@@ -368,7 +368,7 @@ clear
 cat << 'EOF'
 ╔═══════════════════════════════════════════════════════════════════╗
 ║                    DAT406 Workshop                                ║
-║     Build Agentic AI-Powered Search with Aurora PostgreSQL       ║
+║     🚀 Build Agentic AI-Powered Search with Aurora PostgreSQL     ║
 ║                    AWS re:Invent 2025                             ║
 ╚═══════════════════════════════════════════════════════════════════╝
 
