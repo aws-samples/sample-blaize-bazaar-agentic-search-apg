@@ -353,6 +353,97 @@ chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$HOME_FOLDER/.vscode"
 log "✅ VS Code settings configured"
 
 # ============================================================================
+# AUTO-OPEN TERMINAL CONFIGURATION
+# ============================================================================
+
+log "Configuring auto-open terminal with welcome message..."
+
+# Create scripts directory
+mkdir -p "$HOME_FOLDER/scripts"
+
+# Create welcome script
+cat > "$HOME_FOLDER/scripts/welcome.sh" << 'WELCOME_EOF'
+#!/bin/bash
+clear
+cat << 'EOF'
+╔═══════════════════════════════════════════════════════════════════╗
+║                    DAT406 Workshop                                ║
+║     Build Agentic AI-Powered Search with Aurora PostgreSQL       ║
+║                    AWS re:Invent 2025                             ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+✅ Welcome! Your environment is ready.
+
+📚 Quick Commands:
+   workshop       - Navigate to workshop root
+   lab1           - Navigate to Lab 1 (Jupyter)
+   lab2           - Navigate to Lab 2 (Full-stack)
+   start-backend  - Launch FastAPI backend
+   start-frontend - Launch React frontend
+
+📁 Workshop Structure:
+   /workshop/sample-dat406-build-agentic-ai-powered-search-apg/
+   ├── lab1/          - Semantic Search with Jupyter
+   ├── lab2/          - Full-stack Agentic Application
+   │   ├── backend/   - FastAPI + Strands SDK
+   │   └── frontend/  - React + TypeScript
+   └── data/          - Sample product catalog
+
+═══════════════════════════════════════════════════════════════════
+
+EOF
+
+exec bash
+WELCOME_EOF
+
+chmod +x "$HOME_FOLDER/scripts/welcome.sh"
+chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$HOME_FOLDER/scripts/welcome.sh"
+
+# Create VS Code tasks.json for auto-open terminal
+cat > "$HOME_FOLDER/.vscode/tasks.json" << 'TASKS_EOF'
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Welcome Terminal",
+            "type": "shell",
+            "command": "/workshop/scripts/welcome.sh",
+            "presentation": {
+                "echo": false,
+                "reveal": "always",
+                "focus": false,
+                "panel": "dedicated",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
+TASKS_EOF
+
+# Update workspace settings to enable auto-task detection
+cat > "$HOME_FOLDER/.vscode/settings.json" << 'WORKSPACE_SETTINGS'
+{
+    "python.defaultInterpreterPath": "/usr/bin/python3.13",
+    "jupyter.kernels.filter": [],
+    "notebook.defaultKernel": "python3",
+    "terminal.integrated.defaultProfile.linux": "bash",
+    "terminal.integrated.cwd": "/workshop",
+    "task.autoDetect": "on",
+    "task.problemMatchers.neverPrompt": true
+}
+WORKSPACE_SETTINGS
+
+chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$HOME_FOLDER/.vscode"
+chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$HOME_FOLDER/scripts"
+
+log "✅ Auto-open terminal configured"
+
+# ============================================================================
 # STEP 10: PYTHON SETUP (~10 sec)
 # ============================================================================
 
