@@ -49,16 +49,31 @@ else
     error "Database connection failed"
 fi
 
-log "Testing Bedrock Titan..."
-if aws bedrock-runtime invoke-model \
-    --model-id amazon.titan-embed-text-v2:0 \
-    --body '{"inputText":"test","dimensions":1024,"normalize":true}' \
-    --region "$AWS_REGION" \
-    /tmp/bedrock_test.json 2>/dev/null; then
-    log "✅ Bedrock Titan accessible"
-    rm -f /tmp/bedrock_test.json
+log "Testing Bedrock Titan v2 model access..."
+python3 << PYTHON_TEST
+import sys, json, boto3
+try:
+    bedrock = boto3.client('bedrock-runtime', region_name='${AWS_REGION}')
+    response = bedrock.invoke_model(
+        modelId='amazon.titan-embed-text-v2:0',
+        body=json.dumps({'inputText': 'test', 'dimensions': 1024, 'normalize': True}),
+        contentType='application/json',
+        accept='application/json'
+    )
+    result = json.loads(response['body'].read())
+    if 'embedding' in result and len(result['embedding']) == 1024:
+        print('SUCCESS')
+        sys.exit(0)
+    sys.exit(1)
+except Exception as e:
+    print(f'ERROR: {e}', file=sys.stderr)
+    sys.exit(1)
+PYTHON_TEST
+
+if [ $? -eq 0 ]; then
+    log "✅ Bedrock Titan v2 model is accessible"
 else
-    error "Cannot access Bedrock Titan model"
+    error "Cannot access Bedrock Titan v2 model. Enable it in AWS Console: https://console.aws.amazon.com/bedrock/"
 fi
 
 # Create schema
