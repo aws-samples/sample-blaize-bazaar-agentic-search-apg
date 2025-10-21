@@ -201,6 +201,7 @@ print("✅ Data loaded successfully")
 PYTHON
 
 export PROJECT_ROOT="$PROJECT_ROOT"
+export DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD AWS_REGION
 python3 /tmp/load_dat406.py
 if [ $? -eq 0 ]; then
     log "✅ Products loaded with embeddings"
