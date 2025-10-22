@@ -32,7 +32,7 @@ Workflow:
 1. Understand user's needs (budget, features, category)
 2. Use run_query() to search for matching products:
    SELECT "productId", product_description as name, price, stars, reviews,
-          category_name as category, quantity, imgurl as image_url
+          category_name as category, quantity, "imgUrl" as image_url
    FROM bedrock_integration.product_catalog
    WHERE product_description ILIKE '%search_term%'
      AND price > 0 AND quantity > 0

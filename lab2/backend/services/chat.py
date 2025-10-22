@@ -161,7 +161,7 @@ CONTEXT AWARENESS - CRITICAL:
 MANDATORY QUERY FORMAT:
 ```sql
 SELECT "productId", product_description as name, price, stars, reviews, 
-       category_name as category, quantity, imgurl as image_url
+       category_name as category, quantity, "imgUrl" as image_url
 FROM bedrock_integration.product_catalog 
 WHERE product_description ILIKE '%SEARCH_TERM%' 
   AND price > 0
