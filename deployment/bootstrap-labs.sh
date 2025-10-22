@@ -392,6 +392,12 @@ cat > "$HOME_FOLDER/$REPO_NAME/lab2/start-backend.sh" << 'START_BACKEND'
 #!/bin/bash
 cd "$(dirname "$0")/backend"
 
+# Load environment variables from root .env
+if [ -f "../../.env" ]; then
+    export $(grep -v '^#' ../../.env | xargs)
+    echo "✅ Environment variables loaded"
+fi
+
 # Check if dependencies are installed
 if ! python3 -c "import fastapi" 2>/dev/null; then
     echo "📦 Installing backend dependencies..."
@@ -401,6 +407,14 @@ if ! python3 -c "import fastapi" 2>/dev/null; then
     else
         echo "❌ requirements.txt not found"
         exit 1
+    fi
+fi
+
+# Generate MCP config if it doesn't exist
+if [ ! -f "../config/mcp-server-config.json" ]; then
+    echo "🔧 Generating MCP config..."
+    if [ -f "generate_mcp_config.py" ]; then
+        python3 generate_mcp_config.py 2>/dev/null || echo "⚠️  MCP config generation skipped (optional)"
     fi
 fi
 
@@ -424,9 +438,19 @@ if [ ! -d "node_modules" ]; then
     echo "✅ Dependencies installed"
 fi
 
+# Build production version if dist/ doesn't exist
+if [ ! -d "dist" ]; then
+    echo "🛠️  Building production version (first time only)..."
+    npm run build
+    echo "✅ Production build complete"
+fi
+
 echo "🚀 Starting React frontend on http://localhost:5173"
 echo "🔗 Backend should be running at: http://localhost:8000"
-npm run dev
+echo "📝 Using production build (CloudFront compatible)"
+
+# Serve production build (suppresses xsel clipboard error)
+NO_UPDATE_NOTIFIER=1 npx serve -s dist -l 5173 2>&1 | grep -v "xsel"
 START_FRONTEND
 
 chmod +x "$HOME_FOLDER/$REPO_NAME/lab2/start-frontend.sh"

@@ -242,14 +242,14 @@ async def semantic_search(
             SELECT 
                 "productId",
                 product_description,
-                imgurl,
-                producturl,
+                "imgUrl" as imgurl,
+                "productURL" as producturl,
                 stars,
                 reviews,
                 price,
                 category_id,
-                isbestseller,
-                boughtinlastmonth,
+                "isBestSeller" as isbestseller,
+                "boughtInLastMonth" as boughtinlastmonth,
                 category_name,
                 quantity,
                 1 - (embedding <=> %s::vector) as similarity_score
@@ -306,14 +306,14 @@ async def get_product(
             SELECT 
                 "productId",
                 product_description,
-                imgurl,
-                producturl,
+                "imgUrl" as imgurl,
+                "productURL" as producturl,
                 stars,
                 reviews,
                 price,
                 category_id,
-                isbestseller,
-                boughtinlastmonth,
+                "isBestSeller" as isbestseller,
+                "boughtInLastMonth" as boughtinlastmonth,
                 category_name,
                 quantity
             FROM bedrock_integration.product_catalog
@@ -348,8 +348,8 @@ async def browse_category(
             SELECT 
                 "productId",
                 product_description,
-                imgurl,
-                producturl,
+                "imgUrl" as imgurl,
+                "productURL" as producturl,
                 stars,
                 reviews,
                 price,
@@ -421,14 +421,14 @@ async def list_products(
             SELECT 
                 "productId",
                 product_description,
-                imgurl,
-                producturl,
+                "imgUrl" as imgurl,
+                "productURL" as producturl,
                 stars,
                 reviews,
                 price,
                 category_id,
-                isbestseller,
-                boughtinlastmonth,
+                "isBestSeller" as isbestseller,
+                "boughtInLastMonth" as boughtinlastmonth,
                 category_name,
                 quantity
             FROM bedrock_integration.product_catalog
