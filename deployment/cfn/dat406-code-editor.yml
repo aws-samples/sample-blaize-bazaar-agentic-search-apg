@@ -289,7 +289,8 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - rds:*
+                  - rds:DescribeDBClusters
+                  - rds:DescribeDBInstances
                   - rds-db:connect
                   - rds-data:ExecuteStatement
                   - rds-data:BatchExecuteStatement
