@@ -269,7 +269,9 @@ LAB2_BACKEND_REQUIREMENTS="$HOME_FOLDER/$REPO_NAME/lab2/backend/requirements.txt
 
 if [ -f "$LAB2_BACKEND_REQUIREMENTS" ]; then
     log "Installing from $LAB2_BACKEND_REQUIREMENTS..."
-    sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user -q -r "$LAB2_BACKEND_REQUIREMENTS"
+    cd "$HOME_FOLDER/$REPO_NAME/lab2/backend"
+    sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user -q -r requirements.txt
+    cd - > /dev/null
     log "✅ Lab 2 Backend dependencies installed from requirements.txt"
 else
     warn "Lab 2 Backend requirements.txt not found, installing core packages..."
@@ -380,7 +382,60 @@ else
 fi
 
 # ============================================================================
-# STEP 10: BASH ENVIRONMENT CONFIGURATION (~5 sec)
+# STEP 10: CREATE START SCRIPTS (~5 sec)
+# ============================================================================
+
+log "Creating start scripts..."
+
+# Create start-backend script
+cat > "$HOME_FOLDER/$REPO_NAME/lab2/start-backend.sh" << 'START_BACKEND'
+#!/bin/bash
+cd "$(dirname "$0")/backend"
+
+# Check if dependencies are installed
+if ! python3 -c "import fastapi" 2>/dev/null; then
+    echo "📦 Installing backend dependencies..."
+    if [ -f requirements.txt ]; then
+        python3 -m pip install --user -q -r requirements.txt
+        echo "✅ Dependencies installed"
+    else
+        echo "❌ requirements.txt not found"
+        exit 1
+    fi
+fi
+
+echo "🚀 Starting FastAPI backend on http://localhost:8000"
+echo "📚 API docs: http://localhost:8000/docs"
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+START_BACKEND
+
+chmod +x "$HOME_FOLDER/$REPO_NAME/lab2/start-backend.sh"
+chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$HOME_FOLDER/$REPO_NAME/lab2/start-backend.sh"
+
+# Create start-frontend script
+cat > "$HOME_FOLDER/$REPO_NAME/lab2/start-frontend.sh" << 'START_FRONTEND'
+#!/bin/bash
+cd "$(dirname "$0")/frontend"
+
+# Check if node_modules exists
+if [ ! -d "node_modules" ]; then
+    echo "📦 Installing frontend dependencies..."
+    npm install
+    echo "✅ Dependencies installed"
+fi
+
+echo "🚀 Starting React frontend on http://localhost:5173"
+echo "🔗 Backend should be running at: http://localhost:8000"
+npm run dev
+START_FRONTEND
+
+chmod +x "$HOME_FOLDER/$REPO_NAME/lab2/start-frontend.sh"
+chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$HOME_FOLDER/$REPO_NAME/lab2/start-frontend.sh"
+
+log "✅ Start scripts created"
+
+# ============================================================================
+# STEP 11: BASH ENVIRONMENT CONFIGURATION (~5 sec)
 # ============================================================================
 
 log "Configuring bash environment..."
@@ -407,23 +462,16 @@ alias frontend='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/l
 
 # Lab Service Shortcuts
 start-backend() {
-    cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2/backend
-    
-    # Generate MCP config from environment
-    python3 generate_mcp_config.py 2>/dev/null || echo "⚠️  MCP config generation skipped"
-    
-    echo "🚀 Starting FastAPI backend on http://localhost:8000"
-    uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+    /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2/start-backend.sh
 }
 
 start-frontend() {
-    cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2
-    ./START_FRONTEND.sh
+    /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2/start-frontend.sh
 }
 
 start-jupyter() {
     cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab1
-    echo "Starting Jupyter Lab on http://localhost:8888"
+    echo "🚀 Starting Jupyter Lab on http://localhost:8888"
     jupyter lab --ip=0.0.0.0 --port=8888 --no-browser
 }
 

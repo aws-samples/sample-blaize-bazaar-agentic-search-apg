@@ -293,9 +293,9 @@ Resources:
                   - rds-db:connect
                   - rds-data:ExecuteStatement
                   - rds-data:BatchExecuteStatement
-                  - "rds-data:BeginTransaction"
-                  - "rds-data:CommitTransaction"
-                  - "rds-data:RollbackTransaction"
+                  - rds-data:BeginTransaction
+                  - rds-data:CommitTransaction
+                  - rds-data:RollbackTransaction
                 Resource: '*'
               - Effect: Allow
                 Action:
@@ -310,6 +310,10 @@ Resources:
                   - bedrock:InvokeModelWithResponseStream
                 Resource: '*'
 
+              - Effect: Allow
+                Action:
+                  - aws-marketplace:ViewSubscriptions
+                Resource: '*'
               - Effect: Allow
                 Action:
                   - logs:CreateLogGroup
