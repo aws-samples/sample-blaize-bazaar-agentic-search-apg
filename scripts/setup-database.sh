@@ -91,14 +91,14 @@ DROP TABLE IF EXISTS bedrock_integration.product_catalog CASCADE;
 CREATE TABLE bedrock_integration.product_catalog (
     "productId" VARCHAR(255) PRIMARY KEY,
     product_description TEXT NOT NULL,
-    imgurl TEXT,
-    producturl TEXT,
+    "imgUrl" TEXT,
+    "productURL" TEXT,
     stars NUMERIC(3,2),
     reviews INTEGER,
     price NUMERIC(10,2),
     category_id INTEGER,
-    isbestseller BOOLEAN DEFAULT FALSE,
-    boughtinlastmonth INTEGER,
+    "isBestSeller" BOOLEAN DEFAULT FALSE,
+    "boughtInLastMonth" INTEGER,
     category_name VARCHAR(255),
     quantity INTEGER DEFAULT 0,
     embedding vector(1024),
@@ -162,8 +162,8 @@ print("📊 Loading data...")
 df = pd.read_csv(str(DATA_FILE))
 df = df.dropna(subset=['product_description'])
 df = df.fillna({'stars': 0.0, 'reviews': 0, 'price': 0.0, 'category_id': 0, 
-                'isbestseller': False, 'boughtinlastmonth': 0, 'category_name': 'Uncategorized',
-                'quantity': 0, 'imgurl': '', 'producturl': ''})
+                'isBestSeller': False, 'boughtInLastMonth': 0, 'category_name': 'Uncategorized',
+                'quantity': 0, 'imgUrl': '', 'productURL': ''})
 df['product_description'] = df['product_description'].str[:2000]
 
 print(f"✅ Loaded {len(df)} products")
@@ -181,10 +181,10 @@ with psycopg.connect(conn_str) as conn:
         for _, row in df.iterrows():
             batches.append((
                 row['productId'], row['product_description'],
-                row.get('imgurl', ''), row.get('producturl', ''),
+                row.get('imgUrl', ''), row.get('productURL', ''),
                 float(row['stars']), int(row['reviews']), float(row['price']),
-                int(row['category_id']), bool(row.get('isbestseller', False)),
-                int(row.get('boughtinlastmonth', 0)), row['category_name'],
+                int(row['category_id']), bool(row.get('isBestSeller', False)),
+                int(row.get('boughtInLastMonth', 0)), row['category_name'],
                 int(row['quantity']), row['embedding']
             ))
         
@@ -192,8 +192,8 @@ with psycopg.connect(conn_str) as conn:
             chunk = batches[i:i+1000]
             cur.executemany("""
                 INSERT INTO bedrock_integration.product_catalog 
-                ("productId", product_description, imgurl, producturl, stars, reviews, 
-                 price, category_id, isbestseller, boughtinlastmonth, category_name, 
+                ("productId", product_description, "imgUrl", "productURL", stars, reviews, 
+                 price, category_id, "isBestSeller", "boughtInLastMonth", category_name, 
                  quantity, embedding)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT ("productId") DO UPDATE SET
