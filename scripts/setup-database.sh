@@ -41,6 +41,11 @@ done
 
 log "Database: $DB_HOST:$DB_PORT/$DB_NAME"
 
+# Install required Python packages
+log "Installing required Python packages..."
+pip3 install boto3 psycopg[binary] pgvector pandas numpy pandarallel tqdm --quiet
+log "✅ Python packages installed"
+
 # Test connectivity
 log "Testing database..."
 if PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT version();" &>/dev/null; then
