@@ -374,12 +374,12 @@ cat << 'EOF'
 
 ✅ Welcome! Your environment is ready.
 
-📚 Quick Commands:
+📚 Quick Commands (bash aliases - no ./ needed):
    workshop       - Navigate to workshop root
    lab1           - Navigate to Lab 1 (Jupyter)
    lab2           - Navigate to Lab 2 (Full-stack)
-   start-backend  - Launch FastAPI backend
-   start-frontend - Launch React frontend
+   start-backend  - Launch FastAPI backend (auto-installs deps)
+   start-frontend - Launch React frontend (auto-installs deps)
 
 📁 Workshop Structure:
    /workshop/sample-dat406-build-agentic-ai-powered-search-apg/
