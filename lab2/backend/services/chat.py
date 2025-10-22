@@ -76,9 +76,10 @@ class EnhancedChatService:
             raise RuntimeError("Strands SDK not available")
         
         # Load MCP config from config folder
-        # This handles: backend/services/chat.py -> backend/ -> project_root/ -> config/
+        # Path: backend/services/chat.py -> backend/ -> lab2/ -> config/
         config_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            '..',
             'config',
             'mcp-server-config.json'
         )

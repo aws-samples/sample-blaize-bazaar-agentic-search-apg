@@ -301,67 +301,32 @@ fi
 # ============================================================================
 
 log "Installing uv/uvx for MCP..."
-if command -v uv &>/dev/null; then
+if sudo -u "$CODE_EDITOR_USER" bash -c 'export PATH="$HOME/.local/bin:$PATH" && command -v uv' &>/dev/null; then
     log "✅ uv already installed"
 else
-    if command -v curl &>/dev/null; then
-        sudo -u "$CODE_EDITOR_USER" bash -c 'curl -LsSf https://astral.sh/uv/install.sh | sh' || {
-            log "curl installation failed, trying pip..."
-            sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user uv
-        }
-    else
+    log "Installing uv via official installer..."
+    sudo -u "$CODE_EDITOR_USER" bash -c 'curl -LsSf https://astral.sh/uv/install.sh | sh' 2>&1 | grep -v "^$" || {
+        warn "Official installer failed, trying pip..."
         sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user uv
-    fi
-    log "✅ uv/uvx installed"
-fi
-
-# ============================================================================
-# STEP 8: GENERATE MCP CONFIG (~5 sec)
-# ============================================================================
-
-if [ ! -z "$DB_CLUSTER_ARN" ] && [ ! -z "$DB_SECRET_ARN" ]; then
-    log "Generating MCP server configuration..."
-    
-    mkdir -p "$HOME_FOLDER/$REPO_NAME/lab2/config"
-    
-    cat > "$HOME_FOLDER/$REPO_NAME/lab2/config/mcp-server-config.json" << MCP_CONFIG
-{
-  "mcpServers": {
-    "awslabs.postgres-mcp-server": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--with",
-        "awslabs.postgres-mcp-server",
-        "awslabs.postgres-mcp-server",
-        "--resource_arn",
-        "$DB_CLUSTER_ARN",
-        "--secret_arn",
-        "$DB_SECRET_ARN",
-        "--database",
-        "$DB_NAME",
-        "--region",
-        "$AWS_REGION",
-        "--readonly",
-        "True"
-      ],
-      "env": {
-        "AWS_REGION": "$AWS_REGION",
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      },
-      "disabled": false,
-      "autoApprove": []
     }
-  }
-}
-MCP_CONFIG
-
-    chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$HOME_FOLDER/$REPO_NAME/lab2/config/mcp-server-config.json"
-    chmod 644 "$HOME_FOLDER/$REPO_NAME/lab2/config/mcp-server-config.json"
-    log "✅ MCP server config generated"
-else
-    warn "DB_CLUSTER_ARN or DB_SECRET_ARN not set - MCP config not generated"
+    
+    # Verify installation
+    if sudo -u "$CODE_EDITOR_USER" bash -c 'export PATH="$HOME/.local/bin:$PATH" && command -v uv' &>/dev/null; then
+        UV_VERSION=$(sudo -u "$CODE_EDITOR_USER" bash -c 'export PATH="$HOME/.local/bin:$PATH" && uv --version' 2>/dev/null || echo "unknown")
+        log "✅ uv installed successfully ($UV_VERSION)"
+    else
+        error "Failed to install uv - MCP functionality may not work"
+    fi
 fi
+
+# ============================================================================
+# STEP 8: MCP CONFIG DIRECTORY SETUP (~1 sec)
+# ============================================================================
+
+log "Creating MCP config directory..."
+mkdir -p "$HOME_FOLDER/$REPO_NAME/lab2/config"
+chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$HOME_FOLDER/$REPO_NAME/lab2/config"
+log "✅ MCP config directory created (config will be generated on backend startup)"
 
 # ============================================================================
 # STEP 9: LAB 2 - FRONTEND DEPENDENCIES (~8 min)
@@ -391,6 +356,9 @@ log "Creating start scripts..."
 cat > "$HOME_FOLDER/$REPO_NAME/lab2/start-backend.sh" << 'START_BACKEND'
 #!/bin/bash
 cd "$(dirname "$0")/backend"
+
+# Ensure uv is in PATH (required for MCP)
+export PATH="$HOME/.local/bin:$PATH"
 
 # Load environment variables from root .env
 if [ -f "../../.env" ]; then
@@ -507,6 +475,9 @@ psql-workshop() {
 # AWS Region for boto3
 export AWS_DEFAULT_REGION=${AWS_REGION:-us-west-2}
 
+# Ensure uv is in PATH (required for MCP)
+export PATH="$HOME/.local/bin:$PATH"
+
 # Note: EC2 instances use IAM role for credentials automatically
 # No need to export AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY
 
@@ -594,6 +565,13 @@ if sudo -u "$CODE_EDITOR_USER" jupyter kernelspec list 2>/dev/null | grep -q "py
     log "✅ Jupyter kernel verified"
 else
     warn "⚠️  Jupyter kernel may not be registered"
+fi
+
+# Check uv installation (required for MCP)
+if sudo -u "$CODE_EDITOR_USER" bash -c 'export PATH="$HOME/.local/bin:$PATH" && command -v uv' &>/dev/null; then
+    log "✅ uv/uvx verified (MCP ready)"
+else
+    warn "⚠️  uv not found - MCP functionality may not work"
 fi
 
 # ============================================================================
