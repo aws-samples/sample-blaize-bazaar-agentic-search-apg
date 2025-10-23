@@ -68,6 +68,7 @@ export async function sendChatMessageStreaming(
     const reader = response.body?.getReader()
     const decoder = new TextDecoder()
     let finalResponse: ChatResponse | null = null
+    let lastContent = ''
 
     if (reader) {
       while (true) {
@@ -82,6 +83,11 @@ export async function sendChatMessageStreaming(
             try {
               const data = JSON.parse(line.slice(6))
               onUpdate(data)
+              
+              // Track content updates
+              if (data.type === 'content') {
+                lastContent = data.content
+              }
               
               if (data.type === 'complete') {
                 finalResponse = {
@@ -100,7 +106,7 @@ export async function sendChatMessageStreaming(
     }
 
     return finalResponse || {
-      response: 'Response completed',
+      response: lastContent || 'Response completed',
       products: [],
       suggestions: []
     }
