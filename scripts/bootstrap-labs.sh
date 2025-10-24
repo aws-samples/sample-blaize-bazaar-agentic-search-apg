@@ -468,6 +468,13 @@ if [ -f /workshop/sample-dat406-build-agentic-ai-powered-search-apg/.env ]; then
     set -a
     source /workshop/sample-dat406-build-agentic-ai-powered-search-apg/.env
     set +a
+    
+    # Explicitly export PostgreSQL variables for psql
+    export PGHOST
+    export PGPORT
+    export PGUSER
+    export PGPASSWORD
+    export PGDATABASE
 fi
 
 # Workshop Navigation Aliases
