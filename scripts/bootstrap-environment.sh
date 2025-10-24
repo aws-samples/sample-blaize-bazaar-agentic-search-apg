@@ -13,6 +13,8 @@ CODE_EDITOR_USER="${CODE_EDITOR_USER:-participant}"
 HOME_FOLDER="${HOME_FOLDER:-/workshop}"
 CFN_WAIT_HANDLE="${CFN_WAIT_HANDLE:-}"
 STAGE2_SCRIPT_URL="${STAGE2_SCRIPT_URL:-}"
+ASSETS_BUCKET_NAME="${ASSETS_BUCKET_NAME:-}"
+ASSETS_BUCKET_PREFIX="${ASSETS_BUCKET_PREFIX:-}"
 
 # Colors
 RED='\033[0;31m'
@@ -27,6 +29,8 @@ error() { echo -e "${RED}[$(date +'%H:%M:%S')] ERROR:${NC} $1"; exit 1; }
 log "=========================================="
 log "DAT406 Stage 1: Environment Bootstrap"
 log "=========================================="
+log "Assets Bucket: ${ASSETS_BUCKET_NAME:-<not set>}"
+log "Assets Prefix: ${ASSETS_BUCKET_PREFIX:-<not set>}"
 
 # ============================================================================
 # STEP 1: ESSENTIAL SYSTEM PACKAGES (~2 min)
