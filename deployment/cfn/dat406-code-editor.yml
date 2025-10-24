@@ -332,6 +332,13 @@ Resources:
                 Resource: '*'
               - Effect: Allow
                 Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:s3:::${AssetsBucketName}'
+                  - !Sub 'arn:${AWS::Partition}:s3:::${AssetsBucketName}/*'
+              - Effect: Allow
+                Action:
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents

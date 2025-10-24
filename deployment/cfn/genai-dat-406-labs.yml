@@ -251,6 +251,8 @@ Resources:
         DBName: postgres
         BedrockEmbeddingModel: !Ref BedrockEmbeddingModel
         BedrockChatModel: !Ref BedrockChatModel
+        AssetsBucketName: !Ref AssetsBucketName
+        AssetsBucketPrefix: !Ref AssetsBucketPrefix
         PythonVersion: !Ref PythonVersion
         PostgreSQLVersion: !Ref PostgreSQLVersion
       Tags:
