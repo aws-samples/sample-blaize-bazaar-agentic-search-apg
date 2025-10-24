@@ -126,11 +126,11 @@ DROP TABLE temp_products;
 
 \echo 'Creating indexes...'
 
--- Vector similarity index (HNSW)
+-- Vector similarity index (HNSW) - optimized for 21,704 products
 CREATE INDEX idx_product_embedding_hnsw 
 ON bedrock_integration.product_catalog 
 USING hnsw (embedding vector_cosine_ops)
-WITH (m = 16, ef_construction = 64);
+WITH (m = 16, ef_construction = 128);
 
 -- Full-text search index
 CREATE INDEX idx_product_fts 

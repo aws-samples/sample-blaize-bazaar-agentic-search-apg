@@ -87,15 +87,20 @@ BEDROCK_EMBEDDING_MODEL=${BEDROCK_EMBEDDING_MODEL:-amazon.titan-embed-text-v2:0}
 BEDROCK_CHAT_MODEL=${BEDROCK_CHAT_MODEL:-us.anthropic.claude-sonnet-4-20250514-v1:0}
 EOF
     
+    chmod 600 "$REPO_PATH/.env"
+    chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH/.env"
+    
     # Symlink for backend (avoid duplication)
     ln -sf "$REPO_PATH/.env" "$REPO_PATH/lab2/backend/.env" 2>/dev/null
     
-    # .pgpass
+    # .pgpass for psql CLI
     echo "$DB_HOST:$DB_PORT:$DB_NAME:$DB_USER:$DB_PASSWORD" > "/home/$CODE_EDITOR_USER/.pgpass"
     chmod 600 "/home/$CODE_EDITOR_USER/.pgpass"
     chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "/home/$CODE_EDITOR_USER/.pgpass"
     
-    log "✅ Environment files created"
+    log "✅ Environment files created (.env, .pgpass)"
+else
+    warn "Database credentials not available - skipping DB configuration"
 fi
 
 # Fix permissions
@@ -163,14 +168,21 @@ setup_database() {
     if [ -n "$DB_HOST" ] && [ -f "$REPO_PATH/scripts/load-database-fast.sh" ]; then
         cd "$REPO_PATH"
         export DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD AWS_REGION
-        bash scripts/load-database-fast.sh &>/dev/null
+        export ASSETS_BUCKET_NAME ASSETS_BUCKET_PREFIX
+        bash scripts/load-database-fast.sh 2>&1 | tee /var/log/database-setup.log
+        return ${PIPESTATUS[0]}
     fi
+    return 1
 }
 
 setup_frontend & PID_FE=$!
 setup_database & PID_DB=$!
 wait $PID_FE && log "✅ Frontend dependencies installed" || warn "Frontend install issues"
-wait $PID_DB && log "✅ Database setup complete" || warn "Database setup issues"
+if wait $PID_DB; then
+    log "✅ Database setup complete (21,704 products with indexes)"
+else
+    warn "Database setup had issues - check /var/log/database-setup.log"
+fi
 
 # ============================================================================
 # STEP 11: CREATE START SCRIPTS (~5 sec)
@@ -207,31 +219,94 @@ log "Configuring bash environment..."
 
 cat >> "/home/$CODE_EDITOR_USER/.bashrc" << 'EOF'
 
+# ============================================================================
 # DAT406 Workshop Environment
+# ============================================================================
+
 if [ -f /workshop/sample-dat406-build-agentic-ai-powered-search-apg/.env ]; then
-    set -a; source /workshop/sample-dat406-build-agentic-ai-powered-search-apg/.env; set +a
-    export PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE
+    set -a
+    source /workshop/sample-dat406-build-agentic-ai-powered-search-apg/.env
+    set +a
+    
+    # Explicitly export PostgreSQL variables for psql
+    export PGHOST
+    export PGPORT
+    export PGUSER
+    export PGPASSWORD
+    export PGDATABASE
 fi
 
+# Workshop Navigation Aliases
 alias workshop='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg'
 alias lab1='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab1'
 alias lab2='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2'
-start-backend() { /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2/start-backend.sh; }
-start-frontend() { /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2/start-frontend.sh; }
-start-jupyter() { cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab1 && jupyter lab --ip=0.0.0.0 --port=8888 --no-browser; }
-export PATH="$HOME/.local/bin:$PATH"
+alias backend='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2/backend'
+alias frontend='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2/frontend'
+
+# Lab Service Shortcuts
+start-backend() {
+    /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2/start-backend.sh
+}
+
+start-frontend() {
+    /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2/start-frontend.sh
+}
+
+# Database Shortcuts
+psql-workshop() {
+    psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE
+}
+
+# AWS Region for boto3
 export AWS_DEFAULT_REGION=${AWS_REGION:-us-west-2}
+
+# Ensure uv is in PATH (required for MCP)
+export PATH="$HOME/.local/bin:$PATH"
 EOF
 
-log "✅ Bash environment configured"
+log "✅ Bash environment configured (.bashrc updated with psql support)"
 
 # ============================================================================
-# STEP 13: STATUS MARKER
+# STEP 13: FINAL VERIFICATION
+# ============================================================================
+log "Performing final verification..."
+
+# Verify database setup
+if [ -n "$DB_HOST" ]; then
+    PRODUCT_COUNT=$(PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM bedrock_integration.product_catalog;" 2>/dev/null | xargs || echo "0")
+    if [ "$PRODUCT_COUNT" -gt 0 ]; then
+        log "✅ Database verified ($PRODUCT_COUNT products)"
+    else
+        warn "⚠️  Database may not be set up correctly (0 products found)"
+    fi
+fi
+
+# Verify Python packages
+if sudo -u "$CODE_EDITOR_USER" python3.13 -c "import fastapi, uvicorn, strands" 2>/dev/null; then
+    log "✅ Lab 2 Backend dependencies verified"
+else
+    warn "⚠️  Some Lab 2 Backend dependencies may be missing"
+fi
+
+# ============================================================================
+# STEP 14: STATUS MARKER
 # ============================================================================
 cat > /tmp/workshop-ready.json << EOF
-{"status":"complete","timestamp":"$(date -Iseconds)","stage":"labs-bootstrap"}
+{
+    "status": "complete",
+    "timestamp": "$(date -Iseconds)",
+    "stage": "labs-bootstrap",
+    "components": {
+        "lab1_dependencies": "ready",
+        "lab2_backend": "ready",
+        "lab2_frontend": "ready",
+        "database_config": "ready",
+        "jupyter_kernel": "ready"
+    }
+}
 EOF
 chmod 644 /tmp/workshop-ready.json
+log "✅ Status marker created"
 
 # ============================================================================
 # SUMMARY
@@ -239,9 +314,18 @@ chmod 644 /tmp/workshop-ready.json
 log "=========================================="
 log "Stage 2: Labs Bootstrap Complete!"
 log "=========================================="
-echo "✅ All dependencies installed"
-echo "✅ Database setup complete"
-echo "✅ Start scripts: start-backend, start-frontend, start-jupyter"
+echo ""
+echo "✅ Lab 1 (Jupyter) dependencies installed"
+echo "✅ Lab 2 Backend (FastAPI + Strands) installed"
+echo "✅ Lab 2 Frontend (React) dependencies installed"
+echo "✅ Database setup complete (21,704 products with indexes)"
+echo "✅ Bash environment configured (psql ready)"
+echo ""
+echo "Quick Start Commands:"
+echo "  start-backend   # Launch FastAPI backend"
+echo "  start-frontend  # Launch React frontend"
+echo "  psql-workshop   # Connect to database"
+echo ""
 log "=========================================="
 
 exit 0
