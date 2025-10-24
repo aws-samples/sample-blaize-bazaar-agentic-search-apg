@@ -56,7 +56,7 @@ fi
 log "Creating environment files..."
 
 # Frontend .env (always create)
-[ -d "$REPO_PATH/lab2/frontend" ] && cat > "$REPO_PATH/lab2/frontend/.env" << EOF
+[ -d "$REPO_PATH/blaize-bazaar/frontend" ] && cat > "$REPO_PATH/blaize-bazaar/frontend/.env" << EOF
 VITE_API_URL=/ports/8000
 VITE_AWS_REGION=$AWS_REGION
 VITE_ENABLE_LAB2=true
@@ -91,7 +91,7 @@ EOF
     chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH/.env"
     
     # Symlink for backend (avoid duplication)
-    ln -sf "$REPO_PATH/.env" "$REPO_PATH/lab2/backend/.env" 2>/dev/null
+    ln -sf "$REPO_PATH/.env" "$REPO_PATH/blaize-bazaar/backend/.env" 2>/dev/null
     
     # .pgpass for psql CLI
     echo "$DB_HOST:$DB_PORT:$DB_NAME:$DB_USER:$DB_PASSWORD" > "/home/$CODE_EDITOR_USER/.pgpass"
@@ -111,28 +111,40 @@ chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH"
 # ============================================================================
 log "Installing Python dependencies (parallel)..."
 
-install_lab1() {
-    if [ -f "$REPO_PATH/lab1/requirements.txt" ]; then
-        sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user -r "$REPO_PATH/lab1/requirements.txt" &>/dev/null
+install_notebooks() {
+    if [ -f "$REPO_PATH/notebooks/requirements.txt" ]; then
+        sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user -r "$REPO_PATH/notebooks/requirements.txt" 2>&1 | tee /var/log/notebooks-pip-install.log >/dev/null
+        return ${PIPESTATUS[0]}
     fi
     # Register Jupyter kernel
     sudo -u "$CODE_EDITOR_USER" python3.13 -m ipykernel install --user --name python3 --display-name "Python 3.13" &>/dev/null || \
     (sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user ipykernel &>/dev/null && \
      sudo -u "$CODE_EDITOR_USER" python3.13 -m ipykernel install --user --name python3 --display-name "Python 3.13" &>/dev/null)
+    return 0
 }
 
-install_lab2() {
-    if [ -f "$REPO_PATH/lab2/backend/requirements.txt" ]; then
-        cd "$REPO_PATH/lab2/backend"
-        sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user -r requirements.txt &>/dev/null
+install_blaize_bazaar() {
+    if [ -f "$REPO_PATH/blaize-bazaar/backend/requirements.txt" ]; then
+        cd "$REPO_PATH/blaize-bazaar/backend"
+        sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user -r requirements.txt 2>&1 | tee /var/log/blaize-bazaar-pip-install.log >/dev/null
+        return ${PIPESTATUS[0]}
     fi
+    return 1
 }
 
 # Run in parallel
-install_lab1 & PID1=$!
-install_lab2 & PID2=$!
-wait $PID1 && log "✅ Lab 1 dependencies installed" || warn "Lab 1 install issues"
-wait $PID2 && log "✅ Lab 2 Backend dependencies installed" || warn "Lab 2 Backend install issues"
+install_notebooks & PID1=$!
+install_blaize_bazaar & PID2=$!
+if wait $PID1; then
+    log "✅ Notebooks dependencies installed"
+else
+    warn "Notebooks install issues - check /var/log/notebooks-pip-install.log"
+fi
+if wait $PID2; then
+    log "✅ Blaize Bazaar Backend dependencies installed"
+else
+    warn "Blaize Bazaar Backend install issues - check /var/log/blaize-bazaar-pip-install.log"
+fi
 
 # ============================================================================
 # STEP 7: INSTALL UV (~30 sec)
@@ -147,10 +159,44 @@ else
 fi
 
 # ============================================================================
-# STEP 8: MCP CONFIG DIRECTORY
+# STEP 8: MCP CONFIG DIRECTORY & GENERATION
 # ============================================================================
-mkdir -p "$REPO_PATH/lab2/config"
-chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH/lab2/config"
+log "Setting up MCP configuration..."
+mkdir -p "$REPO_PATH/blaize-bazaar/config"
+chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH/blaize-bazaar/config"
+
+# Generate MCP config if database credentials are available
+if [ -n "$DB_HOST" ] && [ -f "$REPO_PATH/blaize-bazaar/backend/generate_mcp_config.py" ]; then
+    cd "$REPO_PATH/blaize-bazaar/backend"
+    
+    # Source .env file to get all variables
+    if [ -f "$REPO_PATH/.env" ]; then
+        set -a
+        source "$REPO_PATH/.env"
+        set +a
+    fi
+    
+    # Verify required variables are set
+    if [ -z "${DB_SECRET_ARN:-}" ] || [ -z "${DB_CLUSTER_ARN:-}" ]; then
+        warn "Missing DB_SECRET_ARN or DB_CLUSTER_ARN - MCP config will be generated on backend startup"
+    else
+        # Generate MCP config with variables from .env
+        sudo -u "$CODE_EDITOR_USER" bash -c "export DB_SECRET_ARN='$DB_SECRET_ARN' && \
+            export DB_CLUSTER_ARN='$DB_CLUSTER_ARN' && \
+            export DB_NAME='$DB_NAME' && \
+            export AWS_REGION='$AWS_REGION' && \
+            python3.13 generate_mcp_config.py" 2>&1 | tee /var/log/mcp-config-generation.log
+        
+        if [ -f "$REPO_PATH/blaize-bazaar/config/mcp-server-config.json" ]; then
+            log "✅ MCP config generated at blaize-bazaar/config/mcp-server-config.json"
+        else
+            warn "MCP config generation failed - will be generated on backend startup"
+        fi
+    fi
+    cd "$REPO_PATH"
+else
+    log "ℹ️  MCP config will be generated on backend startup"
+fi
 
 # ============================================================================
 # STEP 9-10: PARALLEL FRONTEND + DATABASE (~8 min vs 8.5 min)
@@ -158,8 +204,8 @@ chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH/lab2/config"
 log "Setting up frontend and database (parallel)..."
 
 setup_frontend() {
-    if [ -d "$REPO_PATH/lab2/frontend" ]; then
-        cd "$REPO_PATH/lab2/frontend"
+    if [ -d "$REPO_PATH/blaize-bazaar/frontend" ]; then
+        cd "$REPO_PATH/blaize-bazaar/frontend"
         sudo -u "$CODE_EDITOR_USER" npm install &>/dev/null
     fi
 }
@@ -189,7 +235,7 @@ fi
 # ============================================================================
 log "Creating start scripts..."
 
-cat > "$REPO_PATH/lab2/start-backend.sh" << 'EOF'
+cat > "$REPO_PATH/blaize-bazaar/start-backend.sh" << 'EOF'
 #!/bin/bash
 cd "$(dirname "$0")/backend"
 export PATH="$HOME/.local/bin:$PATH"
@@ -199,7 +245,7 @@ echo "🚀 Starting FastAPI backend on http://localhost:8000"
 uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 EOF
 
-cat > "$REPO_PATH/lab2/start-frontend.sh" << 'EOF'
+cat > "$REPO_PATH/blaize-bazaar/start-frontend.sh" << 'EOF'
 #!/bin/bash
 cd "$(dirname "$0")/frontend"
 [ ! -d "node_modules" ] && npm install
@@ -208,8 +254,8 @@ echo "🚀 Starting React frontend on http://localhost:5173"
 NO_UPDATE_NOTIFIER=1 npx serve -s dist -l 5173 2>&1 | grep -v "xsel"
 EOF
 
-chmod +x "$REPO_PATH/lab2/start-backend.sh" "$REPO_PATH/lab2/start-frontend.sh"
-chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH/lab2/start-backend.sh" "$REPO_PATH/lab2/start-frontend.sh"
+chmod +x "$REPO_PATH/blaize-bazaar/start-backend.sh" "$REPO_PATH/blaize-bazaar/start-frontend.sh"
+chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH/blaize-bazaar/start-backend.sh" "$REPO_PATH/blaize-bazaar/start-frontend.sh"
 log "✅ Start scripts created"
 
 # ============================================================================
@@ -238,24 +284,17 @@ fi
 
 # Workshop Navigation Aliases
 alias workshop='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg'
-alias lab1='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab1'
-alias lab2='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2'
-alias backend='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2/backend'
-alias frontend='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2/frontend'
+alias notebooks='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/notebooks'
+alias blaize-bazaar='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar'
+alias backend='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/backend'
+alias frontend='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/frontend'
 
-# Lab Service Shortcuts
-start-backend() {
-    /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2/start-backend.sh
-}
+# Blaize Bazaar Service Shortcuts
+alias start-backend='/workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/start-backend.sh'
+alias start-frontend='/workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/start-frontend.sh'
 
-start-frontend() {
-    /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2/start-frontend.sh
-}
-
-# Database Shortcuts
-psql-workshop() {
-    psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE
-}
+# Database Shortcut (psql uses PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE from .env)
+alias psql='psql'
 
 # AWS Region for boto3
 export AWS_DEFAULT_REGION=${AWS_REGION:-us-west-2}
@@ -283,9 +322,9 @@ fi
 
 # Verify Python packages
 if sudo -u "$CODE_EDITOR_USER" python3.13 -c "import fastapi, uvicorn, strands" 2>/dev/null; then
-    log "✅ Lab 2 Backend dependencies verified"
+    log "✅ Blaize Bazaar Backend dependencies verified"
 else
-    warn "⚠️  Some Lab 2 Backend dependencies may be missing"
+    warn "⚠️  Some Blaize Bazaar Backend dependencies may be missing"
 fi
 
 # ============================================================================
@@ -297,9 +336,9 @@ cat > /tmp/workshop-ready.json << EOF
     "timestamp": "$(date -Iseconds)",
     "stage": "labs-bootstrap",
     "components": {
-        "lab1_dependencies": "ready",
-        "lab2_backend": "ready",
-        "lab2_frontend": "ready",
+        "notebooks_dependencies": "ready",
+        "blaize_bazaar_backend": "ready",
+        "blaize_bazaar_frontend": "ready",
         "database_config": "ready",
         "jupyter_kernel": "ready"
     }
@@ -315,16 +354,16 @@ log "=========================================="
 log "Stage 2: Labs Bootstrap Complete!"
 log "=========================================="
 echo ""
-echo "✅ Lab 1 (Jupyter) dependencies installed"
-echo "✅ Lab 2 Backend (FastAPI + Strands) installed"
-echo "✅ Lab 2 Frontend (React) dependencies installed"
+echo "✅ Notebooks (Jupyter) dependencies installed"
+echo "✅ Blaize Bazaar Backend (FastAPI + Strands) installed"
+echo "✅ Blaize Bazaar Frontend (React) dependencies installed"
 echo "✅ Database setup complete (21,704 products with indexes)"
 echo "✅ Bash environment configured (psql ready)"
 echo ""
 echo "Quick Start Commands:"
 echo "  start-backend   # Launch FastAPI backend"
 echo "  start-frontend  # Launch React frontend"
-echo "  psql-workshop   # Connect to database"
+echo "  psql            # Connect to database"
 echo ""
 log "=========================================="
 

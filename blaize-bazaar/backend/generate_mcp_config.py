@@ -23,12 +23,9 @@ def generate_mcp_config():
     config = {
         "mcpServers": {
             "awslabs.postgres-mcp-server": {
-                "command": "uv",
+                "command": "uvx",
                 "args": [
-                    "run",
-                    "--with",
-                    "awslabs.postgres-mcp-server",
-                    "awslabs.postgres-mcp-server",
+                    "awslabs.postgres-mcp-server@latest",
                     "--resource_arn",
                     db_cluster_arn,
                     "--secret_arn",

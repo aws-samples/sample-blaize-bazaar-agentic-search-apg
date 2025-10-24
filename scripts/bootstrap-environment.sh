@@ -374,17 +374,18 @@ cat << 'EOF'
 
 ✅ Welcome! Your environment is ready.
 
-📚 Quick Commands (bash aliases - no ./ needed):
+📚 Quick Commands:
    workshop       - Navigate to workshop root
-   lab1           - Navigate to Lab 1 (Jupyter)
-   lab2           - Navigate to Lab 2 (Full-stack)
-   start-backend  - Launch FastAPI backend (auto-installs deps)
-   start-frontend - Launch React frontend (auto-installs deps)
+   notebooks      - Navigate to Jupyter notebooks
+   blaize-bazaar  - Navigate to Blaize Bazaar
+   start-backend  - Launch FastAPI backend
+   start-frontend - Launch React frontend
+   psql           - Connect to PostgreSQL database
 
 📁 Workshop Structure:
    /workshop/sample-dat406-build-agentic-ai-powered-search-apg/
-   ├── lab1/          - Semantic Search with Jupyter
-   ├── lab2/          - Full-stack Agentic Application
+   ├── notebooks/     - Semantic Search with Jupyter
+   ├── blaize-bazaar/ - Blaize Bazaar Demo Application
    │   ├── backend/   - FastAPI + Strands SDK
    │   └── frontend/  - React + TypeScript
    └── data/          - Sample product catalog
@@ -461,8 +462,8 @@ export AWS_DEFAULT_REGION="$AWS_REGION"
 
 # Workshop shortcuts
 alias workshop='cd /workshop'
-alias lab1='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab1'
-alias lab2='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/lab2'
+alias notebooks='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/notebooks'
+alias blaize-bazaar='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar'
 
 # Load .env file if it exists
 if [ -f /workshop/.env ]; then
