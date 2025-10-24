@@ -89,20 +89,21 @@ CREATE SCHEMA IF NOT EXISTS bedrock_integration;
 DROP TABLE IF EXISTS bedrock_integration.product_catalog CASCADE;
 
 CREATE TABLE bedrock_integration.product_catalog (
-    "productId" VARCHAR(255) PRIMARY KEY,
-    product_description TEXT NOT NULL,
-    "imgUrl" TEXT,
-    "productURL" TEXT,
-    stars NUMERIC(3,2),
-    reviews INTEGER,
-    price NUMERIC(10,2),
-    category_id INTEGER,
-    "isBestSeller" BOOLEAN DEFAULT FALSE,
-    "boughtInLastMonth" INTEGER,
-    category_name VARCHAR(255),
-    quantity INTEGER DEFAULT 0,
+    "productId" CHAR(10) PRIMARY KEY,
+    product_description VARCHAR(500) NOT NULL,
+    "imgUrl" VARCHAR(70),
+    "productURL" VARCHAR(40),
+    stars NUMERIC(2,1) CHECK (stars >= 1.0 AND stars <= 5.0),
+    reviews INTEGER CHECK (reviews >= 0),
+    price NUMERIC(8,2) CHECK (price >= 0),
+    category_id SMALLINT CHECK (category_id > 0),
+    "isBestSeller" BOOLEAN DEFAULT FALSE NOT NULL,
+    "boughtInLastMonth" INTEGER CHECK ("boughtInLastMonth" >= 0),
+    category_name VARCHAR(50) NOT NULL,
+    quantity SMALLINT CHECK (quantity >= 0 AND quantity <= 1000),
     embedding vector(1024),
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 SQL
 
@@ -226,11 +227,22 @@ CREATE INDEX IF NOT EXISTS idx_product_fts
 ON bedrock_integration.product_catalog
 USING GIN (to_tsvector('english', product_description));
 
-CREATE INDEX IF NOT EXISTS idx_product_category 
+CREATE INDEX IF NOT EXISTS idx_product_category_name 
 ON bedrock_integration.product_catalog(category_name);
 
 CREATE INDEX IF NOT EXISTS idx_product_price 
 ON bedrock_integration.product_catalog(price) WHERE price > 0;
+
+CREATE INDEX IF NOT EXISTS idx_product_stars 
+ON bedrock_integration.product_catalog(stars) WHERE stars >= 4.0;
+
+CREATE INDEX IF NOT EXISTS idx_product_category_price 
+ON bedrock_integration.product_catalog(category_name, price) 
+WHERE price > 0 AND quantity > 0;
+
+CREATE INDEX IF NOT EXISTS idx_product_bestseller 
+ON bedrock_integration.product_catalog("isBestSeller") 
+WHERE "isBestSeller" = TRUE;
 
 VACUUM ANALYZE bedrock_integration.product_catalog;
 SQL

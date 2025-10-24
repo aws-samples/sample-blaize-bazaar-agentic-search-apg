@@ -52,12 +52,12 @@ Parameters:
     
   EnvironmentBootstrapUrl:
     Type: String
-    Default: https://raw.githubusercontent.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg/main/deployment/bootstrap-environment.sh
+    Default: https://raw.githubusercontent.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg/main/scripts/bootstrap-environment.sh
     Description: URL to Stage 1 bootstrap script (Code Editor + VS Code)
     
   LabsBootstrapUrl:
     Type: String
-    Default: https://raw.githubusercontent.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg/main/deployment/bootstrap-labs.sh
+    Default: https://raw.githubusercontent.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg/main/scripts/bootstrap-labs.sh
     Description: URL to Stage 2 bootstrap script (Lab 1 + Lab 2)
     
   VPCId:
@@ -94,6 +94,16 @@ Parameters:
     Type: String
     Default: us.anthropic.claude-sonnet-4-20250514-v1:0
     Description: Bedrock chat model
+    
+  AssetsBucketName:
+    Type: String
+    Default: ''
+    Description: Workshop Studio assets bucket name
+    
+  AssetsBucketPrefix:
+    Type: String
+    Default: ''
+    Description: Workshop Studio assets bucket prefix
     
   PythonVersion:
     Type: String
@@ -375,6 +385,10 @@ Resources:
             type: String
           BedrockChatModel:
             type: String
+          AssetsBucketName:
+            type: String
+          AssetsBucketPrefix:
+            type: String
         mainSteps:
           - name: InstallCloudWatchAgent
             action: aws:configurePackage
@@ -407,6 +421,8 @@ Resources:
                   export BEDROCK_EMBEDDING_MODEL="{{ BedrockEmbeddingModel }}"
                   export BEDROCK_CHAT_MODEL="{{ BedrockChatModel }}"
                   export STAGE2_SCRIPT_URL="{{ LabsBootstrapUrl }}"
+                  export ASSETS_BUCKET_NAME="{{ AssetsBucketName }}"
+                  export ASSETS_BUCKET_PREFIX="{{ AssetsBucketPrefix }}"
                   
                   # Download and run Stage 1: Environment Bootstrap
                   echo "Downloading Stage 1: Environment Bootstrap..."
@@ -602,6 +618,8 @@ Resources:
       DBName: !Ref DBName
       BedrockEmbeddingModel: !Ref BedrockEmbeddingModel
       BedrockChatModel: !Ref BedrockChatModel
+      AssetsBucketName: !Ref AssetsBucketName
+      AssetsBucketPrefix: !Ref AssetsBucketPrefix
 
   # ==========================================
   # CLOUDFRONT CACHE POLICY

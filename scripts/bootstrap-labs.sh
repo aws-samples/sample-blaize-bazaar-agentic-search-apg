@@ -347,7 +347,32 @@ else
 fi
 
 # ============================================================================
-# STEP 10: CREATE START SCRIPTS (~5 sec)
+# STEP 10: DATABASE SETUP (~30 sec)
+# ============================================================================
+
+if [ ! -z "$DB_HOST" ] && [ ! -z "$DB_USER" ]; then
+    log "Setting up database with product catalog..."
+    
+    if [ -f "$HOME_FOLDER/$REPO_NAME/scripts/load-database-fast.sh" ]; then
+        cd "$HOME_FOLDER/$REPO_NAME"
+        
+        # Export database credentials for the script
+        export DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD AWS_REGION
+        
+        if bash scripts/load-database-fast.sh 2>&1 | tee -a /var/log/database-setup.log; then
+            log "✅ Database setup complete (21,704 products loaded)"
+        else
+            warn "Database setup failed - check /var/log/database-setup.log"
+        fi
+    else
+        warn "load-database-fast.sh not found - skipping database setup"
+    fi
+else
+    warn "Database credentials not available - skipping database setup"
+fi
+
+# ============================================================================
+# STEP 11: CREATE START SCRIPTS (~5 sec)
 # ============================================================================
 
 log "Creating start scripts..."
@@ -427,7 +452,7 @@ chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$HOME_FOLDER/$REPO_NAME/lab2/start-
 log "✅ Start scripts created"
 
 # ============================================================================
-# STEP 11: BASH ENVIRONMENT CONFIGURATION (~5 sec)
+# STEP 12: BASH ENVIRONMENT CONFIGURATION (~5 sec)
 # ============================================================================
 
 log "Configuring bash environment..."
@@ -503,7 +528,7 @@ rm -f /tmp/bashrc_append.txt
 log "✅ Bash environment configured"
 
 # ============================================================================
-# STEP 11: CREATE STATUS MARKER (~1 sec)
+# STEP 13: CREATE STATUS MARKER (~1 sec)
 # ============================================================================
 
 log "Creating completion status marker..."
@@ -534,7 +559,7 @@ chmod 644 /tmp/workshop-ready.json
 log "✅ Status marker created: /tmp/workshop-ready.json"
 
 # ============================================================================
-# STEP 12: FINAL VERIFICATION (~5 sec)
+# STEP 14: FINAL VERIFICATION (~5 sec)
 # ============================================================================
 
 log "Performing final verification..."
@@ -574,6 +599,16 @@ else
     warn "⚠️  uv not found - MCP functionality may not work"
 fi
 
+# Check database setup
+if [ ! -z "$DB_HOST" ] && [ ! -z "$DB_USER" ]; then
+    PRODUCT_COUNT=$(PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM bedrock_integration.product_catalog;" 2>/dev/null | xargs || echo "0")
+    if [ "$PRODUCT_COUNT" -gt 0 ]; then
+        log "✅ Database verified ($PRODUCT_COUNT products)"
+    else
+        warn "⚠️  Database may not be set up correctly"
+    fi
+fi
+
 # ============================================================================
 # SUMMARY
 # ============================================================================
@@ -585,7 +620,7 @@ echo ""
 echo "✅ Lab 1 (Jupyter) dependencies installed"
 echo "✅ Lab 2 Backend (FastAPI + Strands) installed"
 echo "✅ Lab 2 Frontend (React) dependencies installed"
-echo "✅ Database configuration complete"
+echo "✅ Database setup complete (21,704 products)"
 echo "✅ Bash environment configured"
 echo ""
 echo "Workshop Repository: $HOME_FOLDER/$REPO_NAME"

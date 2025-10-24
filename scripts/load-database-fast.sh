@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+log() { echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $1"; }
+error() { echo -e "${RED}[$(date +'%H:%M:%S')] ERROR:${NC} $1"; exit 1; }
+
+log "==================== DAT406 Fast Database Load ===================="
+
+# Find project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Find or download CSV file
+CSV_FILE=""
+for path in "$PROJECT_ROOT/data/amazon-products-sample-with-embeddings.csv" \
+            "/workshop/sample-dat406-build-agentic-ai-powered-search-apg/data/amazon-products-sample-with-embeddings.csv"; do
+    if [ -f "$path" ]; then
+        CSV_FILE="$path"
+        break
+    fi
+done
+
+# Download from S3 if not found locally
+if [ -z "$CSV_FILE" ]; then
+    log "CSV not found locally, downloading from S3..."
+    mkdir -p "$PROJECT_ROOT/data"
+    CSV_FILE="$PROJECT_ROOT/data/amazon-products-sample-with-embeddings.csv"
+    
+    # Use Workshop Studio assets bucket (variables set by CloudFormation)
+    if [ -n "${ASSETS_BUCKET_NAME:-}" ] && [ -n "${ASSETS_BUCKET_PREFIX:-}" ]; then
+        S3_URL="s3://${ASSETS_BUCKET_NAME}/${ASSETS_BUCKET_PREFIX}amazon-products-sample-with-embeddings.csv"
+    else
+        # Fallback for local development
+        S3_URL="s3://ws-assets-prod-iad-r-pdx-f3b3f9f1a7d6a3d0/YOUR-EVENT-ID/amazon-products-sample-with-embeddings.csv"
+    fi
+    
+    if command -v aws &> /dev/null; then
+        log "Downloading from: $S3_URL"
+        aws s3 cp "$S3_URL" "$CSV_FILE" || error "Failed to download CSV from S3"
+    else
+        error "AWS CLI not found and CSV not present locally"
+    fi
+fi
+
+log "Using CSV: $CSV_FILE"
+
+# Load environment
+for env_path in "$PROJECT_ROOT/.env" "/workshop/sample-dat406-build-agentic-ai-powered-search-apg/.env"; do
+    if [ -f "$env_path" ]; then
+        source "$env_path"
+        break
+    fi
+done
+
+# Verify variables
+for var in DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD; do
+    if [ -z "${!var:-}" ]; then error "Missing $var"; fi
+done
+
+log "Loading data into $DB_HOST:$DB_PORT/$DB_NAME..."
+
+# Execute SQL with embedded CSV path
+PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" << SQL
+\set ON_ERROR_STOP on
+
+-- Create extension and schema
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE SCHEMA IF NOT EXISTS bedrock_integration;
+DROP TABLE IF EXISTS bedrock_integration.product_catalog CASCADE;
+
+-- Create optimized table
+CREATE TABLE bedrock_integration.product_catalog (
+    "productId" CHAR(10) PRIMARY KEY,
+    product_description VARCHAR(500) NOT NULL,
+    "imgUrl" VARCHAR(70),
+    "productURL" VARCHAR(40),
+    stars NUMERIC(2,1) CHECK (stars >= 1.0 AND stars <= 5.0),
+    reviews INTEGER CHECK (reviews >= 0),
+    price NUMERIC(8,2) CHECK (price >= 0),
+    category_id SMALLINT CHECK (category_id > 0),
+    "isBestSeller" BOOLEAN DEFAULT FALSE NOT NULL,
+    "boughtInLastMonth" INTEGER CHECK ("boughtInLastMonth" >= 0),
+    category_name VARCHAR(50) NOT NULL,
+    quantity SMALLINT CHECK (quantity >= 0 AND quantity <= 1000),
+    embedding vector(1024),
+    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+\echo 'Loading data from CSV...'
+-- Create temporary table matching CSV column names (lowercase)
+CREATE TEMP TABLE temp_products (
+    "productId" VARCHAR(10),
+    product_description TEXT,
+    imgurl TEXT,
+    producturl TEXT,
+    stars NUMERIC,
+    reviews INTEGER,
+    price NUMERIC,
+    category_id INTEGER,
+    isbestseller BOOLEAN,
+    boughtinlastmonth INTEGER,
+    category_name VARCHAR(255),
+    quantity INTEGER,
+    embedding vector(1024)
+);
+
+-- Load CSV into temp table
+\copy temp_products FROM '$CSV_FILE' WITH (FORMAT csv, HEADER true);
+
+-- Copy from temp to final table with column name mapping
+INSERT INTO bedrock_integration.product_catalog 
+    ("productId", product_description, "imgUrl", "productURL", stars, reviews, 
+     price, category_id, "isBestSeller", "boughtInLastMonth", category_name, quantity, embedding)
+SELECT 
+    "productId", product_description, imgurl, producturl, stars, reviews,
+    price, category_id, isbestseller, boughtinlastmonth, category_name, quantity, embedding
+FROM temp_products;
+
+DROP TABLE temp_products;
+
+\echo 'Creating indexes...'
+
+-- Vector similarity index (HNSW)
+CREATE INDEX idx_product_embedding_hnsw 
+ON bedrock_integration.product_catalog 
+USING hnsw (embedding vector_cosine_ops)
+WITH (m = 16, ef_construction = 64);
+
+-- Full-text search index
+CREATE INDEX idx_product_fts 
+ON bedrock_integration.product_catalog
+USING GIN (to_tsvector('english', product_description));
+
+-- Category index
+CREATE INDEX idx_product_category_name 
+ON bedrock_integration.product_catalog(category_name);
+
+-- Price index (partial - only valid prices)
+CREATE INDEX idx_product_price 
+ON bedrock_integration.product_catalog(price) WHERE price > 0;
+
+-- Stars index (partial - highly rated)
+CREATE INDEX idx_product_stars 
+ON bedrock_integration.product_catalog(stars) WHERE stars >= 4.0;
+
+-- Composite index for common queries
+CREATE INDEX idx_product_category_price 
+ON bedrock_integration.product_catalog(category_name, price) 
+WHERE price > 0 AND quantity > 0;
+
+-- Bestseller index (partial)
+CREATE INDEX idx_product_bestseller 
+ON bedrock_integration.product_catalog("isBestSeller") 
+WHERE "isBestSeller" = TRUE;
+
+-- Analyze for query planner
+VACUUM ANALYZE bedrock_integration.product_catalog;
+
+\echo 'Verifying data...'
+SELECT COUNT(*) as product_count FROM bedrock_integration.product_catalog;
+SQL
+
+if [ $? -eq 0 ]; then
+    log "✅ Database loaded successfully"
+    log "==================== Load Complete ===================="
+else
+    error "Database load failed"
+fi

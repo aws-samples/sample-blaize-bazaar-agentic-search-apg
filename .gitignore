@@ -56,3 +56,6 @@ lab2/config/mcp-server-config.json
 # Participant changes (notebooks will be modified during workshop)
 lab1/*.ipynb
 lab1/**/*.ipynb
+
+# Large data files (hosted on S3)
+data/amazon-products-sample-with-embeddings.csv
