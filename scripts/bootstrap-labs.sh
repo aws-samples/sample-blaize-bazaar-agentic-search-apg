@@ -222,8 +222,11 @@ LAB1_REQUIREMENTS="$HOME_FOLDER/$REPO_NAME/lab1/requirements.txt"
 
 if [ -f "$LAB1_REQUIREMENTS" ]; then
     log "Installing from $LAB1_REQUIREMENTS..."
-    sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user -q -r "$LAB1_REQUIREMENTS"
-    log "✅ Lab 1 dependencies installed from requirements.txt"
+    if sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user -r "$LAB1_REQUIREMENTS" 2>&1 | tee -a /var/log/lab1-pip-install.log; then
+        log "✅ Lab 1 dependencies installed from requirements.txt"
+    else
+        warn "Lab 1 pip install had issues - check /var/log/lab1-pip-install.log"
+    fi
 else
     warn "Lab 1 requirements.txt not found, installing core packages..."
     sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user -q \
@@ -253,11 +256,21 @@ fi
 # ============================================================================
 
 log "Registering Jupyter kernel for Python 3.13..."
-sudo -u "$CODE_EDITOR_USER" python3.13 -m ipykernel install \
+if sudo -u "$CODE_EDITOR_USER" python3.13 -m ipykernel install \
     --user \
     --name python3 \
-    --display-name "Python 3.13"
-log "✅ Jupyter kernel registered"
+    --display-name "Python 3.13" 2>&1 | tee -a /var/log/jupyter-kernel-install.log; then
+    log "✅ Jupyter kernel registered"
+else
+    warn "Jupyter kernel registration failed - check /var/log/jupyter-kernel-install.log"
+    warn "Attempting to install ipykernel..."
+    sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user ipykernel
+    if sudo -u "$CODE_EDITOR_USER" python3.13 -m ipykernel install --user --name python3 --display-name "Python 3.13"; then
+        log "✅ Jupyter kernel registered after retry"
+    else
+        warn "Jupyter kernel registration failed - continuing anyway"
+    fi
+fi
 
 # ============================================================================
 # STEP 6: LAB 2 - BACKEND DEPENDENCIES (~4 min)
