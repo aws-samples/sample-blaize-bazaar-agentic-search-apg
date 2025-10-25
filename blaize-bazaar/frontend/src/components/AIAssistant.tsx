@@ -34,7 +34,7 @@ const AIAssistant = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: '✨ I\'m Aurora AI. I can help you find products, compare options, and get recommendations. What are you looking for?',
+      content: '✨ I\'m Blaize Bazaar AI Assist. I can help you find products, compare options, and get recommendations. What are you looking for?',
       timestamp: new Date(),
       suggestions: [
         '🎧 Wireless headphones under $100',
@@ -295,7 +295,7 @@ const AIAssistant = () => {
                 <img src={`${import.meta.env.BASE_URL}chat-icon.jpeg`} alt="Aurora AI" className="w-full h-full object-cover" />
               </div>
               <div>
-                <div className="font-medium text-lg text-text-primary">Aurora AI</div>
+                <div className="font-medium text-lg text-text-primary">Blaize Bazaar AI</div>
                 <div className="text-xs text-text-secondary flex items-center gap-1">
                   {activeAgent ? (
                     <div className="flex items-center gap-1 text-purple-400 animate-pulse">
