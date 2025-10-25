@@ -87,9 +87,7 @@ CREATE TABLE bedrock_integration.product_catalog (
     "boughtInLastMonth" INTEGER CHECK ("boughtInLastMonth" >= 0),
     category_name VARCHAR(50) NOT NULL,
     quantity SMALLINT CHECK (quantity >= 0 AND quantity <= 1000),
-    embedding vector(1024),
-    created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+    embedding vector(1024)
 );
 
 \echo 'Loading data from CSV...'
