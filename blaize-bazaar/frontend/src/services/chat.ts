@@ -5,6 +5,18 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
+/**
+ * Get or create session ID for conversation persistence
+ */
+function getSessionId(): string {
+  let sessionId = localStorage.getItem('blaize-session-id')
+  if (!sessionId) {
+    sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    localStorage.setItem('blaize-session-id', sessionId)
+  }
+  return sessionId
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
@@ -57,7 +69,8 @@ export async function sendChatMessageStreaming(
         conversation_history: conversationHistory.map(msg => ({
           role: msg.role,
           content: msg.content
-        }))
+        })),
+        session_id: getSessionId()
       }),
     })
 
@@ -131,7 +144,8 @@ export async function sendChatMessage(query: string, conversationHistory: ChatMe
         conversation_history: conversationHistory.map(msg => ({
           role: msg.role,
           content: msg.content
-        }))
+        })),
+        session_id: getSessionId()
       }),
     })
 

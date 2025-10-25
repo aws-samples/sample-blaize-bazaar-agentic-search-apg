@@ -31,19 +31,41 @@ interface Message {
 
 const AIAssistant = () => {
   const [isOpen, setIsOpen] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: '✨ I\'m Blaize Bazaar AI Assist. I can help you find products, compare options, and get recommendations. What are you looking for?',
-      timestamp: new Date(),
-      suggestions: [
-        '🎧 Wireless headphones under $100',
-        '📦 What products need restocking?',
-        '💰 Show me the best deals',
-        '⭐ Recommend top-rated products'
-      ]
+  /**
+   * Load conversation history from localStorage
+   */
+  const loadConversationHistory = (): Message[] => {
+    try {
+      const saved = localStorage.getItem('blaize-conversation-history')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        // Convert timestamp strings back to Date objects
+        return parsed.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }))
+      }
+    } catch (e) {
+      console.error('Failed to load conversation history:', e)
     }
-  ])
+    
+    // Default welcome message
+    return [
+      {
+        role: 'assistant',
+        content: '✨ I\'m Blaize Bazaar AI Assist. I can help you find products, compare options, and get recommendations. What are you looking for?',
+        timestamp: new Date(),
+        suggestions: [
+          '🎧 Wireless headphones under $100',
+          '📦 What products need restocking?',
+          '💰 Show me the best deals',
+          '⭐ Recommend top-rated products'
+        ]
+      }
+    ]
+  }
+
+  const [messages, setMessages] = useState<Message[]>(loadConversationHistory())
   const [inputValue, setInputValue] = useState('')
   const [cart, setCart] = useState<ChatProduct[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -59,6 +81,8 @@ const AIAssistant = () => {
 
   useEffect(() => {
     scrollToBottom()
+    // Save conversation to localStorage on every message change
+    localStorage.setItem('blaize-conversation-history', JSON.stringify(messages))
   }, [messages])
 
   // Check backend health on mount

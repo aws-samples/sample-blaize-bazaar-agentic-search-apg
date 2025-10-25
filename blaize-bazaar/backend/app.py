@@ -577,10 +577,11 @@ async def chat(request: ChatRequest):
         # Convert conversation history to dict format
         history = [{"role": msg.role, "content": msg.content} for msg in request.conversation_history]
         
-        # Get chat response
+        # Get chat response with session persistence
         response = await chat_service.chat(
             message=request.message,
-            conversation_history=history
+            conversation_history=history,
+            session_id=request.session_id
         )
         
         return ChatResponse(**response)
@@ -638,11 +639,12 @@ async def chat_stream(request: ChatRequest):
             yield f"data: {data}\n\n"
             await asyncio.sleep(0.3)
             
-            # Get actual response
+            # Get actual response with session persistence
             history = [{"role": msg.role, "content": msg.content} for msg in request.conversation_history]
             response = await chat_service.chat(
                 message=request.message,
-                conversation_history=history
+                conversation_history=history,
+                session_id=request.session_id
             )
             
             # Send completion event

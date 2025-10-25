@@ -44,6 +44,7 @@ class EnhancedChatService:
         self.model_id = settings.BEDROCK_CHAT_MODEL
         self.region = settings.AWS_REGION
         self.bedrock = boto3.client('bedrock-runtime', region_name=self.region)
+        self.session_storage_dir = "/tmp/blaize-sessions"
         
         # MCP Server configuration - REQUIRED
         self.db_cluster_arn = getattr(settings, 'DB_CLUSTER_ARN', None)
@@ -206,7 +207,8 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
     async def chat(
         self,
         message: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        session_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Enhanced chat that returns structured product data
@@ -242,7 +244,7 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
                     f"  DB_SECRET_ARN: {self.db_secret_arn or 'NOT SET'}"
                 )
             
-            return await self._strands_enhanced_chat(message, conversation_history)
+            return await self._strands_enhanced_chat(message, conversation_history, session_id)
             
         except Exception as e:
             logger.error(f"❌ Chat failed: {e}", exc_info=True)
@@ -251,7 +253,8 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
     async def _strands_enhanced_chat(
         self,
         message: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        session_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """Enhanced chat using Strands Orchestrator with specialized agents"""
         logger.info(f"🤖 Processing query with Strands Orchestrator")
@@ -270,6 +273,18 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
                 
                 # Import orchestrator
                 from agents.orchestrator import create_orchestrator
+                
+                # Create session manager if session_id provided
+                session_manager = None
+                if session_id:
+                    from strands.session.file_session_manager import FileSessionManager
+                    import os
+                    os.makedirs(self.session_storage_dir, exist_ok=True)
+                    session_manager = FileSessionManager(
+                        session_id=session_id,
+                        storage_dir=self.session_storage_dir
+                    )
+                    logger.info(f"📁 Session manager created: {session_id}")
                 
                 # Create orchestrator with all tools (specialized agents + database tools)
                 logger.info(f"🎯 Creating agent orchestrator with database tools...")
@@ -294,7 +309,8 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
                 orchestrator = self.Agent(
                     model=model,
                     tools=all_tools,
-                    system_prompt=ORCHESTRATOR_PROMPT
+                    system_prompt=ORCHESTRATOR_PROMPT,
+                    session_manager=session_manager  # Strands handles persistence
                 )
                 
                 # Build conversation context
