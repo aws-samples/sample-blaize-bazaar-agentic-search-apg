@@ -127,6 +127,29 @@ const AIAssistant = () => {
     setMessages(prev => [...prev, successMessage])
   }
 
+  const handleClearChat = () => {
+    if (window.confirm('Clear chat history? This will start a new conversation.')) {
+      // Clear localStorage
+      localStorage.removeItem('blaize-conversation-history')
+      localStorage.removeItem('blaize-session-id')
+      
+      // Reset to welcome message
+      setMessages([
+        {
+          role: 'assistant',
+          content: '✨ I\'m Blaize Bazaar AI Assist. I can help you find products, compare options, and get recommendations. What are you looking for?',
+          timestamp: new Date(),
+          suggestions: [
+            '🎧 Wireless headphones under $100',
+            '📦 What products need restocking?',
+            '💰 Show me the best deals',
+            '⭐ Recommend top-rated products'
+          ]
+        }
+      ])
+    }
+  }
+
   const handleSend = async (customMessage?: string) => {
     const messageText = customMessage || inputValue
     if (!messageText.trim() || isLoading) return
@@ -351,6 +374,13 @@ const AIAssistant = () => {
                   </span>
                 </div>
               )}
+              <button 
+                onClick={handleClearChat}
+                className="text-text-primary hover:text-accent-light transition-colors text-xl"
+                title="Clear chat history"
+              >
+                🧹
+              </button>
               <button 
                 onClick={() => setIsOpen(false)}
                 className="text-text-primary hover:text-accent-light transition-colors"
