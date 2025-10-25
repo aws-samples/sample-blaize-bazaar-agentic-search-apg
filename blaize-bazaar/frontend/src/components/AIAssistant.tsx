@@ -519,7 +519,7 @@ const AIAssistant = () => {
           style={{
             boxShadow: '0 8px 32px rgba(106, 27, 154, 0.5)'
           }}
-          title="Powered by AWS Strands SDK & MCP"
+          title="Powered by AWS Strands SDK & Custom Tools"
         >
           <img src={`${import.meta.env.BASE_URL}chat-icon.jpeg`} alt="Chat" className="w-full h-full object-cover" />
 

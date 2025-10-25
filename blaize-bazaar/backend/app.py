@@ -167,7 +167,7 @@ async def root():
         "message": "DAT406 Workshop API",
         "version": "1.0.0",
         "lab1": "Semantic Search with pgvector",
-        "lab2": "Multi-Agent System with MCP" if LAB2_AVAILABLE else "Not Available"
+        "lab2": "Multi-Agent System with Custom Tools" if LAB2_AVAILABLE else "Not Available"
     }
 
 
@@ -183,7 +183,7 @@ async def health_check(
         "status": "healthy",
         "database": "unknown",
         "bedrock": "unknown",
-        "mcp": "unknown" if LAB2_AVAILABLE else "not_available",
+        "custom_tools": "unknown" if LAB2_AVAILABLE else "not_available",
         "version": "1.0.0"
     }
     
@@ -205,9 +205,9 @@ async def health_check(
         health_status["bedrock"] = "inaccessible"
         health_status["status"] = "degraded"
     
-    # Check MCP if Lab 2 is available
+    # Check Custom Tools if Lab 2 is available
     if LAB2_AVAILABLE:
-        health_status["mcp"] = "available"
+        health_status["custom_tools"] = "available"
     
     return HealthResponse(**health_status)
 
@@ -478,8 +478,8 @@ async def general_exception_handler(request, exc):
     )
 
 
-@app.get("/api/mcp/tools")
-async def list_mcp_tools(
+@app.get("/api/tools")
+async def list_custom_tools(
     db: DatabaseService = Depends(get_db_service)
 ):
     """List all custom business logic tools available"""
@@ -492,7 +492,7 @@ async def list_mcp_tools(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/mcp/trending")
+@app.get("/api/tools/trending")
 async def get_trending(
     limit: int = Query(default=10, ge=1, le=50),
     db: DatabaseService = Depends(get_db_service)
@@ -507,7 +507,7 @@ async def get_trending(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/mcp/inventory-health")
+@app.get("/api/tools/inventory-health")
 async def get_inventory_health_endpoint(
     db: DatabaseService = Depends(get_db_service)
 ):
@@ -521,7 +521,7 @@ async def get_inventory_health_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/mcp/price-stats")
+@app.get("/api/tools/price-stats")
 async def get_price_stats(
     category: str = Query(default=None),
     db: DatabaseService = Depends(get_db_service)
@@ -536,7 +536,7 @@ async def get_price_stats(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/mcp/restock")
+@app.post("/api/tools/restock")
 async def restock_product_endpoint(
     request: dict,
     db: DatabaseService = Depends(get_db_service)
@@ -568,7 +568,7 @@ if __name__ == "__main__":
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     """
-    Chat endpoint with Aurora AI using Strands SDK and MCP
+    Chat endpoint with Aurora AI using Strands SDK and Custom Tools
     """
     if not chat_service:
         raise HTTPException(status_code=503, detail="Chat service not initialized")
@@ -634,7 +634,7 @@ async def chat_stream(request: ChatRequest):
             await asyncio.sleep(0.2)
             
             # Send tool call event
-            data = json.dumps({'type': 'tool_call', 'tool': 'run_query', 'status': 'executing'})
+            data = json.dumps({'type': 'tool_call', 'tool': 'semantic_product_search', 'status': 'executing'})
             yield f"data: {data}\n\n"
             await asyncio.sleep(0.3)
             
@@ -688,7 +688,7 @@ async def agent_query(
 ):
     """
     Query specialized agents (inventory, recommendation, pricing)
-    Uses custom MCP tools to provide data to agents
+    Uses custom business logic tools to provide data to agents
     
     Args:
         query: User query

@@ -343,7 +343,7 @@ CURRENT REQUEST: {message}"""
                 
                 if not parsed["products"]:
                     logger.warning(f"⚠️ No products extracted. Response may not contain JSON product data.")
-                    logger.warning(f"💡 Tip: Orchestrator should call run_query tool to get products from database.")
+                    logger.warning(f"💡 Tip: Orchestrator should call semantic_product_search tool to get products from database.")
                 
                 result = {
                     "response": parsed["text"],
@@ -516,24 +516,15 @@ CURRENT REQUEST: {message}"""
                         "status": "success"
                     })
                 
-                # MCP database tools
-                if tool_name == 'run_query':
+                # Custom business logic tools
+                if tool_name in ['semantic_product_search', 'get_product_by_category']:
                     tool_calls.append({
-                        "tool": "run_query",
+                        "tool": tool_name,
                         "params": tool_params or "Product search",
                         "timestamp": tool_start + 30,
                         "duration_ms": 150,
                         "status": "success"
                     })
-                elif tool_name == 'get_table_schema':
-                    tool_calls.append({
-                        "tool": "get_table_schema",
-                        "timestamp": tool_start + 20,
-                        "duration_ms": 80,
-                        "status": "success"
-                    })
-                
-                # Custom MCP tools
                 elif tool_name in ['get_trending_products', 'get_inventory_health', 'get_price_statistics', 'restock_product']:
                     tool_calls.append({
                         "tool": tool_name,

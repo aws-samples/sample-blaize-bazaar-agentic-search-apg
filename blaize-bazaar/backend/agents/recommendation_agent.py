@@ -2,14 +2,14 @@
 Product Recommendation Agent - Suggests products based on user preferences
 """
 from strands import Agent, tool
-from services.agent_tools import get_trending_products, run_query
+from services.agent_tools import get_trending_products, semantic_product_search, get_product_by_category
 
 
 @tool
 def product_recommendation_agent(query: str) -> str:
     """
     Provide personalized product recommendations based on user preferences.
-    Uses live database tools to search and recommend products.
+    Uses custom business logic tools with embedded AI-powered search.
     
     Args:
         query: User's product inquiry with preferences
@@ -24,21 +24,25 @@ def product_recommendation_agent(query: str) -> str:
 
 OUR CATALOG: 21,704 products including headphones, security cameras, vacuums, gaming gear, wearables, and tech accessories.
 
-You have access to these tools:
+You have access to CUSTOM BUSINESS LOGIC TOOLS (not generic SQL):
+- semantic_product_search(query, max_price, min_rating, category, limit) - AI-powered semantic search with filters
+- get_product_by_category(category, min_rating, max_price, limit) - Browse by category with filters
 - get_trending_products(limit) - Get popular products
-- run_query(sql) - Search product catalog with SQL
+
+Why Custom Tools?
+✅ Faster: Direct database access, no MCP overhead
+✅ Smarter: Embedded pgvector semantic search
+✅ Secure: Business logic encapsulated, SQL hidden
+✅ Type-safe: Validated parameters
 
 Workflow:
 1. Understand user's needs (budget, features, category)
-2. Use run_query() to search for matching products:
-   SELECT "productId", product_description as name, price, stars, reviews,
-          category_name as category, quantity, "imgUrl" as image_url
-   FROM bedrock_integration.product_catalog
-   WHERE product_description ILIKE '%search_term%'
-     AND price > 0 AND quantity > 0
-   ORDER BY stars DESC, reviews DESC
-   LIMIT 5
-3. Provide 3-5 recommendations with reasoning
+2. Use semantic_product_search() for natural language queries:
+   - Automatically generates embeddings
+   - Uses pgvector similarity search
+   - Applies filters (price, rating, category)
+3. Use get_product_by_category() for category browsing
+4. Provide 3-5 recommendations with reasoning
 
 Guidelines:
 - Prioritize highly-rated products (4+ stars)
@@ -50,7 +54,7 @@ Format:
 - Product name, price, rating
 - Why it's a good fit
 - Key features""",
-            tools=[get_trending_products, run_query]
+            tools=[semantic_product_search, get_product_by_category, get_trending_products]
         )
         
         response = agent(query)

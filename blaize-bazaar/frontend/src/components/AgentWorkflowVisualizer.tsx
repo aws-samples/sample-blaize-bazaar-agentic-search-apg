@@ -131,7 +131,7 @@ const AgentWorkflowVisualizer = ({ execution, isActive }: Props) => {
       {execution.tool_calls.length > 0 && (
         <div className="mt-2 pt-2 border-t border-purple-500/20">
           <div className="text-[10px] font-semibold text-text-secondary mb-1.5">
-            🔧 MCP Tool Calls
+            🔧 Custom Tool Calls
           </div>
           <div className="space-y-1">
             {execution.tool_calls.map((tool, idx) => (

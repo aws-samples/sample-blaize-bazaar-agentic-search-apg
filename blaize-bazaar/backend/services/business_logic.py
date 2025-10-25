@@ -235,59 +235,138 @@ class BusinessLogic:
             "message": f"✅ Added {quantity} units to {product['product_description']}"
         }
     
-    async def list_custom_tools(self) -> Dict[str, Any]:
+    async def semantic_product_search(
+        self,
+        query: str,
+        max_price: float = None,
+        min_rating: float = 4.0,
+        category: str = None,
+        limit: int = 5
+    ) -> Dict[str, Any]:
         """
-        List all available custom MCP tools with descriptions.
+        Search products using semantic embeddings and pgvector similarity.
         
-        Returns:
-            Dictionary with tool information
+        Args:
+            query: Natural language search query
+            max_price: Maximum price filter
+            min_rating: Minimum star rating
+            category: Category filter
+            limit: Number of results
         """
-        tools = [
-            {
-                "name": "get_trending_products",
-                "description": "Get trending products based on reviews and ratings",
-                "parameters": {
-                    "limit": "Number of products to return (default: 10)"
-                },
-                "returns": "List of trending products with scores"
-            },
-            {
-                "name": "get_inventory_health",
-                "description": "Get overall inventory health statistics and alerts",
-                "parameters": {},
-                "returns": "Health score, statistics, and critical items"
-            },
-            {
-                "name": "get_price_statistics",
-                "description": "Get price statistics by category or overall",
-                "parameters": {
-                    "category": "Optional category filter"
-                },
-                "returns": "Price statistics by category"
-            },
-            {
-                "name": "restock_product",
-                "description": "Add stock quantity to a product",
-                "parameters": {
-                    "product_id": "Product ID to restock",
-                    "quantity": "Quantity to add"
-                },
-                "returns": "Restock confirmation with old and new quantities"
-            },
-            {
-                "name": "list_custom_tools",
-                "description": "List all available custom MCP tools",
-                "parameters": {},
-                "returns": "Tool information and descriptions"
-            }
-        ]
+        from services.embeddings import EmbeddingService
+        
+        # Generate query embedding
+        embedding_service = EmbeddingService()
+        query_embedding = embedding_service.embed_query(query)
+        
+        # Build SQL with filters
+        conditions = ["quantity > 0"]
+        params = [query_embedding, limit]
+        
+        if max_price:
+            conditions.append("price <= %s")
+            params.insert(-1, max_price)
+        
+        if min_rating:
+            conditions.append("stars >= %s")
+            params.insert(-1, min_rating)
+        
+        if category:
+            conditions.append("category_name ILIKE %s")
+            params.insert(-1, f"%{category}%")
+        
+        where_clause = " AND ".join(conditions)
+        
+        search_query = f"""
+            SELECT 
+                "productId",
+                product_description,
+                price,
+                stars,
+                reviews,
+                category_name,
+                quantity,
+                "imgUrl",
+                1 - (embedding <=> %s::vector) as similarity
+            FROM bedrock_integration.product_catalog
+            WHERE {where_clause}
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s
+        """
+        
+        results = await self.db.fetch_all(search_query, *params)
+        products = [convert_decimals(dict(row)) for row in results]
         
         return {
             "status": "success",
-            "tool_count": len(tools),
-            "tools": tools,
-            "base_mcp_tools": ["run_query", "get_schema"],
-            "note": "These custom tools extend the base Aurora PostgreSQL MCP"
+            "query": query,
+            "count": len(products),
+            "products": products,
+            "filters": {
+                "max_price": max_price,
+                "min_rating": min_rating,
+                "category": category
+            }
+        }
+    
+    async def get_products_by_category(
+        self,
+        category: str,
+        min_rating: float = 4.0,
+        max_price: float = None,
+        limit: int = 10
+    ) -> Dict[str, Any]:
+        """
+        Get products by category with filters.
+        
+        Args:
+            category: Product category
+            min_rating: Minimum star rating
+            max_price: Maximum price
+            limit: Number of results
+        """
+        conditions = ["category_name ILIKE %s", "quantity > 0"]
+        params = [f"%{category}%"]
+        
+        if min_rating:
+            conditions.append("stars >= %s")
+            params.append(min_rating)
+        
+        if max_price:
+            conditions.append("price <= %s")
+            params.append(max_price)
+        
+        params.append(limit)
+        where_clause = " AND ".join(conditions)
+        
+        query = f"""
+            SELECT 
+                "productId",
+                product_description,
+                price,
+                stars,
+                reviews,
+                category_name,
+                quantity,
+                "imgUrl"
+            FROM bedrock_integration.product_catalog
+            WHERE {where_clause}
+            ORDER BY stars DESC, reviews DESC
+            LIMIT %s
+        """
+        
+        results = await self.db.fetch_all(query, *params)
+        products = [convert_decimals(dict(row)) for row in results]
+        
+        return {
+            "status": "success",
+            "category": category,
+            "count": len(products),
+            "products": products,
+            "filters": {
+                "min_rating": min_rating,
+                "max_price": max_price
+            }
         }
     
     def _generate_inventory_alerts(self, stats: Dict) -> List[str]:

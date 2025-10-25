@@ -80,15 +80,59 @@ def restock_product(product_id: str, quantity: int) -> str:
         return json.dumps({"error": str(e)})
 
 @tool
-def run_query(sql: str) -> str:
-    """Execute arbitrary SQL query on the database"""
+def semantic_product_search(
+    query: str,
+    max_price: float = None,
+    min_rating: float = 4.0,
+    category: str = None,
+    limit: int = 5
+) -> str:
+    """Search products using AI-powered semantic understanding with filters
+    
+    Args:
+        query: Natural language search query
+        max_price: Maximum price filter (optional)
+        min_rating: Minimum star rating (default: 4.0)
+        category: Category filter (optional)
+        limit: Number of results (default: 5)
+    """
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
     
     try:
-        result = _run_async(_db_service.fetch_all(sql))
-        # Convert to list of dicts
-        data = [dict(row) for row in result]
-        return json.dumps(data, indent=2, default=str)
+        from services.business_logic import BusinessLogic
+        logic = BusinessLogic(_db_service)
+        result = _run_async(logic.semantic_product_search(
+            query, max_price, min_rating, category, limit
+        ))
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+@tool
+def get_product_by_category(
+    category: str,
+    min_rating: float = 4.0,
+    max_price: float = None,
+    limit: int = 10
+) -> str:
+    """Get products by category with filters
+    
+    Args:
+        category: Product category name
+        min_rating: Minimum star rating (default: 4.0)
+        max_price: Maximum price filter (optional)
+        limit: Number of results (default: 10)
+    """
+    if not _db_service:
+        return json.dumps({"error": "Database service not initialized"})
+    
+    try:
+        from services.business_logic import BusinessLogic
+        logic = BusinessLogic(_db_service)
+        result = _run_async(logic.get_products_by_category(
+            category, min_rating, max_price, limit
+        ))
+        return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})

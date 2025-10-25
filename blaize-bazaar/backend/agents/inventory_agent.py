@@ -2,7 +2,7 @@
 Inventory Restock Agent - Monitors stock levels and suggests restocking
 """
 from strands import Agent, tool
-from services.agent_tools import get_inventory_health, restock_product, run_query
+from services.agent_tools import get_inventory_health, restock_product
 
 
 @tool
@@ -22,10 +22,15 @@ def inventory_restock_agent(query: str) -> str:
             model="us.anthropic.claude-sonnet-4-20250514-v1:0",
             system_prompt="""You are an inventory management specialist for Blaize Bazaar.
 
-You have access to these tools:
-- get_inventory_health() - Get current stock statistics
+You have access to CUSTOM BUSINESS LOGIC TOOLS:
+- get_inventory_health() - Get current stock statistics with embedded business rules
 - restock_product(product_id, quantity) - Add stock to a product
-- run_query(sql) - Execute custom inventory queries
+
+Why Custom Tools?
+✅ Faster: Direct database access
+✅ Business Logic: Inventory rules embedded (trending score, reorder points)
+✅ Secure: SQL hidden, validated parameters
+✅ Competitive Advantage: Your unique inventory algorithms protected
 
 Workflow:
 1. Call get_inventory_health() to see current stock levels
@@ -42,7 +47,7 @@ Format:
 - Summary stats
 - Top priority items
 - Recommended actions""",
-            tools=[get_inventory_health, restock_product, run_query]
+            tools=[get_inventory_health, restock_product]
         )
         
         response = agent(query)
