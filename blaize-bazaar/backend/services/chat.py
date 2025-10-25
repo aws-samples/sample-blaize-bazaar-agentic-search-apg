@@ -332,7 +332,7 @@ CURRENT REQUEST: {message}"""
                 agent_execution = self._extract_agent_chain(response, start_time)
                 
                 # Extract structured data from response
-                parsed = self._parse_agent_response(response_text)
+                parsed = self._parse_agent_response(response_text, full_message)
                 
                 result = {
                     "response": parsed["text"],
@@ -358,7 +358,7 @@ CURRENT REQUEST: {message}"""
         Parse agent response to extract:
         - Text response
         - Product data (from JSON blocks or database query results)
-        - Smart suggestions based on context
+        - Contextual suggestions based on query type
         """
         # Initialize result
         result = {
@@ -390,13 +390,9 @@ CURRENT REQUEST: {message}"""
             suggestion_lines = re.findall(r'^-\s*"([^"]+)"', suggestions_text, re.MULTILINE)
             result["suggestions"] = suggestion_lines[:3]  # Limit to 3 suggestions
         
-        # If no suggestions found, use default ones
+        # If no suggestions found, generate contextual ones
         if not result["suggestions"]:
-            result["suggestions"] = [
-                "Show similar items",
-                "Different price range", 
-                "Other brands"
-            ]
+            result["suggestions"] = self._generate_contextual_suggestions(query)
         
         # Clean text (remove JSON blocks and suggestions section)
         clean_text = re.sub(json_pattern, '', response_text, flags=re.DOTALL)
@@ -573,28 +569,64 @@ CURRENT REQUEST: {message}"""
             "success_rate": 100 if agent_steps else 0
         }
     
-    def _generate_smart_suggestions(self, query: str, products: List[Dict]) -> List[str]:
-        """Generate smart contextual suggestions based on query and results"""
-        suggestions = []
+    def _generate_contextual_suggestions(self, query: str) -> List[str]:
+        """Generate contextual suggestions based on query type"""
         query_lower = query.lower()
         
-        # After showing products, suggest agent capabilities
-        if products:
-            suggestions.append("💡 Want to see trending items?")
+        # Deals/Pricing queries
+        if any(word in query_lower for word in ['deal', 'cheap', 'budget', 'price', 'cost', 'affordable']):
+            return [
+                "Show pricing trends",
+                "Top-rated budget items",
+                "Products under $50"
+            ]
         
-        # Price-related queries
-        if any(word in query_lower for word in ['price', 'cost', 'deal', 'cheap', 'expensive']):
-            suggestions.append("💡 Need pricing insights?")
-        
-        # Inventory-related queries
-        if any(word in query_lower for word in ['stock', 'inventory', 'available', 'restock']):
-            suggestions.append("💡 Check inventory health?")
+        # Inventory queries
+        if any(word in query_lower for word in ['stock', 'inventory', 'restock', 'available']):
+            return [
+                "Check inventory health",
+                "Low stock alerts",
+                "Restock recommendations"
+            ]
         
         # Recommendation queries
         if any(word in query_lower for word in ['recommend', 'suggest', 'best', 'top']):
-            suggestions.append("💡 Get personalized recommendations?")
+            return [
+                "Show trending products",
+                "Top-rated in each category",
+                "Best value products"
+            ]
         
-        return suggestions
+        # Headphones/Audio
+        if any(word in query_lower for word in ['headphone', 'earphone', 'audio', 'speaker']):
+            return [
+                "Show noise-cancelling options",
+                "Budget headphones under $50",
+                "Gaming headsets"
+            ]
+        
+        # Laptops
+        if 'laptop' in query_lower:
+            return [
+                "Gaming laptops",
+                "Business laptops",
+                "Budget laptops under $500"
+            ]
+        
+        # Cameras
+        if 'camera' in query_lower:
+            return [
+                "DSLR cameras",
+                "Mirrorless cameras",
+                "Action cameras"
+            ]
+        
+        # Default suggestions
+        return [
+            "Show similar items",
+            "Different price range",
+            "Other brands"
+        ]
     
     def _error_response(self, error: str) -> Dict[str, Any]:
         """Error response with clear diagnostic information"""
