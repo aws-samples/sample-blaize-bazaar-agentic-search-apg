@@ -50,7 +50,6 @@ const AIAssistant = () => {
   const [backendOnline, setBackendOnline] = useState(true)
   const [showCart, setShowCart] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
-  const [extendedThinking, setExtendedThinking] = useState(false)
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -439,27 +438,6 @@ const AIAssistant = () => {
 
           {/* Input */}
           <div className="px-6 py-4 border-t border-accent-light/20">
-            {/* Extended Thinking Toggle */}
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-text-secondary">
-                🧠 Extended Thinking {extendedThinking && <span className="text-accent-light">(+1-2s)</span>}
-              </span>
-              <button
-                onClick={() => setExtendedThinking(!extendedThinking)}
-                className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent-light focus:ring-offset-2"
-                style={{
-                  background: extendedThinking 
-                    ? 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
-                    : 'rgba(255, 255, 255, 0.1)'
-                }}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    extendedThinking ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
             <div className="flex gap-3">
               <input
                 type="text"

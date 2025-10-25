@@ -273,21 +273,14 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
                 
                 # Create orchestrator with all tools (specialized agents + database tools)
                 logger.info(f"🎯 Creating agent orchestrator with database tools...")
-                orchestrator = create_orchestrator(enable_interleaved_thinking=True)
+                orchestrator = create_orchestrator(enable_interleaved_thinking=False)
                 
                 # Create new agent with combined tools
                 from strands.models import BedrockModel
                 model = BedrockModel(
                     model_id="us.anthropic.claude-sonnet-4-20250514-v1:0",
                     max_tokens=4096,
-                    temperature=1,
-                    additional_request_fields={
-                        "anthropic_beta": ["interleaved-thinking-2025-05-14"],
-                        "reasoning_config": {
-                            "type": "enabled",
-                            "budget_tokens": 3000
-                        }
-                    }
+                    temperature=1
                 )
                 
                 # Get orchestrator tools and add database tools
