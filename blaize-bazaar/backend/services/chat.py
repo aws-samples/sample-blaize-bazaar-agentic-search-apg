@@ -348,7 +348,7 @@ CURRENT REQUEST: {message}"""
                 agent_execution = self._extract_agent_chain(response, start_time)
                 
                 # Extract structured data from response
-                parsed = self._parse_agent_response(response_text, full_message)
+                parsed = self._parse_agent_response(response_text, message, conversation_history)
                 
                 result = {
                     "response": parsed["text"],
@@ -369,7 +369,7 @@ CURRENT REQUEST: {message}"""
             logger.error(f"❌ Orchestrator execution failed: {e}", exc_info=True)
             raise RuntimeError(f"Agent execution failed: {str(e)}")
     
-    def _parse_agent_response(self, response_text: str, query: str = "") -> Dict[str, Any]:
+    def _parse_agent_response(self, response_text: str, query: str = "", conversation_history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
         """
         Parse agent response to extract:
         - Text response
@@ -408,7 +408,7 @@ CURRENT REQUEST: {message}"""
         
         # If no suggestions found, generate contextual ones
         if not result["suggestions"]:
-            result["suggestions"] = self._generate_contextual_suggestions(query)
+            result["suggestions"] = self._generate_contextual_suggestions(query, conversation_history)
         
         # Clean text (remove JSON blocks and suggestions section)
         clean_text = re.sub(json_pattern, '', response_text, flags=re.DOTALL)
@@ -585,9 +585,15 @@ CURRENT REQUEST: {message}"""
             "success_rate": 100 if agent_steps else 0
         }
     
-    def _generate_contextual_suggestions(self, query: str) -> List[str]:
-        """Generate contextual suggestions based on query type"""
-        query_lower = query.lower()
+    def _generate_contextual_suggestions(self, query: str, conversation_history: Optional[List[Dict[str, str]]] = None) -> List[str]:
+        """Generate contextual suggestions based on query type and conversation history"""
+        # Build context from last 3 user messages + current query
+        context_text = query.lower()
+        if conversation_history:
+            recent_user_messages = [msg['content'].lower() for msg in conversation_history[-6:] if msg.get('role') == 'user']
+            context_text = ' '.join(recent_user_messages[-3:] + [query.lower()])
+        
+        query_lower = context_text
         
         # Deals/Pricing queries
         if any(word in query_lower for word in ['deal', 'cheap', 'budget', 'price', 'cost', 'affordable']):
