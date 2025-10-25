@@ -334,10 +334,6 @@ CURRENT REQUEST: {message}"""
                 # Extract structured data from response
                 parsed = self._parse_agent_response(response_text)
                 
-                if not parsed["products"]:
-                    logger.warning(f"⚠️ No products extracted. Response may not contain JSON product data.")
-                    logger.warning(f"💡 Tip: Orchestrator should call semantic_product_search tool to get products from database.")
-                
                 result = {
                     "response": parsed["text"],
                     "products": parsed["products"],
@@ -349,8 +345,8 @@ CURRENT REQUEST: {message}"""
                     "model": self.model_id
                 }
                 
-                logger.info(f"📤 Returning {len(result['products'])} products with detailed agent execution data")
-                logger.info(f"⏱️ Total execution time: {agent_execution['total_duration_ms']}ms")
+                logger.info(f"📦 Agent execution: {len(agent_execution['agent_steps'])} steps, {len(agent_execution['tool_calls'])} tool calls")
+                logger.info(f"✅ Response generated ({agent_execution['total_duration_ms']}ms)")
                 return result
                 
         except Exception as e:

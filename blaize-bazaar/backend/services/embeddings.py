@@ -34,7 +34,7 @@ class EmbeddingService:
         self.model_id = settings.BEDROCK_EMBEDDING_MODEL
         self.embedding_dimension = 1024
         
-        logger.info(f"Initialized embeddings service: {self.model_id}")
+        logger.debug(f"Initialized embeddings service: {self.model_id}")
     
     def generate_embedding(
         self,

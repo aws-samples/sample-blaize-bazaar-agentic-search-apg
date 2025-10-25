@@ -259,25 +259,28 @@ class BusinessLogic:
         embedding_service = EmbeddingService()
         query_embedding = embedding_service.embed_query(query)
         
-        # Build SQL with filters
+        # Build SQL with filters - embedding first, then filters, then limit
         conditions = ["quantity > 0"]
-        params = [query_embedding, limit]
+        params = [str(query_embedding)]  # Embedding as first param
         
         if max_price:
             conditions.append("price <= %s")
-            params.insert(-1, max_price)
+            params.append(max_price)
         
         if min_rating:
             conditions.append("stars >= %s")
-            params.insert(-1, min_rating)
+            params.append(min_rating)
         
         if category:
             conditions.append("category_name ILIKE %s")
-            params.insert(-1, f"%{category}%")
+            params.append(f"%{category}%")
         
+        params.append(limit)  # Limit as last param
         where_clause = " AND ".join(conditions)
         
+        # Use CTE to define embedding once and reuse it
         search_query = f"""
+            WITH query_embedding AS (SELECT %s::vector as emb)
             SELECT 
                 "productId",
                 product_description,
@@ -287,10 +290,10 @@ class BusinessLogic:
                 category_name,
                 quantity,
                 "imgUrl",
-                1 - (embedding <=> %s::vector) as similarity
+                1 - (embedding <=> (SELECT emb FROM query_embedding)) as similarity
             FROM bedrock_integration.product_catalog
             WHERE {where_clause}
-            ORDER BY embedding <=> %s::vector
+            ORDER BY embedding <=> (SELECT emb FROM query_embedding)
             LIMIT %s
         """
         
