@@ -197,8 +197,7 @@ class DatabaseService:
         """
         async with self.get_connection() as conn:
             async with conn.cursor() as cur:
-                # Pass params as tuple to execute
-                await cur.execute(query, params if params else None)
+                await cur.execute(query, params)
                 return await cur.fetchall()
     
     async def fetch_one(self, query: str, *params: Any) -> Optional[dict]:

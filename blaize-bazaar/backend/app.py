@@ -679,6 +679,31 @@ async def chat_stream(request: ChatRequest):
     )
 
 
+@app.get("/api/autocomplete")
+async def autocomplete(
+    q: str = Query(..., min_length=2),
+    limit: int = Query(default=5, ge=1, le=10),
+    db: DatabaseService = Depends(get_db_service)
+):
+    """Product search autocomplete"""
+    try:
+        query = """
+            SELECT product_description, category_name
+            FROM bedrock_integration.product_catalog
+            WHERE product_description ILIKE %s
+            ORDER BY reviews DESC
+            LIMIT %s
+        """
+        results = await db.fetch_all(query, f"%{q}%", limit)
+        return {"suggestions": [{
+            "text": r["product_description"][:60],
+            "category": r["category_name"]
+        } for r in results]}
+    except Exception as e:
+        logger.error(f"❌ Autocomplete failed: {e}")
+        return {"suggestions": []}
+
+
 @app.post("/api/agents/query")
 async def agent_query(
     query: str,

@@ -13,7 +13,8 @@ interface HeaderProps {
 
 const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) => {
   const [searchQuery, setSearchQuery] = useState('')
-
+  const [suggestions, setSuggestions] = useState<Array<{text: string, category: string}>>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [showCollectionsMenu, setShowCollectionsMenu] = useState(false)
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const { theme } = useTheme()
@@ -62,9 +63,38 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
     }
   }
 
+  const fetchSuggestions = async (query: string) => {
+    if (query.length < 2) {
+      setSuggestions([])
+      setShowSuggestions(false)
+      return
+    }
+    try {
+      const response = await fetch(`/api/autocomplete?q=${encodeURIComponent(query)}&limit=5`)
+      const data = await response.json()
+      setSuggestions(data.suggestions || [])
+      setShowSuggestions(data.suggestions && data.suggestions.length > 0)
+    } catch (error) {
+      setSuggestions([])
+      setShowSuggestions(false)
+    }
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value)
+    fetchSuggestions(value)
+  }
+
+  const handleSuggestionSelect = (text: string) => {
+    setSearchQuery(text)
+    setShowSuggestions(false)
+    if (onSearch) onSearch(text)
+  }
+
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && searchQuery.trim() && onSearch) {
       onSearch(searchQuery)
+      setShowSuggestions(false)
     }
   }
 
@@ -161,11 +191,27 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               onKeyDown={handleSearchKeyDown}
+              onFocus={() => searchQuery.length >= 2 && setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               placeholder={`Try: "${placeholders[placeholderIndex]}"`}
               className="w-full px-3 py-2 text-sm input-field rounded-lg"
             />
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 glass-strong rounded-xl overflow-hidden shadow-xl border border-accent-light/20 max-h-80 overflow-y-auto z-50">
+                {suggestions.map((suggestion, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => handleSuggestionSelect(suggestion.text)}
+                    className="px-4 py-3 cursor-pointer hover:bg-accent-light/10 transition-colors border-b border-accent-light/10 last:border-b-0"
+                  >
+                    <div className="text-sm text-text-primary font-medium">{suggestion.text}</div>
+                    <div className="text-xs text-text-secondary mt-1">{suggestion.category}</div>
+                  </div>
+                ))}
+              </div>
+            )}
             {/* AI Badge */}
             {!searchQuery && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30">
