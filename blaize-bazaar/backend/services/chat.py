@@ -277,14 +277,18 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
                 # Create session manager if session_id provided
                 session_manager = None
                 if session_id:
-                    from strands.session.file_session_manager import FileSessionManager
-                    import os
-                    os.makedirs(self.session_storage_dir, exist_ok=True)
-                    session_manager = FileSessionManager(
+                    from services.aurora_session_manager import AuroraSessionManager
+                    from config import settings
+                    
+                    # Build connection string
+                    conn_string = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+                    
+                    session_manager = AuroraSessionManager(
                         session_id=session_id,
-                        storage_dir=self.session_storage_dir
+                        conn_string=conn_string,
+                        agent_name="blaize_orchestrator"
                     )
-                    logger.info(f"📁 Session manager created: {session_id}")
+                    logger.info(f"🗄️ Aurora session manager created: {session_id}")
                 
                 # Create orchestrator with all tools (specialized agents + database tools)
                 logger.info(f"🎯 Creating agent orchestrator with database tools...")
