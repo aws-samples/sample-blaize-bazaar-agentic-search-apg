@@ -301,6 +301,11 @@ export AWS_DEFAULT_REGION=${AWS_REGION:-us-west-2}
 
 # Ensure uv is in PATH (required for MCP)
 export PATH="$HOME/.local/bin:$PATH"
+
+# Auto-navigate to workshop directory on terminal open
+if [ "$PWD" = "$HOME" ] || [ "$PWD" = "/workshop" ]; then
+    cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg 2>/dev/null || true
+fi
 EOF
 
 log "✅ Bash environment configured (.bashrc updated with psql support)"

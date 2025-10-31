@@ -11,6 +11,7 @@ set -euo pipefail
 CODE_EDITOR_PASSWORD="${CODE_EDITOR_PASSWORD:-defaultPassword}"
 CODE_EDITOR_USER="${CODE_EDITOR_USER:-participant}"
 HOME_FOLDER="${HOME_FOLDER:-/workshop}"
+REPO_NAME="${REPO_NAME:-sample-dat406-build-agentic-ai-powered-search-apg}"
 CFN_WAIT_HANDLE="${CFN_WAIT_HANDLE:-}"
 STAGE2_SCRIPT_URL="${STAGE2_SCRIPT_URL:-}"
 ASSETS_BUCKET_NAME="${ASSETS_BUCKET_NAME:-}"
@@ -207,7 +208,7 @@ Environment=PATH=/usr/local/bin:/usr/bin:/bin:/home/$CODE_EDITOR_USER/.local/bin
 Environment=HOME=/home/$CODE_EDITOR_USER
 Environment=AWS_REGION=$AWS_REGION
 Environment=AWS_DEFAULT_REGION=$AWS_REGION
-ExecStart=$CODE_EDITOR_CMD --accept-server-license-terms --host 127.0.0.1 --port 8080 --default-workspace $HOME_FOLDER --default-folder $HOME_FOLDER --connection-token $CODE_EDITOR_PASSWORD
+ExecStart=$CODE_EDITOR_CMD --accept-server-license-terms --host 127.0.0.1 --port 8080 --default-workspace $HOME_FOLDER/$REPO_NAME --default-folder $HOME_FOLDER/$REPO_NAME --connection-token $CODE_EDITOR_PASSWORD
 Restart=always
 RestartSec=10
 StandardOutput=journal
