@@ -44,13 +44,23 @@ class AuroraSessionManager:
         try:
             with psycopg.connect(self.conn_string) as conn:
                 with conn.cursor() as cur:
+                    # Check if session already exists
                     cur.execute("""
-                        INSERT INTO bedrock_integration.conversations (session_id, agent_name, context, created_at)
-                        VALUES (%s, %s, %s, %s)
-                        ON CONFLICT (session_id) DO NOTHING
-                    """, (self.session_id, self.agent_name, json.dumps({}), datetime.now()))
-                    conn.commit()
-            logger.info(f"✅ Session initialized: {self.session_id}")
+                        SELECT session_id, created_at FROM bedrock_integration.conversations
+                        WHERE session_id = %s
+                    """, (self.session_id,))
+                    existing = cur.fetchone()
+                    
+                    if existing:
+                        logger.info(f"♻️  Reusing existing session: {self.session_id} (created: {existing[1]})")
+                    else:
+                        logger.info(f"🆕 Creating new session: {self.session_id}")
+                        cur.execute("""
+                            INSERT INTO bedrock_integration.conversations (session_id, agent_name, context, created_at)
+                            VALUES (%s, %s, %s, %s)
+                        """, (self.session_id, self.agent_name, json.dumps({}), datetime.now()))
+                        conn.commit()
+                        logger.info(f"✅ Session created successfully: {self.session_id}")
         except Exception as e:
             logger.error(f"Failed to initialize session: {e}")
             raise
@@ -177,3 +187,11 @@ class AuroraSessionManager:
         except Exception as e:
             logger.error(f"Failed to clear session: {e}")
             raise
+    
+    def register_hooks(self, agent):
+        """Register hooks with Strands agent for automatic session tracking"""
+        # This method is called by Strands SDK to set up event hooks
+        # We don't need to implement hooks since we're manually tracking
+        # in add_message and add_tool_use methods
+        logger.debug(f"Hooks registered for agent with session {self.session_id}")
+        pass

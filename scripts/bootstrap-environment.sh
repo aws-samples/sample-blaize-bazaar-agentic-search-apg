@@ -228,26 +228,47 @@ log "✅ Code Editor service started"
 # ============================================================================
 
 log "Waiting for Code Editor to initialize..."
-sleep 20
+sleep 15
 
 MAX_RETRIES=30
 RETRY_COUNT=0
 CODE_EDITOR_READY=false
 RESTART_ATTEMPTED=false
+FORBIDDEN_COUNT=0
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/ 2>/dev/null || echo "000")
     
+    # Success codes - Code Editor is ready
     if [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "405" ]; then
         log "✅ Code Editor is responding (HTTP $HTTP_CODE)"
         CODE_EDITOR_READY=true
-        sleep 3
+        sleep 2
         break
-    elif [ "$HTTP_CODE" = "403" ] && [ $RETRY_COUNT -eq 10 ] && [ "$RESTART_ATTEMPTED" = "false" ]; then
-        warn "HTTP 403 detected - restarting Code Editor service..."
-        systemctl restart "code-editor@$CODE_EDITOR_USER"
-        RESTART_ATTEMPTED=true
-        sleep 10
+    
+    # HTTP 403 - Code Editor is starting but not ready yet
+    elif [ "$HTTP_CODE" = "403" ]; then
+        FORBIDDEN_COUNT=$((FORBIDDEN_COUNT + 1))
+        
+        # After 15 consecutive 403s, try restart once
+        if [ $FORBIDDEN_COUNT -eq 15 ] && [ "$RESTART_ATTEMPTED" = "false" ]; then
+            warn "HTTP 403 persisting - restarting Code Editor service..."
+            systemctl restart "code-editor@$CODE_EDITOR_USER"
+            RESTART_ATTEMPTED=true
+            FORBIDDEN_COUNT=0
+            sleep 10
+        # After 25 total 403s, assume it's working but auth not ready
+        elif [ $FORBIDDEN_COUNT -ge 25 ]; then
+            warn "HTTP 403 persisting but service is running - continuing..."
+            CODE_EDITOR_READY=true
+            break
+        else
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            log "Code Editor starting... ($RETRY_COUNT/$MAX_RETRIES) [HTTP: $HTTP_CODE]"
+            sleep 2
+        fi
+    
+    # Other codes - keep waiting
     else
         RETRY_COUNT=$((RETRY_COUNT + 1))
         if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
@@ -256,7 +277,7 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             break
         fi
         log "Waiting for Code Editor... ($RETRY_COUNT/$MAX_RETRIES) [HTTP: $HTTP_CODE]"
-        sleep 3
+        sleep 2
     fi
 done
 
