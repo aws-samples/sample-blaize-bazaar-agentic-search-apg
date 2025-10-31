@@ -289,7 +289,7 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
                 
                 # Create orchestrator (specialized agents already have database tools)
                 logger.info(f"🎯 Creating agent orchestrator...")
-                orchestrator = create_orchestrator(enable_interleaved_thinking=False)
+                orchestrator = create_orchestrator()
                 
                 # Debug: Check orchestrator configuration
                 logger.info(f"🔍 Orchestrator created successfully")
@@ -337,7 +337,7 @@ CURRENT REQUEST: {message}"""
                 logger.info(f"📝 Response preview: {response_text[:300]}...")
                 
                 # Extract detailed agent execution information
-                agent_execution = self._extract_agent_chain(response, start_time)
+                agent_execution = self._extract_agent_chain(response, start_time, message)
                 
                 # Extract structured data from response
                 parsed = self._parse_agent_response(response_text, message, conversation_history)
@@ -440,7 +440,7 @@ CURRENT REQUEST: {message}"""
         
         return formatted
     
-    def _extract_agent_chain(self, response, start_time: float) -> Dict[str, Any]:
+    def _extract_agent_chain(self, response, start_time: float, user_query: str = "") -> Dict[str, Any]:
         """Extract detailed agent execution information from orchestrator response"""
         import time
         
@@ -458,10 +458,21 @@ CURRENT REQUEST: {message}"""
         })
         
         # Check if response has tool calls (agent invocations)
-        if hasattr(response, 'tool_calls') and response.tool_calls:
-            logger.info(f"🔍 Extracting {len(response.tool_calls)} tool calls from response")
+        
+        # Check for tool calls in message attribute
+        tool_calls_list = None
+        if hasattr(response, 'message'):
+            if isinstance(response.message, dict) and 'tool_calls' in response.message:
+                tool_calls_list = response.message['tool_calls']
+            elif hasattr(response.message, 'tool_calls'):
+                tool_calls_list = response.message.tool_calls
+        elif hasattr(response, 'tool_calls'):
+            tool_calls_list = response.tool_calls
+        
+        if tool_calls_list:
+            logger.info(f"🔍 Extracting {len(tool_calls_list)} tool calls from response")
             
-            for idx, tool_call in enumerate(response.tool_calls):
+            for idx, tool_call in enumerate(tool_calls_list):
                 tool_name = tool_call.name
                 tool_start = start_time + (idx + 1) * 100
                 
@@ -505,7 +516,8 @@ CURRENT REQUEST: {message}"""
                         "timestamp": tool_start,
                         "duration_ms": 220
                     })
-                elif 'price' in tool_name or 'pricing' in tool_name:
+                elif 'price' in tool_name or 'pricing' in tool_name or 'optimization' in tool_name:
+                    logger.info(f"✅ Detected PRICING agent call: {tool_name}")
                     agent_steps.append({
                         "agent": "Pricing Agent",
                         "action": "Analyzing prices and deals",
@@ -537,25 +549,29 @@ CURRENT REQUEST: {message}"""
                         "duration_ms": 100,
                         "status": "success"
                     })
+        else:
+            logger.debug("No tool_calls in response - using query-based agent inference")
         
-        # Always show agent chain for non-greeting queries
-        step_time = start_time + 100
-        
-        # Default to showing Recommendation Agent for product queries
-        agent_steps.append({
-            "agent": "Recommendation Agent",
-            "action": "Searching product catalog",
-            "status": "completed",
-            "timestamp": step_time,
-            "duration_ms": 200
-        })
-        tool_calls.append({
-            "tool": "semantic_product_search",
-            "timestamp": step_time + 50,
-            "duration_ms": 150,
-            "status": "success"
-        })
-        
+        # Infer agent from user query since Strands agents-as-tools do not expose call chain
+        logger.info(f"Agent steps count: {len(agent_steps)} - {[s['agent'] for s in agent_steps]}")
+        if len(agent_steps) == 1:
+            step_time = start_time + 100
+            query_lower = user_query.lower()
+            
+            if any(word in query_lower for word in ['deal', 'cheap', 'price', 'discount', 'budget', 'cost', 'value', 'save']):
+                agent_steps.append({"agent": "Pricing Agent", "action": "Analyzing prices and deals", "status": "completed", "timestamp": step_time, "duration_ms": 160})
+                tool_calls.append({"tool": "get_price_statistics", "timestamp": step_time + 25, "duration_ms": 100, "status": "success"})
+                logger.info("Inferred: Pricing Agent")
+            elif any(word in query_lower for word in ['stock', 'inventory', 'restock']):
+                agent_steps.append({"agent": "Inventory Agent", "action": "Analyzing stock levels", "status": "completed", "timestamp": step_time, "duration_ms": 180})
+                tool_calls.append({"tool": "get_inventory_health", "timestamp": step_time + 20, "duration_ms": 120, "status": "success"})
+                logger.info("Inferred: Inventory Agent")
+            else:
+                agent_steps.append({"agent": "Recommendation Agent", "action": "Searching product catalog", "status": "completed", "timestamp": step_time, "duration_ms": 200})
+                tool_calls.append({"tool": "semantic_product_search", "timestamp": step_time + 50, "duration_ms": 150, "status": "success"})
+                logger.info("Inferred: Recommendation Agent")
+        else:
+            logger.info(f"Specialist agent detected: {agent_steps[-1]['agent']}")
         # Extract reasoning if available (Claude 4 thinking)
         if hasattr(response, 'thinking') and response.thinking:
             reasoning_steps.append({

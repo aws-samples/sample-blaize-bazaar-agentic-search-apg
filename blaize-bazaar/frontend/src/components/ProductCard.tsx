@@ -25,21 +25,30 @@ const ProductCard = ({ product, onAddToCart, aiRecommended = true }: ProductCard
   
   return (
     <div
-      className="rounded-xl p-3 flex items-center gap-3 animate-slideUp transition-all duration-300 hover:scale-[1.02] group relative"
+      className="rounded-xl p-3 flex items-center gap-3 animate-slideUp transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl group relative overflow-hidden"
       style={{
         background: 'rgba(30, 30, 40, 0.4)',
         border: '1px solid rgba(106, 27, 154, 0.2)',
-        transition: 'all 0.3s ease'
+        transition: 'all 0.3s ease',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(186, 104, 200, 0.15) 0%, rgba(106, 27, 154, 0.1) 100%)'
-        e.currentTarget.style.borderColor = 'rgba(186, 104, 200, 0.5)'
+        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(186, 104, 200, 0.2) 0%, rgba(106, 27, 154, 0.15) 100%)'
+        e.currentTarget.style.borderColor = 'rgba(186, 104, 200, 0.6)'
+        e.currentTarget.style.boxShadow = '0 8px 24px rgba(186, 104, 200, 0.3)'
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.background = 'rgba(30, 30, 40, 0.4)'
         e.currentTarget.style.borderColor = 'rgba(106, 27, 154, 0.2)'
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)'
       }}
     >
+      {/* Shimmer effect on hover */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+           style={{
+             background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent)',
+             animation: 'shimmer 2s infinite'
+           }} />
       {/* AI Badge */}
       {aiRecommended && (
         <div className="absolute top-1 right-1 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 backdrop-blur-sm z-10">
@@ -101,13 +110,13 @@ const ProductCard = ({ product, onAddToCart, aiRecommended = true }: ProductCard
       {/* Add to Cart Button */}
       <button
         onClick={() => onAddToCart?.(product)}
-        className="px-3 py-2 rounded-lg font-semibold text-xs transition-all duration-300 hover:scale-105 flex items-center gap-1 flex-shrink-0"
+        className="px-3 py-2 rounded-lg font-semibold text-xs transition-all duration-300 hover:scale-110 hover:shadow-lg flex items-center gap-1 flex-shrink-0 active:scale-95"
         style={{
           background: 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)',
           color: 'white'
         }}
       >
-        <ShoppingCart className="h-3 w-3" />
+        <ShoppingCart className="h-3 w-3 group-hover:animate-bounce" />
         Add
       </button>
     </div>
