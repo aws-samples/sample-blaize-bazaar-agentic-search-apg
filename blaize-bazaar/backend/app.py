@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from typing import List
 
 from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -24,11 +25,13 @@ from models.search import (
     ChatRequest,
     ChatResponse,
 )
+from models.image_search_models import ImageSearchResponse
 from models.product import Product, ProductWithScore, InventoryStats
 from services.database import DatabaseService
 from services.embeddings import EmbeddingService
 from services.bedrock import BedrockService
 from services.chat import ChatService
+from services.image_search import ImageSearchService, get_image_search_service
 
 # Lab 2 agents use Strands SDK function pattern (not class-based)
 # Agents are available via /api/agents/query endpoint
@@ -54,6 +57,7 @@ db_service: DatabaseService = None
 embedding_service: EmbeddingService = None
 bedrock_service: BedrockService = None
 chat_service: ChatService = None
+image_search_service: ImageSearchService = None
 
 # Lab 2 agents use function pattern - no global instances needed
 
@@ -67,8 +71,7 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting DAT406 Workshop API...")
     
-    global db_service, embedding_service, bedrock_service, chat_service
-    global search_agent, inventory_agent, recommendation_agent
+    global db_service, embedding_service, bedrock_service, chat_service, image_search_service
     
     try:
         # Initialize core services
@@ -84,6 +87,11 @@ async def lifespan(app: FastAPI):
         
         chat_service = ChatService()
         logger.info("✅ Chat service initialized")
+
+        # Initialize image search service
+        global image_search_service
+        image_search_service = ImageSearchService()
+        logger.info("✅ Image search service initialized")
         
         # Set chat service logger to INFO
         logging.getLogger('services.chat').setLevel(logging.INFO)
@@ -154,6 +162,13 @@ async def get_bedrock_service() -> BedrockService:
     if not bedrock_service:
         raise HTTPException(status_code=503, detail="Bedrock service not initialized")
     return bedrock_service
+
+def get_image_search_service_dep():
+    """Dependency for image search service"""
+    global image_search_service
+    if not image_search_service:
+        raise HTTPException(status_code=503, detail="Image search service not initialized")
+    return image_search_service
 
 
 # ============================================================================
@@ -333,6 +348,129 @@ async def get_product(
         logger.error(f"Failed to fetch product: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch product: {str(e)}")
 
+@app.post("/api/search/image", response_model=ImageSearchResponse)
+async def image_search(
+    file: UploadFile = File(...),
+    limit: int = Query(default=12, ge=1, le=50),
+    min_similarity: float = Query(default=0.0, ge=0, le=1),
+    db: DatabaseService = Depends(get_db_service),
+    embeddings: EmbeddingService = Depends(get_embedding_service),
+    image_search: ImageSearchService = Depends(get_image_search_service_dep),
+):
+    """
+    Multi-Modal Image Search Endpoint
+    
+    Upload a product image to find similar products using Claude Sonnet 4 vision
+    and pgvector semantic search.
+    """
+    import time
+    import base64
+    
+    start_time = time.time()
+    
+    try:
+        # Validate file type
+        if not file.content_type or not file.content_type.startswith('image/'):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file type. Must be an image (JPEG, PNG, WebP)"
+            )
+        
+        logger.info(f"📸 Image search: {file.filename}")
+        
+        # Read image
+        image_data = await file.read()
+        image_size_mb = len(image_data) / (1024 * 1024)
+        
+        if image_size_mb > 5:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Image too large: {image_size_mb:.2f}MB. Maximum is 5MB"
+            )
+        
+        # Analyze with Claude Sonnet 4
+        logger.info("🤖 Analyzing image with Claude Sonnet 4 vision...")
+        analysis = await image_search.analyze_image(
+            image_data=image_data,
+            mime_type=file.content_type
+        )
+        
+        if not analysis:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to analyze image"
+            )
+        
+        # Generate search query
+        search_query = image_search.create_search_query(analysis)
+        logger.info(f"🔍 Generated search query: {search_query[:100]}...")
+        
+        # Get embedding
+        query_embedding = embeddings.generate_embedding(search_query)
+        
+        # Search database
+        query = """
+            SELECT 
+                "productId",
+                product_description,
+                "imgUrl" as imgurl,
+                "productURL" as producturl,
+                stars,
+                reviews,
+                price,
+                category_id,
+                "isBestSeller" as isbestseller,
+                "boughtInLastMonth" as boughtinlastmonth,
+                category_name,
+                quantity,
+                1 - (embedding <=> %s::vector) as similarity_score
+            FROM bedrock_integration.product_catalog
+            WHERE 1 - (embedding <=> %s::vector) >= %s
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s
+        """
+        
+        results = await db.fetch_all(
+            query,
+            query_embedding,
+            query_embedding,
+            min_similarity,
+            query_embedding,
+            limit
+        )
+        
+        # Format results
+        from models.product import ProductWithScore
+        from models.search import SearchResult
+        
+        search_results = []
+        for row in results:
+            product = ProductWithScore(**dict(row))
+            search_result = SearchResult(product=product)
+            search_results.append(search_result)
+        
+        search_time_ms = (time.time() - start_time) * 1000
+        logger.info(f"✅ Image search complete: {len(results)} products in {search_time_ms:.2f}ms")
+        
+        image_base64 = base64.b64encode(image_data).decode('utf-8')
+        
+        return ImageSearchResponse(
+            query_type="image",
+            analysis=analysis,
+            search_query=search_query,
+            results=[r.dict() for r in search_results],
+            total_results=len(search_results),
+            search_time_ms=search_time_ms,
+            image_preview=f"data:{file.content_type};base64,{image_base64[:200]}..."
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Image search failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        await file.close()
 
 @app.get("/api/products/category/{category_query}")
 async def browse_category(

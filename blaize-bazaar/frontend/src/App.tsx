@@ -3,9 +3,9 @@
  * Hero section, Collections, About pages with theme toggle
  */
 import { useState, useEffect, createContext, useContext } from 'react'
-import Header from './components/Header'
-import AIAssistant from './components/AIAssistant'
-import SearchOverlay from './components/SearchOverlay'
+import Header from './components/Header.tsx'
+import AIAssistant from './components/AIAssistant.tsx'
+import SearchOverlay from './components/SearchOverlay.tsx'
 import './styles/premium-heading-styles.css'
 
 // Theme Context (locked to dark mode)
@@ -46,7 +46,7 @@ function App() {
         <Header
           activeSection={activeSection}
           onNavigate={setActiveSection}
-          onSearch={(query) => {
+          onSearch={(query: string) => {
             setSearchQuery(query)
             setSearchOverlayVisible(true)
           }}
