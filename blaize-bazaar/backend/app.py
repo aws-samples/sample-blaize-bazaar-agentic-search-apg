@@ -32,6 +32,8 @@ from services.embeddings import EmbeddingService
 from services.bedrock import BedrockService
 from services.chat import ChatService
 from services.image_search import ImageSearchService, get_image_search_service
+from services.sql_query_logger import init_query_logger, get_query_logger
+from services.index_performance import get_index_performance_service
 
 # Lab 2 agents use Strands SDK function pattern (not class-based)
 # Agents are available via /api/agents/query endpoint
@@ -58,6 +60,8 @@ embedding_service: EmbeddingService = None
 bedrock_service: BedrockService = None
 chat_service: ChatService = None
 image_search_service: ImageSearchService = None
+query_logger = None
+index_performance_service = None
 
 # Lab 2 agents use function pattern - no global instances needed
 
@@ -71,7 +75,7 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting DAT406 Workshop API...")
     
-    global db_service, embedding_service, bedrock_service, chat_service, image_search_service
+    global db_service, embedding_service, bedrock_service, chat_service, image_search_service, query_logger, index_performance_service
     
     try:
         # Initialize core services
@@ -88,8 +92,16 @@ async def lifespan(app: FastAPI):
         chat_service = ChatService()
         logger.info("✅ Chat service initialized")
 
+        # Initialize SQL query logger
+        query_logger = init_query_logger(max_logs=100)
+        logger.info("✅ SQL query logger initialized")
+
+        # Initialize index performance service
+        conn_string = f"host={settings.DB_HOST} port={settings.DB_PORT} dbname={settings.DB_NAME} user={settings.DB_USER} password={settings.DB_PASSWORD}"
+        index_performance_service = get_index_performance_service(conn_string)
+        logger.info("✅ Index performance service initialized")
+
         # Initialize image search service
-        global image_search_service
         image_search_service = ImageSearchService()
         logger.info("✅ Image search service initialized")
         
@@ -252,8 +264,8 @@ async def semantic_search(
         query_embedding = embeddings.generate_embedding(request.query)
         logger.info(f"✅ Generated embedding vector (1024 dimensions)")
         
-        # Perform vector similarity search
-        query = """
+        # Prepare SQL
+        query_sql = """
             SELECT 
                 "productId",
                 product_description,
@@ -274,14 +286,30 @@ async def semantic_search(
             LIMIT %s
         """
         
-        results = await db.fetch_all(
-            query,
-            query_embedding,
-            query_embedding,
-            request.min_similarity,
-            query_embedding,
-            request.limit
-        )
+        # Get connection for logging
+        import psycopg
+        conn_string = f"host={settings.DB_HOST} port={settings.DB_PORT} dbname={settings.DB_NAME} user={settings.DB_USER} password={settings.DB_PASSWORD}"
+        
+        # Log the query
+        query_logger_instance = get_query_logger()
+        with psycopg.connect(conn_string) as conn:
+            with query_logger_instance.log_query(
+                query_type="semantic_search",
+                sql=query_sql,
+                params=[query_embedding, query_embedding, request.min_similarity, query_embedding, request.limit],
+                connection=conn
+            ) as query_metadata:
+                # Execute query
+                results = await db.fetch_all(
+                    query_sql,
+                    query_embedding,
+                    query_embedding,
+                    request.min_similarity,
+                    query_embedding,
+                    request.limit
+                )
+                
+                query_metadata["rows_returned"] = len(results)
         
         logger.info(f"📦 Found {len(results)} products")
         
@@ -889,3 +917,100 @@ async def agent_query(
     except Exception as e:
         logger.error(f"Agent query failed: {e}")
         raise HTTPException(status_code=500, detail=f"Agent query failed: {str(e)}")
+
+# ============================================================================
+# SQL QUERY INSPECTOR ENDPOINTS
+# ============================================================================
+
+@app.get("/api/queries/recent")
+async def get_recent_queries(limit: int = Query(default=10, ge=1, le=50)):
+    """
+    Get recent SQL queries with performance metrics
+    
+    Returns query logs for the SQL Inspector UI
+    """
+    try:
+        query_logger_instance = get_query_logger()
+        queries = query_logger_instance.get_recent_queries(limit=limit)
+        stats = query_logger_instance.get_summary_stats()
+        
+        return {
+            "queries": queries,
+            "stats": stats,
+            "total": len(queries)
+        }
+    except Exception as e:
+        logger.error(f"Failed to get recent queries: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/queries/clear")
+async def clear_query_logs():
+    """Clear all query logs"""
+    try:
+        query_logger_instance = get_query_logger()
+        query_logger_instance.clear_logs()
+        return {"status": "success", "message": "Query logs cleared"}
+    except Exception as e:
+        logger.error(f"Failed to clear logs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# INDEX PERFORMANCE ENDPOINTS
+# ============================================================================
+
+@app.post("/api/performance/compare")
+async def compare_index_performance(
+    request: dict,
+    embeddings: EmbeddingService = Depends(get_embedding_service)
+):
+    """
+    Compare HNSW index performance vs sequential scan
+    
+    Request body:
+        query: Search query text
+        ef_search: HNSW ef_search parameter (default: 40)
+        limit: Number of results (default: 10)
+    """
+    try:
+        query = request.get("query")
+        ef_search = request.get("ef_search", 40)
+        limit = request.get("limit", 10)
+        
+        if not query:
+            raise HTTPException(status_code=400, detail="Query is required")
+        
+        logger.info(f"🔬 Index performance comparison: '{query}' (ef_search={ef_search})")
+        
+        # Generate embedding
+        embedding = embeddings.generate_embedding(query)
+        
+        # Run comparison
+        results = await index_performance_service.compare_index_performance(
+            query=query,
+            embedding=embedding,
+            ef_search=ef_search,
+            limit=limit
+        )
+        
+        logger.info(f"✅ Comparison complete: HNSW={results['hnsw']['execution_time_ms']}ms, Sequential={results['sequential']['execution_time_ms']}ms")
+        
+        return results
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Performance comparison failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/performance/stats")
+async def get_index_stats():
+    """Get pgvector index statistics"""
+    try:
+        stats = await index_performance_service.get_index_stats()
+        return stats
+    except Exception as e:
+        logger.error(f"Failed to get index stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,11 +1,15 @@
 /**
  * Main App Component - Enhanced with Light/Dark Mode
  * Hero section, Collections, About pages with theme toggle
+ * WITH Floating Action Buttons for SQL Inspector + Index Performance
  */
 import { useState, useEffect, createContext, useContext } from 'react'
-import Header from './components/Header.tsx'
-import AIAssistant from './components/AIAssistant.tsx'
-import SearchOverlay from './components/SearchOverlay.tsx'
+import Header from './components/Header'
+import AIAssistant from './components/AIAssistant'
+import SearchOverlay from './components/SearchOverlay'
+import SQLInspector from './components/SQLInspector'
+import IndexPerformanceDashboard from './components/IndexPerformanceDashboard'
+import { Database, BarChart3 } from 'lucide-react'
 import './styles/premium-heading-styles.css'
 
 // Theme Context (locked to dark mode)
@@ -29,6 +33,8 @@ function App() {
   const [activeSection, setActiveSection] = useState<Section>('shop')
   const [searchOverlayVisible, setSearchOverlayVisible] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showSQLInspector, setShowSQLInspector] = useState(false)
+  const [showIndexPerformance, setShowIndexPerformance] = useState(false)
   const backgroundImage = `${import.meta.env.BASE_URL}backgrounds/bg-1.png`
 
   // Apply dark theme to document
@@ -37,8 +43,6 @@ function App() {
     document.documentElement.classList.remove('light')
   }, [])
 
-
-
   return (
     <ThemeContext.Provider value={{ theme }}>
       <div className="min-h-screen bg-bg-primary relative transition-colors duration-300">
@@ -46,7 +50,7 @@ function App() {
         <Header
           activeSection={activeSection}
           onNavigate={setActiveSection}
-          onSearch={(query: string) => {
+          onSearch={(query) => {
             setSearchQuery(query)
             setSearchOverlayVisible(true)
           }}
@@ -119,19 +123,6 @@ function App() {
                 {/* Right: Empty space (product showcase removed, kept as backup in code) */}
                 <div className="h-[500px] flex items-center justify-center">
                   {/* Product showcase hidden - uncomment below to restore */}
-                  {/* <div className="w-full h-full card flex items-center justify-center relative overflow-hidden">
-                    <div 
-                      key={showcaseKey}
-                      className="text-center relative z-10 opacity-0 animate-fadeIn"
-                    >
-                      <div className="text-[180px] mb-6">{currentProduct.icon}</div>
-                      <h3 className="text-2xl font-normal mb-3 text-gray-900 dark:text-white">
-                        {currentProduct.name}
-                      </h3>
-                      <div className="text-[28px] text-accent-light mb-2">{currentProduct.price}</div>
-                      <p className="text-gray-600 dark:text-gray-400 text-sm">{currentProduct.desc}</p>
-                    </div>
-                  </div> */}
                 </div>
               </div>
             </section>
@@ -178,8 +169,6 @@ function App() {
                 <p className="text-text-secondary text-lg">Production-grade AI search powered by AWS</p>
               </div>
               
-              {/* Architecture Diagram - Removed (image not available) */}
-
               {/* Technology Stack - Smaller Tiles */}
               <div className="text-center mb-8">
                 <h3 className="text-3xl font-light text-gray-900 dark:text-white mb-2">Technology Stack</h3>
@@ -189,7 +178,7 @@ function App() {
                 {[
                   { title: 'Aurora PostgreSQL', icon: '🗄️' },
                   { title: 'Amazon Bedrock', icon: '🤖' },
-                  { title: 'pgvector', icon: '🔍' },
+                  { title: 'pgvector', icon: '🔢' },
                   { title: 'AWS Strands SDK', icon: '🔗' },
                 ].map((tech, index) => (
                   <div key={index} className="card p-6 text-center">
@@ -209,6 +198,61 @@ function App() {
 
         {/* AI Assistant */}
         <AIAssistant />
+
+        {/* Floating Database Tools Menu - Bottom Left */}
+        <div className="fixed bottom-8 left-8 z-40 flex flex-col gap-4">
+          {/* SQL Inspector FAB */}
+          <button
+            onClick={() => setShowSQLInspector(true)}
+            className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
+            }}
+            title="SQL Query Inspector"
+          >
+            <Database className="h-6 w-6 text-white" />
+            
+            {/* Tooltip on hover */}
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+              <div className="px-3 py-2 rounded-lg bg-purple-500/95 backdrop-blur-sm border border-purple-400/30 shadow-xl">
+                <p className="text-sm text-white font-medium">SQL Query Inspector</p>
+                <p className="text-xs text-purple-200">Monitor pgvector queries</p>
+              </div>
+            </div>
+          </button>
+
+          {/* Index Performance FAB */}
+          <button
+            onClick={() => setShowIndexPerformance(true)}
+            className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
+            }}
+            title="Index Performance Dashboard"
+          >
+            <BarChart3 className="h-6 w-6 text-white" />
+            
+            {/* Tooltip on hover */}
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+              <div className="px-3 py-2 rounded-lg bg-purple-500/95 backdrop-blur-sm border border-purple-400/30 shadow-xl">
+                <p className="text-sm text-white font-medium">Index Performance</p>
+                <p className="text-xs text-purple-200">Tune HNSW parameters</p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* SQL Inspector Modal */}
+        <SQLInspector
+          isOpen={showSQLInspector}
+          onClose={() => setShowSQLInspector(false)}
+        />
+
+        {/* Index Performance Dashboard Modal */}
+        <IndexPerformanceDashboard
+          isOpen={showIndexPerformance}
+          onClose={() => setShowIndexPerformance(false)}
+        />
       </div>
     </ThemeContext.Provider>
   )
