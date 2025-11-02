@@ -254,10 +254,13 @@ class BusinessLogic:
             limit: Number of results
         """
         from services.embeddings import EmbeddingService
+        import time
         
-        # Generate query embedding
+        # Generate query embedding with timing
+        start_time = time.time()
         embedding_service = EmbeddingService()
         query_embedding = embedding_service.embed_query(query)
+        embedding_time_ms = (time.time() - start_time) * 1000
         
         # Build SQL with filters - embedding first, then filters, then limit
         conditions = ["quantity > 0"]
@@ -297,7 +300,11 @@ class BusinessLogic:
             LIMIT %s
         """
         
+        # Execute query with timing
+        db_start = time.time()
         results = await self.db.fetch_all(search_query, *params)
+        db_time_ms = (time.time() - db_start) * 1000
+        
         products = [convert_decimals(dict(row)) for row in results]
         
         return {
@@ -309,7 +316,14 @@ class BusinessLogic:
                 "max_price": max_price,
                 "min_rating": min_rating,
                 "category": category
-            }
+            },
+            "performance": {
+                "bedrock_embedding_ms": round(embedding_time_ms, 2),
+                "database_query_ms": round(db_time_ms, 2),
+                "total_ms": round(embedding_time_ms + db_time_ms, 2)
+            },
+            "sql_query": search_query.replace("%s", "?"),
+            "note": "⚠️ This is a DAT406 workshop tool for educational purposes"
         }
     
     async def get_products_by_category(
