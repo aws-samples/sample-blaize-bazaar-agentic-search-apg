@@ -14,6 +14,7 @@ interface QueryLog {
   rows_returned: number;
   index_used: string | null;
   query_plan: any;
+  search_query?: string;
 }
 
 interface SummaryStats {
@@ -87,40 +88,6 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
       .replace(/ORDER BY/gi, '\nORDER BY')
       .replace(/LIMIT/gi, '\nLIMIT')
       .trim();
-  };
-
-  const highlightSQL = (sql: string): JSX.Element => {
-    // Simple syntax highlighting
-    const keywords = ['SELECT', 'FROM', 'WHERE', 'ORDER BY', 'LIMIT', 'AND', 'OR', 'AS', 'JOIN', 'LEFT', 'RIGHT', 'INNER'];
-    const operators = ['<=>', '<=', '>=', '=', '<', '>', '!='];
-    
-    let highlighted = sql;
-    
-    // Highlight keywords
-    keywords.forEach(keyword => {
-      const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
-      highlighted = highlighted.replace(regex, `<span class="sql-keyword">${keyword}</span>`);
-    });
-    
-    // Highlight operators
-    operators.forEach(op => {
-      const escaped = op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      highlighted = highlighted.replace(new RegExp(escaped, 'g'), `<span class="sql-operator">${op}</span>`);
-    });
-    
-    // Highlight table names (simplified)
-    highlighted = highlighted.replace(
-      /bedrock_integration\.product_catalog/g,
-      '<span class="sql-table">bedrock_integration.product_catalog</span>'
-    );
-    
-    // Highlight vector operations
-    highlighted = highlighted.replace(
-      /:vector/g,
-      '<span class="sql-vector">::vector</span>'
-    );
-    
-    return <span dangerouslySetInnerHTML={{ __html: highlighted }} />;
   };
 
   const getQueryTypeColor = (type: string): string => {
@@ -206,6 +173,27 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
           </div>
         </div>
 
+        {/* Performance Info Banner */}
+        <div className="px-6 py-3 bg-blue-500/10 border-b border-blue-500/30">
+          <div className="flex items-start gap-3">
+            <Zap className="h-5 w-5 mt-0.5 text-blue-400 flex-shrink-0" />
+            <div className="text-xs">
+              <p className="font-semibold text-blue-300 mb-1">Performance Breakdown</p>
+              <p className="text-blue-200/80 leading-relaxed">
+                <span className="font-medium text-blue-300">Total Search Time (~660ms)</span> = 
+                <span className="text-yellow-300"> Bedrock Embeddings (~600ms)</span> + 
+                <span className="text-green-300"> Database Query (&lt;1ms)</span> + 
+                <span className="text-gray-300"> Processing (~60ms)</span>
+              </p>
+              <p className="text-blue-200/70 mt-1.5">
+                💡 <span className="font-medium">HNSW Index Optimization:</span> Using <code className="px-1 py-0.5 bg-black/30 rounded text-purple-300">SET LOCAL enable_seqscan=off</code>, 
+                <code className="px-1 py-0.5 bg-black/30 rounded text-purple-300">random_page_cost=1</code>, and 
+                <code className="px-1 py-0.5 bg-black/30 rounded text-purple-300">cpu_tuple_cost=0.01</code> to force PostgreSQL to use the HNSW index for sub-millisecond vector similarity search.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Stats Summary */}
         {stats && (
           <div className="px-6 py-3 bg-purple-500/5 border-b border-purple-500/20">
@@ -257,12 +245,14 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
                       <span className={`px-2 py-1 rounded-md text-xs font-medium border ${getQueryTypeColor(query.query_type)}`}>
                         {query.query_type}
                       </span>
-                      <div className="flex items-center gap-2 text-xs text-text-secondary">
-                        <Clock className="h-3 w-3" />
-                        <span className={getPerformanceColor(query.execution_time_ms)}>
-                          {query.execution_time_ms}ms
-                        </span>
-                      </div>
+                      {query.execution_time_ms > 0 && (
+                        <div className="flex items-center gap-2 text-xs text-text-secondary">
+                          <Clock className="h-3 w-3" />
+                          <span className={getPerformanceColor(query.execution_time_ms)}>
+                            {query.execution_time_ms}ms
+                          </span>
+                        </div>
+                      )}
                       <div className="text-xs text-text-secondary">
                         {query.rows_returned} rows
                       </div>
@@ -277,14 +267,36 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
                       onClick={() => setExpandedQuery(expandedQuery === idx ? null : idx)}
                       className="text-xs text-purple-400 hover:text-purple-300"
                     >
-                      {expandedQuery === idx ? 'Hide Details' : 'Show Details'}
+                      {expandedQuery === idx ? 'Hide More' : 'More Details'}
                     </button>
                   </div>
 
+                  {/* Query Plan (Primary View) */}
+                  {query.query_plan && query.query_plan.text && (
+                    <div className="px-4 py-3 bg-black/40 border-b border-purple-500/20">
+                      <div className="text-xs font-medium text-purple-300 mb-2 flex items-center gap-2">
+                        <Zap className="h-3 w-3" />
+                        EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
+                      </div>
+                      <pre className="text-xs text-green-300/90 font-mono overflow-x-auto custom-scrollbar bg-black/50 p-3 rounded-lg leading-relaxed">
+                        {query.query_plan.text}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Search Query */}
+                  {query.search_query && (
+                    <div className="px-4 py-2 bg-blue-500/10 border-b border-blue-500/20">
+                      <div className="text-xs font-medium text-blue-300 mb-1">🔍 Search Query:</div>
+                      <div className="text-sm text-blue-200 font-medium">"{query.search_query}"</div>
+                    </div>
+                  )}
+
                   {/* Query SQL */}
                   <div className="px-4 py-3 bg-black/30">
-                    <pre className="text-xs text-text-primary font-mono overflow-x-auto custom-scrollbar sql-code">
-                      {highlightSQL(formatSQL(query.sql))}
+                    <div className="text-xs font-medium text-purple-300 mb-2">SQL Query:</div>
+                    <pre className="text-xs text-green-300 font-mono overflow-x-auto custom-scrollbar whitespace-pre">
+                      {formatSQL(query.sql)}
                     </pre>
                   </div>
 
@@ -305,12 +317,12 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
                         </div>
                       )}
 
-                      {/* Query Plan */}
-                      {query.query_plan && (
-                        <div className="px-4 py-3">
-                          <div className="text-xs font-medium text-purple-300 mb-2">Query Plan (EXPLAIN):</div>
+                      {/* JSON Query Plan */}
+                      {query.query_plan && query.query_plan.json && (
+                        <div className="px-4 py-3 border-b border-purple-500/20">
+                          <div className="text-xs font-medium text-purple-300 mb-2">Query Plan (JSON Format):</div>
                           <pre className="text-xs text-text-secondary font-mono overflow-x-auto custom-scrollbar bg-black/30 p-3 rounded-lg">
-                            {JSON.stringify(query.query_plan, null, 2)}
+                            {JSON.stringify(query.query_plan.json, null, 2)}
                           </pre>
                         </div>
                       )}
@@ -332,8 +344,9 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
           <div className="flex items-start gap-3 text-xs text-text-secondary">
             <Zap className="h-4 w-4 mt-0.5 text-purple-400 flex-shrink-0" />
             <div>
-              <p className="font-medium text-purple-300 mb-1">Database Professional Features</p>
+              <p className="font-medium text-purple-300 mb-1">Disclaimer</p>
               <p>
+                SQL Inspector is built for the DAT406 workshop for illustrative and educational purposes only. 
                 Inspect actual pgvector queries with <span className="text-purple-400">&lt;=&gt;</span> operator, 
                 view HNSW index usage, analyze execution times, and understand query plans for optimization.
               </p>

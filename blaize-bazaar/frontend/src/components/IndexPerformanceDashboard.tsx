@@ -417,7 +417,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
 
               {/* Insights */}
               <div className="p-6 rounded-xl bg-purple-500/5 border border-purple-500/20">
-                <h3 className="text-lg font-semibold text-text-primary mb-3">💡 Performance Insights</h3>
+                <h3 className="text-lg font-semibold text-text-primary mb-3">💡 Query Insights</h3>
                 <div className="space-y-2 text-sm text-text-secondary">
                   <p>
                     • HNSW index provides <strong className="text-purple-400">{results.comparison.speedup_factor}x speedup</strong> over sequential scan

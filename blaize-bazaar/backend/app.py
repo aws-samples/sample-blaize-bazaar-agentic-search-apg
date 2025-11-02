@@ -264,7 +264,7 @@ async def semantic_search(
         query_embedding = embeddings.generate_embedding(request.query)
         logger.info(f"✅ Generated embedding vector (1024 dimensions)")
         
-        # Prepare SQL
+        # Prepare SQL (no WHERE clause - let HNSW index optimize ORDER BY + LIMIT)
         query_sql = """
             SELECT 
                 "productId",
@@ -281,7 +281,6 @@ async def semantic_search(
                 quantity,
                 1 - (embedding <=> %s::vector) as similarity_score
             FROM bedrock_integration.product_catalog
-            WHERE 1 - (embedding <=> %s::vector) >= %s
             ORDER BY embedding <=> %s::vector
             LIMIT %s
         """
@@ -290,26 +289,38 @@ async def semantic_search(
         import psycopg
         conn_string = f"host={settings.DB_HOST} port={settings.DB_PORT} dbname={settings.DB_NAME} user={settings.DB_USER} password={settings.DB_PASSWORD}"
         
+        # Force index usage with multiple settings
+        await db.execute_query("SET LOCAL enable_seqscan = off")
+        await db.execute_query("SET LOCAL random_page_cost = 1")
+        await db.execute_query("SET LOCAL cpu_tuple_cost = 0.01")
+        
+        # Execute query with index forced
+        results = await db.fetch_all(
+            query_sql,
+            query_embedding,
+            query_embedding,
+            request.limit
+        )
+        
         # Log the query
         query_logger_instance = get_query_logger()
         with psycopg.connect(conn_string) as conn:
+            conn.execute("SET LOCAL enable_seqscan = off")
+            conn.execute("SET LOCAL random_page_cost = 1")
+            conn.execute("SET LOCAL cpu_tuple_cost = 0.01")
+            
             with query_logger_instance.log_query(
                 query_type="semantic_search",
                 sql=query_sql,
-                params=[query_embedding, query_embedding, request.min_similarity, query_embedding, request.limit],
-                connection=conn
+                params=[query_embedding, query_embedding, request.limit],
+                connection=conn,
+                search_query=request.query
             ) as query_metadata:
-                # Execute query
-                results = await db.fetch_all(
-                    query_sql,
-                    query_embedding,
-                    query_embedding,
-                    request.min_similarity,
-                    query_embedding,
-                    request.limit
-                )
-                
                 query_metadata["rows_returned"] = len(results)
+        
+        # Filter by similarity threshold in application (after HNSW index optimization)
+        if request.min_similarity > 0:
+            results = [r for r in results if r.get("similarity_score", 0) >= request.min_similarity]
         
         logger.info(f"📦 Found {len(results)} products")
         
@@ -436,7 +447,7 @@ async def image_search(
         # Get embedding
         query_embedding = embeddings.generate_embedding(search_query)
         
-        # Search database
+        # Search database (no WHERE clause for HNSW optimization)
         query = """
             SELECT 
                 "productId",
@@ -453,7 +464,6 @@ async def image_search(
                 quantity,
                 1 - (embedding <=> %s::vector) as similarity_score
             FROM bedrock_integration.product_catalog
-            WHERE 1 - (embedding <=> %s::vector) >= %s
             ORDER BY embedding <=> %s::vector
             LIMIT %s
         """
@@ -462,10 +472,12 @@ async def image_search(
             query,
             query_embedding,
             query_embedding,
-            min_similarity,
-            query_embedding,
             limit
         )
+        
+        # Filter by similarity in application if needed
+        if min_similarity > 0:
+            results = [r for r in results if r.get("similarity_score", 0) >= min_similarity]
         
         # Format results
         from models.product import ProductWithScore

@@ -23,7 +23,8 @@ class QueryLog:
         timestamp: datetime,
         rows_returned: int = 0,
         index_used: Optional[str] = None,
-        query_plan: Optional[Dict] = None
+        query_plan: Optional[Dict] = None,
+        search_query: Optional[str] = None
     ):
         self.query_type = query_type
         self.sql = sql
@@ -33,6 +34,7 @@ class QueryLog:
         self.rows_returned = rows_returned
         self.index_used = index_used
         self.query_plan = query_plan
+        self.search_query = search_query
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
@@ -44,7 +46,8 @@ class QueryLog:
             "timestamp": self.timestamp.isoformat(),
             "rows_returned": self.rows_returned,
             "index_used": self.index_used,
-            "query_plan": self.query_plan
+            "query_plan": self.query_plan,
+            "search_query": self.search_query
         }
     
     def _serialize_param(self, param: Any) -> str:
@@ -72,7 +75,8 @@ class SQLQueryLogger:
         query_type: str,
         sql: str,
         params: List[Any],
-        connection
+        connection,
+        search_query: Optional[str] = None
     ):
         """
         Context manager for logging query execution
@@ -122,7 +126,8 @@ class SQLQueryLogger:
                 timestamp=datetime.now(),
                 rows_returned=query_metadata.get("rows_returned", 0),
                 index_used=query_metadata.get("index_used"),
-                query_plan=query_metadata.get("query_plan")
+                query_plan=query_metadata.get("query_plan"),
+                search_query=search_query
             )
             
             # Add to queue (keep only max_logs most recent)
@@ -144,7 +149,7 @@ class SQLQueryLogger:
         params: List[Any]
     ) -> Optional[Dict]:
         """
-        Get EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) output
+        Get EXPLAIN output in both text and JSON formats
         
         Args:
             connection: Database connection
@@ -152,24 +157,31 @@ class SQLQueryLogger:
             params: Query parameters
         
         Returns:
-            Parsed query plan as dictionary
+            Dictionary with 'text' and 'json' formats
         """
         try:
-            # Create EXPLAIN query
-            explain_sql = f"EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {sql}"
-            
-            # Execute EXPLAIN
             cursor = connection.cursor()
-            cursor.execute(explain_sql, params)
-            result = cursor.fetchone()
             
-            if result and result[0]:
-                plan_json = result[0]
-                if isinstance(plan_json, str):
-                    plan_json = json.loads(plan_json)
-                return plan_json
+            # Get text format (traditional DBA view)
+            explain_text_sql = f"EXPLAIN (ANALYZE, BUFFERS, VERBOSE, COSTS) {sql}"
+            cursor.execute(explain_text_sql, params)
+            text_rows = cursor.fetchall()
+            text_plan = "\n".join([row[0] for row in text_rows])
             
-            return None
+            # Get JSON format (for programmatic parsing)
+            explain_json_sql = f"EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {sql}"
+            cursor.execute(explain_json_sql, params)
+            json_result = cursor.fetchone()
+            json_plan = None
+            if json_result and json_result[0]:
+                json_plan = json_result[0]
+                if isinstance(json_plan, str):
+                    json_plan = json.loads(json_plan)
+            
+            return {
+                "text": text_plan,
+                "json": json_plan
+            }
             
         except Exception as e:
             logger.debug(f"Failed to get query plan: {e}")
@@ -180,20 +192,22 @@ class SQLQueryLogger:
         Extract index name from query plan
         
         Args:
-            query_plan: Parsed EXPLAIN output
+            query_plan: Parsed EXPLAIN output (expects dict with 'json' key)
         
         Returns:
             Index name if found, None otherwise
         """
-        if not query_plan:
+        if not query_plan or not query_plan.get("json"):
             return None
         
         try:
+            json_plan = query_plan["json"]
+            
             # Navigate the plan structure
-            if isinstance(query_plan, list) and len(query_plan) > 0:
-                plan = query_plan[0].get("Plan", {})
+            if isinstance(json_plan, list) and len(json_plan) > 0:
+                plan = json_plan[0].get("Plan", {})
             else:
-                plan = query_plan.get("Plan", {})
+                plan = json_plan.get("Plan", {})
             
             # Check for index scan
             node_type = plan.get("Node Type", "")
