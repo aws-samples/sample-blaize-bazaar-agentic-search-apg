@@ -11,7 +11,8 @@ import SQLInspector from './components/SQLInspector'
 import IndexPerformanceDashboard from './components/IndexPerformanceDashboard'
 import MCPContextDashboard from './components/MCPContextDashboard'
 import AgentReasoningTraces from './components/AgentReasoningTraces'
-import { Database, BarChart3, Activity, Brain } from 'lucide-react'
+import HybridSearchComparison from './components/HybridSearchComparison'
+import { Database, BarChart3, Activity, Brain, GitCompare } from 'lucide-react'
 import './styles/premium-heading-styles.css'
 
 // Theme Context (locked to dark mode)
@@ -39,6 +40,7 @@ function App() {
   const [showIndexPerformance, setShowIndexPerformance] = useState(false)
   const [showMCPDashboard, setShowMCPDashboard] = useState(false)
   const [showAgentTraces, setShowAgentTraces] = useState(false)
+  const [showHybridComparison, setShowHybridComparison] = useState(false)
   const backgroundImage = `${import.meta.env.BASE_URL}backgrounds/bg-1.png`
 
   // Apply dark theme to document
@@ -288,6 +290,26 @@ function App() {
               </div>
             </div>
           </button>
+
+          {/* Hybrid Search Comparison FAB */}
+          <button
+            onClick={() => setShowHybridComparison(true)}
+            className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
+            }}
+            title="Hybrid Search Comparison"
+          >
+            <GitCompare className="h-6 w-6 text-white" />
+            
+            {/* Tooltip on hover */}
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+              <div className="px-3 py-2 rounded-lg bg-purple-500/95 backdrop-blur-sm border border-purple-400/30 shadow-xl">
+                <p className="text-sm text-white font-medium">Hybrid Search Comparison</p>
+                <p className="text-xs text-purple-200">Vector vs Hybrid side-by-side</p>
+              </div>
+            </div>
+          </button>
         </div>
 
         {/* MCP Context Dashboard - Floating Panel (Bottom Right, Above AI Assistant) */}
@@ -321,6 +343,12 @@ function App() {
         <AgentReasoningTraces
           isOpen={showAgentTraces}
           onClose={() => setShowAgentTraces(false)}
+        />
+
+        {/* Hybrid Search Comparison Modal */}
+        <HybridSearchComparison
+          isOpen={showHybridComparison}
+          onClose={() => setShowHybridComparison(false)}
         />
       </div>
     </ThemeContext.Provider>

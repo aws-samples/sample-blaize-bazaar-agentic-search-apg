@@ -2,12 +2,14 @@
  * Connects to FastAPI backend for actual product search
  */
 import { useState, useRef, useEffect } from 'react'
-import { Send, ShoppingCart, X, AlertCircle } from 'lucide-react'
+import { Send, ShoppingCart, X, AlertCircle, Activity, Brain } from 'lucide-react'
 import ProductCard from './ProductCard'
 import CartModal from './CartModal'
 import CheckoutModal from './CheckoutModal'
 import AgentWorkflowVisualizer from './AgentWorkflowVisualizer'
 import MarkdownMessage from './MarkdownMessage'
+import MCPContextDashboard from './MCPContextDashboard'
+import AgentReasoningTraces from './AgentReasoningTraces'
 import { sendChatMessageStreaming, ChatProduct, checkBackendHealth } from '../services/chat'
 
 interface AgentExecution {
@@ -73,6 +75,8 @@ const AIAssistant = () => {
   const [showCart, setShowCart] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
+  const [showMCPDashboard, setShowMCPDashboard] = useState(false)
+  const [showAgentTraces, setShowAgentTraces] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -390,6 +394,20 @@ const AIAssistant = () => {
                 </div>
               )}
               <button 
+                onClick={() => setShowMCPDashboard(!showMCPDashboard)}
+                className="text-text-primary hover:text-purple-400 transition-colors"
+                title="MCP Context Monitor"
+              >
+                <Activity className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={() => setShowAgentTraces(true)}
+                className="text-text-primary hover:text-purple-400 transition-colors"
+                title="Agent Reasoning Traces"
+              >
+                <Brain className="h-5 w-5" />
+              </button>
+              <button 
                 onClick={handleClearChat}
                 className="text-text-primary hover:text-accent-light transition-colors text-xl"
                 title="Clear chat history"
@@ -404,6 +422,13 @@ const AIAssistant = () => {
               </button>
             </div>
           </div>
+
+          {/* MCP Context Dashboard (Collapsible) */}
+          {showMCPDashboard && (
+            <div className="px-6 py-4 border-b border-accent-light/20">
+              <MCPContextDashboard />
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4 custom-scrollbar">
@@ -532,6 +557,34 @@ const AIAssistant = () => {
         </div>
       )}
 
+      {/* Floating Action Buttons (when chat closed) */}
+      {!isOpen && (
+        <div className="fixed bottom-32 right-8 z-[999] flex flex-col gap-3">
+          <button
+            onClick={() => setShowMCPDashboard(!showMCPDashboard)}
+            className="w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg"
+            style={{
+              background: 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)',
+              boxShadow: '0 4px 16px rgba(106, 27, 154, 0.4)'
+            }}
+            title="MCP Context Monitor"
+          >
+            <Activity className="h-6 w-6 text-white" />
+          </button>
+          <button
+            onClick={() => setShowAgentTraces(true)}
+            className="w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg"
+            style={{
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+              boxShadow: '0 4px 16px rgba(139, 92, 246, 0.4)'
+            }}
+            title="Agent Reasoning Traces"
+          >
+            <Brain className="h-6 w-6 text-white" />
+          </button>
+        </div>
+      )}
+
       {/* Floating Bubble */}
       <div className="fixed bottom-8 right-8 z-[1000]">
         {/* Tooltip Bubble */}
@@ -612,6 +665,28 @@ const AIAssistant = () => {
         cart={cart}
         onComplete={handleCheckoutComplete}
       />
+
+      {/* Agent Reasoning Traces Modal */}
+      <AgentReasoningTraces
+        isOpen={showAgentTraces}
+        onClose={() => setShowAgentTraces(false)}
+      />
+
+      {/* MCP Dashboard Floating Panel (when chat closed) */}
+      {!isOpen && showMCPDashboard && (
+        <div className="fixed bottom-32 right-24 z-[998] w-[400px] max-h-[600px] overflow-y-auto glass-strong rounded-2xl p-4 shadow-2xl animate-slideUp">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-text-primary">MCP Context Monitor</h3>
+            <button
+              onClick={() => setShowMCPDashboard(false)}
+              className="text-text-secondary hover:text-text-primary transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <MCPContextDashboard />
+        </div>
+      )}
     </>
   )
 }

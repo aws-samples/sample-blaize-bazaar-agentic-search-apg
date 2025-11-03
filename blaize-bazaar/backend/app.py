@@ -279,15 +279,17 @@ async def semantic_search(
                 limit=request.limit
             )
             results = hybrid_result["results"]
-            # Convert to expected format
+            # Convert to expected format - preserve RRF fields at top level
             for r in results:
                 if 'similarity' in r:
                     r['similarity_score'] = r['similarity']
                 r['productId'] = r.get('product_id')
-                r['imgurl'] = r.get('imgurl', '')
-                r['producturl'] = r.get('producturl', '')
+                r['imgurl'] = r.get('img_url', '')
+                r['producturl'] = r.get('product_url', '')
                 r['isbestseller'] = r.get('isbestseller', False)
                 r['boughtinlastmonth'] = r.get('boughtinlastmonth', 0)
+                r['stars'] = r.get('rating', 0)
+                # RRF fields are already at top level from hybrid_search.py
         else:
             # Prepare SQL (no WHERE clause - let HNSW index optimize ORDER BY + LIMIT)
             query_sql = """
@@ -352,8 +354,21 @@ async def semantic_search(
         # Convert to response model
         search_results = []
         for row in results:
-            product = ProductWithScore(**dict(row))
+            row_dict = dict(row)
+            # Extract RRF fields before creating ProductWithScore
+            rrf_score = row_dict.pop('rrf_score', None)
+            vector_rank = row_dict.pop('vector_rank', None)
+            fulltext_rank = row_dict.pop('fulltext_rank', None)
+            
+            product = ProductWithScore(**row_dict)
             search_result = SearchResult(product=product)
+            
+            # Add RRF fields back to search_result dict for hybrid searches
+            if rrf_score is not None:
+                search_result.rrf_score = rrf_score
+                search_result.vector_rank = vector_rank
+                search_result.fulltext_rank = fulltext_rank
+            
             search_results.append(search_result)
         
         search_time_ms = (time.time() - start_time) * 1000

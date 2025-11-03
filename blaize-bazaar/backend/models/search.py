@@ -36,6 +36,9 @@ class SearchResult(BaseModel):
     
     product: ProductWithScore
     explanation: Optional[str] = None
+    rrf_score: Optional[float] = None
+    vector_rank: Optional[int] = None
+    fulltext_rank: Optional[int] = None
 
 
 class SearchResponse(BaseModel):
