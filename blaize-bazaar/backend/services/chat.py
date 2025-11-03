@@ -7,9 +7,6 @@ It will fail fast with clear error messages if dependencies are missing.
 
 import json
 import logging
-import os
-import subprocess
-import sys
 from typing import List, Dict, Any, Optional
 import re
 
@@ -35,7 +32,7 @@ class EnhancedChatService:
     """Enhanced chat service with product card support - NO FALLBACK"""
     
     def __init__(self):
-        """Initialize with Strands and MCP configuration"""
+        """Initialize with Strands configuration"""
         from config import settings
         
         self.model_id = settings.BEDROCK_CHAT_MODEL
@@ -43,94 +40,18 @@ class EnhancedChatService:
         self.bedrock = boto3.client('bedrock-runtime', region_name=self.region)
         self.session_storage_dir = "/tmp/blaize-sessions"
         
-        # MCP Server configuration - REQUIRED
-        self.db_cluster_arn = getattr(settings, 'DB_CLUSTER_ARN', None)
-        self.db_secret_arn = getattr(settings, 'DB_SECRET_ARN', None)
-        self.db_name = settings.DB_NAME
-        self.db_region = settings.AWS_REGION
-        
         # Check Strands availability - REQUIRED
         try:
             from strands import Agent
-            from strands.tools.mcp import MCPClient
-            from mcp import StdioServerParameters, stdio_client
-            
             self.Agent = Agent
-            self.MCPClient = MCPClient
-            self.StdioServerParameters = StdioServerParameters
-            self.stdio_client = stdio_client
             self.strands_available = True
-            
             logger.info("✅ Enhanced ChatService initialized with Strands SDK")
-            
         except ImportError as e:
             self.strands_available = False
             logger.error(f"❌ Strands SDK not available: {e}")
-            logger.error("Install with: pip install strands-agents strands-agents-tools mcp")
+            logger.error("Install with: pip install strands-agents strands-agents-tools")
     
-    def _create_mcp_client(self):
-        """Create Aurora PostgreSQL MCP client using local config file"""
-        if not self.strands_available:
-            raise RuntimeError("Strands SDK not available")
-        
-        # Load MCP config from config folder
-        # Path: backend/services/chat.py -> backend/ -> lab2/ -> config/
-        config_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            '..',
-            'config',
-            'mcp-server-config.json'
-        )
-        
-        if not os.path.exists(config_path):
-            raise RuntimeError(
-                f"MCP config file not found at {config_path}\n"
-                "Expected location: config/mcp-server-config.json"
-            )
-        
-        # Read config
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-        
-        server_config = config['mcpServers']['awslabs.postgres-mcp-server']
-        
-        # Extract command and args from config
-        command = server_config['command']
-        args = server_config['args']
-        env_vars = server_config.get('env', {})
-        
-        # Pass AWS credentials from current environment (not profile)
-        # MCP subprocess needs explicit credentials
-        env_vars.update({
-            "AWS_ACCESS_KEY_ID": os.environ.get('AWS_ACCESS_KEY_ID', ''),
-            "AWS_SECRET_ACCESS_KEY": os.environ.get('AWS_SECRET_ACCESS_KEY', ''),
-            "AWS_SESSION_TOKEN": os.environ.get('AWS_SESSION_TOKEN', ''),
-            "AWS_DEFAULT_REGION": self.db_region,
-            "AWS_REGION": self.db_region,
-            "PYTHONWARNINGS": "ignore",
-            "UV_NO_PROGRESS": "1"
-        })
-        
-        # Remove AWS_PROFILE if present (we're using explicit credentials)
-        env_vars.pop('AWS_PROFILE', None)
-        
-        logger.info(f"Loading MCP config from: {config_path}")
-        
-        try:
-            mcp_client = self.MCPClient(
-                lambda: self.stdio_client(
-                    self.StdioServerParameters(
-                        command=command,
-                        args=args,
-                        env=env_vars
-                    )
-                )
-            )
-            logger.info("MCP client created from local config")
-            return mcp_client
-        except Exception as e:
-            logger.error(f"MCP client creation failed: {e}")
-            raise RuntimeError(f"Failed to create MCP client: {str(e)}")
+
     
     def _get_system_prompt(self) -> str:
         """Enhanced system prompt for product recommendations"""
@@ -229,16 +150,7 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
             if not self.strands_available:
                 raise RuntimeError(
                     "Strands SDK not available. Install with: "
-                    "pip install strands-agents strands-agents-tools mcp"
-                )
-            
-            # Require MCP configuration
-            if not self.db_cluster_arn or not self.db_secret_arn:
-                raise RuntimeError(
-                    "Database ARNs not configured. Set DB_CLUSTER_ARN and DB_SECRET_ARN in .env\n"
-                    f"Current values:\n"
-                    f"  DB_CLUSTER_ARN: {self.db_cluster_arn or 'NOT SET'}\n"
-                    f"  DB_SECRET_ARN: {self.db_secret_arn or 'NOT SET'}"
+                    "pip install strands-agents strands-agents-tools"
                 )
             
             return await self._strands_enhanced_chat(message, conversation_history, session_id)
@@ -263,110 +175,98 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
         # Track user message
         mcp_manager.add_message("user", message)
         
-        # This will raise an exception if it fails
-        mcp_client = self._create_mcp_client()
+        # Import orchestrator
+        from agents.orchestrator import create_orchestrator
         
-        try:
-            with mcp_client:
-                # Get database tools
-                tools = mcp_client.list_tools_sync()
-                logger.info(f"✅ Connected to database with {len(tools)} tools available")
-                
-                if len(tools) == 0:
-                    raise RuntimeError("No database tools available from MCP server")
-                
-                # Import orchestrator
-                from agents.orchestrator import create_orchestrator
-                
-                # Create session manager if session_id provided
-                session_manager = None
-                if session_id:
-                    from services.aurora_session_manager import AuroraSessionManager
-                    from config import settings
-                    
-                    # Build connection string
-                    conn_string = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-                    
-                    session_manager = AuroraSessionManager(
-                        session_id=session_id,
-                        conn_string=conn_string,
-                        agent_name="blaize_orchestrator"
-                    )
-                    logger.info(f"🗄️ Aurora session manager created: {session_id}")
-                
-                # Create orchestrator (specialized agents already have database tools)
-                logger.info(f"🎯 Creating agent orchestrator...")
-                orchestrator = create_orchestrator()
-                
-                # Debug: Check orchestrator configuration
-                logger.info(f"🔍 Orchestrator created successfully")
-                
-                # Add session manager if provided
-                if session_manager:
-                    orchestrator.session_manager = session_manager
-                    session_manager.register_hooks(orchestrator)
-                
-                # Build conversation context
-                conversation_context = ""
-                if conversation_history:
-                    recent_history = conversation_history[-6:]
-                    for msg in recent_history:
-                        role = msg.get('role', 'user')
-                        content = msg.get('content', '')
-                        if len(content) > 300:
-                            content = content[:300] + "..."
-                        conversation_context += f"{role.upper()}: {content}\n\n"
-                
-                # Prepare message for orchestrator
-                full_message = message
-                if conversation_context:
-                    full_message = f"""CONVERSATION HISTORY:
+        # Create session manager if session_id provided
+        session_manager = None
+        if session_id:
+            from services.aurora_session_manager import AuroraSessionManager
+            from config import settings
+            
+            # Build connection string
+            conn_string = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+            
+            session_manager = AuroraSessionManager(
+                session_id=session_id,
+                conn_string=conn_string,
+                agent_name="blaize_orchestrator"
+            )
+            logger.info(f"🗄️ Aurora session manager created: {session_id}")
+        
+        # Create orchestrator (uses direct asyncpg for database access)
+        logger.info(f"🎯 Creating agent orchestrator...")
+        orchestrator = create_orchestrator()
+        logger.info(f"🔍 Orchestrator created successfully")
+        
+        # Add session manager if provided
+        if session_manager:
+            orchestrator.session_manager = session_manager
+            session_manager.register_hooks(orchestrator)
+        
+        # Build conversation context
+        conversation_context = ""
+        if conversation_history:
+            recent_history = conversation_history[-6:]
+            for msg in recent_history:
+                role = msg.get('role', 'user')
+                content = msg.get('content', '')
+                if len(content) > 300:
+                    content = content[:300] + "..."
+                conversation_context += f"{role.upper()}: {content}\n\n"
+        
+        # Prepare message for orchestrator
+        full_message = message
+        if conversation_context:
+            full_message = f"""CONVERSATION HISTORY:
 {conversation_context}
 ---
 CURRENT REQUEST: {message}"""
-                
-                # Invoke orchestrator with timing
-                import time
-                start_time = time.time()
-                
-                logger.info(f"🔄 Invoking orchestrator with query: {message[:100]}...")
-                response = orchestrator(full_message)
-                response_text = str(response)
-                
-                # Track assistant response in MCP
-                mcp_manager.add_message("assistant", response_text)
-                
-                # Debug: Check response structure
-                logger.info(f"🔍 Response type: {type(response)}")
-                logger.info(f"🔍 Response has tool_calls: {hasattr(response, 'tool_calls')}")
-                if hasattr(response, 'tool_calls'):
-                    logger.info(f"🔍 Tool calls count: {len(response.tool_calls) if response.tool_calls else 0}")
-                
-                logger.info(f"✅ Orchestrator completed with agent chain")
-                logger.info(f"📝 Final response length: {len(response_text)} chars")
-                logger.info(f"📝 Response preview: {response_text[:300]}...")
-                
-                # Extract detailed agent execution information
-                agent_execution = self._extract_agent_chain(response, start_time, message)
-                
-                # Extract structured data from response
-                parsed = self._parse_agent_response(response_text, message, conversation_history)
-                
-                result = {
-                    "response": parsed["text"],
-                    "products": parsed["products"],
-                    "suggestions": parsed["suggestions"],
-                    "success": True,
-                    "mcp_enabled": True,
-                    "orchestrator_enabled": True,
-                    "agent_execution": agent_execution,
-                    "model": self.model_id
-                }
-                
-                logger.info(f"📦 Agent execution: {len(agent_execution['agent_steps'])} steps, {len(agent_execution['tool_calls'])} tool calls")
-                logger.info(f"✅ Response generated ({agent_execution['total_duration_ms']}ms)")
-                return result
-                
+        
+        # Invoke orchestrator with timing
+        import time
+        start_time = time.time()
+        
+        logger.info(f"🔄 Invoking orchestrator with query: {message[:100]}...")
+        
+        try:
+            response = orchestrator(full_message)
+            response_text = str(response)
+            
+            # Track assistant response in MCP
+            mcp_manager.add_message("assistant", response_text)
+            
+            # Debug: Check response structure
+            logger.info(f"🔍 Response type: {type(response)}")
+            logger.info(f"🔍 Response has tool_calls: {hasattr(response, 'tool_calls')}")
+            if hasattr(response, 'tool_calls'):
+                logger.info(f"🔍 Tool calls count: {len(response.tool_calls) if response.tool_calls else 0}")
+            
+            logger.info(f"✅ Orchestrator completed with agent chain")
+            logger.info(f"📝 Final response length: {len(response_text)} chars")
+            logger.info(f"📝 Response preview: {response_text[:300]}...")
+            
+            # Extract detailed agent execution information
+            agent_execution = self._extract_agent_chain(response, start_time, message)
+            
+            # Extract structured data from response
+            parsed = self._parse_agent_response(response_text, message, conversation_history)
+            
+            result = {
+                "response": parsed["text"],
+                "products": parsed["products"],
+                "suggestions": parsed["suggestions"],
+                "success": True,
+                "mcp_enabled": True,
+                "orchestrator_enabled": True,
+                "agent_execution": agent_execution,
+                "model": self.model_id
+            }
+            
+            logger.info(f"📦 Agent execution: {len(agent_execution['agent_steps'])} steps, {len(agent_execution['tool_calls'])} tool calls")
+            logger.info(f"✅ Response generated ({agent_execution['total_duration_ms']}ms)")
+            return result
+            
         except Exception as e:
             logger.error(f"❌ Orchestrator execution failed: {e}", exc_info=True)
             raise RuntimeError(f"Agent execution failed: {str(e)}")
@@ -675,13 +575,7 @@ CURRENT REQUEST: {message}"""
         
         if not self.strands_available:
             diagnostics.append("❌ Strands SDK not installed")
-            diagnostics.append("   Run: pip install strands-agents strands-agents-tools mcp")
-        
-        if not self.db_cluster_arn:
-            diagnostics.append("❌ DB_CLUSTER_ARN not set in .env")
-        
-        if not self.db_secret_arn:
-            diagnostics.append("❌ DB_SECRET_ARN not set in .env")
+            diagnostics.append("   Run: pip install strands-agents strands-agents-tools")
         
         error_msg = "Configuration Error:\n\n" + "\n".join(diagnostics) if diagnostics else str(error)
         
