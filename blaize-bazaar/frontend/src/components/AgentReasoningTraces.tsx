@@ -39,7 +39,12 @@ const AgentReasoningTraces = ({ isOpen, onClose }: AgentReasoningTracesProps) =>
   useEffect(() => {
     const handleAgentExecution = (event: CustomEvent) => {
       console.log('📥 Received agent-execution-complete event:', event.detail);
-      const { agent_steps, tool_calls } = event.detail;
+      const { agent_steps, tool_calls, trace_id, otel_enabled } = event.detail;
+      
+      // Log OTEL trace info if available
+      if (otel_enabled && trace_id) {
+        console.log('✨ OpenTelemetry trace_id:', trace_id);
+      }
       
       if (!agent_steps || agent_steps.length === 0) {
         console.log('⚠️ No agent steps in event');
@@ -225,39 +230,42 @@ const AgentReasoningTraces = ({ isOpen, onClose }: AgentReasoningTracesProps) =>
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Controls */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={(e) => simulateAgentExecution(e)}
-                disabled={isRecording}
-                className="px-4 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{
-                  background: isRecording
-                    ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(168, 85, 247, 0.3) 100%)'
-                    : 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
-                  color: 'white',
-                }}
-              >
-                {isRecording ? 'Recording...' : 'Simulate Agent Query'}
-              </button>
-              <div className="flex items-center gap-2">
-                <div className="text-xs text-text-secondary">
-                  {mode === 'live' ? '🔴 Live Mode' : '🟢 Demo Mode'}
-                </div>
-                <div className="text-xs text-text-secondary">
-                  💡 Use AI Assistant to see live traces
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={(e) => simulateAgentExecution(e)}
+                  disabled={isRecording}
+                  className="px-4 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: isRecording
+                      ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.3) 0%, rgba(168, 85, 247, 0.3) 100%)'
+                      : 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                    color: 'white',
+                  }}
+                >
+                  {isRecording ? 'Recording...' : 'Simulate Agent Query'}
+                </button>
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-text-secondary">
+                    {mode === 'live' ? '🔴 Live Mode' : '🟢 Demo Mode'}
+                  </div>
+                  <div className="text-xs text-text-secondary">
+                    💡 Use AI Assistant to see live traces
+                  </div>
                 </div>
               </div>
+              {traces.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setTraces([])}
+                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Clear Traces
+                </button>
+              )}
             </div>
-            {traces.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setTraces([])}
-                className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-              >
-                Clear Traces
-              </button>
-            )}
+
           </div>
 
           {/* Traces Timeline */}
@@ -370,8 +378,8 @@ const AgentReasoningTraces = ({ isOpen, onClose }: AgentReasoningTracesProps) =>
         >
           <p className="text-xs text-text-secondary">
             <strong className="text-purple-300">Agent Reasoning:</strong> Visualizes orchestrator routing, 
-            specialist agent execution, tool invocations, and decision flow in real-time. Production systems 
-            use distributed tracing (AWS X-Ray, OpenTelemetry) for observability.
+            specialist agent execution, and tool invocations in real-time. Powered by <strong>Strands OpenTelemetry</strong> 
+            with automatic trace capture. View full traces in console or export to CloudWatch X-Ray/Jaeger for production observability.
           </p>
         </div>
       </div>

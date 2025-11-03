@@ -79,6 +79,47 @@ async def lifespan(app: FastAPI):
     global db_service, embedding_service, bedrock_service, chat_service, image_search_service, query_logger, index_performance_service
     
     try:
+        # Initialize Strands OpenTelemetry tracing
+        try:
+            from strands.telemetry import StrandsTelemetry
+            import sys
+            
+            strands_telemetry = StrandsTelemetry()
+            
+            # Custom formatter for cleaner trace output
+            def format_trace(span):
+                attrs = span.attributes or {}
+                name = span.name
+                duration_ms = (span.end_time - span.start_time) / 1_000_000  # ns to ms
+                
+                # Extract key metrics
+                agent_name = attrs.get('gen_ai.agent.name', '')
+                total_tokens = attrs.get('gen_ai.usage.total_tokens', 0)
+                prompt_tokens = attrs.get('gen_ai.usage.prompt_tokens', 0)
+                completion_tokens = attrs.get('gen_ai.usage.completion_tokens', 0)
+                
+                # Format based on span type
+                if 'invoke_agent' in name:
+                    return f"✨ Agent: {agent_name} | {duration_ms:.0f}ms | Tokens: {total_tokens} ({prompt_tokens} in + {completion_tokens} out)\n"
+                elif 'chat' in name and total_tokens > 0:
+                    return f"  🤖 LLM Call | {duration_ms:.0f}ms | Tokens: {total_tokens}\n"
+                elif 'execute_event_loop_cycle' in name:
+                    cycle_id = attrs.get('event_loop.cycle_id', '')[:8]
+                    return f"  🔄 Cycle {cycle_id} | {duration_ms:.0f}ms\n"
+                else:
+                    return f"  • {name} | {duration_ms:.0f}ms\n"
+            
+            strands_telemetry.setup_console_exporter(
+                out=sys.stdout,
+                formatter=format_trace
+            )
+            # strands_telemetry.setup_otlp_exporter()   # Prod: CloudWatch X-Ray
+            logger.info("✅ Strands OpenTelemetry tracing enabled (compact format)")
+        except ImportError:
+            logger.warning("⚠️ Strands OpenTelemetry not available - install with: pip install 'strands-agents[otel]'")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to setup OpenTelemetry: {e}")
+        
         # Initialize core services
         db_service = DatabaseService()
         await db_service.connect()
@@ -1153,3 +1194,48 @@ async def list_mcp_prompts():
     except Exception as e:
         logger.error(f"Failed to list prompts: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# OPENTELEMETRY TRACING ENDPOINTS
+# ============================================================================
+
+@app.get("/api/traces/status")
+async def get_tracing_status():
+    """
+    Get OpenTelemetry tracing status and configuration
+    """
+    try:
+        from opentelemetry import trace
+        tracer_provider = trace.get_tracer_provider()
+        
+        return {
+            "enabled": tracer_provider is not None,
+            "provider_type": type(tracer_provider).__name__,
+            "exporters": ["console"],
+            "note": "Traces automatically captured by Strands SDK"
+        }
+    except Exception as e:
+        return {"enabled": False, "error": str(e)}
+
+
+@app.get("/api/traces/info")
+async def get_tracing_info():
+    """
+    Get OpenTelemetry tracing documentation and setup info
+    """
+    return {
+        "tracing_enabled": True,
+        "sdk": "Strands OpenTelemetry",
+        "exporters": {
+            "console": {"enabled": True, "description": "Development traces to console"},
+            "otlp": {"enabled": False, "description": "Export to CloudWatch X-Ray/Jaeger"}
+        },
+        "captured_data": [
+            "Agent invocations and routing",
+            "LLM calls with token usage",
+            "Tool executions with results",
+            "End-to-end latency"
+        ],
+        "visualization": "docker run -p 16686:16686 -p 4317:4317 jaegertracing/all-in-one:latest"
+    }

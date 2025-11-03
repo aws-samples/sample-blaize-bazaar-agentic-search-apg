@@ -1,12 +1,15 @@
 """
 Chat Service with Product Card Support
 
-This version REQUIRES Strands SDK and MCP to be properly configured.
-It will fail fast with clear error messages if dependencies are missing.
+Uses Strands SDK for multi-agent orchestration with direct asyncpg database access.
+MCP Context Manager tracks tokens and manages conversation state.
 """
 
 import json
 import logging
+import os
+import subprocess
+import sys
 from typing import List, Dict, Any, Optional
 import re
 
@@ -29,10 +32,10 @@ logger = logging.getLogger(__name__)
 
 
 class EnhancedChatService:
-    """Enhanced chat service with product card support - NO FALLBACK"""
+    """Enhanced chat service with product card support"""
     
     def __init__(self):
-        """Initialize with Strands configuration"""
+        """Initialize with Strands SDK for multi-agent orchestration"""
         from config import settings
         
         self.model_id = settings.BEDROCK_CHAT_MODEL
@@ -40,12 +43,13 @@ class EnhancedChatService:
         self.bedrock = boto3.client('bedrock-runtime', region_name=self.region)
         self.session_storage_dir = "/tmp/blaize-sessions"
         
-        # Check Strands availability - REQUIRED
+        # Check Strands availability
         try:
             from strands import Agent
             self.Agent = Agent
             self.strands_available = True
-            logger.info("✅ Enhanced ChatService initialized with Strands SDK")
+            logger.info("✅ ChatService initialized with Strands SDK")
+            
         except ImportError as e:
             self.strands_available = False
             logger.error(f"❌ Strands SDK not available: {e}")
@@ -131,8 +135,9 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
         """
         Enhanced chat that returns structured product data
         
-        REQUIRES: Strands SDK and MCP properly configured
-        FAILS: If dependencies are missing
+        Uses Strands orchestrator with specialized agents.
+        Agents access database via direct asyncpg connection.
+        MCP Context Manager tracks tokens for conversation state.
         
         Returns:
             {
@@ -140,13 +145,13 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
                 "products": [array of product objects],
                 "suggestions": [array of quick action strings],
                 "success": true,
-                "mcp_enabled": true
+                "mcp_context_tracking": true
             }
         """
         try:
             logger.info(f"💬 Enhanced chat processing: '{message[:60]}...'")
             
-            # Require Strands - no fallback
+            # Require Strands
             if not self.strands_available:
                 raise RuntimeError(
                     "Strands SDK not available. Install with: "
@@ -175,79 +180,91 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
         # Track user message
         mcp_manager.add_message("user", message)
         
-        # Import orchestrator
-        from agents.orchestrator import create_orchestrator
-        
-        # Create session manager if session_id provided
-        session_manager = None
-        if session_id:
-            from services.aurora_session_manager import AuroraSessionManager
-            from config import settings
+        try:
+            # Import orchestrator
+            from agents.orchestrator import create_orchestrator
             
-            # Build connection string
-            conn_string = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+            # Create session manager if session_id provided
+            session_manager = None
+            if session_id:
+                from services.aurora_session_manager import AuroraSessionManager
+                from config import settings
+                
+                # Build connection string
+                conn_string = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+                
+                session_manager = AuroraSessionManager(
+                    session_id=session_id,
+                    conn_string=conn_string,
+                    agent_name="blaize_orchestrator"
+                )
+                logger.info(f"🗄️ Aurora session manager created: {session_id}")
             
-            session_manager = AuroraSessionManager(
-                session_id=session_id,
-                conn_string=conn_string,
-                agent_name="blaize_orchestrator"
-            )
-            logger.info(f"🗄️ Aurora session manager created: {session_id}")
-        
-        # Create orchestrator (uses direct asyncpg for database access)
-        logger.info(f"🎯 Creating agent orchestrator...")
-        orchestrator = create_orchestrator()
-        logger.info(f"🔍 Orchestrator created successfully")
-        
-        # Add session manager if provided
-        if session_manager:
-            orchestrator.session_manager = session_manager
-            session_manager.register_hooks(orchestrator)
-        
-        # Build conversation context
-        conversation_context = ""
-        if conversation_history:
-            recent_history = conversation_history[-6:]
-            for msg in recent_history:
-                role = msg.get('role', 'user')
-                content = msg.get('content', '')
-                if len(content) > 300:
-                    content = content[:300] + "..."
-                conversation_context += f"{role.upper()}: {content}\n\n"
-        
-        # Prepare message for orchestrator
-        full_message = message
-        if conversation_context:
-            full_message = f"""CONVERSATION HISTORY:
+            # Create orchestrator (agents use direct asyncpg via agent_tools.py)
+            logger.info(f"🎯 Creating agent orchestrator...")
+            orchestrator = create_orchestrator()
+            
+            # Add OpenTelemetry trace attributes
+            orchestrator.trace_attributes = {
+                "session.id": session_id or "anonymous",
+                "user.query": message[:100],
+                "workshop": "DAT406",
+                "service": "blaize-bazaar"
+            }
+            
+            logger.info(f"🔍 Orchestrator created with OTEL tracing")
+            
+            # Add session manager if provided
+            if session_manager:
+                orchestrator.session_manager = session_manager
+                session_manager.register_hooks(orchestrator)
+            
+            # Build conversation context
+            conversation_context = ""
+            if conversation_history:
+                recent_history = conversation_history[-6:]
+                for msg in recent_history:
+                    role = msg.get('role', 'user')
+                    content = msg.get('content', '')
+                    if len(content) > 300:
+                        content = content[:300] + "..."
+                    conversation_context += f"{role.upper()}: {content}\n\n"
+            
+            # Prepare message for orchestrator
+            full_message = message
+            if conversation_context:
+                full_message = f"""CONVERSATION HISTORY:
 {conversation_context}
 ---
 CURRENT REQUEST: {message}"""
-        
-        # Invoke orchestrator with timing
-        import time
-        start_time = time.time()
-        
-        logger.info(f"🔄 Invoking orchestrator with query: {message[:100]}...")
-        
-        try:
+            
+            # Invoke orchestrator with timing
+            import time
+            start_time = time.time()
+            
+            logger.info(f"🔄 Invoking orchestrator with query: {message[:100]}...")
             response = orchestrator(full_message)
             response_text = str(response)
             
             # Track assistant response in MCP
             mcp_manager.add_message("assistant", response_text)
             
-            # Debug: Check response structure
-            logger.info(f"🔍 Response type: {type(response)}")
-            logger.info(f"🔍 Response has tool_calls: {hasattr(response, 'tool_calls')}")
-            if hasattr(response, 'tool_calls'):
-                logger.info(f"🔍 Tool calls count: {len(response.tool_calls) if response.tool_calls else 0}")
-            
             logger.info(f"✅ Orchestrator completed with agent chain")
             logger.info(f"📝 Final response length: {len(response_text)} chars")
-            logger.info(f"📝 Response preview: {response_text[:300]}...")
             
-            # Extract detailed agent execution information
-            agent_execution = self._extract_agent_chain(response, start_time, message)
+            # Extract agent execution from OpenTelemetry traces
+            from services.otel_trace_extractor import extract_agent_execution_from_otel, infer_agent_from_query
+            
+            agent_execution = extract_agent_execution_from_otel()
+            
+            # Log OTEL trace info if available
+            if agent_execution.get("otel_enabled") and agent_execution.get("trace_id"):
+                logger.info(f"✨ OpenTelemetry trace_id: {agent_execution['trace_id']}")
+            
+            # Fallback to inference if OTEL not available
+            if not agent_execution.get("otel_enabled"):
+                agent_execution = infer_agent_from_query(message, start_time)
+                logger.info("📊 Using inferred agent execution (OTEL not active)")
             
             # Extract structured data from response
             parsed = self._parse_agent_response(response_text, message, conversation_history)
@@ -257,13 +274,13 @@ CURRENT REQUEST: {message}"""
                 "products": parsed["products"],
                 "suggestions": parsed["suggestions"],
                 "success": True,
-                "mcp_enabled": True,
+                "mcp_context_tracking": True,
                 "orchestrator_enabled": True,
                 "agent_execution": agent_execution,
                 "model": self.model_id
             }
             
-            logger.info(f"📦 Agent execution: {len(agent_execution['agent_steps'])} steps, {len(agent_execution['tool_calls'])} tool calls")
+            logger.info(f"📦 Agent execution: {len(agent_execution['agent_steps'])} steps, {len(agent_execution['tool_calls'])} tool calls | OTEL: {agent_execution.get('otel_enabled', False)}")
             logger.info(f"✅ Response generated ({agent_execution['total_duration_ms']}ms)")
             return result
             
@@ -307,7 +324,7 @@ CURRENT REQUEST: {message}"""
                     continue
         
         if not products_data:
-            logger.warning("⚠️ No JSON product data found in agent response")
+            logger.debug("No JSON product data in response (pricing/inventory queries may not return products)")
         
         # Extract suggestions from "Suggestions:" section only
         suggestions_section = re.search(r'Suggestions?:\s*\n(.*?)(?:\n\n|$)', response_text, re.DOTALL | re.IGNORECASE)
@@ -349,158 +366,6 @@ CURRENT REQUEST: {message}"""
             })
         
         return formatted
-    
-    def _extract_agent_chain(self, response, start_time: float, user_query: str = "") -> Dict[str, Any]:
-        """Extract detailed agent execution information from orchestrator response"""
-        import time
-        
-        agent_steps = []
-        tool_calls = []
-        reasoning_steps = []
-        
-        # Extract orchestrator step
-        agent_steps.append({
-            "agent": "Orchestrator",
-            "action": "Analyzing query and routing to specialists",
-            "status": "completed",
-            "timestamp": start_time,
-            "duration_ms": 50
-        })
-        
-        # Check if response has tool calls (agent invocations)
-        
-        # Check for tool calls in message attribute
-        tool_calls_list = None
-        if hasattr(response, 'message'):
-            if isinstance(response.message, dict) and 'tool_calls' in response.message:
-                tool_calls_list = response.message['tool_calls']
-            elif hasattr(response.message, 'tool_calls'):
-                tool_calls_list = response.message.tool_calls
-        elif hasattr(response, 'tool_calls'):
-            tool_calls_list = response.tool_calls
-        
-        if tool_calls_list:
-            logger.info(f"🔍 Extracting {len(tool_calls_list)} tool calls from response")
-            
-            for idx, tool_call in enumerate(tool_calls_list):
-                tool_name = tool_call.name
-                tool_start = start_time + (idx + 1) * 100
-                
-                logger.info(f"  Tool {idx+1}: {tool_name}")
-                
-                # Extract tool parameters if available
-                tool_params = None
-                if hasattr(tool_call, 'input') and tool_call.input:
-                    if isinstance(tool_call.input, dict):
-                        # For database queries, extract SQL
-                        if 'query' in tool_call.input:
-                            query = tool_call.input['query']
-                            if 'SELECT' in query:
-                                tool_params = query[:50] + '...' if len(query) > 50 else query
-                        elif 'sql' in tool_call.input:
-                            sql = tool_call.input['sql']
-                            tool_params = sql[:50] + '...' if len(sql) > 50 else sql
-                    elif isinstance(tool_call.input, str):
-                        tool_params = tool_call.input[:50]
-                
-                # Specialized agent detection
-                if 'inventory' in tool_name:
-                    agent_steps.append({
-                        "agent": "Inventory Agent",
-                        "action": "Analyzing stock levels and inventory health",
-                        "status": "completed",
-                        "timestamp": tool_start,
-                        "duration_ms": 180
-                    })
-                    tool_calls.append({
-                        "tool": "get_inventory_health",
-                        "timestamp": tool_start + 20,
-                        "duration_ms": 120,
-                        "status": "success"
-                    })
-                elif 'recommendation' in tool_name:
-                    agent_steps.append({
-                        "agent": "Recommendation Agent",
-                        "action": "Finding matching products",
-                        "status": "completed",
-                        "timestamp": tool_start,
-                        "duration_ms": 220
-                    })
-                elif 'price' in tool_name or 'pricing' in tool_name or 'optimization' in tool_name:
-                    logger.info(f"✅ Detected PRICING agent call: {tool_name}")
-                    agent_steps.append({
-                        "agent": "Pricing Agent",
-                        "action": "Analyzing prices and deals",
-                        "status": "completed",
-                        "timestamp": tool_start,
-                        "duration_ms": 160
-                    })
-                    tool_calls.append({
-                        "tool": "get_price_statistics",
-                        "timestamp": tool_start + 25,
-                        "duration_ms": 100,
-                        "status": "success"
-                    })
-                
-                # Custom business logic tools
-                if tool_name in ['semantic_product_search', 'get_product_by_category']:
-                    tool_calls.append({
-                        "tool": tool_name,
-                        "params": tool_params or "Product search",
-                        "timestamp": tool_start + 30,
-                        "duration_ms": 150,
-                        "status": "success"
-                    })
-                elif tool_name in ['get_trending_products', 'get_inventory_health', 'get_price_statistics', 'restock_product']:
-                    tool_calls.append({
-                        "tool": tool_name,
-                        "params": tool_params,
-                        "timestamp": tool_start + 20,
-                        "duration_ms": 100,
-                        "status": "success"
-                    })
-        else:
-            logger.debug("No tool_calls in response - using query-based agent inference")
-        
-        # Infer agent from user query since Strands agents-as-tools do not expose call chain
-        logger.info(f"Agent steps count: {len(agent_steps)} - {[s['agent'] for s in agent_steps]}")
-        if len(agent_steps) == 1:
-            step_time = start_time + 100
-            query_lower = user_query.lower()
-            
-            if any(word in query_lower for word in ['deal', 'cheap', 'price', 'discount', 'budget', 'cost', 'value', 'save']):
-                agent_steps.append({"agent": "Pricing Agent", "action": "Analyzing prices and deals", "status": "completed", "timestamp": step_time, "duration_ms": 160})
-                tool_calls.append({"tool": "get_price_statistics", "timestamp": step_time + 25, "duration_ms": 100, "status": "success"})
-                logger.info("Inferred: Pricing Agent")
-            elif any(word in query_lower for word in ['stock', 'inventory', 'restock']):
-                agent_steps.append({"agent": "Inventory Agent", "action": "Analyzing stock levels", "status": "completed", "timestamp": step_time, "duration_ms": 180})
-                tool_calls.append({"tool": "get_inventory_health", "timestamp": step_time + 20, "duration_ms": 120, "status": "success"})
-                logger.info("Inferred: Inventory Agent")
-            else:
-                agent_steps.append({"agent": "Recommendation Agent", "action": "Searching product catalog", "status": "completed", "timestamp": step_time, "duration_ms": 200})
-                tool_calls.append({"tool": "semantic_product_search", "timestamp": step_time + 50, "duration_ms": 150, "status": "success"})
-                logger.info("Inferred: Recommendation Agent")
-        else:
-            logger.info(f"Specialist agent detected: {agent_steps[-1]['agent']}")
-        # Extract reasoning if available (Claude 4 thinking)
-        if hasattr(response, 'thinking') and response.thinking:
-            reasoning_steps.append({
-                "step": "Initial Analysis",
-                "content": str(response.thinking)[:200] + "...",
-                "timestamp": start_time + 10
-            })
-        
-        total_duration = time.time() - start_time
-        
-        logger.info(f"📊 Extracted {len(agent_steps)} agent steps and {len(tool_calls)} tool calls")
-        
-        return {
-            "agent_steps": agent_steps,
-            "tool_calls": tool_calls,
-            "reasoning_steps": reasoning_steps,
-            "total_duration_ms": int(total_duration * 1000),
-            "success_rate": 100 if agent_steps else 0
-        }
     
     def _generate_contextual_suggestions(self, query: str, conversation_history: Optional[List[Dict[str, str]]] = None) -> List[str]:
         """Generate contextual suggestions based on query type and conversation history"""
