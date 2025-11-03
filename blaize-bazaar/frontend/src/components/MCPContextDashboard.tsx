@@ -279,7 +279,7 @@ const MCPContextDashboard = ({ sessionId }: MCPContextDashboardProps) => {
           <Zap className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
           <div className="text-xs text-text-secondary">
             <strong className="text-blue-300">Model Context Protocol (MCP):</strong> This dashboard 
-            demonstrates production-grade context window management for Claude Sonnet 4's 200K token 
+            demonstrates enterprise-grade context window management for Claude Sonnet 4's 200K token 
             limit. Token budgeting, intelligent pruning, and cost optimization are critical for 
             multi-agent systems at scale.
           </div>

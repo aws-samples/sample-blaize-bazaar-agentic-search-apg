@@ -263,7 +263,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                           <li><strong className="text-green-300">Warm cache (subsequent):</strong> 10-60ms - realistic for cached data</li>
                         </ul>
                         <p className="pt-2 border-t border-yellow-500/20">
-                          <strong className="text-yellow-300">This is correct production behavior.</strong> Databases 
+                          <strong className="text-yellow-300">This is correct enterprise behavior.</strong> Databases 
                           cache hot data for performance. Both measurements are valid depending on your workload.
                         </p>
                       </div>
@@ -285,7 +285,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                     <div className="pt-3 border-t border-blue-500/20">
                       <p className="text-xs text-blue-300 font-medium">
                         💡 Production Takeaway: With small datasets and warm caches, timing becomes inconsistent. 
-                        This is normal PostgreSQL behavior. Focus on testing with production-scale data for realistic ef_search tuning.
+                        This is normal PostgreSQL behavior. Focus on testing with enterprise-scale data for realistic ef_search tuning.
                       </p>
                     </div>
                   </div>
@@ -438,7 +438,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                   )}
                   {results.hnsw.execution_time_ms < 50 && (
                     <p className="text-green-400">
-                      ✅ Excellent performance! Query latency is optimal for production
+                      ✅ Excellent performance! Query latency is optimal for enterprise
                     </p>
                   )}
                 </div>

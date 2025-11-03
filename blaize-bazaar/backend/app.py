@@ -145,7 +145,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify actual origins
+    allow_origins=["*"],  # In enterprise deployments, specify actual origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -1078,7 +1078,7 @@ async def get_mcp_stats(session_id: Optional[str] = Query(default=None)):
     Get MCP context statistics for monitoring
     
     Returns comprehensive metrics for token usage, efficiency, and costs.
-    Demonstrates production-grade context window management for Claude Sonnet 4.
+    Demonstrates enterprise-grade context window management for Claude Sonnet 4.
     
     Args:
         session_id: Optional session ID for session-specific stats
@@ -1133,7 +1133,7 @@ async def list_mcp_prompts():
     """
     List all available prompt templates with versions and performance metrics
     
-    Demonstrates production prompt engineering patterns:
+    Demonstrates enterprise-grade prompt engineering patterns:
     - Versioned prompts for A/B testing
     - Performance tracking per prompt
     - Agent-specific prompt templates

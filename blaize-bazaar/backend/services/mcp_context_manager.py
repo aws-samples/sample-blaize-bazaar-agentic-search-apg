@@ -444,7 +444,7 @@ class PromptRegistry:
     """
     Centralized Prompt Management for Multi-Agent Systems
     
-    Demonstrates production-grade prompt engineering patterns:
+    Demonstrates enterprise-grade prompt engineering patterns:
     - Versioned prompts for A/B testing
     - Dynamic prompt assembly based on context
     - Few-shot example management

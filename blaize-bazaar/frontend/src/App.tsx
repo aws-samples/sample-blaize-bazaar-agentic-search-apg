@@ -174,7 +174,7 @@ function App() {
             <section className="max-w-[1400px] mx-auto px-10 py-24">
               <div className="text-center mb-12">
                 <h2 className="text-5xl font-light mb-4 text-gray-900 dark:text-white">Architecture</h2>
-                <p className="text-text-secondary text-lg">Production-grade AI search powered by AWS</p>
+                <p className="text-text-secondary text-lg">Enterprise-grade AI search powered by AWS</p>
               </div>
               
               {/* Technology Stack - Smaller Tiles */}

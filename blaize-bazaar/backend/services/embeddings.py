@@ -108,7 +108,7 @@ class EmbeddingService:
         Generate embeddings for multiple texts.
         
         Note: Titan v2 doesn't support native batch processing, so this
-        method calls the API sequentially. For production, consider
+        method calls the API sequentially. For enterprise deployments, consider
         implementing async batch processing with rate limiting.
         
         Args:

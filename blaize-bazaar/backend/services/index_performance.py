@@ -385,7 +385,7 @@ class IndexPerformanceService:
                 "dataset in memory after the first query (warm cache). This causes timing variations: "
                 "• First run (cold cache): 200-400ms - realistic for cache misses\n"
                 "• Subsequent runs (warm cache): 10-60ms - realistic for cached data\n\n"
-                "This is expected production behavior. Databases cache frequently accessed data. "
+                "This is expected enterprise behavior. Databases cache frequently accessed data. "
                 "The ef_search parameter's impact is most visible with:\n"
                 "1. Large datasets (>100K rows) where cache can't hold everything\n"
                 "2. Cold cache scenarios (initial queries)\n"
@@ -397,7 +397,7 @@ class IndexPerformanceService:
             ef_search_note = "Consider testing with ef_search values between 40-100 to find optimal balance for your use case."
             cache_note = (
                 "Cache effects are still present but less pronounced. Some queries may hit cache while "
-                "others trigger disk I/O, creating more realistic production variance."
+                "others trigger disk I/O, creating more realistic enterprise variance."
             )
         else:
             size_category = "large"
@@ -405,7 +405,7 @@ class IndexPerformanceService:
             ef_search_note = f"At {dataset_size:,} rows, ef_search={ef_search} provides good starting point. Test 40-200 range."
             cache_note = (
                 "At this scale, cache misses are common and ef_search tuning shows clear performance impact. "
-                "This represents realistic production scenarios where the working set exceeds available cache."
+                "This represents realistic enterprise scenarios where the working set exceeds available cache."
             )
         
         return {
@@ -427,9 +427,9 @@ class IndexPerformanceService:
     ) -> str:
         """Generate performance recommendation"""
         if dataset_size < 10000:
-            return f"Small dataset (~{dataset_size:,} rows): HNSW provides {speedup:.1f}x speedup. For production scale (>100K rows), ef_search tuning becomes more impactful."
+            return f"Small dataset (~{dataset_size:,} rows): HNSW provides {speedup:.1f}x speedup. For enterprise scale (>100K rows), ef_search tuning becomes more impactful."
         elif hnsw_time < 50:
-            return "Excellent performance! Query latency is optimal for production use."
+            return "Excellent performance! Query latency is optimal for enterprise use."
         elif hnsw_time < 150:
             if recall < 95:
                 return f"Good performance. Consider increasing ef_search (currently {ef_search}) to improve recall (currently {recall:.1f}%)."
