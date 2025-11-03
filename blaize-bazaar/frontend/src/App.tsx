@@ -312,16 +312,16 @@ function App() {
           </button>
         </div>
 
-        {/* MCP Context Dashboard - Floating Panel (Bottom Right, Above AI Assistant) */}
+        {/* MCP Context Dashboard - Floating Panel (Next to FABs) */}
         {showMCPDashboard && (
-          <div className="fixed bottom-32 right-8 z-40 w-[480px] max-h-[calc(100vh-200px)] overflow-y-auto">
+          <div className="fixed bottom-8 left-24 z-40 w-[420px] max-h-[calc(100vh-100px)] overflow-y-auto">
             <div 
-              className="rounded-2xl shadow-2xl backdrop-blur-xl border border-purple-500/30 p-6"
+              className="rounded-2xl shadow-2xl backdrop-blur-xl border border-purple-500/30 p-5"
               style={{
                 background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(31, 41, 55, 0.95) 100%)'
               }}
             >
-              <MCPContextDashboard />
+              <MCPContextDashboard onClose={() => setShowMCPDashboard(false)} />
             </div>
           </div>
         )}

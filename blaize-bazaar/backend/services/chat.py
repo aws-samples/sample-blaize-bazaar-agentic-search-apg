@@ -256,6 +256,13 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
         """Enhanced chat using Strands Orchestrator with specialized agents"""
         logger.info(f"🤖 Processing query with Strands Orchestrator")
         
+        # Get MCP manager for token tracking
+        from services.mcp_context_manager import get_mcp_manager
+        mcp_manager = get_mcp_manager()
+        
+        # Track user message
+        mcp_manager.add_message("user", message)
+        
         # This will raise an exception if it fails
         mcp_client = self._create_mcp_client()
         
@@ -325,6 +332,9 @@ CURRENT REQUEST: {message}"""
                 logger.info(f"🔄 Invoking orchestrator with query: {message[:100]}...")
                 response = orchestrator(full_message)
                 response_text = str(response)
+                
+                # Track assistant response in MCP
+                mcp_manager.add_message("assistant", response_text)
                 
                 # Debug: Check response structure
                 logger.info(f"🔍 Response type: {type(response)}")

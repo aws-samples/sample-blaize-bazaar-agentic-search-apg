@@ -39,12 +39,14 @@ interface PromptVersion {
 
 interface MCPContextDashboardProps {
   sessionId?: string;
+  onClose?: () => void;
 }
 
-const MCPContextDashboard = ({ sessionId }: MCPContextDashboardProps) => {
+const MCPContextDashboard = ({ sessionId, onClose }: MCPContextDashboardProps) => {
   const [stats, setStats] = useState<MCPStats | null>(null);
   const [promptVersions, setPromptVersions] = useState<PromptVersion[]>([]);
-  const [showDetails, setShowDetails] = useState(false);
+  const [showDetails] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   // Fetch MCP stats
   useEffect(() => {
@@ -110,14 +112,43 @@ const MCPContextDashboard = ({ sessionId }: MCPContextDashboardProps) => {
           <h3 className="text-lg font-semibold text-text-primary">MCP Context Monitor</h3>
           <span className="text-xs text-text-secondary">Real-time</span>
         </div>
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          className="text-xs px-3 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 transition-colors"
-        >
-          {showDetails ? 'Hide Details' : 'Show Details'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsMinimized(!isMinimized)}
+            className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 transition-colors"
+            title={isMinimized ? 'Expand' : 'Minimize'}
+          >
+            {isMinimized ? '□' : '−'}
+          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 hover:bg-red-500/20 text-purple-300 hover:text-red-300 transition-colors"
+              title="Close"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Minimized View */}
+      {isMinimized && (
+        <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-text-secondary">Tokens:</span>
+            <span className="text-purple-400 font-bold">{stats.current_tokens.toLocaleString()} / 200K</span>
+          </div>
+          <div className="flex items-center justify-between text-sm mt-1">
+            <span className="text-text-secondary">Cost:</span>
+            <span className="text-yellow-400 font-bold">${stats.estimated_cost_usd.toFixed(4)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Full View */}
+      {!isMinimized && (
+        <>
       {/* Token Usage Meter - Primary */}
       <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
         <div className="flex items-center justify-between mb-3">
@@ -155,44 +186,54 @@ const MCPContextDashboard = ({ sessionId }: MCPContextDashboardProps) => {
       </div>
 
       {/* Key Metrics Grid */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {/* Messages */}
         <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
           <div className="flex items-center gap-2 mb-1">
             <Clock className="h-3 w-3 text-blue-400" />
             <span className="text-xs text-text-secondary">Messages</span>
           </div>
-          <div className="text-xl font-bold text-blue-400">{stats.total_messages}</div>
-          <div className="text-xs text-text-secondary mt-1">
-            ~{stats.avg_tokens_per_message.toFixed(0)} tokens/msg
+          <div className="text-lg font-bold text-blue-400">{stats.total_messages}</div>
+          <div className="text-xs text-text-secondary mt-1 truncate">
+            ~{stats.avg_tokens_per_message.toFixed(0)} tok/msg
           </div>
         </div>
 
         {/* Efficiency Score */}
-        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 group relative">
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="h-3 w-3 text-green-400" />
             <span className="text-xs text-text-secondary">Efficiency</span>
           </div>
-          <div className={`text-xl font-bold ${getEfficiencyColor(stats.efficiency_score)}`}>
+          <div className={`text-lg font-bold ${getEfficiencyColor(stats.efficiency_score)}`}>
             {stats.efficiency_score.toFixed(0)}%
           </div>
-          <div className="text-xs text-text-secondary mt-1">
+          <div className="text-xs text-text-secondary mt-1 truncate">
             {stats.pruning_events} prunes
+          </div>
+          <div className="absolute left-0 bottom-full mb-2 w-56 p-2 rounded-lg bg-green-900/95 border border-green-500/30 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+            <p className="text-xs text-green-100 leading-relaxed">
+              <strong>Efficiency Score:</strong> Measures token utilization (40%), pruning efficiency (30%), and recency (30%). Higher is better. 80%+ is excellent.
+            </p>
           </div>
         </div>
 
         {/* Cost */}
-        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20 group relative">
           <div className="flex items-center gap-2 mb-1">
             <DollarSign className="h-3 w-3 text-yellow-400" />
             <span className="text-xs text-text-secondary">Cost</span>
           </div>
-          <div className="text-xl font-bold text-yellow-400">
+          <div className="text-lg font-bold text-yellow-400 truncate">
             ${stats.estimated_cost_usd.toFixed(4)}
           </div>
-          <div className="text-xs text-text-secondary mt-1">
+          <div className="text-xs text-text-secondary mt-1 truncate">
             Input tokens
+          </div>
+          <div className="absolute left-0 bottom-full mb-2 w-56 p-2 rounded-lg bg-yellow-900/95 border border-yellow-500/30 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+            <p className="text-xs text-yellow-100 leading-relaxed">
+              <strong>Cost Calculation:</strong> Claude Sonnet 4 charges $3.00 per 1M input tokens. Formula: (tokens / 1,000,000) × $3.00
+            </p>
           </div>
         </div>
 
@@ -202,34 +243,47 @@ const MCPContextDashboard = ({ sessionId }: MCPContextDashboardProps) => {
             <Clock className="h-3 w-3 text-purple-400" />
             <span className="text-xs text-text-secondary">Duration</span>
           </div>
-          <div className="text-xl font-bold text-purple-400">
+          <div className="text-lg font-bold text-purple-400">
             {stats.session_duration_minutes.toFixed(0)}m
           </div>
-          <div className="text-xs text-text-secondary mt-1">
+          <div className="text-xs text-text-secondary mt-1 truncate">
             Active session
           </div>
         </div>
       </div>
+        </>
+      )}
 
       {/* Prompt Versions - Compact */}
-      {promptVersions.length > 0 && (
+      {!isMinimized && promptVersions.length > 0 && (
         <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/20">
-          <div className="flex items-center gap-2 mb-3">
-            <Code className="h-4 w-4 text-purple-400" />
-            <span className="text-sm font-medium text-text-primary">Active Prompt Versions</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Code className="h-4 w-4 text-purple-400" />
+              <span className="text-sm font-medium text-text-primary">Active Prompt Versions</span>
+            </div>
+            <div className="group relative">
+              <button className="text-xs text-purple-400 hover:text-purple-300">ℹ️</button>
+              <div className="absolute right-0 top-6 w-64 p-3 rounded-lg bg-purple-900/95 border border-purple-500/30 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                <p className="text-xs text-purple-100 mb-2 font-semibold">Extend Prompts:</p>
+                <p className="text-xs text-purple-200 leading-relaxed">
+                  Edit prompts in <code className="bg-purple-800/50 px-1 rounded">backend/services/mcp_context_manager.py</code> under PromptRegistry.TEMPLATES. Update version numbers for A/B testing and track performance metrics.
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-2">
             {promptVersions.map((prompt) => (
               <div key={prompt.agent} className="p-2 rounded-lg bg-purple-500/10">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-medium text-text-primary">{prompt.agent}</span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300">
+                  <span className="text-xs font-medium text-text-primary truncate flex-1">{prompt.agent}</span>
+                  <span className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 ml-2">
                     {prompt.version}
                   </span>
                 </div>
                 <div className="flex gap-3 text-xs text-text-secondary">
-                  <span>{prompt.performance.avg_response_time_ms}ms</span>
-                  <span>{(prompt.performance.success_rate * 100).toFixed(0)}% success</span>
+                  <span className="truncate">{prompt.performance.avg_response_time_ms}ms</span>
+                  <span className="truncate">{(prompt.performance.success_rate * 100).toFixed(0)}%</span>
                 </div>
               </div>
             ))}
