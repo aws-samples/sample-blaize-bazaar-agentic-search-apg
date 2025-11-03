@@ -122,8 +122,14 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-[600px] max-h-[90vh] glass-strong rounded-[20px] flex flex-col shadow-2xl overflow-hidden">
+    <div 
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={handleClose}
+    >
+      <div 
+        className="w-[600px] max-h-[90vh] glass-strong rounded-[20px] flex flex-col shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-purple-500/20 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -133,7 +139,11 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
             </h2>
             <Sparkles className="h-5 w-5 text-purple-400" />
           </div>
-          <button onClick={handleClose} className="hover:text-accent-light transition-colors">
+          <button 
+            onClick={handleClose} 
+            className="p-2 rounded-lg hover:bg-purple-500/20 transition-colors text-text-secondary hover:text-text-primary"
+            aria-label="Close modal"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
