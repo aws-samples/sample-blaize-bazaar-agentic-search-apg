@@ -176,7 +176,7 @@ const AIAssistant = () => {
         agent_steps: [
           { agent: 'Orchestrator', action: 'Analyzing query and routing to specialists', status: 'in_progress', timestamp: Date.now(), duration_ms: 0 }
         ],
-        tool_calls: [],
+        tool_calls: [],  // Will be populated when response completes
         reasoning_steps: [],
         total_duration_ms: 0,
         success_rate: 0
@@ -212,6 +212,11 @@ const AIAssistant = () => {
         (data) => {
           // Handle streaming updates
           if (data.type === 'agent_step') {
+            // Emit event for Agent Reasoning Traces
+            window.dispatchEvent(new CustomEvent('agent-trace', {
+              detail: { agent: data.agent, action: data.action, status: data.status }
+            }));
+            
             setMessages(prev => {
               const updated = [...prev]
               const lastMsg = updated[updated.length - 1]
@@ -279,6 +284,16 @@ const AIAssistant = () => {
 
       // Add AI response (products already formatted by chat service)
       console.log('🔍 Agent execution received:', response.agent_execution)
+      
+      // Emit complete agent execution for Agent Reasoning Traces
+      if (response.agent_execution) {
+        console.log('🚀 Emitting agent-execution-complete event:', response.agent_execution);
+        window.dispatchEvent(new CustomEvent('agent-execution-complete', {
+          detail: response.agent_execution
+        }));
+      } else {
+        console.log('⚠️ No agent_execution in response');
+      }
       
       const aiMessage: Message = {
         role: 'assistant',

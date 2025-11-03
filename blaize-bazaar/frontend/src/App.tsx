@@ -9,7 +9,9 @@ import AIAssistant from './components/AIAssistant'
 import SearchOverlay from './components/SearchOverlay'
 import SQLInspector from './components/SQLInspector'
 import IndexPerformanceDashboard from './components/IndexPerformanceDashboard'
-import { Database, BarChart3 } from 'lucide-react'
+import MCPContextDashboard from './components/MCPContextDashboard'
+import AgentReasoningTraces from './components/AgentReasoningTraces'
+import { Database, BarChart3, Activity, Brain } from 'lucide-react'
 import './styles/premium-heading-styles.css'
 
 // Theme Context (locked to dark mode)
@@ -35,6 +37,8 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showSQLInspector, setShowSQLInspector] = useState(false)
   const [showIndexPerformance, setShowIndexPerformance] = useState(false)
+  const [showMCPDashboard, setShowMCPDashboard] = useState(false)
+  const [showAgentTraces, setShowAgentTraces] = useState(false)
   const backgroundImage = `${import.meta.env.BASE_URL}backgrounds/bg-1.png`
 
   // Apply dark theme to document
@@ -68,7 +72,7 @@ function App() {
           {/* Shop Section (Hero) */}
           {activeSection === 'shop' && (
             <section 
-              className="h-[calc(100vh-72px)] flex items-center px-16 relative"
+              className="h-[calc(100vh-72px)] flex items-center relative"
               style={{
                 backgroundImage: `url(${backgroundImage})`,
                 backgroundSize: 'cover',
@@ -77,7 +81,9 @@ function App() {
                 imageRendering: '-webkit-optimize-contrast',
                 filter: 'contrast(1.05) saturate(1.1) brightness(1.02)',
                 WebkitBackfaceVisibility: 'hidden',
-                backfaceVisibility: 'hidden'
+                backfaceVisibility: 'hidden',
+                paddingLeft: '180px',
+                paddingRight: '64px'
               }}
             >
               <div className="w-full grid grid-cols-2 gap-12 items-center">
@@ -240,7 +246,64 @@ function App() {
               </div>
             </div>
           </button>
+
+          {/* MCP Context Monitor FAB */}
+          <button
+            onClick={() => setShowMCPDashboard(!showMCPDashboard)}
+            className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95"
+            style={{
+              background: showMCPDashboard 
+                ? 'linear-gradient(135deg, #ba68c8 0%, #6a1b9a 100%)'
+                : 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
+            }}
+            title="MCP Context Monitor"
+          >
+            <Activity className="h-6 w-6 text-white" />
+            
+            {/* Tooltip on hover */}
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+              <div className="px-3 py-2 rounded-lg bg-purple-500/95 backdrop-blur-sm border border-purple-400/30 shadow-xl">
+                <p className="text-sm text-white font-medium">MCP Context Monitor</p>
+                <p className="text-xs text-purple-200">Token & prompt management</p>
+              </div>
+            </div>
+          </button>
+
+          {/* Agent Reasoning Traces FAB */}
+          <button
+            onClick={() => setShowAgentTraces(true)}
+            className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95"
+            style={{
+              background: 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
+            }}
+            title="Agent Reasoning Traces"
+          >
+            <Brain className="h-6 w-6 text-white" />
+            
+            {/* Tooltip on hover */}
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+              <div className="px-3 py-2 rounded-lg bg-purple-500/95 backdrop-blur-sm border border-purple-400/30 shadow-xl">
+                <p className="text-sm text-white font-medium">Agent Reasoning Traces</p>
+                <p className="text-xs text-purple-200">Multi-agent workflow</p>
+              </div>
+            </div>
+          </button>
         </div>
+
+        {/* MCP Context Dashboard - Floating Panel (Bottom Right, Above AI Assistant) */}
+        {showMCPDashboard && (
+          <div className="fixed bottom-32 right-8 z-40 w-[480px] max-h-[calc(100vh-200px)] overflow-y-auto">
+            <div 
+              className="rounded-2xl shadow-2xl backdrop-blur-xl border border-purple-500/30 p-6"
+              style={{
+                background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(31, 41, 55, 0.95) 100%)'
+              }}
+            >
+              <MCPContextDashboard />
+            </div>
+          </div>
+        )}
+        
 
         {/* SQL Inspector Modal */}
         <SQLInspector
@@ -252,6 +315,12 @@ function App() {
         <IndexPerformanceDashboard
           isOpen={showIndexPerformance}
           onClose={() => setShowIndexPerformance(false)}
+        />
+
+        {/* Agent Reasoning Traces Modal */}
+        <AgentReasoningTraces
+          isOpen={showAgentTraces}
+          onClose={() => setShowAgentTraces(false)}
         />
       </div>
     </ThemeContext.Provider>

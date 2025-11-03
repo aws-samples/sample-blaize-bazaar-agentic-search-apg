@@ -114,7 +114,7 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
             : 'rgba(0, 0, 0, 0.1)'
         }}
       >
-        <nav className="px-16 h-[72px] flex items-center justify-between relative z-10">
+        <nav className="h-[72px] flex items-center justify-between relative z-10" style={{ paddingLeft: '180px', paddingRight: '64px' }}>
           {/* Logo */}
           <div 
             className="logo gradient-text-chrome text-2xl font-light tracking-tight cursor-pointer"

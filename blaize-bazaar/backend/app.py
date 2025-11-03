@@ -7,7 +7,7 @@ import time
 import logging
 import json
 from contextlib import asynccontextmanager
-from typing import List
+from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi import File, UploadFile
@@ -34,6 +34,7 @@ from services.chat import ChatService
 from services.image_search import ImageSearchService, get_image_search_service
 from services.sql_query_logger import init_query_logger, get_query_logger
 from services.index_performance import get_index_performance_service
+from services.hybrid_search import HybridSearchService
 
 # Lab 2 agents use Strands SDK function pattern (not class-based)
 # Agents are available via /api/agents/query endpoint
@@ -248,75 +249,99 @@ async def semantic_search(
     request: SearchRequest,
     db: DatabaseService = Depends(get_db_service),
     embeddings: EmbeddingService = Depends(get_embedding_service),
+    use_hybrid: bool = False
 ):
     """
     LAB 1: Semantic search endpoint using vector similarity
     
     Performs pure vector similarity search using pgvector HNSW index
-    and Amazon Titan embeddings.
+    and Amazon Titan embeddings. Optionally uses hybrid search (vector + full-text).
     """
     start_time = time.time()
+    use_hybrid = request.query.startswith("hybrid:") or use_hybrid
+    if use_hybrid and request.query.startswith("hybrid:"):
+        request.query = request.query.replace("hybrid:", "").strip()
     
     try:
-        logger.info(f"🔍 Semantic search: '{request.query}' (limit={request.limit})")
+        search_type = "hybrid" if use_hybrid else "vector"
+        logger.info(f"🔍 {search_type.upper()} search: '{request.query}' (limit={request.limit})")
         
         # Generate query embedding
         query_embedding = embeddings.generate_embedding(request.query)
         logger.info(f"✅ Generated embedding vector (1024 dimensions)")
         
-        # Prepare SQL (no WHERE clause - let HNSW index optimize ORDER BY + LIMIT)
-        query_sql = """
-            SELECT 
-                "productId",
-                product_description,
-                "imgUrl" as imgurl,
-                "productURL" as producturl,
-                stars,
-                reviews,
-                price,
-                category_id,
-                "isBestSeller" as isbestseller,
-                "boughtInLastMonth" as boughtinlastmonth,
-                category_name,
-                quantity,
-                1 - (embedding <=> %s::vector) as similarity_score
-            FROM bedrock_integration.product_catalog
-            ORDER BY embedding <=> %s::vector
-            LIMIT %s
-        """
-        
-        # Get connection for logging
-        import psycopg
-        conn_string = f"host={settings.DB_HOST} port={settings.DB_PORT} dbname={settings.DB_NAME} user={settings.DB_USER} password={settings.DB_PASSWORD}"
-        
-        # Force index usage with multiple settings
-        await db.execute_query("SET LOCAL enable_seqscan = off")
-        await db.execute_query("SET LOCAL random_page_cost = 1")
-        await db.execute_query("SET LOCAL cpu_tuple_cost = 0.01")
-        
-        # Execute query with index forced
-        results = await db.fetch_all(
-            query_sql,
-            query_embedding,
-            query_embedding,
-            request.limit
-        )
-        
-        # Log the query
-        query_logger_instance = get_query_logger()
-        with psycopg.connect(conn_string) as conn:
-            conn.execute("SET LOCAL enable_seqscan = off")
-            conn.execute("SET LOCAL random_page_cost = 1")
-            conn.execute("SET LOCAL cpu_tuple_cost = 0.01")
+        if use_hybrid:
+            # Hybrid search with RRF
+            hybrid_service = HybridSearchService(db)
+            hybrid_result = await hybrid_service.search(
+                query=request.query,
+                embedding=query_embedding,
+                limit=request.limit
+            )
+            results = hybrid_result["results"]
+            # Convert to expected format
+            for r in results:
+                if 'similarity' in r:
+                    r['similarity_score'] = r['similarity']
+                r['productId'] = r.get('product_id')
+                r['imgurl'] = r.get('imgurl', '')
+                r['producturl'] = r.get('producturl', '')
+                r['isbestseller'] = r.get('isbestseller', False)
+                r['boughtinlastmonth'] = r.get('boughtinlastmonth', 0)
+        else:
+            # Prepare SQL (no WHERE clause - let HNSW index optimize ORDER BY + LIMIT)
+            query_sql = """
+                SELECT 
+                    "productId",
+                    product_description,
+                    "imgUrl" as imgurl,
+                    "productURL" as producturl,
+                    stars,
+                    reviews,
+                    price,
+                    category_id,
+                    "isBestSeller" as isbestseller,
+                    "boughtInLastMonth" as boughtinlastmonth,
+                    category_name,
+                    quantity,
+                    1 - (embedding <=> %s::vector) as similarity_score
+                FROM bedrock_integration.product_catalog
+                ORDER BY embedding <=> %s::vector
+                LIMIT %s
+            """
             
-            with query_logger_instance.log_query(
-                query_type="semantic_search",
-                sql=query_sql,
-                params=[query_embedding, query_embedding, request.limit],
-                connection=conn,
-                search_query=request.query
-            ) as query_metadata:
-                query_metadata["rows_returned"] = len(results)
+            # Get connection for logging
+            import psycopg
+            conn_string = f"host={settings.DB_HOST} port={settings.DB_PORT} dbname={settings.DB_NAME} user={settings.DB_USER} password={settings.DB_PASSWORD}"
+            
+            # Force index usage with multiple settings
+            await db.execute_query("SET LOCAL enable_seqscan = off")
+            await db.execute_query("SET LOCAL random_page_cost = 1")
+            await db.execute_query("SET LOCAL cpu_tuple_cost = 0.01")
+            
+            # Execute query with index forced
+            results = await db.fetch_all(
+                query_sql,
+                query_embedding,
+                query_embedding,
+                request.limit
+            )
+            
+            # Log the query
+            query_logger_instance = get_query_logger()
+            with psycopg.connect(conn_string) as conn:
+                conn.execute("SET LOCAL enable_seqscan = off")
+                conn.execute("SET LOCAL random_page_cost = 1")
+                conn.execute("SET LOCAL cpu_tuple_cost = 0.01")
+                
+                with query_logger_instance.log_query(
+                    query_type="semantic_search",
+                    sql=query_sql,
+                    params=[query_embedding, query_embedding, request.limit],
+                    connection=conn,
+                    search_query=request.query
+                ) as query_metadata:
+                    query_metadata["rows_returned"] = len(results)
         
         # Filter by similarity threshold in application (after HNSW index optimization)
         if request.min_similarity > 0:
@@ -332,14 +357,14 @@ async def semantic_search(
             search_results.append(search_result)
         
         search_time_ms = (time.time() - start_time) * 1000
-        logger.info(f"⚡ Search completed in {search_time_ms:.2f}ms")
+        logger.info(f"⚡ Search completed in {search_time_ms:.2f}ms (method: {search_type})")
         
         return SearchResponse(
             query=request.query,
             results=search_results,
             total_results=len(search_results),
             search_time_ms=search_time_ms,
-            search_type="semantic"
+            search_type=search_type
         )
         
     except Exception as e:
@@ -1025,4 +1050,91 @@ async def get_index_stats():
         return stats
     except Exception as e:
         logger.error(f"Failed to get index stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# MCP (MODEL CONTEXT PROTOCOL) ENDPOINTS
+# ============================================================================
+
+@app.get("/api/mcp/stats")
+async def get_mcp_stats(session_id: Optional[str] = Query(default=None)):
+    """
+    Get MCP context statistics for monitoring
+    
+    Returns comprehensive metrics for token usage, efficiency, and costs.
+    Demonstrates production-grade context window management for Claude Sonnet 4.
+    
+    Args:
+        session_id: Optional session ID for session-specific stats
+    """
+    try:
+        from services.mcp_context_manager import get_mcp_manager
+        
+        mcp_manager = get_mcp_manager()
+        stats = mcp_manager.get_context_stats()
+        
+        logger.info(f"📊 MCP stats requested: {stats['current_tokens']:,} tokens, {stats['efficiency_score']:.1f}% efficiency")
+        
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Failed to get MCP stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/mcp/clear")
+async def clear_mcp_context(session_id: str = Query(...)):
+    """
+    Clear MCP context for a session
+    
+    Useful for starting fresh conversations or freeing memory.
+    System prompts are preserved.
+    
+    Args:
+        session_id: Session ID to clear context for
+    """
+    try:
+        from services.mcp_context_manager import get_mcp_manager
+        
+        mcp_manager = get_mcp_manager()
+        mcp_manager.clear_context()
+        
+        logger.info(f"🗑️ MCP context cleared for session: {session_id}")
+        
+        return {
+            "status": "success",
+            "message": f"Context cleared for session {session_id}",
+            "session_id": session_id
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to clear MCP context: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/mcp/prompts")
+async def list_mcp_prompts():
+    """
+    List all available prompt templates with versions and performance metrics
+    
+    Demonstrates production prompt engineering patterns:
+    - Versioned prompts for A/B testing
+    - Performance tracking per prompt
+    - Agent-specific prompt templates
+    """
+    try:
+        from services.mcp_context_manager import PromptRegistry
+        
+        prompts = PromptRegistry.list_available_prompts()
+        
+        logger.info(f"📋 Listed {len(prompts)} prompt templates")
+        
+        return {
+            "prompts": prompts,
+            "total": len(prompts)
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to list prompts: {e}")
         raise HTTPException(status_code=500, detail=str(e))
