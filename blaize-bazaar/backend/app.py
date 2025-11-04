@@ -47,6 +47,21 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 
+# Filter out malicious bot requests from logs
+class SecurityScanFilter(logging.Filter):
+    """Filter out automated security scanner requests"""
+    MALICIOUS_PATTERNS = [
+        'phpunit', '.env', 'eval-stdin', 'wp-admin', 'wp-login',
+        '.git', 'config.php', 'shell', 'cmd', 'exec'
+    ]
+    
+    def filter(self, record):
+        message = record.getMessage().lower()
+        return not any(pattern in message for pattern in self.MALICIOUS_PATTERNS)
+
+# Apply filter to uvicorn access logger
+logging.getLogger("uvicorn.access").addFilter(SecurityScanFilter())
+
 # Configure the root strands logger
 logging.getLogger("strands").setLevel(logging.INFO)
 
