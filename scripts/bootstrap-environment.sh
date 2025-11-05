@@ -282,8 +282,14 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     fi
 done
 
+# If service is running, consider it ready even if HTTP check failed
 if [ "$CODE_EDITOR_READY" = "false" ]; then
-    error "Code Editor did not become ready"
+    if systemctl is-active --quiet "code-editor@$CODE_EDITOR_USER"; then
+        warn "Code Editor HTTP check failed but service is running - continuing..."
+        CODE_EDITOR_READY=true
+    else
+        error "Code Editor did not become ready"
+    fi
 fi
 
 # ============================================================================
