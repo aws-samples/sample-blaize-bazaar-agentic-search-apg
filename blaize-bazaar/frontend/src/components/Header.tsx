@@ -1,7 +1,3 @@
-/**
- * Premium Header Component - Enhanced with Theme Toggle and Image Search
- * ALWAYS DARK BACKGROUND - No transparency at top!
- */
 import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../App'
 import ImageSearchModal from './ImageSearchModal'
@@ -102,7 +98,7 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
   return (
     <>
       <header 
-        className="fixed top-0 left-0 right-0 z-50 border-b relative"
+        className="fixed top-0 left-0 right-0 z-50 border-b"
         style={{
           background: theme === 'dark' 
             ? 'rgba(10, 10, 15, 0.95)' 
