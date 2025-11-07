@@ -114,7 +114,7 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
             : 'rgba(0, 0, 0, 0.1)'
         }}
       >
-        <nav className="h-[72px] flex items-center justify-between relative z-10" style={{ paddingLeft: '180px', paddingRight: '64px' }}>
+        <nav className="h-[72px] flex items-center justify-between relative z-10 px-4 md:px-8 lg:px-16" style={{ paddingLeft: 'max(64px, 10vw)', paddingRight: 'max(64px, 5vw)' }}>
           {/* Logo */}
           <div 
             className="logo gradient-text-chrome text-2xl font-light tracking-tight cursor-pointer"
@@ -187,9 +187,9 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
           </div>
 
           {/* Right Side - Search & Theme Toggle */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4 flex-shrink min-w-0">
             <div className="flex items-center gap-2">
-              <div className="relative w-[450px] group" ref={searchRef}>
+              <div className="relative w-full max-w-[450px] min-w-[280px] group" ref={searchRef}>
                 <input
                   type="text"
                   value={searchQuery}
@@ -198,7 +198,7 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
                   onFocus={() => searchQuery.length >= 2 && setShowSuggestions(true)}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                   placeholder={`Try: "${placeholders[placeholderIndex]}"`}
-                  className="w-full px-3 py-2 pr-24 text-sm input-field rounded-lg"
+                  className="w-full px-3 py-2 pr-24 text-sm input-field rounded-lg overflow-hidden text-ellipsis"
                 />
                 {showSuggestions && suggestions.length > 0 && (
                   <div className="absolute top-full left-0 right-0 mt-2 glass-strong rounded-xl overflow-hidden shadow-xl border border-accent-light/20 max-h-80 overflow-y-auto z-50">

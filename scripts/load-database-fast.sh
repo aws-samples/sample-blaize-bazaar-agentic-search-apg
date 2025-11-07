@@ -160,8 +160,68 @@ WHERE "isBestSeller" = TRUE;
 -- Analyze for query planner
 VACUUM ANALYZE bedrock_integration.product_catalog;
 
+\echo 'Creating session management tables...'
+-- Session management tables (required by Blaize Bazaar app)
+CREATE TABLE IF NOT EXISTS bedrock_integration.conversations (
+    session_id VARCHAR(255) PRIMARY KEY,
+    agent_name VARCHAR(255),
+    context JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    metadata JSONB DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversations_created_at 
+ON bedrock_integration.conversations(created_at);
+
+CREATE TABLE IF NOT EXISTS bedrock_integration.messages (
+    id SERIAL PRIMARY KEY,
+    session_id VARCHAR(255) NOT NULL REFERENCES bedrock_integration.conversations(session_id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    metadata JSONB DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_session_id 
+ON bedrock_integration.messages(session_id);
+
+CREATE INDEX IF NOT EXISTS idx_messages_created_at 
+ON bedrock_integration.messages(created_at);
+
+CREATE TABLE IF NOT EXISTS bedrock_integration.session_metadata (
+    session_id VARCHAR(255) PRIMARY KEY REFERENCES bedrock_integration.conversations(session_id) ON DELETE CASCADE,
+    user_preferences JSONB DEFAULT '{}'::jsonb,
+    context_data JSONB DEFAULT '{}'::jsonb,
+    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS bedrock_integration.tool_uses (
+    id SERIAL PRIMARY KEY,
+    session_id VARCHAR(255) NOT NULL REFERENCES bedrock_integration.conversations(session_id) ON DELETE CASCADE,
+    tool_name VARCHAR(255) NOT NULL,
+    tool_input JSONB,
+    tool_output JSONB,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_tool_uses_session_id 
+ON bedrock_integration.tool_uses(session_id);
+
+CREATE INDEX IF NOT EXISTS idx_tool_uses_timestamp 
+ON bedrock_integration.tool_uses(timestamp);
+
+-- Grant permissions
+GRANT SELECT, INSERT, UPDATE, DELETE ON bedrock_integration.conversations TO postgres;
+GRANT SELECT, INSERT, UPDATE, DELETE ON bedrock_integration.messages TO postgres;
+GRANT SELECT, INSERT, UPDATE, DELETE ON bedrock_integration.session_metadata TO postgres;
+GRANT SELECT, INSERT, UPDATE, DELETE ON bedrock_integration.tool_uses TO postgres;
+GRANT USAGE, SELECT ON SEQUENCE bedrock_integration.messages_id_seq TO postgres;
+GRANT USAGE, SELECT ON SEQUENCE bedrock_integration.tool_uses_id_seq TO postgres;
+
 \echo 'Verifying data...'
 SELECT COUNT(*) as product_count FROM bedrock_integration.product_catalog;
+SELECT 'Session tables created' as session_status;
 SQL
 
 if [ $? -eq 0 ]; then
