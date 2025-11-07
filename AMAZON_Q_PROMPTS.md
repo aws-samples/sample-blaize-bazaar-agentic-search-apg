@@ -5,232 +5,281 @@
 > **Level**: 400 (Expert)  
 > **AWS re:Invent 2025**
 
-Use these 10 essential prompts with Amazon Q Developer in your IDE to explore the Blaize Bazaar architecture.
+Use these prompts with Amazon Q Developer in your IDE to progressively understand the Blaize Bazaar architecture.
 
 ---
 
 ## 📚 Workshop Structure
 
-**Part 1**: Agent Memory Foundation - Semantic Search as Agent Context  
-**Part 2**: Agent Tool Development - Custom Tools with Strands SDK  
-**Part 3**: Agent Orchestration Systems - Agents as Tools Pattern  
-**Demo**: Blaize Bazaar App - Full-stack Production Application
+**Part 1**: Agent Memory (Semantic Search + Sessions) - 25 min  
+**Part 2**: MCP Context Management & Custom Tools - 20 min  
+**Part 3**: Multi-Agent Orchestration - 25 min  
+**Part 4**: Advanced Topics (Optional) - Session management, production patterns
 
 ---
 
-## 🎯 Essential Prompts
+## 🎯 Progressive Learning Prompts
 
-### 1. Complete Architecture Overview
+### 1. High-Level: What is Blaize Bazaar?
 
 ```
-@workspace Explain the Blaize Bazaar architecture end-to-end:
-- React frontend → FastAPI backend → Aurora PostgreSQL
-- Multi-agent system (Orchestrator + 3 specialist agents)
-- Data flow: chat.py → orchestrator → agents → tools → database
-- MCP Context Manager for token tracking
-- OpenTelemetry for trace capture
+@workspace What is Blaize Bazaar and what problem does it solve?
+- What is the business use case (e-commerce product search)?
+- Why use AI agents instead of traditional search?
+- What are the key technologies: Aurora PostgreSQL, pgvector, Strands SDK, Claude Sonnet 4?
+- How does it demonstrate production-ready agentic AI patterns?
 
-Show me the complete flow for: "Show me wireless headphones under $100"
+Give me a 2-minute executive summary.
 ```
 
-**Use for**: Understanding the big picture and how all components connect.
+**Use for**: Understanding the business context and value proposition.
 
 ---
 
-### 2. Part 1: Semantic Search & RAG
+### 2. High-Level: System Architecture Overview
 
 ```
-@workspace Guide me through Part 1 - Agent Memory Foundation:
-- How to generate 1024-dim embeddings with Amazon Titan (embeddings.py)
-- How to store vectors in Aurora PostgreSQL with pgvector extension
-- How to create HNSW index for fast similarity search
-- How to query with <=> operator and optimize with enable_seqscan=off
-- How semantic search provides context for agents (RAG pattern)
+@workspace Explain the Blaize Bazaar architecture at a high level:
+- Frontend: React app with chat interface and monitoring dashboards
+- Backend: FastAPI with multi-agent orchestration
+- Database: Aurora PostgreSQL with pgvector for semantic search
+- Agents: Orchestrator + Recommendation + Inventory + Pricing specialists
+- Key patterns: "Agents as Tools", MCP context management, OpenTelemetry tracing
 
-Show me the complete vector search SQL query in app.py /api/search endpoint.
+Show me a simple diagram of how a user query flows through the system.
 ```
 
-**Use for**: Lab Part 1 - Building the knowledge base for agents.
+**Use for**: Understanding the overall architecture before diving into details.
 
 ---
 
-### 3. Part 2: Custom Tools with Strands SDK
+### 3. Part 1: Semantic Search with pgvector
 
 ```
-@workspace Guide me through Part 2 - Agent Tool Development:
-- How @tool decorator works in Strands SDK (agent_tools.py)
-- How to implement custom business logic (business_logic.py)
-  * get_inventory_health() - stock levels
-  * get_price_statistics() - pricing analytics
-  * semantic_product_search() - vector search
-- How to integrate with database using asyncpg (database.py)
-- How to register tools with set_db_service()
+@workspace Guide me through Part 1 - Agent Memory (Semantic Search + Sessions):
+- How does Amazon Bedrock Titan generate 1024-dim embeddings?
+- How is pgvector extension used in Aurora PostgreSQL?
+- What is the product_catalog table schema (productId, embedding, price, stars)?
+- How does HNSW index work for fast similarity search?
+- What is the <=> operator and why use SET enable_seqscan=off?
+- How does semantic search provide context for agents (RAG pattern)?
 
-Show me how to create a new tool called "get_best_sellers" step-by-step.
+Show me the complete embedding generation and vector search code.
 ```
 
-**Use for**: Lab Part 2 - Building tools that agents can use.
+**Use for**: Part 1 notebook - Building semantic search foundation.
 
 ---
 
-### 4. Part 3: Multi-Agent Orchestration
+### 4. Part 2: Custom Tools & MCP Context Management
 
 ```
-@workspace Guide me through Part 3 - Agent Orchestration Systems:
-- How orchestrator routes queries to specialists (orchestrator.py)
-- How specialist agents are defined as @tool functions:
-  * inventory_restock_agent - stock management
-  * price_optimization_agent - pricing analysis
-  * product_recommendation_agent - product search
-- How agents-as-tools pattern works in Strands SDK
-- How OpenTelemetry captures agent execution traces
+@workspace Guide me through Part 2 - MCP Context Management & Custom Tools:
+- What is MCP (Model Context Protocol) and why is it important?
+- How does MCPContextManager track tokens with tiktoken?
+- What are the three custom tools built in Part 2?
+  * get_trending_products(limit) - engagement scoring
+  * semantic_product_search(query, limit) - vector search
+  * get_category_price_analysis(category) - pricing stats
+- How does @tool decorator work in Strands SDK?
+- How do these tools reduce context from 50K+ tokens to ~2K tokens?
 
-Show me the complete agent chain for: "What products need restocking?"
+Show me the complete implementation of get_trending_products().
 ```
 
-**Use for**: Lab Part 3 - Building multi-agent coordination.
+**Use for**: Part 2 notebook - Building custom tools and understanding token optimization.
 
 ---
 
-### 5. Demo: Blaize Bazaar Full-Stack App
+### 5. Part 3: Multi-Agent Orchestration (Agents as Tools)
 
 ```
-@workspace Explain the Blaize Bazaar demo application:
-- Frontend: React components (AIAssistant.tsx, AgentReasoningTraces.tsx)
-- Backend: FastAPI endpoints (/api/chat, /api/search, /api/mcp/stats)
-- Real-time features: agent-execution-complete events, token tracking
-- Monitoring: SQL Inspector, Index Performance, MCP Dashboard, Agent Traces
-- Production patterns: MCP Context Manager, OpenTelemetry, connection pooling
+@workspace Guide me through Part 3 - Multi-Agent Orchestration:
+- What is the "Agents as Tools" pattern?
+- How does the Orchestrator Agent coordinate specialist agents?
+- What tools does each specialist agent have?
+  * Recommendation Agent: semantic_product_search(), get_trending_products()
+  * Pricing Agent: get_category_price_analysis(), semantic_product_search()
+  * Inventory Agent: check_inventory_levels()
+- How are agents wrapped as @tool functions for the Orchestrator?
+- How does MCP manage context across multiple agent calls?
 
-Show me how to access each monitoring dashboard in the UI.
+Show me how the Orchestrator routes "Find laptops under $800" to the right agent.
+```
+
+**Use for**: Part 3 notebook - Building multi-agent systems.
+
+---
+
+### 6. Blaize Bazaar Full-Stack Application
+
+```
+@workspace Explain the Blaize Bazaar production application:
+- Frontend: React (Header.tsx, AIAssistant.tsx, SearchOverlay.tsx)
+- Backend: FastAPI (app.py, chat.py, services/)
+- Key endpoints: /api/chat, /api/search, /api/mcp/stats
+- Real-time features: Server-Sent Events for agent execution updates
+- Monitoring dashboards:
+  * Agent Reasoning Traces - see agent decision flow
+  * MCP Context Dashboard - token usage and costs
+  * SQL Inspector - query performance
+  * Index Performance - HNSW index stats
+
+Show me how the chat flow works from user input to agent response.
 ```
 
 **Use for**: Understanding the complete production application.
 
 ---
 
-### 6. MCP Context Protocol Deep-Dive
+### 7. MCP Context Management Deep-Dive
 
 ```
 @workspace Explain MCP (Model Context Protocol) implementation:
-- What is MCPContextManager in mcp_context_manager.py?
-- How does it track tokens with tiktoken (cl100k_base encoding)?
-- How does intelligent pruning work at 85% capacity (153K tokens)?
+- What is MCPContextManager in services/mcp_context_manager.py?
+- How does tiktoken count tokens accurately (cl100k_base encoding)?
+- What is the Context Pyramid (Raw Data → Structured Tools → MCP → Agent)?
+- How does intelligent pruning work at 85% capacity (153K/180K tokens)?
 - How is cost calculated: (tokens / 1M) × $3.00 for Claude Sonnet 4?
-- How is efficiency score computed: 40% utilization + 30% pruning + 30% recency?
+- What is the importance scoring algorithm for message pruning?
 
-Show me where MCP manager is used in chat.py for token tracking.
+Show me the token budgeting strategy and pruning logic.
 ```
 
-**Use for**: Understanding production context window management.
+**Use for**: Understanding production context window management (Part 2 & 4).
 
 ---
 
-### 7. OpenTelemetry Tracing
+### 8. OpenTelemetry & Observability
 
 ```
 @workspace How does OpenTelemetry work in Blaize Bazaar?
-- Where is Strands OpenTelemetry initialized? (app.py lifespan)
-- What does the custom trace formatter capture?
-  * ✨ Agent invocations with duration and tokens
-  * 🤖 LLM calls with prompt/completion tokens
-  * 🔄 Event loop cycles
-- How does otel_trace_extractor.py extract trace data?
-- How to export traces to Jaeger or CloudWatch X-Ray?
+- Where is Strands OpenTelemetry initialized? (app.py startup)
+- What traces are captured?
+  * Agent invocations (which agent, duration, tokens)
+  * Tool calls (which tool, parameters, results)
+  * LLM calls (prompt tokens, completion tokens, latency)
+- How does the Agent Reasoning Traces UI display this data?
+- How to export traces to AWS X-Ray or Jaeger?
+- What metrics are tracked: token usage, costs, latency, success rates?
 
-Show me the custom format_trace() function in app.py.
+Show me the trace capture and visualization flow.
 ```
 
-**Use for**: Understanding observability and production debugging.
+**Use for**: Understanding observability and production debugging (Part 4).
 
 ---
 
-### 8. Database Schema & pgvector
+### 9. Database Schema & Session Management
 
 ```
-@workspace Explain the Aurora PostgreSQL setup:
-- Table: bedrock_integration.product_catalog (21,704 products)
-- Key columns: "productId", embedding (vector(1024)), price, stars, reviews
+@workspace Explain the Aurora PostgreSQL database schema:
+- Product catalog: bedrock_integration.product_catalog (21,704 products)
+  * Key columns: "productId", embedding vector(1024), price, stars, reviews
+  * HNSW index on embedding for fast similarity search
+- Session tables (Part 4):
+  * conversations - session tracking with agent_name and context
+  * messages - conversation history
+  * session_metadata - user preferences
+  * tool_uses - tool invocation tracking
 - Why camelCase with quotes? ("imgUrl", "isBestSeller")
-- HNSW index on embedding column for fast similarity search
-- Connection pooling with asyncpg (5-20 connections)
 
-Show me the table schema and HNSW index creation SQL.
+Show me the complete schema and how sessions are persisted.
 ```
 
-**Use for**: Understanding the database foundation.
+**Use for**: Understanding the database foundation (Part 1 & 4).
 
 ---
 
-### 9. Add a New Agent
+### 10. Add a New Custom Tool
 
 ```
-@workspace I want to create a "Customer Service Agent" for returns/refunds:
-1. Create customer_service_agent.py following the pattern
-2. Define tools: process_return(), check_refund_status()
-3. Add to orchestrator's tools list in orchestrator.py
-4. Update orchestrator prompt to route customer service queries
+@workspace I want to create a new tool "get_low_stock_products" that:
+- Finds products with quantity < 50
+- Returns product details with stock levels
+- Uses the @tool decorator from Strands SDK
+- Integrates with the existing database connection
 
-Provide complete code for all 4 steps.
+Show me:
+1. Complete tool implementation with @tool decorator
+2. SQL query to fetch low stock products
+3. How to add it to an agent's tools list
+4. Example of how the agent would use it
 ```
 
-**Use for**: Extending the system with new agents.
+**Use for**: Extending the system with new tools (Part 2 exercise).
 
 ---
 
-### 10. Production Deployment Checklist
+### 11. Production Deployment Best Practices
 
 ```
-@workspace What changes are needed for production deployment?
-- CORS: Change from allow_origins=["*"] to specific domains
-- Database: Tune connection pool (min_size, max_size, timeout)
-- OpenTelemetry: Switch from console to OTLP exporter for X-Ray
-- Security: Add API authentication, rate limiting, input validation
-- Monitoring: Enable CloudWatch metrics, set up alarms
-- Environment: Use AWS Secrets Manager for credentials
+@workspace What are the production deployment best practices for Blaize Bazaar?
+- Security: CORS configuration, API authentication, rate limiting
+- Database: Connection pooling, query optimization, index maintenance
+- Observability: OpenTelemetry export to X-Ray, CloudWatch metrics, alarms
+- Cost optimization: Token budgeting, MCP pruning, caching strategies
+- Resilience: Error handling, retry logic, circuit breakers
+- Secrets: AWS Secrets Manager for credentials
+- Deployment: ECS/EKS for backend, CloudFront for frontend, RDS Proxy
 
-Show me the specific code changes in app.py and config.py.
+Show me the key configuration changes needed for production.
 ```
 
-**Use for**: Preparing for production deployment.
+**Use for**: Preparing for production deployment (Part 4).
 
 ---
 
 ## 💡 How to Use These Prompts
 
 1. **Copy the prompt** you need
-2. **Open Amazon Q Developer** in your IDE
-3. **Paste and run** - Q will analyze your codebase
-4. **Ask follow-ups** to dive deeper
-5. **Try the code** Q suggests
+2. **Open Amazon Q Developer** in your IDE (Chat panel)
+3. **Paste and run** - Q will analyze your codebase with @workspace
+4. **Ask follow-ups** to dive deeper into specific areas
+5. **Try the code** Q suggests in your notebooks or application
 
-## 🎓 Learning Path
+## 🎓 Recommended Learning Path
 
-**Workshop Flow**:
-1. Prompt 2 → Part 1: Semantic Search
-2. Prompt 3 → Part 2: Custom Tools
-3. Prompt 4 → Part 3: Agent Orchestration
-4. Prompt 5 → Demo: Full Application
+**Start Here (High-Level Understanding)**:
+1. Prompt 1 → What is Blaize Bazaar?
+2. Prompt 2 → System Architecture Overview
 
-**Deep Dives**:
-- Prompt 1 → Architecture overview
-- Prompt 6 → MCP context management
-- Prompt 7 → OpenTelemetry tracing
-- Prompt 8 → Database & pgvector
+**Workshop Labs (Progressive)**:
+3. Prompt 3 → Part 1: Semantic Search with pgvector
+4. Prompt 4 → Part 2: Custom Tools & MCP Context Management
+5. Prompt 5 → Part 3: Multi-Agent Orchestration
+
+**Full Application**:
+6. Prompt 6 → Blaize Bazaar Production App
+
+**Deep Dives (Advanced)**:
+7. Prompt 7 → MCP Context Management
+8. Prompt 8 → OpenTelemetry & Observability
+9. Prompt 9 → Database Schema & Sessions
 
 **Extensions**:
-- Prompt 9 → Add new agents
-- Prompt 10 → Production deployment
+10. Prompt 10 → Add New Custom Tools
+11. Prompt 11 → Production Deployment
 
 ## 🚀 Next Steps
 
-1. Complete all 3 lab parts (Jupyter notebooks)
-2. Explore the Blaize Bazaar demo app
-3. Use prompts 9-10 to extend and deploy
-4. Share your learnings with the community
+1. **Start with prompts 1-2** to understand the big picture
+2. **Follow Parts 1-3** using prompts 3-5 as you work through notebooks
+3. **Explore the demo app** with prompt 6
+4. **Dive deep** with prompts 7-9 for advanced topics
+5. **Extend the system** with prompts 10-11
+
+## 📝 Tips for Success
+
+- Use `@workspace` to give Q full codebase context
+- Ask follow-up questions to clarify concepts
+- Try modifying the suggested code in your notebooks
+- Use Q to debug errors as you encounter them
+- Reference specific files with `@filename` for targeted help
 
 ---
 
 **Happy Learning! 🎉**
 
-*DAT406 - AWS re:Invent 2025*
+*DAT406 - Build Agentic AI-Powered Search with Amazon Aurora and RDS*  
+*AWS re:Invent 2025*
