@@ -53,7 +53,7 @@ Show me a simple diagram of how a user query flows through the system.
 
 ---
 
-### 3. Part 1: Semantic Search with pgvector
+### 3. Part 1: Agent Memory - Semantic Search & Sessions
 
 ```
 Guide me through Part 1 - Agent Memory (Semantic Search + Sessions):
