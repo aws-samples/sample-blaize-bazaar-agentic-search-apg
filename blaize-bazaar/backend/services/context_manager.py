@@ -1,5 +1,5 @@
 """
-Model Context Protocol (MCP) Implementation
+Intelligent Context Management for Production Agentic AI
 Context Window Management & Prompt Engineering for Production Agentic AI
 
 This module demonstrates expert-level context management for multi-agent systems:
@@ -52,9 +52,9 @@ class Message:
         }
 
 
-class MCPContextManager:
+class ContextManager:
     """
-    Model Context Protocol: Production-Grade Context Window Management
+    Production-Grade Context Window Management
     
     Manages Claude Sonnet 4's 200K context window for multi-agent systems.
     Demonstrates expert-level patterns for token optimization, context pruning,
@@ -68,7 +68,7 @@ class MCPContextManager:
     - Cost optimization through token efficiency
     
     Usage:
-        manager = MCPContextManager(max_tokens=180000)
+        manager = ContextManager(max_tokens=180000)
         manager.add_message("user", "Find wireless headphones under $100")
         context = manager.get_optimized_context("recommendation_agent")
     """
@@ -81,7 +81,7 @@ class MCPContextManager:
         encoding_name: str = "cl100k_base"  # Claude's tokenizer
     ):
         """
-        Initialize MCP Context Manager
+        Initialize Context Manager
         
         Args:
             max_tokens: Maximum context window size (default: 180K leaves 20K buffer)
@@ -116,7 +116,7 @@ class MCPContextManager:
             agent: [] for agent in AgentType
         }
         
-        logger.info(f"✅ MCP Context Manager initialized: {max_tokens:,} token limit")
+        logger.info(f"✅ Context Manager initialized: {max_tokens:,} token limit")
     
     def _estimate_tokens(self, text: str) -> int:
         """
@@ -545,21 +545,21 @@ Use the semantic_product_search() tool for intelligent matching.""",
         ]
 
 
-# Global MCP manager instance
-_mcp_manager: Optional[MCPContextManager] = None
+# Global context manager instance
+_context_manager: Optional[ContextManager] = None
 
 
-def get_mcp_manager() -> MCPContextManager:
-    """Get or create the global MCP manager instance"""
-    global _mcp_manager
-    if _mcp_manager is None:
-        _mcp_manager = MCPContextManager(max_tokens=180000)
-    return _mcp_manager
+def get_context_manager() -> ContextManager:
+    """Get or create the global context manager instance"""
+    global _context_manager
+    if _context_manager is None:
+        _context_manager = ContextManager(max_tokens=180000)
+    return _context_manager
 
 
-def init_mcp_manager(max_tokens: int = 180000) -> MCPContextManager:
-    """Initialize the MCP manager (call during app startup)"""
-    global _mcp_manager
-    _mcp_manager = MCPContextManager(max_tokens=max_tokens)
-    logger.info(f"✅ MCP Context Manager initialized (max_tokens={max_tokens:,})")
-    return _mcp_manager
+def init_context_manager(max_tokens: int = 180000) -> ContextManager:
+    """Initialize the context manager (call during app startup)"""
+    global _context_manager
+    _context_manager = ContextManager(max_tokens=max_tokens)
+    logger.info(f"✅ Context Manager initialized (max_tokens={max_tokens:,})")
+    return _context_manager

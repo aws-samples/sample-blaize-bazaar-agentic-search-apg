@@ -9,7 +9,7 @@ import AIAssistant from './components/AIAssistant'
 import SearchOverlay from './components/SearchOverlay'
 import SQLInspector from './components/SQLInspector'
 import IndexPerformanceDashboard from './components/IndexPerformanceDashboard'
-import MCPContextDashboard from './components/MCPContextDashboard'
+import ContextDashboard from './components/ContextDashboard'
 import AgentReasoningTraces from './components/AgentReasoningTraces'
 import HybridSearchComparison from './components/HybridSearchComparison'
 import { Database, BarChart3, Activity, Brain, GitCompare } from 'lucide-react'
@@ -38,7 +38,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('')
   const [showSQLInspector, setShowSQLInspector] = useState(false)
   const [showIndexPerformance, setShowIndexPerformance] = useState(false)
-  const [showMCPDashboard, setShowMCPDashboard] = useState(false)
+  const [showContextDashboard, setShowContextDashboard] = useState(false)
   const [showAgentTraces, setShowAgentTraces] = useState(false)
   const [showHybridComparison, setShowHybridComparison] = useState(false)
   const backgroundImage = `${import.meta.env.BASE_URL}backgrounds/bg-1.png`
@@ -249,23 +249,23 @@ function App() {
             </div>
           </button>
 
-          {/* MCP Context Monitor FAB */}
+          {/* Context Monitor FAB */}
           <button
-            onClick={() => setShowMCPDashboard(!showMCPDashboard)}
+            onClick={() => setShowContextDashboard(!showContextDashboard)}
             className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95"
             style={{
-              background: showMCPDashboard 
+              background: showContextDashboard 
                 ? 'linear-gradient(135deg, #ba68c8 0%, #6a1b9a 100%)'
                 : 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
             }}
-            title="MCP Context Monitor"
+            title="Context Monitor"
           >
             <Activity className="h-6 w-6 text-white" />
             
             {/* Tooltip on hover */}
             <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
               <div className="px-3 py-2 rounded-lg bg-purple-500/95 backdrop-blur-sm border border-purple-400/30 shadow-xl">
-                <p className="text-sm text-white font-medium">MCP Context Monitor</p>
+                <p className="text-sm text-white font-medium">Context Monitor</p>
                 <p className="text-xs text-purple-200">Token & prompt management</p>
               </div>
             </div>
@@ -312,8 +312,8 @@ function App() {
           </button>
         </div>
 
-        {/* MCP Context Dashboard - Floating Panel (Next to FABs) */}
-        {showMCPDashboard && (
+        {/* Context Dashboard - Floating Panel (Next to FABs) */}
+        {showContextDashboard && (
           <div className="fixed bottom-8 left-24 z-40 w-[420px] max-h-[calc(100vh-100px)] overflow-y-auto">
             <div 
               className="rounded-2xl shadow-2xl backdrop-blur-xl border border-purple-500/30 p-5"
@@ -321,7 +321,7 @@ function App() {
                 background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(31, 41, 55, 0.95) 100%)'
               }}
             >
-              <MCPContextDashboard onClose={() => setShowMCPDashboard(false)} />
+              <ContextDashboard onClose={() => setShowContextDashboard(false)} />
             </div>
           </div>
         )}

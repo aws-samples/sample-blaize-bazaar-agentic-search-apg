@@ -1125,13 +1125,13 @@ async def get_index_stats():
 
 
 # ============================================================================
-# MCP (MODEL CONTEXT PROTOCOL) ENDPOINTS
+# CONTEXT MANAGEMENT ENDPOINTS
 # ============================================================================
 
-@app.get("/api/mcp/stats")
-async def get_mcp_stats(session_id: Optional[str] = Query(default=None)):
+@app.get("/api/context/stats")
+async def get_context_stats(session_id: Optional[str] = Query(default=None)):
     """
-    Get MCP context statistics for monitoring
+    Get context statistics for monitoring
     
     Returns comprehensive metrics for token usage, efficiency, and costs.
     Demonstrates enterprise-grade context window management for Claude Sonnet 4.
@@ -1140,24 +1140,24 @@ async def get_mcp_stats(session_id: Optional[str] = Query(default=None)):
         session_id: Optional session ID for session-specific stats
     """
     try:
-        from services.mcp_context_manager import get_mcp_manager
+        from services.context_manager import get_context_manager
         
-        mcp_manager = get_mcp_manager()
-        stats = mcp_manager.get_context_stats()
+        context_manager = get_context_manager()
+        stats = context_manager.get_context_stats()
         
-        logger.info(f"📊 MCP stats requested: {stats['current_tokens']:,} tokens, {stats['efficiency_score']:.1f}% efficiency")
+        logger.info(f"📊 Context stats requested: {stats['current_tokens']:,} tokens, {stats['efficiency_score']:.1f}% efficiency")
         
         return stats
         
     except Exception as e:
-        logger.error(f"Failed to get MCP stats: {e}")
+        logger.error(f"Failed to get context stats: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/mcp/clear")
-async def clear_mcp_context(session_id: str = Query(...)):
+@app.post("/api/context/clear")
+async def clear_context(session_id: str = Query(...)):
     """
-    Clear MCP context for a session
+    Clear context for a session
     
     Useful for starting fresh conversations or freeing memory.
     System prompts are preserved.
@@ -1166,12 +1166,12 @@ async def clear_mcp_context(session_id: str = Query(...)):
         session_id: Session ID to clear context for
     """
     try:
-        from services.mcp_context_manager import get_mcp_manager
+        from services.context_manager import get_context_manager
         
-        mcp_manager = get_mcp_manager()
-        mcp_manager.clear_context()
+        context_manager = get_context_manager()
+        context_manager.clear_context()
         
-        logger.info(f"🗑️ MCP context cleared for session: {session_id}")
+        logger.info(f"🗑️ Context cleared for session: {session_id}")
         
         return {
             "status": "success",
@@ -1180,12 +1180,12 @@ async def clear_mcp_context(session_id: str = Query(...)):
         }
         
     except Exception as e:
-        logger.error(f"Failed to clear MCP context: {e}")
+        logger.error(f"Failed to clear context: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/mcp/prompts")
-async def list_mcp_prompts():
+@app.get("/api/context/prompts")
+async def list_prompts():
     """
     List all available prompt templates with versions and performance metrics
     
@@ -1195,7 +1195,7 @@ async def list_mcp_prompts():
     - Agent-specific prompt templates
     """
     try:
-        from services.mcp_context_manager import PromptRegistry
+        from services.context_manager import PromptRegistry
         
         prompts = PromptRegistry.list_available_prompts()
         

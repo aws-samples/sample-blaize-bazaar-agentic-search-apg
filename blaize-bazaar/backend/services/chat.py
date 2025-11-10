@@ -2,7 +2,7 @@
 Chat Service with Product Card Support
 
 Uses Strands SDK for multi-agent orchestration with direct asyncpg database access.
-MCP Context Manager tracks tokens and manages conversation state.
+Context Manager tracks tokens and manages conversation state.
 """
 
 import json
@@ -137,7 +137,7 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
         
         Uses Strands orchestrator with specialized agents.
         Agents access database via direct asyncpg connection.
-        MCP Context Manager tracks tokens for conversation state.
+        Context Manager tracks tokens for conversation state.
         
         Returns:
             {
@@ -145,7 +145,7 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
                 "products": [array of product objects],
                 "suggestions": [array of quick action strings],
                 "success": true,
-                "mcp_context_tracking": true
+                "context_tracking": true
             }
         """
         try:
@@ -173,12 +173,12 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
         """Enhanced chat using Strands Orchestrator with specialized agents"""
         logger.info(f"🤖 Processing query with Strands Orchestrator")
         
-        # Get MCP manager for token tracking
-        from services.mcp_context_manager import get_mcp_manager
-        mcp_manager = get_mcp_manager()
+        # Get context manager for token tracking
+        from services.context_manager import get_context_manager
+        context_manager = get_context_manager()
         
         # Track user message
-        mcp_manager.add_message("user", message)
+        context_manager.add_message("user", message)
         
         try:
             # Import orchestrator
@@ -246,8 +246,8 @@ CURRENT REQUEST: {message}"""
             response = orchestrator(full_message)
             response_text = str(response)
             
-            # Track assistant response in MCP
-            mcp_manager.add_message("assistant", response_text)
+            # Track assistant response in context manager
+            context_manager.add_message("assistant", response_text)
             
             logger.info(f"✅ Orchestrator completed with agent chain")
             logger.info(f"📝 Final response length: {len(response_text)} chars")
@@ -274,7 +274,7 @@ CURRENT REQUEST: {message}"""
                 "products": parsed["products"],
                 "suggestions": parsed["suggestions"],
                 "success": True,
-                "mcp_context_tracking": True,
+                "context_tracking": True,
                 "orchestrator_enabled": True,
                 "agent_execution": agent_execution,
                 "model": self.model_id

@@ -1,5 +1,5 @@
 /**
- * MCP Context Dashboard - Visual Token & Prompt Management
+ * Context Dashboard - Visual Token & Prompt Management
  * 
  * Production-grade UI for monitoring context window usage, prompt versions,
  * and cost optimization in real-time.
@@ -13,7 +13,7 @@
 import { useState, useEffect } from 'react';
 import { Activity, Zap, DollarSign, Clock, TrendingUp, Code, AlertTriangle } from 'lucide-react';
 
-interface MCPStats {
+interface ContextStats {
   window_size: number;
   current_tokens: number;
   usage_percentage: number;
@@ -37,34 +37,34 @@ interface PromptVersion {
   };
 }
 
-interface MCPContextDashboardProps {
+interface ContextDashboardProps {
   sessionId?: string;
   onClose?: () => void;
 }
 
-const MCPContextDashboard = ({ sessionId, onClose }: MCPContextDashboardProps) => {
-  const [stats, setStats] = useState<MCPStats | null>(null);
+const ContextDashboard = ({ sessionId, onClose }: ContextDashboardProps) => {
+  const [stats, setStats] = useState<ContextStats | null>(null);
   const [promptVersions, setPromptVersions] = useState<PromptVersion[]>([]);
   const [showDetails] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
-  // Fetch MCP stats
+  // Fetch context stats
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch(`/api/mcp/stats${sessionId ? `?session_id=${sessionId}` : ''}`);
+        const response = await fetch(`/api/context/stats${sessionId ? `?session_id=${sessionId}` : ''}`);
         if (response.ok) {
           const data = await response.json();
           setStats(data);
         }
       } catch (error) {
-        console.error('Failed to fetch MCP stats:', error);
+        console.error('Failed to fetch context stats:', error);
       }
     };
 
     const fetchPrompts = async () => {
       try {
-        const response = await fetch('/api/mcp/prompts');
+        const response = await fetch('/api/context/prompts');
         if (response.ok) {
           const data = await response.json();
           setPromptVersions(data.prompts || []);
@@ -85,7 +85,7 @@ const MCPContextDashboard = ({ sessionId, onClose }: MCPContextDashboardProps) =
       <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
         <div className="flex items-center gap-2 text-text-secondary">
           <Activity className="h-4 w-4 animate-pulse" />
-          <span className="text-sm">Loading MCP Context Stats...</span>
+          <span className="text-sm">Loading Context Stats...</span>
         </div>
       </div>
     );
@@ -109,7 +109,7 @@ const MCPContextDashboard = ({ sessionId, onClose }: MCPContextDashboardProps) =
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Activity className="h-5 w-5 text-purple-400" />
-          <h3 className="text-lg font-semibold text-text-primary">MCP Context Monitor</h3>
+          <h3 className="text-lg font-semibold text-text-primary">Context Monitor</h3>
           <span className="text-xs text-text-secondary">Real-time</span>
         </div>
         <div className="flex items-center gap-2">
@@ -267,7 +267,7 @@ const MCPContextDashboard = ({ sessionId, onClose }: MCPContextDashboardProps) =
               <div className="absolute right-0 top-6 w-64 p-3 rounded-lg bg-purple-900/95 border border-purple-500/30 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                 <p className="text-xs text-purple-100 mb-2 font-semibold">Extend Prompts:</p>
                 <p className="text-xs text-purple-200 leading-relaxed">
-                  Edit prompts in <code className="bg-purple-800/50 px-1 rounded">backend/services/mcp_context_manager.py</code> under PromptRegistry.TEMPLATES. Update version numbers for A/B testing and track performance metrics.
+                  Edit prompts in <code className="bg-purple-800/50 px-1 rounded">backend/services/context_manager.py</code> under PromptRegistry.TEMPLATES. Update version numbers for A/B testing and track performance metrics.
                 </p>
               </div>
             </div>
@@ -318,7 +318,7 @@ const MCPContextDashboard = ({ sessionId, onClose }: MCPContextDashboardProps) =
           {/* Context Management Info */}
           <div className="pt-3 border-t border-purple-500/20">
             <p className="text-xs text-text-secondary leading-relaxed">
-              <strong className="text-purple-300">MCP Context Management:</strong> Automatically prunes 
+              <strong className="text-purple-300">Context Management:</strong> Automatically prunes 
               low-importance messages when reaching 85% capacity. System prompts and recent messages 
               are always preserved. Current efficiency score of {stats.efficiency_score.toFixed(0)}% 
               indicates {stats.efficiency_score >= 80 ? 'excellent' : stats.efficiency_score >= 60 ? 'good' : 'moderate'} token utilization.
@@ -332,7 +332,7 @@ const MCPContextDashboard = ({ sessionId, onClose }: MCPContextDashboardProps) =
         <div className="flex items-start gap-2">
           <Zap className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
           <div className="text-xs text-text-secondary">
-            <strong className="text-blue-300">Model Context Protocol (MCP):</strong> This dashboard 
+            <strong className="text-blue-300">Context Management:</strong> This dashboard 
             demonstrates enterprise-grade context window management for Claude Sonnet 4's 200K token 
             limit. Token budgeting, intelligent pruning, and cost optimization are critical for 
             multi-agent systems at scale.
@@ -343,4 +343,4 @@ const MCPContextDashboard = ({ sessionId, onClose }: MCPContextDashboardProps) =
   );
 };
 
-export default MCPContextDashboard;
+export default ContextDashboard;
