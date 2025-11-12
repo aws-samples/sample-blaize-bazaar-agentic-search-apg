@@ -76,46 +76,50 @@ class HybridSearchService:
         limit: int,
         ef_search: int
     ) -> List[Dict[str, Any]]:
-        """Vector similarity search using pgvector"""
-        await self.db.execute_query(f"SET LOCAL hnsw.ef_search = {ef_search}")
-        
-        query = """
-            SELECT 
-                "productId" as product_id,
-                product_description,
-                category_name,
-                price,
-                reviews,
-                stars,
-                "imgUrl" as img_url,
-                "productURL" as product_url,
-                "isBestSeller" as isbestseller,
-                "boughtInLastMonth" as boughtinlastmonth,
-                quantity,
-                1 - (embedding <=> %s::vector) as similarity
-            FROM bedrock_integration.product_catalog
-            ORDER BY embedding <=> %s::vector
-            LIMIT %s
-        """
-        results = await self.db.fetch_all(query, embedding, embedding, limit)
-        return [dict(r) for r in results]
+        """Vector similarity search using pgvector with quality filters"""
+        async with self.db.get_connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(f"SET LOCAL hnsw.ef_search = {ef_search}")
+                await cur.execute("""
+                    SELECT 
+                        "productId" as product_id,
+                        product_description,
+                        "imgUrl" as img_url,
+                        "productURL" as product_url,
+                        category_name,
+                        price,
+                        reviews,
+                        stars as rating,
+                        "isBestSeller" as isbestseller,
+                        "boughtInLastMonth" as boughtinlastmonth,
+                        quantity,
+                        1 - (embedding <=> %s::vector) as similarity
+                    FROM bedrock_integration.product_catalog
+                    WHERE stars >= 3.5
+                      AND reviews >= 10
+                      AND "imgUrl" IS NOT NULL
+                    ORDER BY embedding <=> %s::vector
+                    LIMIT %s
+                """, (embedding, embedding, limit))
+                results = await cur.fetchall()
+                return [dict(r) for r in results]
     
     async def _fulltext_search(
         self,
         query: str,
         limit: int
     ) -> List[Dict[str, Any]]:
-        """Full-text search using PostgreSQL tsvector"""
+        """Full-text search using PostgreSQL tsvector with quality filters"""
         search_query = """
             SELECT 
                 "productId" as product_id,
                 product_description,
+                "imgUrl" as img_url,
+                "productURL" as product_url,
                 category_name,
                 price,
                 reviews,
-                stars,
-                "imgUrl" as img_url,
-                "productURL" as product_url,
+                stars as rating,
                 "isBestSeller" as isbestseller,
                 "boughtInLastMonth" as boughtinlastmonth,
                 quantity,
@@ -126,6 +130,9 @@ class HybridSearchService:
             FROM bedrock_integration.product_catalog
             WHERE to_tsvector('english', product_description || ' ' || category_name) 
                   @@ plainto_tsquery('english', %s)
+              AND stars >= 3.5
+              AND reviews >= 10
+              AND "imgUrl" IS NOT NULL
             ORDER BY rank DESC
             LIMIT %s
         """
