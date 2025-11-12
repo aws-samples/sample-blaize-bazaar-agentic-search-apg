@@ -277,18 +277,6 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
             </a>
           </div>
         </nav>
-
-        {/* Animated Purple Data Flow Line - Full Width */}
-        <div className="absolute bottom-0 left-0 w-full h-[1px] pointer-events-none z-50">
-          <div
-            className="absolute h-full w-[20%] top-0"
-            style={{
-              background: 'linear-gradient(90deg, transparent, rgba(186, 104, 200, 0.8), transparent)',
-              boxShadow: '0 0 12px rgba(186, 104, 200, 0.9), 0 0 24px rgba(186, 104, 200, 0.5)',
-              animation: 'dataFlowPurple 3s linear infinite'
-            }}
-          />
-        </div>
       </header>
 
       {/* Image Search Modal - NEW */}
