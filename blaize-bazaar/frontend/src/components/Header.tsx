@@ -29,12 +29,12 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
   ]
 
   const categories = [
-    { icon: '🔌', name: 'Cables & Chargers', query: 'cable charger' },
-    { icon: '⌚', name: 'Watches', query: 'watch' },
-    { icon: '📷', name: 'Cameras', query: 'camera' },
-    { icon: '💻', name: 'Laptops', query: 'laptop' },
-    { icon: '🎧', name: 'Headphones', query: 'headphones earbuds' },
-    { icon: '🎮', name: 'Gaming', query: 'gaming' },
+    { icon: '🔌', name: 'Cables & Chargers', query: 'cable charger', img: 'https://m.media-amazon.com/images/I/71yHIdTRluL._AC_UL320_.jpg' },
+    { icon: '🏠', name: 'Smart Home', query: 'smart home security camera doorbell', img: 'https://m.media-amazon.com/images/I/61tKyzaZfzL._AC_UL320_.jpg' },
+    { icon: '📷', name: 'Cameras', query: 'camera', img: 'https://m.media-amazon.com/images/I/61+L7P7W0+S._AC_UL320_.jpg' },
+    { icon: '💻', name: 'Laptops', query: 'laptop', img: 'https://m.media-amazon.com/images/I/61KUIjmfe7L._AC_UL320_.jpg' },
+    { icon: '🎧', name: 'Headphones', query: 'headphones earbuds', img: 'https://m.media-amazon.com/images/I/81ZTs2AvxiL._AC_UL320_.jpg' },
+    { icon: '🎮', name: 'Gaming', query: 'gaming', img: 'https://m.media-amazon.com/images/I/71vyo6WLiCL._AC_UL320_.jpg' },
   ]
 
   useEffect(() => {
@@ -110,7 +110,7 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
             : 'rgba(0, 0, 0, 0.1)'
         }}
       >
-        <nav className="h-[72px] flex items-center justify-between relative z-10 px-4 md:px-8 lg:px-16" style={{ paddingLeft: 'max(64px, 10vw)', paddingRight: 'max(64px, 5vw)' }}>
+        <nav className="h-[72px] flex items-center justify-between relative z-10 px-4 md:px-8 lg:px-16" style={{ paddingLeft: 'max(64px, 10vw)', paddingRight: 'max(32px, 3vw)' }}>
           {/* Logo */}
           <div 
             className="logo gradient-text-chrome text-2xl font-light tracking-tight cursor-pointer"
@@ -150,7 +150,7 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
                 )}
               </a>
               {showCollectionsMenu && (
-                <div className="absolute top-full pt-6 left-0 w-64">
+                <div className="absolute top-full pt-6 left-0 w-72">
                   <div className="glass-strong rounded-2xl shadow-2xl border border-purple-500/20 overflow-hidden animate-slideUp">
                     {categories.map((cat, i) => (
                       <div
@@ -159,10 +159,16 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
                           setShowCollectionsMenu(false)
                           if (onSearch) onSearch(cat.query)
                         }}
-                        className="px-4 py-3 hover:bg-purple-500/10 cursor-pointer border-b border-purple-500/10 last:border-0 transition-all duration-200 flex items-center gap-3"
+                        className="px-3 py-2.5 hover:bg-purple-500/10 cursor-pointer border-b border-purple-500/10 last:border-0 transition-all duration-200 flex items-center gap-3"
                       >
-                        <span className="text-2xl">{cat.icon}</span>
-                        <span className="text-sm text-text-primary">{cat.name}</span>
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
+                          <img 
+                            src={cat.img} 
+                            alt={cat.name}
+                            className="w-full h-full object-contain p-1"
+                          />
+                        </div>
+                        <span className="text-sm text-text-primary font-medium">{cat.name}</span>
                       </div>
                     ))}
                   </div>

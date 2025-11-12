@@ -148,7 +148,7 @@ function App() {
               <div className="grid grid-cols-3 gap-8">
                 {[
                   { icon: '🔌', title: 'Cables & Chargers', count: '585 products • Essential accessories', query: 'cable charger', img: 'https://m.media-amazon.com/images/I/71yHIdTRluL._AC_UL320_.jpg' },
-                  { icon: '⌚', title: 'Watches', count: '481 products • Premium timepieces', query: 'watch', img: 'https://m.media-amazon.com/images/I/615uKIrhCdL._AC_UL320_.jpg' },
+                  { icon: '🏠', title: 'Smart Home', count: '173 products • Security & automation', query: 'smart home security camera doorbell', img: 'https://m.media-amazon.com/images/I/61tKyzaZfzL._AC_UL320_.jpg' },
                   { icon: '📷', title: 'Cameras', count: '437 products • Capture moments', query: 'camera', img: 'https://m.media-amazon.com/images/I/61+L7P7W0+S._AC_UL320_.jpg' },
                   { icon: '💻', title: 'Laptops', count: '306 products • Power & performance', query: 'laptop', img: 'https://m.media-amazon.com/images/I/61KUIjmfe7L._AC_UL320_.jpg' },
                   { icon: '🎧', title: 'Headphones', count: '175 products • Immersive audio', query: 'headphones earbuds', img: 'https://m.media-amazon.com/images/I/81ZTs2AvxiL._AC_UL320_.jpg' },
