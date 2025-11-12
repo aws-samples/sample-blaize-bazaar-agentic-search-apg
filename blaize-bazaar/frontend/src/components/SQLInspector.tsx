@@ -206,19 +206,19 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
               <div className="text-center">
                 <div className="text-xs text-text-secondary">Avg Time</div>
                 <div className={`text-lg font-semibold ${getPerformanceColor(stats.avg_time_ms)}`}>
-                  {stats.avg_time_ms < 1 ? `${(stats.avg_time_ms * 1000).toFixed(0)}μs` : `${stats.avg_time_ms.toFixed(2)}ms`}
+                  {stats.avg_time_ms.toFixed(2)}ms
                 </div>
               </div>
               <div className="text-center">
                 <div className="text-xs text-text-secondary">Min Time</div>
                 <div className="text-lg font-semibold text-green-400">
-                  {stats.min_time_ms < 1 ? `${(stats.min_time_ms * 1000).toFixed(0)}μs` : `${stats.min_time_ms.toFixed(2)}ms`}
+                  {stats.min_time_ms.toFixed(2)}ms
                 </div>
               </div>
               <div className="text-center">
                 <div className="text-xs text-text-secondary">Max Time</div>
                 <div className="text-lg font-semibold text-red-400">
-                  {stats.max_time_ms < 1 ? `${(stats.max_time_ms * 1000).toFixed(0)}μs` : `${stats.max_time_ms.toFixed(2)}ms`}
+                  {stats.max_time_ms.toFixed(2)}ms
                 </div>
               </div>
               <div className="text-center">
