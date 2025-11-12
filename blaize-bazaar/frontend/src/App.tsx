@@ -97,6 +97,19 @@ function App() {
     }
   }, [activeSection, featuredProducts.length])
 
+  // Keyboard shortcut: / or Ctrl+K to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '/' || (e.ctrlKey && e.key === 'k') || (e.metaKey && e.key === 'k')) {
+        e.preventDefault()
+        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement
+        if (searchInput) searchInput.focus()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   return (
     <ThemeContext.Provider value={{ theme }}>
       <div className="min-h-screen bg-bg-primary relative transition-colors duration-300">
@@ -257,8 +270,8 @@ function App() {
               </div>
               <div className="grid grid-cols-3 gap-8">
                 {[
-                  { icon: '🔌', title: 'Cables & Chargers', count: '585 products • Essential accessories', query: 'cable charger', img: 'https://m.media-amazon.com/images/I/71yHIdTRluL._AC_UL320_.jpg' },
-                  { icon: '🏠', title: 'Smart Home', count: '200 products • Security & automation', query: 'smart home security camera doorbell', img: 'https://m.media-amazon.com/images/I/61tKyzaZfzL._AC_UL320_.jpg' },
+                  { icon: '🔌', title: 'Cables & Chargers', count: '585 products • Essential accessories', query: 'cable charger', img: 'https://m.media-amazon.com/images/I/71yHIdTRluL._AC_UL320_.jpg', badge: 'Most Popular' },
+                  { icon: '🏠', title: 'Smart Home', count: '200 products • Security & automation', query: 'smart home security camera doorbell', img: 'https://m.media-amazon.com/images/I/61tKyzaZfzL._AC_UL320_.jpg', badge: 'Trending' },
                   { icon: '📷', title: 'Cameras', count: '437 products • Capture moments', query: 'camera', img: 'https://m.media-amazon.com/images/I/61+L7P7W0+S._AC_UL320_.jpg' },
                   { icon: '💻', title: 'Laptops', count: '306 products • Power & performance', query: 'laptop', img: 'https://m.media-amazon.com/images/I/61KUIjmfe7L._AC_UL320_.jpg' },
                   { icon: '🎧', title: 'Headphones', count: '175 products • Immersive audio', query: 'headphones earbuds', img: 'https://m.media-amazon.com/images/I/71HmvDc4bZL._AC_UL320_.jpg' },
@@ -278,6 +291,13 @@ function App() {
                   >
                     {/* Gradient border glow on hover */}
                     <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500/0 via-purple-500/50 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                    
+                    {/* Badge for trending/popular */}
+                    {collection.badge && (
+                      <div className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg animate-pulse">
+                        {collection.badge}
+                      </div>
+                    )}
                     
                     <div className="relative w-full h-48 mb-4 rounded-xl overflow-hidden bg-white/5">
                       <img 
