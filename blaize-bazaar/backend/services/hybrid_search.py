@@ -77,15 +77,21 @@ class HybridSearchService:
         ef_search: int
     ) -> List[Dict[str, Any]]:
         """Vector similarity search using pgvector"""
-        query = f"""
-            SET LOCAL hnsw.ef_search = {ef_search};
+        await self.db.execute_query(f"SET LOCAL hnsw.ef_search = {ef_search}")
+        
+        query = """
             SELECT 
-                product_id,
+                "productId" as product_id,
                 product_description,
                 category_name,
                 price,
                 reviews,
-                rating,
+                stars,
+                "imgUrl" as img_url,
+                "productURL" as product_url,
+                "isBestSeller" as isbestseller,
+                "boughtInLastMonth" as boughtinlastmonth,
+                quantity,
                 1 - (embedding <=> %s::vector) as similarity
             FROM bedrock_integration.product_catalog
             ORDER BY embedding <=> %s::vector
@@ -102,12 +108,17 @@ class HybridSearchService:
         """Full-text search using PostgreSQL tsvector"""
         search_query = """
             SELECT 
-                product_id,
+                "productId" as product_id,
                 product_description,
                 category_name,
                 price,
                 reviews,
-                rating,
+                stars,
+                "imgUrl" as img_url,
+                "productURL" as product_url,
+                "isBestSeller" as isbestseller,
+                "boughtInLastMonth" as boughtinlastmonth,
+                quantity,
                 ts_rank(
                     to_tsvector('english', product_description || ' ' || category_name),
                     plainto_tsquery('english', %s)
