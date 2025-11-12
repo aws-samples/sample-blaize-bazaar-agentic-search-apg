@@ -42,6 +42,7 @@ function App() {
   const [showAgentTraces, setShowAgentTraces] = useState(false)
   const [showHybridComparison, setShowHybridComparison] = useState(false)
   const [showDevTools, setShowDevTools] = useState(false)
+  const [expandedDiagram, setExpandedDiagram] = useState<string | null>(null)
   const backgroundImage = `${import.meta.env.BASE_URL}backgrounds/bg-1.png`
 
   // Apply dark theme to document
@@ -181,27 +182,35 @@ function App() {
             <section className="max-w-[1400px] mx-auto px-10 py-24">
               <div className="text-center mb-12">
                 <h2 className="text-5xl font-light mb-4 text-gray-900 dark:text-white">Architecture</h2>
-                <p className="text-text-secondary text-lg">Enterprise-grade AI search powered by AWS</p>
               </div>
               
-              {/* Technology Stack - Smaller Tiles */}
-              <div className="text-center mb-8">
-                <h3 className="text-3xl font-light text-gray-900 dark:text-white mb-2">Technology Stack</h3>
-                <p className="text-text-secondary text-sm">Powered by AWS's most advanced AI and database services</p>
+              {/* Architecture Diagrams - 3 Column Grid */}
+              <div className="mb-16">
+                <div className="grid grid-cols-3 gap-6">
+                  {[
+                    { title: 'Agent Memory Foundations', img: 'diagram1.png', alt: 'Agent Memory Foundations' },
+                    { title: 'Context Management & Custom Agent Tools', img: 'diagram2.png', alt: 'Context Management & Custom Agent Tools' },
+                    { title: 'Multi-Agent Orchestration', img: 'diagram3.png', alt: 'Multi-Agent Orchestration' },
+                  ].map((diagram, index) => (
+                    <div 
+                      key={index}
+                      className="card p-4 cursor-pointer hover:scale-[1.02] transition-transform duration-300"
+                      onClick={() => setExpandedDiagram(diagram.img)}
+                    >
+                      <h4 className="text-base font-normal text-gray-900 dark:text-white mb-3 text-center">{diagram.title}</h4>
+                      <div className="relative w-full rounded-lg overflow-hidden bg-white/5 border border-purple-500/20">
+                        <img 
+                          src={`${import.meta.env.BASE_URL}architecture/${diagram.img}`}
+                          alt={diagram.alt}
+                          className="w-full h-auto"
+                        />
+                      </div>
+                      <p className="text-xs text-purple-400 text-center mt-2">Click to expand</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="grid grid-cols-4 gap-6 mb-12">
-                {[
-                  { title: 'Aurora PostgreSQL', icon: '🗄️' },
-                  { title: 'Amazon Bedrock', icon: '🤖' },
-                  { title: 'pgvector', icon: '🔢' },
-                  { title: 'AWS Strands SDK', icon: '🔗' },
-                ].map((tech, index) => (
-                  <div key={index} className="card p-6 text-center">
-                    <div className="text-4xl mb-3">{tech.icon}</div>
-                    <h4 className="text-lg font-normal text-gray-900 dark:text-white">{tech.title}</h4>
-                  </div>
-                ))}
-              </div>
+
               <div className="text-center">
                 <p className="text-xs text-text-secondary">
                   © 2025 Shayon Sanyal | DAT406: Build agentic AI-powered search with Amazon Aurora | AWS re:Invent 2025
@@ -327,6 +336,28 @@ function App() {
           isOpen={showHybridComparison}
           onClose={() => setShowHybridComparison(false)}
         />
+
+        {/* Expanded Diagram Modal */}
+        {expandedDiagram && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
+            onClick={() => setExpandedDiagram(null)}
+          >
+            <div className="relative max-w-[90vw] max-h-[90vh] p-4">
+              <button
+                onClick={() => setExpandedDiagram(null)}
+                className="absolute -top-12 right-0 p-2 rounded-full bg-purple-600 hover:bg-purple-700 transition-colors"
+              >
+                <X className="h-6 w-6 text-white" />
+              </button>
+              <img 
+                src={`${import.meta.env.BASE_URL}architecture/${expandedDiagram}`}
+                alt="Architecture Diagram"
+                className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+              />
+            </div>
+          </div>
+        )}
       </div>
     </ThemeContext.Provider>
   )
