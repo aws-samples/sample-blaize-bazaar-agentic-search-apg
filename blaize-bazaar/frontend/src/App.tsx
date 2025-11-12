@@ -317,12 +317,9 @@ function App() {
                       <h4 className="text-base font-normal text-gray-900 dark:text-white mb-3 text-center">{diagram.title}</h4>
                       <div className="relative w-full rounded-lg overflow-hidden bg-white/5 border border-purple-500/20">
                         <img 
-                          src={`/architecture/${diagram.img}`}
+                          src={`${import.meta.env.BASE_URL}architecture/${diagram.img}`}
                           alt={diagram.alt}
                           className="w-full h-auto"
-                          onError={(e) => {
-                            e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23333" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" fill="%23999" text-anchor="middle" dy=".3em"%3EImage Loading...%3C/text%3E%3C/svg%3E';
-                          }}
                         />
                       </div>
                       <p className="text-xs text-purple-400 text-center mt-2">Click to expand</p>
@@ -352,12 +349,12 @@ function App() {
                   <div className="text-sm text-text-secondary">Categories</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl font-light text-purple-300 mb-2">AI</div>
-                  <div className="text-sm text-text-secondary">Powered Search</div>
-                </div>
-                <div className="text-center">
                   <div className="text-4xl font-light text-purple-300 mb-2">pgvector</div>
                   <div className="text-sm text-text-secondary">Vector Search</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-light text-purple-300 mb-2">Multi-Agent</div>
+                  <div className="text-sm text-text-secondary">AI Architecture</div>
                 </div>
               </div>
               <div className="text-center text-xs text-text-secondary pt-8 border-t border-purple-500/10">
@@ -499,7 +496,7 @@ function App() {
                 <X className="h-6 w-6 text-white" />
               </button>
               <img 
-                src={`/architecture/${expandedDiagram}`}
+                src={`${import.meta.env.BASE_URL}architecture/${expandedDiagram}`}
                 alt="Architecture Diagram"
                 className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
               />
