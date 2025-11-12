@@ -33,8 +33,11 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
     { icon: '🏠', name: 'Smart Home', query: 'smart home security camera doorbell', img: 'https://m.media-amazon.com/images/I/61tKyzaZfzL._AC_UL320_.jpg' },
     { icon: '📷', name: 'Cameras', query: 'camera', img: 'https://m.media-amazon.com/images/I/61+L7P7W0+S._AC_UL320_.jpg' },
     { icon: '💻', name: 'Laptops', query: 'laptop', img: 'https://m.media-amazon.com/images/I/61KUIjmfe7L._AC_UL320_.jpg' },
-    { icon: '🎧', name: 'Headphones', query: 'headphones earbuds', img: 'https://m.media-amazon.com/images/I/81ZTs2AvxiL._AC_UL320_.jpg' },
+    { icon: '🎧', name: 'Headphones', query: 'headphones earbuds', img: 'https://m.media-amazon.com/images/I/71HmvDc4bZL._AC_UL320_.jpg' },
     { icon: '🎮', name: 'Gaming', query: 'gaming', img: 'https://m.media-amazon.com/images/I/71vyo6WLiCL._AC_UL320_.jpg' },
+    { icon: '🏥', name: 'Health & Household', query: 'health household', img: 'https://m.media-amazon.com/images/I/71fwzimU8-L._AC_UL320_.jpg' },
+    { icon: '🎓', name: 'Learning & Education', query: 'learning education toys', img: 'https://m.media-amazon.com/images/I/71PPebaJrYL._AC_UL320_.jpg' },
+    { icon: '⚽', name: 'Sports & Outdoors', query: 'sports outdoors', img: 'https://m.media-amazon.com/images/I/81pWZ1kyDoL._AC_UL320_.jpg' },
   ]
 
   useEffect(() => {

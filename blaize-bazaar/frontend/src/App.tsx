@@ -44,6 +44,7 @@ function App() {
   const [showDevTools, setShowDevTools] = useState(false)
   const [expandedDiagram, setExpandedDiagram] = useState<string | null>(null)
   const [productCount, setProductCount] = useState(0)
+  const [categoryCount, setCategoryCount] = useState(0)
   const [featuredIndex, setFeaturedIndex] = useState(0)
   const backgroundImage = `${import.meta.env.BASE_URL}backgrounds/bg-1.png`
 
@@ -51,7 +52,7 @@ function App() {
   const featuredProducts = [
     { img: 'https://m.media-amazon.com/images/I/61+L7P7W0+S._AC_UL320_.jpg', name: '4K Digital Camera' },
     { img: 'https://m.media-amazon.com/images/I/61KUIjmfe7L._AC_UL320_.jpg', name: 'HP Chromebook' },
-    { img: 'https://m.media-amazon.com/images/I/81ZTs2AvxiL._AC_UL320_.jpg', name: 'Wireless Headphones' },
+    { img: 'https://m.media-amazon.com/images/I/71HmvDc4bZL._AC_UL320_.jpg', name: 'Wireless Earbuds' },
     { img: 'https://m.media-amazon.com/images/I/61tKyzaZfzL._AC_UL320_.jpg', name: 'Smart Doorbell' },
   ]
 
@@ -80,6 +81,11 @@ function App() {
       return () => clearInterval(timer)
     }
   }, [activeSection])
+
+  // Set category count to 190 (total in database)
+  useEffect(() => {
+    setCategoryCount(190)
+  }, [])
 
   // Featured products carousel
   useEffect(() => {
@@ -196,7 +202,7 @@ function App() {
                       <span className="text-purple-300 text-sm font-medium">✨ AI-Powered</span>
                     </div>
                     <div className="px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/30 backdrop-blur-sm">
-                      <span className="text-purple-300 text-sm font-medium">⚡ Real-time</span>
+                      <span className="text-purple-300 text-sm font-medium">🔍 Semantic Search</span>
                     </div>
                   </div>
                 </div>
@@ -252,11 +258,14 @@ function App() {
               <div className="grid grid-cols-3 gap-8">
                 {[
                   { icon: '🔌', title: 'Cables & Chargers', count: '585 products • Essential accessories', query: 'cable charger', img: 'https://m.media-amazon.com/images/I/71yHIdTRluL._AC_UL320_.jpg' },
-                  { icon: '🏠', title: 'Smart Home', count: '173 products • Security & automation', query: 'smart home security camera doorbell', img: 'https://m.media-amazon.com/images/I/61tKyzaZfzL._AC_UL320_.jpg' },
+                  { icon: '🏠', title: 'Smart Home', count: '200 products • Security & automation', query: 'smart home security camera doorbell', img: 'https://m.media-amazon.com/images/I/61tKyzaZfzL._AC_UL320_.jpg' },
                   { icon: '📷', title: 'Cameras', count: '437 products • Capture moments', query: 'camera', img: 'https://m.media-amazon.com/images/I/61+L7P7W0+S._AC_UL320_.jpg' },
                   { icon: '💻', title: 'Laptops', count: '306 products • Power & performance', query: 'laptop', img: 'https://m.media-amazon.com/images/I/61KUIjmfe7L._AC_UL320_.jpg' },
-                  { icon: '🎧', title: 'Headphones', count: '175 products • Immersive audio', query: 'headphones earbuds', img: 'https://m.media-amazon.com/images/I/81ZTs2AvxiL._AC_UL320_.jpg' },
+                  { icon: '🎧', title: 'Headphones', count: '175 products • Immersive audio', query: 'headphones earbuds', img: 'https://m.media-amazon.com/images/I/71HmvDc4bZL._AC_UL320_.jpg' },
                   { icon: '🎮', title: 'Gaming', count: '170 products • Next-gen gaming', query: 'gaming', img: 'https://m.media-amazon.com/images/I/71vyo6WLiCL._AC_UL320_.jpg' },
+                  { icon: '🏥', title: 'Health & Household', count: '200 products • Wellness essentials', query: 'health household', img: 'https://m.media-amazon.com/images/I/71fwzimU8-L._AC_UL320_.jpg' },
+                  { icon: '🎓', title: 'Learning & Education', count: '193 products • Educational toys', query: 'learning education toys', img: 'https://m.media-amazon.com/images/I/71PPebaJrYL._AC_UL320_.jpg' },
+                  { icon: '⚽', title: 'Sports & Outdoors', count: '187 products • Active lifestyle', query: 'sports outdoors', img: 'https://m.media-amazon.com/images/I/81pWZ1kyDoL._AC_UL320_.jpg' },
                 ].map((collection, index) => (
                   <div 
                     key={index} 
@@ -308,9 +317,12 @@ function App() {
                       <h4 className="text-base font-normal text-gray-900 dark:text-white mb-3 text-center">{diagram.title}</h4>
                       <div className="relative w-full rounded-lg overflow-hidden bg-white/5 border border-purple-500/20">
                         <img 
-                          src={`${import.meta.env.BASE_URL}architecture/${diagram.img}`}
+                          src={`/architecture/${diagram.img}`}
                           alt={diagram.alt}
                           className="w-full h-auto"
+                          onError={(e) => {
+                            e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23333" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" fill="%23999" text-anchor="middle" dy=".3em"%3EImage Loading...%3C/text%3E%3C/svg%3E';
+                          }}
                         />
                       </div>
                       <p className="text-xs text-purple-400 text-center mt-2">Click to expand</p>
@@ -336,7 +348,7 @@ function App() {
                   <div className="text-sm text-text-secondary">Products</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl font-light text-purple-300 mb-2">6</div>
+                  <div className="text-4xl font-light text-purple-300 mb-2">{categoryCount || '9+'}</div>
                   <div className="text-sm text-text-secondary">Categories</div>
                 </div>
                 <div className="text-center">
@@ -344,8 +356,8 @@ function App() {
                   <div className="text-sm text-text-secondary">Powered Search</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl font-light text-purple-300 mb-2">&lt;50ms</div>
-                  <div className="text-sm text-text-secondary">Search Speed</div>
+                  <div className="text-4xl font-light text-purple-300 mb-2">pgvector</div>
+                  <div className="text-sm text-text-secondary">Vector Search</div>
                 </div>
               </div>
               <div className="text-center text-xs text-text-secondary pt-8 border-t border-purple-500/10">
@@ -487,7 +499,7 @@ function App() {
                 <X className="h-6 w-6 text-white" />
               </button>
               <img 
-                src={`${import.meta.env.BASE_URL}architecture/${expandedDiagram}`}
+                src={`/architecture/${expandedDiagram}`}
                 alt="Architecture Diagram"
                 className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
               />
