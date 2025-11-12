@@ -539,10 +539,10 @@ const AIAssistant = () => {
 
 
       {/* Floating Bubble */}
-      <div className="fixed bottom-8 right-8 z-[1000]">
+      <div className="fixed bottom-6 right-6 z-[1000]">
         {/* Tooltip Bubble */}
         {!isOpen && (
-          <div className="absolute bottom-28 right-0 animate-slideIn">
+          <div className="absolute bottom-24 right-0 animate-slideIn">
             <div 
               className="px-4 py-2 rounded-2xl text-base font-medium text-white whitespace-nowrap relative"
               style={{
@@ -551,7 +551,7 @@ const AIAssistant = () => {
                 border: '1px solid rgba(186, 104, 200, 0.2)'
               }}
             >
-              How may I assist?
+              Hi there! What can I help you find today? 👋
               {/* Chat bubble tail */}
               <div 
                 className="absolute -bottom-2 right-6 w-4 h-4 rotate-45"
