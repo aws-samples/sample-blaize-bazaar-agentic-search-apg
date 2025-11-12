@@ -180,10 +180,11 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
             <div className="text-xs">
               <p className="font-semibold text-blue-300 mb-1">Performance Breakdown</p>
               <p className="text-blue-200/80 leading-relaxed">
-                <span className="font-medium text-blue-300">Total Search Time (~660ms)</span> = 
-                <span className="text-yellow-300"> Bedrock Embeddings (~600ms)</span> + 
+                <span className="font-medium text-blue-300">Total Search Time (~400ms)</span> = 
+                <span className="text-yellow-300"> Bedrock Embeddings (~200ms)</span> + 
                 <span className="text-green-300"> Database Query (&lt;1ms)</span> + 
-                <span className="text-gray-300"> Processing (~60ms)</span>
+                <span className="text-orange-300"> Network Latency (~150ms)</span> + 
+                <span className="text-gray-300"> Processing (~50ms)</span>
               </p>
               <p className="text-blue-200/70 mt-1.5">
                 💡 <span className="font-medium">HNSW Index Optimization:</span> Using <code className="px-1 py-0.5 bg-black/30 rounded text-purple-300">SET LOCAL enable_seqscan=off</code>, 
