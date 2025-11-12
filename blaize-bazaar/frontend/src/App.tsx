@@ -348,11 +348,34 @@ function App() {
                 </div>
               </div>
 
-              <div className="text-center">
-                <p className="text-xs text-text-secondary">
-                  © 2025 Shayon Sanyal | DAT406: Build agentic AI-powered search with Amazon Aurora | AWS re:Invent 2025
-                </p>
+              {/* About & Contact Section */}
+              <div className="grid grid-cols-2 gap-8">
+                <div className="card p-6">
+                  <h3 className="text-xl font-semibold text-purple-300 mb-4">About This Workshop</h3>
+                  <h4 className="text-base font-medium text-white mb-3">DAT406: Build agentic AI-powered search with Amazon Aurora</h4>
+                  <p className="text-sm text-text-secondary leading-relaxed">
+                    Learn how to build intelligent product search using Aurora PostgreSQL with pgvector, Amazon Bedrock, and AWS Strands SDK. This workshop demonstrates RAG, agentic AI capabilities, context management, and custom agent tools for personalized user experiences.
+                  </p>
+                </div>
+                <div className="card p-6">
+                  <h3 className="text-xl font-semibold text-purple-300 mb-4">Resources</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-white mb-2">📧 Workshop Contact</p>
+                      <a href="mailto:pgvector-usecase@amazon.com" className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
+                        pgvector-usecase@amazon.com
+                      </a>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white mb-2">👨‍💻 GitHub Repository</p>
+                      <a href="https://github.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg" target="_blank" rel="noopener noreferrer" className="text-sm text-purple-400 hover:text-purple-300 transition-colors">
+                        View Source Code →
+                      </a>
+                    </div>
+                  </div>
+                </div>
               </div>
+
             </section>
           )}
 
