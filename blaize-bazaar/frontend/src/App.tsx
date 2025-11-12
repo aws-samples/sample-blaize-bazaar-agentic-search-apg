@@ -146,22 +146,28 @@ function App() {
               </div>
               <div className="grid grid-cols-3 gap-8">
                 {[
-                  { icon: '🔌', title: 'Cables & Chargers', count: '585 products • Essential accessories', query: 'cable charger' },
-                  { icon: '⌚', title: 'Watches', count: '481 products • Premium timepieces', query: 'watch' },
-                  { icon: '📷', title: 'Cameras', count: '437 products • Capture moments', query: 'camera' },
-                  { icon: '💻', title: 'Laptops', count: '306 products • Power & performance', query: 'laptop' },
-                  { icon: '🎧', title: 'Headphones', count: '175 products • Immersive audio', query: 'headphones earbuds' },
-                  { icon: '🎮', title: 'Gaming', count: '170 products • Next-gen gaming', query: 'gaming' },
+                  { icon: '🔌', title: 'Cables & Chargers', count: '585 products • Essential accessories', query: 'cable charger', img: 'https://m.media-amazon.com/images/I/71yHIdTRluL._AC_UL320_.jpg' },
+                  { icon: '⌚', title: 'Watches', count: '481 products • Premium timepieces', query: 'watch', img: 'https://m.media-amazon.com/images/I/615uKIrhCdL._AC_UL320_.jpg' },
+                  { icon: '📷', title: 'Cameras', count: '437 products • Capture moments', query: 'camera', img: 'https://m.media-amazon.com/images/I/61+L7P7W0+S._AC_UL320_.jpg' },
+                  { icon: '💻', title: 'Laptops', count: '306 products • Power & performance', query: 'laptop', img: 'https://m.media-amazon.com/images/I/61KUIjmfe7L._AC_UL320_.jpg' },
+                  { icon: '🎧', title: 'Headphones', count: '175 products • Immersive audio', query: 'headphones earbuds', img: 'https://m.media-amazon.com/images/I/81ZTs2AvxiL._AC_UL320_.jpg' },
+                  { icon: '🎮', title: 'Gaming', count: '170 products • Next-gen gaming', query: 'gaming', img: 'https://m.media-amazon.com/images/I/71vyo6WLiCL._AC_UL320_.jpg' },
                 ].map((collection, index) => (
                   <div 
                     key={index} 
-                    className="card cursor-pointer"
+                    className="card cursor-pointer overflow-hidden"
                     onClick={() => {
                       setSearchQuery(collection.query)
                       setSearchOverlayVisible(true)
                     }}
                   >
-                    <div className="text-5xl mb-4">{collection.icon}</div>
+                    <div className="relative w-full h-48 mb-4 rounded-xl overflow-hidden bg-white/5">
+                      <img 
+                        src={collection.img} 
+                        alt={collection.title}
+                        className="w-full h-full object-contain p-4"
+                      />
+                    </div>
                     <div className="text-2xl font-normal mb-3 text-gray-900 dark:text-white">{collection.title}</div>
                     <div className="text-text-secondary text-sm">{collection.count}</div>
                   </div>
