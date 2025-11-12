@@ -544,7 +544,7 @@ const AIAssistant = () => {
         {!isOpen && (
           <div className="absolute bottom-24 right-0 animate-slideIn">
             <div 
-              className="px-4 py-2 rounded-2xl text-base font-medium text-white whitespace-nowrap relative"
+              className="px-4 py-2 pr-8 rounded-2xl text-base font-medium text-white whitespace-nowrap relative"
               style={{
                 background: 'rgba(10, 10, 15, 0.95)',
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
@@ -552,6 +552,16 @@ const AIAssistant = () => {
               }}
             >
               Hi there! What can I help you find today? 👋
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const tooltip = e.currentTarget.closest('.animate-slideIn') as HTMLElement
+                  if (tooltip) tooltip.style.display = 'none'
+                }}
+                className="absolute top-2 right-2 text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
               {/* Chat bubble tail */}
               <div 
                 className="absolute -bottom-2 right-6 w-4 h-4 rotate-45"
