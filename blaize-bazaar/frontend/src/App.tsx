@@ -12,7 +12,7 @@ import IndexPerformanceDashboard from './components/IndexPerformanceDashboard'
 import ContextDashboard from './components/ContextDashboard'
 import AgentReasoningTraces from './components/AgentReasoningTraces'
 import HybridSearchComparison from './components/HybridSearchComparison'
-import { Database, BarChart3, Activity, Brain, GitCompare } from 'lucide-react'
+import { Database, BarChart3, Activity, Brain, GitCompare, Wrench, X } from 'lucide-react'
 import './styles/premium-heading-styles.css'
 
 // Theme Context (locked to dark mode)
@@ -41,6 +41,7 @@ function App() {
   const [showContextDashboard, setShowContextDashboard] = useState(false)
   const [showAgentTraces, setShowAgentTraces] = useState(false)
   const [showHybridComparison, setShowHybridComparison] = useState(false)
+  const [showDevTools, setShowDevTools] = useState(false)
   const backgroundImage = `${import.meta.env.BASE_URL}backgrounds/bg-1.png`
 
   // Apply dark theme to document
@@ -207,110 +208,80 @@ function App() {
         {/* AI Assistant */}
         <AIAssistant />
 
-        {/* Floating Database Tools Menu - Bottom Left */}
-        <div className="fixed bottom-8 left-8 z-40 flex flex-col gap-4">
-          {/* SQL Inspector FAB */}
-          <button
-            onClick={() => setShowSQLInspector(true)}
-            className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95"
-            style={{
-              background: 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
-            }}
-            title="SQL Query Inspector"
-          >
-            <Database className="h-6 w-6 text-white" />
-            
-            {/* Tooltip on hover */}
-            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-              <div className="px-3 py-2 rounded-lg bg-purple-500/95 backdrop-blur-sm border border-purple-400/30 shadow-xl">
-                <p className="text-sm text-white font-medium">SQL Query Inspector</p>
-                <p className="text-xs text-purple-200">Monitor pgvector queries</p>
-              </div>
-            </div>
-          </button>
+        {/* Developer Tools FAB */}
+        <button
+          onClick={() => setShowDevTools(!showDevTools)}
+          className="fixed bottom-8 left-8 z-50 p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 group"
+          style={{
+            background: showDevTools
+              ? 'linear-gradient(135deg, #ba68c8 0%, #6a1b9a 100%)'
+              : 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
+          }}
+        >
+          {showDevTools ? <X className="h-6 w-6 text-white transition-transform duration-300 group-hover:rotate-90" /> : <Wrench className="h-6 w-6 text-white transition-transform duration-300 group-hover:rotate-12" />}
+        </button>
 
-          {/* Index Performance FAB */}
-          <button
-            onClick={() => setShowIndexPerformance(true)}
-            className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95"
-            style={{
-              background: 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
-            }}
-            title="Index Performance Dashboard"
-          >
-            <BarChart3 className="h-6 w-6 text-white" />
-            
-            {/* Tooltip on hover */}
-            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-              <div className="px-3 py-2 rounded-lg bg-purple-500/95 backdrop-blur-sm border border-purple-400/30 shadow-xl">
-                <p className="text-sm text-white font-medium">Index Performance</p>
-                <p className="text-xs text-purple-200">Tune HNSW parameters</p>
+        {/* Developer Tools Sidebar */}
+        {showDevTools && (
+          <div className="fixed left-0 top-[72px] w-80 h-[calc(100vh-72px)] z-40 bg-gradient-to-b from-gray-900/98 to-gray-800/98 backdrop-blur-xl border-r border-purple-500/30 shadow-2xl animate-in slide-in-from-left duration-300">
+            <div className="p-6 h-full flex flex-col">
+              <div className="mb-6">
+                <h2 className="text-2xl font-light text-white mb-2">Developer Tools</h2>
+                <p className="text-sm text-purple-300">Workshop debugging & monitoring</p>
+              </div>
+              <div className="flex-1 space-y-3 overflow-y-auto">
+                <button onClick={() => { setShowSQLInspector(true); setShowDevTools(false); }} className="w-full p-4 rounded-xl bg-purple-900/30 hover:bg-purple-800/50 hover:scale-[1.02] border border-purple-500/30 text-left transition-all duration-200">
+                  <div className="flex items-start gap-3">
+                    <Database className="h-5 w-5 text-purple-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-white font-medium mb-1">SQL Query Inspector</p>
+                      <p className="text-xs text-purple-300">Monitor pgvector queries</p>
+                    </div>
+                  </div>
+                </button>
+                <button onClick={() => { setShowIndexPerformance(true); setShowDevTools(false); }} className="w-full p-4 rounded-xl bg-purple-900/30 hover:bg-purple-800/50 hover:scale-[1.02] border border-purple-500/30 text-left transition-all duration-200">
+                  <div className="flex items-start gap-3">
+                    <BarChart3 className="h-5 w-5 text-purple-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-white font-medium mb-1">Index Performance</p>
+                      <p className="text-xs text-purple-300">Tune HNSW parameters</p>
+                    </div>
+                  </div>
+                </button>
+                <button onClick={() => { setShowContextDashboard(!showContextDashboard); setShowDevTools(false); }} className="w-full p-4 rounded-xl bg-purple-900/30 hover:bg-purple-800/50 hover:scale-[1.02] border border-purple-500/30 text-left transition-all duration-200">
+                  <div className="flex items-start gap-3">
+                    <Activity className="h-5 w-5 text-purple-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-white font-medium mb-1">Context Monitor</p>
+                      <p className="text-xs text-purple-300">Token & prompt management</p>
+                    </div>
+                  </div>
+                </button>
+                <button onClick={() => { setShowAgentTraces(true); setShowDevTools(false); }} className="w-full p-4 rounded-xl bg-purple-900/30 hover:bg-purple-800/50 hover:scale-[1.02] border border-purple-500/30 text-left transition-all duration-200">
+                  <div className="flex items-start gap-3">
+                    <Brain className="h-5 w-5 text-purple-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-white font-medium mb-1">Agent Reasoning Traces</p>
+                      <p className="text-xs text-purple-300">Multi-agent workflow</p>
+                    </div>
+                  </div>
+                </button>
+                <button onClick={() => { setShowHybridComparison(true); setShowDevTools(false); }} className="w-full p-4 rounded-xl bg-purple-900/30 hover:bg-purple-800/50 hover:scale-[1.02] border border-purple-500/30 text-left transition-all duration-200">
+                  <div className="flex items-start gap-3">
+                    <GitCompare className="h-5 w-5 text-purple-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-white font-medium mb-1">Hybrid Search Comparison</p>
+                      <p className="text-xs text-purple-300">Vector vs Hybrid side-by-side</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+              <div className="mt-6 pt-4 border-t border-purple-500/30">
+                <p className="text-xs text-purple-400 text-center">Workshop Tools • DAT406</p>
               </div>
             </div>
-          </button>
-
-          {/* Context Monitor FAB */}
-          <button
-            onClick={() => setShowContextDashboard(!showContextDashboard)}
-            className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95"
-            style={{
-              background: showContextDashboard 
-                ? 'linear-gradient(135deg, #ba68c8 0%, #6a1b9a 100%)'
-                : 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
-            }}
-            title="Context Monitor"
-          >
-            <Activity className="h-6 w-6 text-white" />
-            
-            {/* Tooltip on hover */}
-            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-              <div className="px-3 py-2 rounded-lg bg-purple-500/95 backdrop-blur-sm border border-purple-400/30 shadow-xl">
-                <p className="text-sm text-white font-medium">Context Monitor</p>
-                <p className="text-xs text-purple-200">Token & prompt management</p>
-              </div>
-            </div>
-          </button>
-
-          {/* Agent Reasoning Traces FAB */}
-          <button
-            onClick={() => setShowAgentTraces(true)}
-            className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95"
-            style={{
-              background: 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
-            }}
-            title="Agent Reasoning Traces"
-          >
-            <Brain className="h-6 w-6 text-white" />
-            
-            {/* Tooltip on hover */}
-            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-              <div className="px-3 py-2 rounded-lg bg-purple-500/95 backdrop-blur-sm border border-purple-400/30 shadow-xl">
-                <p className="text-sm text-white font-medium">Agent Reasoning Traces</p>
-                <p className="text-xs text-purple-200">Multi-agent workflow</p>
-              </div>
-            </div>
-          </button>
-
-          {/* Hybrid Search Comparison FAB */}
-          <button
-            onClick={() => setShowHybridComparison(true)}
-            className="group relative p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95"
-            style={{
-              background: 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
-            }}
-            title="Hybrid Search Comparison"
-          >
-            <GitCompare className="h-6 w-6 text-white" />
-            
-            {/* Tooltip on hover */}
-            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-              <div className="px-3 py-2 rounded-lg bg-purple-500/95 backdrop-blur-sm border border-purple-400/30 shadow-xl">
-                <p className="text-sm text-white font-medium">Hybrid Search Comparison</p>
-                <p className="text-xs text-purple-200">Vector vs Hybrid side-by-side</p>
-              </div>
-            </div>
-          </button>
-        </div>
+          </div>
+        )}
 
         {/* Context Dashboard - Floating Panel (Next to FABs) */}
         {showContextDashboard && (

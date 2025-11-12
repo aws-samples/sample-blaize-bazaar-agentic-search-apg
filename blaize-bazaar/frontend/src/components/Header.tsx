@@ -183,9 +183,9 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
           </div>
 
           {/* Right Side - Search & Theme Toggle */}
-          <div className="flex items-center gap-2 md:gap-4 flex-shrink min-w-0">
+          <div className="flex items-center gap-2 md:gap-4">
             <div className="flex items-center gap-2">
-              <div className="relative w-full max-w-[450px] min-w-[280px] group" ref={searchRef}>
+              <div className="relative w-[380px] min-w-[280px] group" ref={searchRef}>
                 <input
                   type="text"
                   value={searchQuery}
