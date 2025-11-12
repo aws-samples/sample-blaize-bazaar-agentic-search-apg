@@ -43,7 +43,17 @@ function App() {
   const [showHybridComparison, setShowHybridComparison] = useState(false)
   const [showDevTools, setShowDevTools] = useState(false)
   const [expandedDiagram, setExpandedDiagram] = useState<string | null>(null)
+  const [productCount, setProductCount] = useState(0)
+  const [featuredIndex, setFeaturedIndex] = useState(0)
   const backgroundImage = `${import.meta.env.BASE_URL}backgrounds/bg-1.png`
+
+  // Featured products for carousel
+  const featuredProducts = [
+    { img: 'https://m.media-amazon.com/images/I/61+L7P7W0+S._AC_UL320_.jpg', name: '4K Digital Camera' },
+    { img: 'https://m.media-amazon.com/images/I/61KUIjmfe7L._AC_UL320_.jpg', name: 'HP Chromebook' },
+    { img: 'https://m.media-amazon.com/images/I/81ZTs2AvxiL._AC_UL320_.jpg', name: 'Wireless Headphones' },
+    { img: 'https://m.media-amazon.com/images/I/61tKyzaZfzL._AC_UL320_.jpg', name: 'Smart Doorbell' },
+  ]
 
   // Apply dark theme to document
   useEffect(() => {
@@ -51,9 +61,57 @@ function App() {
     document.documentElement.classList.remove('light')
   }, [])
 
+  // Animated counter for product count
+  useEffect(() => {
+    if (activeSection === 'shop') {
+      let start = 0
+      const end = 21000
+      const duration = 2000
+      const increment = end / (duration / 16)
+      const timer = setInterval(() => {
+        start += increment
+        if (start >= end) {
+          setProductCount(end)
+          clearInterval(timer)
+        } else {
+          setProductCount(Math.floor(start))
+        }
+      }, 16)
+      return () => clearInterval(timer)
+    }
+  }, [activeSection])
+
+  // Featured products carousel
+  useEffect(() => {
+    if (activeSection === 'shop') {
+      const interval = setInterval(() => {
+        setFeaturedIndex((prev) => (prev + 1) % featuredProducts.length)
+      }, 4000)
+      return () => clearInterval(interval)
+    }
+  }, [activeSection, featuredProducts.length])
+
   return (
     <ThemeContext.Provider value={{ theme }}>
       <div className="min-h-screen bg-bg-primary relative transition-colors duration-300">
+        {/* Floating Particles - Performance optimized with CSS only */}
+        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+          {[...Array(12)].map((_, i) => (
+            <div
+              key={i}
+              className="particle"
+              style={{
+                width: `${Math.random() * 6 + 2}px`,
+                height: `${Math.random() * 6 + 2}px`,
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                background: `radial-gradient(circle, rgba(186, 104, 200, ${Math.random() * 0.4 + 0.2}), transparent)`,
+                animationDelay: `${Math.random() * 15}s`,
+                animationDuration: `${Math.random() * 10 + 15}s`
+              }}
+            />
+          ))}
+        </div>
         {/* Header */}
         <Header
           activeSection={activeSection}
@@ -111,7 +169,7 @@ function App() {
                     Experience intelligent product discovery powered by Aurora PostgreSQL with pgvector,
                     Amazon Bedrock, and AWS Strands SDK. Real-time semantic search meets premium shopping.
                   </p>
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 mb-8">
                     <button 
                       className="btn-secondary"
                       onClick={() => {
@@ -128,11 +186,57 @@ function App() {
                       Browse Collections
                     </button>
                   </div>
+
+                  {/* Stats Badges */}
+                  <div className="flex gap-4 animate-fadeIn" style={{ animationDelay: '0.3s' }}>
+                    <div className="px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/30 backdrop-blur-sm">
+                      <span className="text-purple-300 text-sm font-medium">{(productCount / 1000).toFixed(0)}K+ Products</span>
+                    </div>
+                    <div className="px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/30 backdrop-blur-sm">
+                      <span className="text-purple-300 text-sm font-medium">✨ AI-Powered</span>
+                    </div>
+                    <div className="px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/30 backdrop-blur-sm">
+                      <span className="text-purple-300 text-sm font-medium">⚡ Real-time</span>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Right: Empty space (product showcase removed, kept as backup in code) */}
+                {/* Right: Featured Products Carousel */}
                 <div className="h-[500px] flex items-center justify-center">
-                  {/* Product showcase hidden - uncomment below to restore */}
+                  <div className="relative w-[400px] h-[400px]">
+                    {featuredProducts.map((product, idx) => (
+                      <div
+                        key={idx}
+                        className="absolute inset-0 transition-all duration-1000 ease-in-out"
+                        style={{
+                          opacity: idx === featuredIndex ? 1 : 0,
+                          transform: idx === featuredIndex ? 'scale(1) rotate(0deg)' : 'scale(0.8) rotate(-10deg)',
+                          zIndex: idx === featuredIndex ? 10 : 0
+                        }}
+                      >
+                        <div className="w-full h-full rounded-3xl bg-white/5 backdrop-blur-sm border border-purple-500/20 p-8 flex flex-col items-center justify-center">
+                          <div className="w-full h-[300px] mb-4 flex items-center justify-center">
+                            <img
+                              src={product.img}
+                              alt={product.name}
+                              className="max-w-full max-h-full object-contain"
+                            />
+                          </div>
+                          <p className="text-white text-lg font-medium">{product.name}</p>
+                          <div className="flex gap-2 mt-4">
+                            {featuredProducts.map((_, i) => (
+                              <div
+                                key={i}
+                                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                                  i === featuredIndex ? 'bg-purple-400 w-6' : 'bg-purple-400/30'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </section>
@@ -156,20 +260,24 @@ function App() {
                 ].map((collection, index) => (
                   <div 
                     key={index} 
-                    className="card cursor-pointer overflow-hidden"
+                    className="card cursor-pointer overflow-hidden group relative animate-fadeIn"
+                    style={{ animationDelay: `${index * 0.1}s` }}
                     onClick={() => {
                       setSearchQuery(collection.query)
                       setSearchOverlayVisible(true)
                     }}
                   >
+                    {/* Gradient border glow on hover */}
+                    <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500/0 via-purple-500/50 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                    
                     <div className="relative w-full h-48 mb-4 rounded-xl overflow-hidden bg-white/5">
                       <img 
                         src={collection.img} 
                         alt={collection.title}
-                        className="w-full h-full object-contain p-4"
+                        className="w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-110"
                       />
                     </div>
-                    <div className="text-2xl font-normal mb-3 text-gray-900 dark:text-white">{collection.title}</div>
+                    <div className="text-2xl font-normal mb-3 text-gray-900 dark:text-white transition-colors duration-300 group-hover:text-purple-300">{collection.title}</div>
                     <div className="text-text-secondary text-sm">{collection.count}</div>
                   </div>
                 ))}
@@ -218,6 +326,34 @@ function App() {
               </div>
             </section>
           )}
+
+          {/* Footer with Stats */}
+          <footer className="border-t border-purple-500/20 bg-gradient-to-b from-transparent to-purple-900/10">
+            <div className="max-w-[1400px] mx-auto px-10 py-12">
+              <div className="grid grid-cols-4 gap-8 mb-8">
+                <div className="text-center">
+                  <div className="text-4xl font-light text-purple-300 mb-2">{(productCount / 1000).toFixed(0)}K+</div>
+                  <div className="text-sm text-text-secondary">Products</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-light text-purple-300 mb-2">6</div>
+                  <div className="text-sm text-text-secondary">Categories</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-light text-purple-300 mb-2">AI</div>
+                  <div className="text-sm text-text-secondary">Powered Search</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-4xl font-light text-purple-300 mb-2">&lt;50ms</div>
+                  <div className="text-sm text-text-secondary">Search Speed</div>
+                </div>
+              </div>
+              <div className="text-center text-xs text-text-secondary pt-8 border-t border-purple-500/10">
+                <p className="mb-2">© 2025 Shayon Sanyal | DAT406: Build agentic AI-powered search with Amazon Aurora</p>
+                <p className="text-purple-400">Powered by Aurora PostgreSQL • Amazon Bedrock • pgvector • AWS Strands SDK</p>
+              </div>
+            </div>
+          </footer>
         </main>
 
         {/* AI Assistant */}
