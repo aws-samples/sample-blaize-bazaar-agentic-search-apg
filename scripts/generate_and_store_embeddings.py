@@ -305,7 +305,7 @@ def main():
         logger.info(f"  - Average time per product: {(elapsed_time/len(df)):.3f} seconds")
         logger.info("="*80)
         
-        logger.info("\n✅ Part 1 Complete: Setup and data loading finished!")
+        logger.info("\n✅ Setup and data loading finished!")
         
     except Exception as e:
         logger.error(f"Fatal error: {str(e)}", exc_info=True)
