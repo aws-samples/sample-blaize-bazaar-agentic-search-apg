@@ -343,7 +343,10 @@ sudo -u "$CODE_EDITOR_USER" mkdir -p "$SETTINGS_DIR"
 cat > "$SETTINGS_DIR/settings.json" << 'VSCODE_SETTINGS'
 {
     "workbench.colorTheme": "Default Dark Modern",
+    "workbench.preferredDarkColorTheme": "Default Dark Modern",
+    "workbench.preferredLightColorTheme": "Default Dark Modern",
     "window.autoDetectColorScheme": false,
+    "window.autoDetectHighContrast": false,
     "python.defaultInterpreterPath": "/usr/bin/python3.13",
     "python.terminal.activateEnvironment": true,
     "python.linting.enabled": true,
@@ -383,6 +386,18 @@ VSCODE_SETTINGS
 
 chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$SETTINGS_DIR"
 
+# Create trustedUris.json to explicitly trust the workspace
+log "Configuring trusted workspace URIs..."
+cat > "$SETTINGS_DIR/trustedUris.json" << TRUSTED_URIS
+[
+  "file://$HOME_FOLDER",
+  "file://$HOME_FOLDER/$REPO_NAME"
+]
+TRUSTED_URIS
+
+chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$SETTINGS_DIR/trustedUris.json"
+log "✅ Workspace URIs trusted"
+
 # Create Python environment file for workspace
 log "Creating Python environment configuration..."
 mkdir -p "$HOME_FOLDER/.vscode"
@@ -390,7 +405,12 @@ cat > "$HOME_FOLDER/.vscode/settings.json" << 'WORKSPACE_SETTINGS'
 {
     "python.defaultInterpreterPath": "/usr/bin/python3.13",
     "jupyter.kernels.filter": [],
-    "notebook.defaultKernel": "python3"
+    "notebook.defaultKernel": "python3",
+    "workbench.colorTheme": "Default Dark Modern",
+    "workbench.preferredDarkColorTheme": "Default Dark Modern",
+    "workbench.preferredLightColorTheme": "Default Dark Modern",
+    "window.autoDetectColorScheme": false,
+    "window.autoDetectHighContrast": false
 }
 WORKSPACE_SETTINGS
 
@@ -480,7 +500,12 @@ cat > "$HOME_FOLDER/.vscode/settings.json" << 'WORKSPACE_SETTINGS'
     "terminal.integrated.defaultProfile.linux": "bash",
     "terminal.integrated.cwd": "/workshop",
     "task.autoDetect": "on",
-    "task.problemMatchers.neverPrompt": true
+    "task.problemMatchers.neverPrompt": true,
+    "workbench.colorTheme": "Default Dark Modern",
+    "workbench.preferredDarkColorTheme": "Default Dark Modern",
+    "workbench.preferredLightColorTheme": "Default Dark Modern",
+    "window.autoDetectColorScheme": false,
+    "window.autoDetectHighContrast": false
 }
 WORKSPACE_SETTINGS
 
