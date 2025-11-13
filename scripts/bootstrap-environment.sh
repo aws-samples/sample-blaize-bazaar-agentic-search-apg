@@ -342,6 +342,8 @@ sudo -u "$CODE_EDITOR_USER" mkdir -p "$SETTINGS_DIR"
 
 cat > "$SETTINGS_DIR/settings.json" << 'VSCODE_SETTINGS'
 {
+    "workbench.colorTheme": "Default Dark Modern",
+    "window.autoDetectColorScheme": false,
     "python.defaultInterpreterPath": "/usr/bin/python3.13",
     "python.terminal.activateEnvironment": true,
     "python.linting.enabled": true,
