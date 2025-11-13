@@ -365,6 +365,8 @@ cat > "$SETTINGS_DIR/settings.json" << 'VSCODE_SETTINGS'
     "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 1000,
     "workbench.startupEditor": "none",
+    "workbench.welcomePage.walkthroughs.openOnInstall": false,
+    "workbench.tips.enabled": false,
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "git.enabled": false,
@@ -388,15 +390,33 @@ chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$SETTINGS_DIR"
 
 # Create trustedUris.json to explicitly trust the workspace
 log "Configuring trusted workspace URIs..."
+mkdir -p "$SETTINGS_DIR/globalStorage"
+cat > "$SETTINGS_DIR/globalStorage/storage.json" << STORAGE_JSON
+{
+  "workbench.welcomePage.walkthroughsHidden": true,
+  "workbench.welcomePage.walkthroughsCompleted": true,
+  "workbench.welcomePage.shown": true,
+  "vs.editor.welcomepage.shown": true,
+  "editor.multiCursorModifier.shown": true,
+  "workbench.panel.opened": false,
+  "workbench.startupEditor": "none"
+}
+STORAGE_JSON
+
 cat > "$SETTINGS_DIR/trustedUris.json" << TRUSTED_URIS
 [
-  "file://$HOME_FOLDER",
-  "file://$HOME_FOLDER/$REPO_NAME"
+  {
+    "uri": "file://$HOME_FOLDER"
+  },
+  {
+    "uri": "file://$HOME_FOLDER/$REPO_NAME"
+  }
 ]
 TRUSTED_URIS
 
+chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$SETTINGS_DIR/globalStorage"
 chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$SETTINGS_DIR/trustedUris.json"
-log "✅ Workspace URIs trusted"
+log "✅ Workspace URIs trusted and welcome page disabled"
 
 # Create Python environment file for workspace
 log "Creating Python environment configuration..."
