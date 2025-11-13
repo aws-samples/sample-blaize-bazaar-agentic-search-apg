@@ -446,9 +446,11 @@ log "Configuring auto-open terminal with welcome message..."
 # Create scripts directory
 mkdir -p "$HOME_FOLDER/scripts"
 
-# Create welcome script
+# Create welcome script that exits cleanly
 cat > "$HOME_FOLDER/scripts/welcome.sh" << 'WELCOME_EOF'
 #!/bin/bash
+
+# Display welcome message once and exit
 clear
 cat << 'EOF'
 ╔═══════════════════════════════════════════════════════════════════╗
@@ -479,7 +481,8 @@ cat << 'EOF'
 
 EOF
 
-exec bash
+# Exit cleanly so task completes
+exit 0
 WELCOME_EOF
 
 chmod +x "$HOME_FOLDER/scripts/welcome.sh"
@@ -493,18 +496,21 @@ cat > "$HOME_FOLDER/.vscode/tasks.json" << 'TASKS_EOF'
         {
             "label": "Welcome Terminal",
             "type": "shell",
-            "command": "/workshop/scripts/welcome.sh",
+            "command": "bash",
+            "args": ["-c", "/workshop/scripts/welcome.sh && exec bash"],
             "presentation": {
                 "echo": false,
                 "reveal": "always",
                 "focus": false,
                 "panel": "dedicated",
                 "showReuseMessage": false,
-                "clear": true
+                "clear": true,
+                "close": false
             },
             "runOptions": {
                 "runOn": "folderOpen"
             },
+            "isBackground": false,
             "problemMatcher": []
         }
     ]
