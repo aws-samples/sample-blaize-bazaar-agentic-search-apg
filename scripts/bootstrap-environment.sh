@@ -343,80 +343,44 @@ sudo -u "$CODE_EDITOR_USER" mkdir -p "$SETTINGS_DIR"
 cat > "$SETTINGS_DIR/settings.json" << 'VSCODE_SETTINGS'
 {
     "workbench.colorTheme": "Default Dark Modern",
-    "workbench.preferredDarkColorTheme": "Default Dark Modern",
-    "workbench.preferredLightColorTheme": "Default Dark Modern",
-    "window.autoDetectColorScheme": false,
-    "window.autoDetectHighContrast": false,
+    "explorer.compactFolders": false,
+    "explorer.autoReveal": false,
+    "git.enabled": false,
+    "git.decorations.enabled": false,
+    "git.showProgress": false,
+    "git.autofetch": false,
+    "scm.diffDecorations": "none",
+    "aws.telemetry": false,
+    "extensions.autoUpdate": false,
+    "extensions.autoCheckUpdates": false,
+    "telemetry.telemetryLevel": "off",
+    "security.workspace.trust.startupPrompt": "never",
+    "security.workspace.trust.enabled": false,
+    "security.workspace.trust.banner": "never",
+    "security.workspace.trust.emptyWindow": false,
+    "workbench.startupEditor": "none",
+    "terminal.integrated.defaultProfile.linux": "bash",
     "python.defaultInterpreterPath": "/usr/bin/python3.13",
-    "python.terminal.activateEnvironment": true,
-    "python.linting.enabled": true,
-    "python.globalModuleInstallation": true,
+    "python.testing.pytestEnabled": true,
     "jupyter.jupyterServerType": "local",
     "jupyter.kernels.filter": [],
     "jupyter.notebookFileRoot": "/workshop",
     "jupyter.askForKernelRestart": false,
     "notebook.defaultKernel": "python3",
-    "notebook.cellToolbarLocation": {
-        "default": "right",
-        "jupyter-notebook": "left"
-    },
-    "terminal.integrated.defaultProfile.linux": "bash",
-    "terminal.integrated.cwd": "/workshop",
     "files.autoSave": "afterDelay",
     "files.autoSaveDelay": 1000,
-    "workbench.startupEditor": "none",
-    "workbench.welcomePage.walkthroughs.openOnInstall": false,
-    "workbench.tips.enabled": false,
-    "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "git.enabled": false,
-    "git.autorefresh": false,
-    "git.autofetch": false,
-    "scm.defaultViewMode": "tree",
-    "aws.telemetry": false,
-    "amazonQ.telemetry": false,
-    "telemetry.telemetryLevel": "off",
-    "extensions.autoCheckUpdates": false,
-    "extensions.autoUpdate": false,
-    "extensions.ignoreRecommendations": true,
-    "security.workspace.trust.enabled": false,
-    "security.workspace.trust.startupPrompt": "never",
-    "security.workspace.trust.banner": "never",
-    "security.workspace.trust.emptyWindow": false
+    "files.exclude": {
+        "**/.git": true,
+        "**/.github": true,
+        "**/.vscode": true,
+        "**/scripts": true
+    }
 }
 VSCODE_SETTINGS
 
 chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$SETTINGS_DIR"
 
-# Create trustedUris.json to explicitly trust the workspace
-log "Configuring trusted workspace URIs..."
-mkdir -p "$SETTINGS_DIR/globalStorage"
-cat > "$SETTINGS_DIR/globalStorage/storage.json" << STORAGE_JSON
-{
-  "workbench.welcomePage.walkthroughsHidden": true,
-  "workbench.welcomePage.walkthroughsCompleted": true,
-  "workbench.welcomePage.shown": true,
-  "vs.editor.welcomepage.shown": true,
-  "editor.multiCursorModifier.shown": true,
-  "workbench.panel.opened": false,
-  "workbench.startupEditor": "none"
-}
-STORAGE_JSON
-
-cat > "$SETTINGS_DIR/trustedUris.json" << TRUSTED_URIS
-[
-  {
-    "uri": "file://$HOME_FOLDER"
-  },
-  {
-    "uri": "file://$HOME_FOLDER/$REPO_NAME"
-  }
-]
-TRUSTED_URIS
-
-chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$SETTINGS_DIR/globalStorage"
-chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$SETTINGS_DIR/trustedUris.json"
-log "✅ Workspace URIs trusted and welcome page disabled"
+log "✅ VS Code user settings configured"
 
 # Create Python environment file for workspace
 log "Creating Python environment configuration..."
@@ -425,12 +389,7 @@ cat > "$HOME_FOLDER/.vscode/settings.json" << 'WORKSPACE_SETTINGS'
 {
     "python.defaultInterpreterPath": "/usr/bin/python3.13",
     "jupyter.kernels.filter": [],
-    "notebook.defaultKernel": "python3",
-    "workbench.colorTheme": "Default Dark Modern",
-    "workbench.preferredDarkColorTheme": "Default Dark Modern",
-    "workbench.preferredLightColorTheme": "Default Dark Modern",
-    "window.autoDetectColorScheme": false,
-    "window.autoDetectHighContrast": false
+    "notebook.defaultKernel": "python3"
 }
 WORKSPACE_SETTINGS
 
@@ -523,15 +482,8 @@ cat > "$HOME_FOLDER/.vscode/settings.json" << 'WORKSPACE_SETTINGS'
     "python.defaultInterpreterPath": "/usr/bin/python3.13",
     "jupyter.kernels.filter": [],
     "notebook.defaultKernel": "python3",
-    "terminal.integrated.defaultProfile.linux": "bash",
-    "terminal.integrated.cwd": "/workshop",
     "task.autoDetect": "on",
-    "task.problemMatchers.neverPrompt": true,
-    "workbench.colorTheme": "Default Dark Modern",
-    "workbench.preferredDarkColorTheme": "Default Dark Modern",
-    "workbench.preferredLightColorTheme": "Default Dark Modern",
-    "window.autoDetectColorScheme": false,
-    "window.autoDetectHighContrast": false
+    "task.problemMatchers.neverPrompt": true
 }
 WORKSPACE_SETTINGS
 
