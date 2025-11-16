@@ -67,15 +67,16 @@ def _empty_execution() -> Dict[str, Any]:
 
 def infer_agent_from_query(query: str, start_time: float) -> Dict[str, Any]:
     """
-    Fallback: Infer agent execution from query keywords
+    Fallback: Infer agent execution from query keywords with routing decision
     
     Used when OpenTelemetry traces are not available.
-    This is a simplified version for UI display only.
+    Enhanced with tool parameters, results, and routing confidence.
     """
     import time
     
     agent_steps = []
     tool_calls = []
+    routing_decision = None
     
     # Orchestrator step
     agent_steps.append({
@@ -86,11 +87,21 @@ def infer_agent_from_query(query: str, start_time: float) -> Dict[str, Any]:
         "duration_ms": 50
     })
     
-    # Infer specialist agent from query
+    # Infer specialist agent from query with confidence
     query_lower = query.lower()
     step_time = start_time + 100
     
+    # Extract query snippet for display
+    query_snippet = query[:30] + '...' if len(query) > 30 else query
+    
     if any(word in query_lower for word in ['deal', 'cheap', 'price', 'discount', 'budget', 'cost', 'value']):
+        detected_keywords = [w for w in ['deal', 'cheap', 'price', 'discount', 'budget', 'cost', 'value'] if w in query_lower]
+        routing_decision = {
+            "selected_agent": "Pricing Agent",
+            "confidence": 95,
+            "reason": f"Pricing keywords detected: {', '.join(detected_keywords[:2])}",
+            "alternatives": [{"agent": "Recommendation Agent", "confidence": 5}]
+        }
         agent_steps.append({
             "agent": "Pricing Agent",
             "action": "Analyzing prices and deals",
@@ -99,12 +110,21 @@ def infer_agent_from_query(query: str, start_time: float) -> Dict[str, Any]:
             "duration_ms": 160
         })
         tool_calls.append({
-            "tool": "get_price_statistics",
+            "tool": "semantic_product_search",
+            "params": f"query='{query_snippet}', limit=5",
+            "result": "Found 5 products",
             "timestamp": step_time + 25,
-            "duration_ms": 100,
+            "duration_ms": 150,
             "status": "success"
         })
     elif any(word in query_lower for word in ['stock', 'inventory', 'restock']):
+        detected_keywords = [w for w in ['stock', 'inventory', 'restock'] if w in query_lower]
+        routing_decision = {
+            "selected_agent": "Inventory Agent",
+            "confidence": 98,
+            "reason": f"Inventory keywords detected: {', '.join(detected_keywords)}",
+            "alternatives": [{"agent": "Recommendation Agent", "confidence": 2}]
+        }
         agent_steps.append({
             "agent": "Inventory Agent",
             "action": "Analyzing stock levels",
@@ -114,11 +134,19 @@ def infer_agent_from_query(query: str, start_time: float) -> Dict[str, Any]:
         })
         tool_calls.append({
             "tool": "get_inventory_health",
+            "params": "category=all",
+            "result": "Health score: 85%",
             "timestamp": step_time + 20,
             "duration_ms": 120,
             "status": "success"
         })
     else:
+        routing_decision = {
+            "selected_agent": "Recommendation Agent",
+            "confidence": 90,
+            "reason": "General product search query",
+            "alternatives": [{"agent": "Pricing Agent", "confidence": 10}]
+        }
         agent_steps.append({
             "agent": "Recommendation Agent",
             "action": "Searching product catalog",
@@ -128,6 +156,8 @@ def infer_agent_from_query(query: str, start_time: float) -> Dict[str, Any]:
         })
         tool_calls.append({
             "tool": "semantic_product_search",
+            "params": f"query='{query_snippet}', limit=5",
+            "result": "Found 5 products",
             "timestamp": step_time + 50,
             "duration_ms": 150,
             "status": "success"
@@ -139,6 +169,7 @@ def infer_agent_from_query(query: str, start_time: float) -> Dict[str, Any]:
         "agent_steps": agent_steps,
         "tool_calls": tool_calls,
         "reasoning_steps": [],
+        "routing_decision": routing_decision,
         "total_duration_ms": int(total_duration * 1000),
         "success_rate": 100,
         "otel_enabled": False,

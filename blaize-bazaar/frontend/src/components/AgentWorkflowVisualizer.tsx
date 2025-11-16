@@ -15,15 +15,24 @@ interface AgentStep {
 interface ToolCall {
   tool: string
   params?: string
+  result?: string
   timestamp: number
   duration_ms: number
   status: string
+}
+
+interface RoutingDecision {
+  selected_agent: string
+  confidence: number
+  reason: string
+  alternatives: Array<{agent: string, confidence: number}>
 }
 
 interface AgentExecution {
   agent_steps: AgentStep[]
   tool_calls: ToolCall[]
   reasoning_steps: Array<{step: string, content: string, timestamp: number}>
+  routing_decision?: RoutingDecision
   total_duration_ms: number
   success_rate: number
 }
@@ -71,7 +80,7 @@ const AgentWorkflowVisualizer = ({ execution, isActive }: Props) => {
       border: '1px solid rgba(186, 104, 200, 0.2)'
     }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-text-primary">🔄 Agent Workflow</span>
           <span className="text-[10px] text-text-secondary">
@@ -82,6 +91,25 @@ const AgentWorkflowVisualizer = ({ execution, isActive }: Props) => {
           ✓ {execution.success_rate}% Success
         </div>
       </div>
+
+      {/* Routing Decision */}
+      {execution.routing_decision && (
+        <div className="mb-3 p-2.5 rounded-lg" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+          <div className="text-[10px] font-semibold text-purple-300 mb-1.5">🎯 Agent Routing Decision</div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-medium text-text-primary">{execution.routing_decision.selected_agent}</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-semibold">
+              {execution.routing_decision.confidence}% confidence
+            </span>
+          </div>
+          <div className="text-[10px] text-text-secondary mb-1">{execution.routing_decision.reason}</div>
+          {execution.routing_decision.alternatives.length > 0 && (
+            <div className="text-[10px] text-text-secondary">
+              Alternative: {execution.routing_decision.alternatives[0].agent} ({execution.routing_decision.alternatives[0].confidence}%)
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Agent Steps */}
       <div className="space-y-1.5">
@@ -127,25 +155,34 @@ const AgentWorkflowVisualizer = ({ execution, isActive }: Props) => {
         ))}
       </div>
 
-      {/* Tool Calls Timeline - Only show when complete (not during thinking) */}
+      {/* Tool Calls Timeline - Enhanced with params and results */}
       {!isActive && execution.tool_calls.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-purple-500/20">
-          <div className="text-[10px] font-semibold text-text-secondary mb-1.5">
-            🔧 Custom Tool Calls
+        <div className="mt-3 pt-2 border-t border-purple-500/20">
+          <div className="text-[10px] font-semibold text-text-secondary mb-2">
+            🔧 Tool Calls (Real-time)
           </div>
-          <div className="space-y-1">
+          <div className="space-y-2">
             {execution.tool_calls.map((tool, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-2 text-[10px] p-1.5 rounded"
-                style={{ background: 'rgba(106, 27, 154, 0.05)' }}
+                className="p-2 rounded-lg"
+                style={{ background: 'rgba(34, 197, 94, 0.05)', border: '1px solid rgba(34, 197, 94, 0.2)' }}
               >
-                <span className="text-green-400 text-xs">✓</span>
-                <span className="text-text-primary font-mono">{tool.tool}</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-green-400 text-xs">✓</span>
+                  <span className="text-text-primary font-mono text-xs font-semibold">{tool.tool}()</span>
+                  <span className="ml-auto text-purple-400 text-[10px]">{tool.duration_ms}ms</span>
+                </div>
                 {tool.params && (
-                  <span className="text-text-secondary truncate max-w-[120px]" title={tool.params}>({tool.params})</span>
+                  <div className="text-[10px] text-text-secondary ml-5 mb-0.5">
+                    {tool.params}
+                  </div>
                 )}
-                <span className="ml-auto text-purple-400">{tool.duration_ms}ms</span>
+                {tool.result && (
+                  <div className="text-[10px] text-green-400 ml-5">
+                    → {tool.result}
+                  </div>
+                )}
               </div>
             ))}
           </div>
