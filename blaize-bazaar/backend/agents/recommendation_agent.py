@@ -9,24 +9,90 @@ from services.agent_tools import get_trending_products, semantic_product_search,
 def product_recommendation_agent(query: str) -> str:
     """
     Provide personalized product recommendations based on user preferences.
-    Directly calls semantic_product_search and returns JSON products.
+    Analyzes the full query (including conversation history) to personalize results.
     
     Args:
-        query: User's product inquiry with preferences
+        query: User's product inquiry (may include conversation history)
     
     Returns:
-        JSON array of products
+        JSON array of personalized products
     """
     import json
-    try:
-        # Direct tool call - bypass LLM text generation
-        result = semantic_product_search(query=query, limit=5)
-        result_dict = json.loads(result)
+    import re
+    
+    # Extract user preferences from the query (which includes conversation history)
+    preferences = _extract_user_preferences(query)
+    
+    # Extract the actual current request
+    current_request = query
+    if "CURRENT REQUEST:" in query:
+        current_request = query.split("CURRENT REQUEST:")[-1].strip()
+    
+    # Build personalized query
+    if preferences['categories']:
+        # User has search history - personalize
+        enhanced_query = current_request
         
-        # Extract products array
-        products = result_dict.get('products', [])
+        # Add category context if not already in query
+        for cat in preferences['categories'][:2]:
+            if cat.lower() not in current_request.lower():
+                enhanced_query += f" {cat}"
         
-        # Return formatted string with JSON block for chat.py parsing
-        return f"Here are some great options for you!\n\nProducts:\n```json\n{json.dumps(products, indent=2)}\n```"
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+        if preferences['price_range']:
+            if 'under' not in current_request.lower():
+                enhanced_query += f" under ${preferences['price_range']}"
+        
+        intro = f"Based on your interest in {', '.join(preferences['categories'][:2])}, here are personalized recommendations!"
+    else:
+        # New user or no clear preferences - use query as-is
+        enhanced_query = current_request
+        intro = "Here are some great options for you!"
+    
+    # Search with enhanced query
+    result = semantic_product_search(query=enhanced_query, limit=5)
+    result_dict = json.loads(result)
+    products = result_dict.get('products', [])
+    
+    return f"{intro}\n\nProducts:\n```json\n{json.dumps(products, indent=2)}\n```"
+
+
+def _extract_user_preferences(text: str) -> dict:
+    """Extract user preferences from conversation text"""
+    import re
+    
+    preferences = {
+        'categories': [],
+        'keywords': [],
+        'price_range': None
+    }
+    
+    # Extract categories from past searches
+    category_keywords = {
+        'laptop': 'laptops',
+        'headphone': 'headphones',
+        'earbud': 'headphones',
+        'camera': 'cameras',
+        'gaming': 'gaming',
+        'smart home': 'smart home',
+        'cable': 'cables',
+        'charger': 'chargers'
+    }
+    
+    text_lower = text.lower()
+    
+    for keyword, category in category_keywords.items():
+        if keyword in text_lower and category not in preferences['categories']:
+            preferences['categories'].append(category)
+    
+    # Extract price preferences (look for highest mentioned price)
+    price_matches = re.findall(r'under \$?(\d+)', text_lower)
+    if price_matches:
+        preferences['price_range'] = max([int(p) for p in price_matches])
+    
+    # Extract common keywords
+    keywords = ['wireless', 'gaming', 'portable', 'professional', 'budget', 'noise cancel']
+    for kw in keywords:
+        if kw in text_lower:
+            preferences['keywords'].append(kw)
+    
+    return preferences
