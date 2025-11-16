@@ -343,6 +343,8 @@ sudo -u "$CODE_EDITOR_USER" mkdir -p "$SETTINGS_DIR"
 cat > "$SETTINGS_DIR/settings.json" << 'VSCODE_SETTINGS'
 {
     "workbench.colorTheme": "Default Dark Modern",
+    "editor.fontSize": 16,
+    "terminal.integrated.fontSize": 16,
     "explorer.compactFolders": false,
     "explorer.autoReveal": false,
     "git.enabled": false,
