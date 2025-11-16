@@ -2,10 +2,8 @@
  * Connects to FastAPI backend for actual product search
  */
 import { useState, useRef, useEffect } from 'react'
-import { Send, ShoppingCart, X, AlertCircle } from 'lucide-react'
+import { Send, X, AlertCircle } from 'lucide-react'
 import ProductCardCompact from './ProductCardCompact'
-import CartModal from './CartModal'
-import CheckoutModal from './CheckoutModal'
 import AgentWorkflowVisualizer from './AgentWorkflowVisualizer'
 import MarkdownMessage from './MarkdownMessage'
 import QueryInsight from './QueryInsight'
