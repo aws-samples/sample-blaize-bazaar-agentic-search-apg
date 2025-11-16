@@ -91,18 +91,6 @@ const AIAssistant = () => {
     checkBackendHealth().then(setBackendOnline)
   }, [])
 
-  const addToCart = (product: ChatProduct) => {
-    setCart(prev => [...prev, product])
-    
-    // Add confirmation message
-    const confirmMessage: Message = {
-      role: 'assistant',
-      content: `✅ Added to cart! You now have ${cart.length + 1} item(s). Ready to checkout?`,
-      timestamp: new Date()
-    }
-    setMessages(prev => [...prev, confirmMessage])
-  }
-
   const updateQuantity = (productId: string, delta: number) => {
     if (delta > 0) {
       const product = cart.find(p => p.id === productId)
@@ -436,7 +424,7 @@ const AIAssistant = () => {
                   }}
                 >
                   {message.role === 'assistant' ? (
-                    <MarkdownMessage content={message.content} />
+                    <MarkdownMessage content={message.products && message.products.length > 0 ? message.content.substring(0, 150) : message.content} />
                   ) : (
                     <span style={{ whiteSpace: 'pre-wrap' }}>{message.content}</span>
                   )}
@@ -449,9 +437,19 @@ const AIAssistant = () => {
                       <ProductCard
                         key={product.id}
                         product={product}
-                        onAddToCart={addToCart}
+                        onAddToCart={() => {
+                          if ((window as any).addToCart) {
+                            (window as any).addToCart({
+                              productId: product.id,
+                              name: product.name,
+                              price: product.price,
+                              quantity: 1,
+                              image: product.image || '📦'
+                            })
+                          }
+                        }}
                         highlighted={idx === 0}
-                        aiRecommended={idx === 0} // Only first product gets AI Pick badge
+                        aiRecommended={idx === 0}
                       />
                     ))}
                   </div>

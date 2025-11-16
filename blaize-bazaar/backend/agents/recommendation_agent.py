@@ -9,27 +9,24 @@ from services.agent_tools import get_trending_products, semantic_product_search,
 def product_recommendation_agent(query: str) -> str:
     """
     Provide personalized product recommendations based on user preferences.
-    Uses custom business logic tools with embedded AI-powered search.
+    Directly calls semantic_product_search and returns JSON products.
     
     Args:
         query: User's product inquiry with preferences
     
     Returns:
-        Personalized product recommendations with reasoning
+        JSON array of products
     """
+    import json
     try:
-        agent = Agent(
-            model="us.anthropic.claude-sonnet-4-20250514-v1:0",
-            system_prompt="""You are the product recommendation specialist. Call semantic_product_search() with the query, then return results as JSON.
-
-Format:
-```json
-[{"productId":"B001","name":"Product Name","price":99.0,"stars":4.5,"reviews":100,"category":"Category","quantity":10,"image_url":"url"}]
-```""",
-            tools=[semantic_product_search, get_product_by_category, get_trending_products]
-        )
+        # Direct tool call - bypass LLM text generation
+        result = semantic_product_search(query=query, limit=5)
+        result_dict = json.loads(result)
         
-        response = agent(query)
-        return str(response)
+        # Extract products array
+        products = result_dict.get('products', [])
+        
+        # Return as JSON array
+        return json.dumps(products)
     except Exception as e:
-        return f"Error in recommendation agent: {str(e)}"
+        return json.dumps({"error": str(e)})

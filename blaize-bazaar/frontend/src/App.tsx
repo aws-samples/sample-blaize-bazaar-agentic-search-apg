@@ -12,6 +12,7 @@ import IndexPerformanceDashboard from './components/IndexPerformanceDashboard'
 import ContextDashboard from './components/ContextDashboard'
 import AgentReasoningTraces from './components/AgentReasoningTraces'
 import HybridSearchComparison from './components/HybridSearchComparison'
+import CartPanel, { CartItem } from './components/CartPanel'
 import { Database, BarChart3, Activity, Brain, GitCompare, Wrench, X } from 'lucide-react'
 import './styles/premium-heading-styles.css'
 
@@ -46,7 +47,47 @@ function App() {
   const [productCount, setProductCount] = useState(0)
   const [categoryCount, setCategoryCount] = useState(0)
   const [featuredIndex, setFeaturedIndex] = useState(0)
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [showCart, setShowCart] = useState(false)
   const backgroundImage = `${import.meta.env.BASE_URL}backgrounds/bg-1.png`
+
+  // Cart management functions
+  const addToCart = (item: CartItem) => {
+    setCartItems(prev => {
+      const existing = prev.find(i => i.productId === item.productId)
+      if (existing) {
+        return prev.map(i => 
+          i.productId === item.productId 
+            ? { ...i, quantity: i.quantity + 1 }
+            : i
+        )
+      }
+      return [...prev, { ...item, quantity: 1 }]
+    })
+    setShowCart(true)
+  }
+
+  const updateQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      setCartItems(prev => prev.filter(item => item.productId !== productId))
+    } else {
+      setCartItems(prev => 
+        prev.map(item => 
+          item.productId === productId ? { ...item, quantity } : item
+        )
+      )
+    }
+  }
+
+  const removeItem = (productId: string) => {
+    setCartItems(prev => prev.filter(item => item.productId !== productId))
+  }
+
+  const handleCheckout = () => {
+    alert(`🎉 Demo Checkout\n\nTotal: $${cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)}\n\nThis is a demo - no real transaction will occur.`)
+    setCartItems([])
+    setShowCart(false)
+  }
 
   // Featured products for carousel
   const featuredProducts = [
@@ -85,6 +126,11 @@ function App() {
   // Set category count to 190 (total in database)
   useEffect(() => {
     setCategoryCount(190)
+  }, [])
+
+  // Expose addToCart globally for chat integration
+  useEffect(() => {
+    (window as any).addToCart = addToCart
   }, [])
 
   // Featured products carousel
@@ -523,6 +569,16 @@ function App() {
         <HybridSearchComparison
           isOpen={showHybridComparison}
           onClose={() => setShowHybridComparison(false)}
+        />
+
+        {/* Cart Panel */}
+        <CartPanel
+          isOpen={showCart}
+          onClose={() => setShowCart(false)}
+          items={cartItems}
+          onUpdateQuantity={updateQuantity}
+          onRemoveItem={removeItem}
+          onCheckout={handleCheckout}
         />
 
         {/* Expanded Diagram Modal */}

@@ -33,6 +33,7 @@ export interface ChatProduct {
   category?: string
   rating?: number
   reviews?: number
+  url?: string
 }
 
 export interface AgentExecution {
@@ -164,6 +165,7 @@ export async function sendChatMessage(query: string, conversationHistory: ChatMe
         category: p.category || p.category_name,
         rating: p.stars || p.rating,
         reviews: p.reviews,
+        url: p.url || p.producturl || `https://www.amazon.com/dp/${p.id || p.productId}`
       }
     ))
 

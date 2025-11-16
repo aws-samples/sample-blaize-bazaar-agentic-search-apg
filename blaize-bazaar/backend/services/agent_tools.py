@@ -52,8 +52,8 @@ def get_trending_products(limit: int = 10) -> str:
         return json.dumps({"error": str(e)})
 
 @tool
-def get_price_statistics(category: str = None) -> str:
-    """Get price statistics by category with live data from database"""
+def get_category_price_analysis(category: str = None) -> str:
+    """Get category price analysis with live data from database (matches Part 2 notebook)"""
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
     

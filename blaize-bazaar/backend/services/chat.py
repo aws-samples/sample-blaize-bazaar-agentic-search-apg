@@ -302,11 +302,12 @@ CURRENT REQUEST: {message}"""
             "suggestions": []
         }
         
-        # Extract JSON product arrays - try multiple patterns
+        # Aggressive JSON extraction - try multiple patterns
         json_patterns = [
             r'```json\s*(\[.*?\])\s*```',  # Standard markdown json block
             r'```\s*(\[.*?\])\s*```',       # Generic code block
-            r'(\[\s*\{[^\[]*"productId"[^\]]*\])'  # Raw JSON array with productId
+            r'(\[\s*\{[^\[]*"productId"[^\]]*\])',  # Raw JSON array with productId
+            r'(\[\s*\{[^\[]*"product_description"[^\]]*\])'  # Raw JSON with product_description
         ]
         
         products_data = None
@@ -322,6 +323,10 @@ CURRENT REQUEST: {message}"""
                 except json.JSONDecodeError as e:
                     logger.warning(f"⚠️ Failed to parse JSON with pattern: {e}")
                     continue
+        
+        # Fallback: if products found, override text with brief intro
+        if result["products"]:
+            result["text"] = "Here are some great options for you!"
         
         if not products_data:
             logger.debug("No JSON product data in response (pricing/inventory queries may not return products)")
@@ -350,19 +355,24 @@ CURRENT REQUEST: {message}"""
         return result
     
     def _format_products(self, products_data: List[Dict]) -> List[Dict]:
-        """Format products for frontend display"""
+        """Format products for frontend display with URL mapping"""
         formatted = []
         
         for product in products_data:
+            product_id = product.get("productId", "")
+            # Map product_url to url with fallback
+            product_url = product.get("product_url") or product.get("productURL") or f"https://www.amazon.com/dp/{product_id}"
+            
             formatted.append({
-                "id": product.get("productId", ""),
+                "id": product_id,
                 "name": product.get("name", product.get("product_description", ""))[:50],
                 "price": float(product.get("price", 0)),
                 "stars": float(product.get("stars", 0)),
                 "reviews": int(product.get("reviews", 0)),
                 "category": product.get("category", product.get("category_name", "")),
                 "inStock": product.get("quantity", 0) > 0 if "quantity" in product else product.get("inStock", True),
-                "image": product.get("image_url", product.get("imgurl", "📦"))
+                "image": product.get("image_url", product.get("imgurl", "📦")),
+                "url": product_url
             })
         
         return formatted

@@ -45,6 +45,7 @@ class BusinessLogic:
                 reviews,
                 category_name,
                 quantity,
+                "productURL" as product_url,
                 (reviews * stars) as trending_score
             FROM bedrock_integration.product_catalog
             WHERE quantity > 0 
@@ -293,6 +294,7 @@ class BusinessLogic:
                 category_name,
                 quantity,
                 "imgUrl",
+                "productURL" as product_url,
                 1 - (embedding <=> (SELECT emb FROM query_embedding)) as similarity
             FROM bedrock_integration.product_catalog
             WHERE {where_clause}
@@ -365,7 +367,8 @@ class BusinessLogic:
                 reviews,
                 category_name,
                 quantity,
-                "imgUrl"
+                "imgUrl",
+                "productURL" as product_url
             FROM bedrock_integration.product_catalog
             WHERE {where_clause}
             ORDER BY stars DESC, reviews DESC
