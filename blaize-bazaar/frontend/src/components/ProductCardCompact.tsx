@@ -10,6 +10,7 @@ interface Product {
   image?: string
   category?: string
   url?: string
+  quantity?: number
 }
 
 interface ProductCardCompactProps {
@@ -67,6 +68,17 @@ const ProductCardCompact = ({ product, onAddToCart }: ProductCardCompactProps) =
             )}
             {product.reviews && (
               <span className="text-gray-400">({product.reviews.toLocaleString()})</span>
+            )}
+            {product.quantity !== undefined && (
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                product.quantity === 0 ? 'bg-red-500/20 text-red-300' :
+                product.quantity < 10 ? 'bg-yellow-500/20 text-yellow-300' :
+                'bg-green-500/20 text-green-300'
+              }`}>
+                {product.quantity === 0 ? '⚠️ Out of Stock' :
+                 product.quantity < 10 ? `⚡ ${product.quantity} left` :
+                 `✓ ${product.quantity} in stock`}
+              </span>
             )}
           </div>
         </div>

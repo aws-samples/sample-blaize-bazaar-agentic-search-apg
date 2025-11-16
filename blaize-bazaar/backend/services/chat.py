@@ -380,6 +380,7 @@ CURRENT REQUEST: {message}"""
                 "stars": float(product.get("stars", 0)),
                 "reviews": int(product.get("reviews", 0)),
                 "category": product.get("category", product.get("category_name", "")),
+                "quantity": int(product.get("quantity", 0)),
                 "inStock": product.get("quantity", 0) > 0 if "quantity" in product else product.get("inStock", True),
                 "image": product.get("image_url", product.get("imgUrl", product.get("imgurl", "📦"))),
                 "url": product_url
