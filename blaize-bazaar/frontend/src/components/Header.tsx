@@ -229,16 +229,9 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch }: HeaderProps) =
                   <Camera className="h-4 w-4 text-purple-400 group-hover/camera:text-purple-300 transition-colors" />
                 </button>
                 
-                {/* Hybrid Search Badge - Always visible */}
-                <div className="absolute -bottom-8 left-0 flex items-center gap-2">
-                  <div className="px-2 py-0.5 rounded-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 backdrop-blur-sm">
-                    <span className="text-[10px] text-purple-300 font-medium">🔬 Hybrid Search: Vector + Keyword</span>
-                  </div>
-                  {!searchQuery && (
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-xs text-purple-400 whitespace-nowrap">
-                      + Image Search
-                    </div>
-                  )}
+                {/* Search capabilities hint */}
+                <div className="absolute -bottom-8 left-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <span className="text-xs text-purple-400 whitespace-nowrap">🔍 Semantic Search + 📸 Visual Search</span>
                 </div>
                 
                 {searchQuery && (
