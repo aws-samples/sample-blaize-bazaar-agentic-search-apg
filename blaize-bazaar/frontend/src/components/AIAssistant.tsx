@@ -8,6 +8,7 @@ import CartModal from './CartModal'
 import CheckoutModal from './CheckoutModal'
 import AgentWorkflowVisualizer from './AgentWorkflowVisualizer'
 import MarkdownMessage from './MarkdownMessage'
+import QueryInsight from './QueryInsight'
 import { sendChatMessageStreaming, ChatProduct, checkBackendHealth } from '../services/chat'
 
 interface AgentExecution {
@@ -408,6 +409,11 @@ const AIAssistant = () => {
                     isActive={message.agentStatus === 'thinking'}
                   />
                 )}
+                {/* Query Insight - Show for user messages with products */}
+                {message.role === 'user' && index < messages.length - 1 && messages[index + 1].products && messages[index + 1].products!.length > 0 && (
+                  <QueryInsight query={message.content} agent={messages[index + 1].agent} />
+                )}
+                
                 {/* Message Bubble */}
                 <div
                   className={`max-w-[85%] px-[18px] py-[14px] rounded-2xl text-base leading-relaxed animate-slideUp ${

@@ -13,6 +13,7 @@ interface ProductCardProps {
     category?: string
     rating?: number
     reviews?: number
+    similarity?: number
   }
   onAddToCart?: (product: any) => void
   highlighted?: boolean
@@ -49,10 +50,12 @@ const ProductCard = ({ product, onAddToCart, aiRecommended = true }: ProductCard
              background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent)',
              animation: 'shimmer 2s infinite'
            }} />
-      {/* AI Badge */}
+      {/* AI Badge with Similarity Score */}
       {aiRecommended && (
-        <div className="absolute top-1 right-1 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 backdrop-blur-sm z-10">
-          <span className="text-[9px] text-purple-300 font-medium">✨ AI Pick</span>
+        <div className="absolute top-1 right-1 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 backdrop-blur-sm z-10 group/badge hover:scale-110 transition-transform" title={product.similarity ? `${(product.similarity * 100).toFixed(1)}% semantic match` : 'AI recommended'}>
+          <span className="text-[9px] text-purple-300 font-medium">
+            ✨ {product.similarity ? `${(product.similarity * 100).toFixed(0)}%` : 'AI Pick'}
+          </span>
         </div>
       )}
       
@@ -98,6 +101,21 @@ const ProductCard = ({ product, onAddToCart, aiRecommended = true }: ProductCard
             ${product.price}
           </div>
         </div>
+        
+        {/* Similarity Bar */}
+        {product.similarity && product.similarity > 0 && (
+          <div className="mb-1">
+            <div className="h-1 w-full bg-gray-700 rounded-full overflow-hidden">
+              <div 
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${product.similarity * 100}%`,
+                  background: product.similarity > 0.9 ? 'linear-gradient(90deg, #10b981, #34d399)' : product.similarity > 0.7 ? 'linear-gradient(90deg, #ba68c8, #9c27b0)' : 'linear-gradient(90deg, #6366f1, #8b5cf6)'
+                }}
+              />
+            </div>
+          </div>
+        )}
         
         {/* Category */}
         {product.category && (

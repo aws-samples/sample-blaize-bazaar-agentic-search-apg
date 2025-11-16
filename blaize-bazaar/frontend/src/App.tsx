@@ -13,6 +13,7 @@ import ContextDashboard from './components/ContextDashboard'
 import AgentReasoningTraces from './components/AgentReasoningTraces'
 import HybridSearchComparison from './components/HybridSearchComparison'
 import CartPanel, { CartItem } from './components/CartPanel'
+import Toast from './components/Toast'
 import { Database, BarChart3, Activity, Brain, GitCompare, Wrench, X } from 'lucide-react'
 import './styles/premium-heading-styles.css'
 
@@ -49,6 +50,8 @@ function App() {
   const [featuredIndex, setFeaturedIndex] = useState(0)
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [showCart, setShowCart] = useState(false)
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
   const backgroundImage = `${import.meta.env.BASE_URL}backgrounds/bg-1.png`
 
   // Cart management functions
@@ -56,12 +59,16 @@ function App() {
     setCartItems(prev => {
       const existing = prev.find(i => i.productId === item.productId)
       if (existing) {
+        setToastMessage(`Updated quantity for ${item.name.substring(0, 30)}...`)
+        setShowToast(true)
         return prev.map(i => 
           i.productId === item.productId 
             ? { ...i, quantity: i.quantity + 1 }
             : i
         )
       }
+      setToastMessage(`Added ${item.name.substring(0, 30)}... to cart`)
+      setShowToast(true)
       return [...prev, { ...item, quantity: 1 }]
     })
     setShowCart(true)
@@ -579,6 +586,13 @@ function App() {
           onUpdateQuantity={updateQuantity}
           onRemoveItem={removeItem}
           onCheckout={handleCheckout}
+        />
+
+        {/* Toast Notification */}
+        <Toast
+          message={toastMessage}
+          show={showToast}
+          onClose={() => setShowToast(false)}
         />
 
         {/* Expanded Diagram Modal */}
