@@ -1,7 +1,6 @@
 /**
  * Premium Search Overlay Component - Apple-inspired Design
  * Glassmorphism, smooth animations, and refined spacing
- * DARK MODE READY - SYNTAX FIXED
  */
 import { useEffect, useState } from 'react'
 import { Search, X, Sparkles, Zap, Database } from 'lucide-react'
