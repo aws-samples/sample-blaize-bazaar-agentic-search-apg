@@ -68,11 +68,8 @@ const AIAssistant = () => {
 
   const [messages, setMessages] = useState<Message[]>(loadConversationHistory())
   const [inputValue, setInputValue] = useState('')
-  const [cart, setCart] = useState<ChatProduct[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [backendOnline, setBackendOnline] = useState(true)
-  const [showCart, setShowCart] = useState(false)
-  const [showCheckout, setShowCheckout] = useState(false)
   const [activeAgent, setActiveAgent] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -92,30 +89,7 @@ const AIAssistant = () => {
     checkBackendHealth().then(setBackendOnline)
   }, [])
 
-  const updateQuantity = (productId: string, delta: number) => {
-    if (delta > 0) {
-      const product = cart.find(p => p.id === productId)
-      if (product) setCart(prev => [...prev, product])
-    } else {
-      const index = cart.findIndex(p => p.id === productId)
-      if (index !== -1) setCart(prev => prev.filter((_, i) => i !== index))
-    }
-  }
 
-  const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(p => p.id !== productId))
-  }
-
-  const handleCheckoutComplete = () => {
-    setCart([])
-    const successMessage: Message = {
-      role: 'assistant',
-      content: '🎉 Order placed successfully! Your items will arrive in 2-3 business days. Can I help you find anything else?',
-      timestamp: new Date(),
-      suggestions: ['Track my order', 'Browse more products', 'Contact support']
-    }
-    setMessages(prev => [...prev, successMessage])
-  }
 
   const handleClearChat = () => {
     if (window.confirm('Clear chat history? This will start a new conversation.')) {
@@ -371,15 +345,6 @@ const AIAssistant = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {cart.length > 0 && (
-                <div className="relative cursor-pointer" onClick={() => setShowCart(true)}>
-                  <ShoppingCart className="h-5 w-5 text-accent-light hover:scale-110 transition-transform" />
-                  <span className="absolute -top-2 -right-2 bg-accent-light text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                    {cart.length}
-                  </span>
-                </div>
-              )}
-
               <button 
                 onClick={handleClearChat}
                 className="text-text-primary hover:text-accent-light transition-colors text-xl"
@@ -455,7 +420,15 @@ const AIAssistant = () => {
                           key={product.id}
                           product={product}
                           onAddToCart={() => {
-                            setCart(prev => [...prev, product])
+                            if ((window as any).addToCart) {
+                              (window as any).addToCart({
+                                productId: product.id,
+                                name: product.name,
+                                price: product.price,
+                                quantity: 1,
+                                image: product.image || '📦'
+                              })
+                            }
                           }}
                         />
                       ))}
@@ -484,32 +457,7 @@ const AIAssistant = () => {
                   </div>
                 )}
 
-                {/* Cart Actions */}
-                {message.products && cart.length > 0 && (
-                  <div className="flex gap-2 ml-0 mt-2">
-                    <button
-                      onClick={() => setShowCart(true)}
-                      className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-300 hover:scale-105"
-                      style={{
-                        background: 'rgba(106, 27, 154, 0.2)',
-                        border: '1px solid rgba(186, 104, 200, 0.3)',
-                        color: '#ba68c8'
-                      }}
-                    >
-                      View cart ({cart.length})
-                    </button>
-                    <button
-                      onClick={() => setShowCheckout(true)}
-                      className="flex-1 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-300 hover:scale-105"
-                      style={{
-                        background: 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)',
-                        color: 'white'
-                      }}
-                    >
-                      Checkout now
-                    </button>
-                  </div>
-                )}
+
               </div>
             ))}
             <div ref={messagesEndRef} />
@@ -591,12 +539,6 @@ const AIAssistant = () => {
           title="Powered by AWS Strands SDK & Custom Tools"
         >
           <img src={`${import.meta.env.BASE_URL}chat-icon.jpeg`} alt="Chat" className="w-full h-full object-cover" />
-
-          {cart.length > 0 && (
-            <div className="absolute -top-2 -left-2 bg-green-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold animate-pulse">
-              {cart.length}
-            </div>
-          )}
           
           {/* Hover Tooltip */}
           <div className="absolute -top-16 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
@@ -613,30 +555,6 @@ const AIAssistant = () => {
           </div>
         </div>
       </div>
-
-      {/* Cart Modal */}
-      <CartModal
-        isOpen={showCart}
-        onClose={() => setShowCart(false)}
-        cart={cart}
-        onUpdateQuantity={updateQuantity}
-        onRemove={removeFromCart}
-        onCheckout={() => {
-          setShowCart(false)
-          setShowCheckout(true)
-        }}
-      />
-
-      {/* Checkout Modal */}
-      <CheckoutModal
-        isOpen={showCheckout}
-        onClose={() => setShowCheckout(false)}
-        cart={cart}
-        onComplete={handleCheckoutComplete}
-      />
-
-
-
 
     </>
   )

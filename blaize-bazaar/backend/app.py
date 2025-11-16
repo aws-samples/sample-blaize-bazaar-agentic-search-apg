@@ -335,6 +335,8 @@ async def semantic_search(
                 limit=request.limit
             )
             results = hybrid_result["results"]
+            logger.info(f"🔀 Hybrid search returned {len(results)} results with RRF scores")
+            
             # Convert to expected format - preserve RRF fields at top level
             for r in results:
                 if 'similarity' in r:

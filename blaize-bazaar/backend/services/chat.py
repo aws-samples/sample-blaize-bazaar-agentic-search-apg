@@ -319,6 +319,7 @@ CURRENT REQUEST: {message}"""
                     products_data = json.loads(json_matches[0])
                     result["products"] = self._format_products(products_data)
                     logger.info(f"📦 Extracted {len(result['products'])} products from JSON")
+                    logger.info(f"🛍️ Products extracted: {len(result['products'])} products")
                     break
                 except json.JSONDecodeError as e:
                     logger.warning(f"⚠️ Failed to parse JSON with pattern: {e}")
@@ -332,8 +333,10 @@ CURRENT REQUEST: {message}"""
                 result["text"] = intro_text
         
         # Fallback: if products found but no text, use brief intro
-        if result["products"] and not result["text"]:
-            result["text"] = "Here are some great options for you!"
+        if result["products"]:
+            if not result["text"]:
+                result["text"] = "Here are some great options for you!"
+            logger.info(f"🛍️ Products extracted: {len(result['products'])} products")
         
         if not products_data:
             logger.debug("No JSON product data in response (pricing/inventory queries may not return products)")

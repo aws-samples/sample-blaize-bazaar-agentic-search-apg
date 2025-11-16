@@ -49,7 +49,10 @@ class HybridSearchService:
         
         # Run both searches in parallel
         vector_results = await self._vector_search(embedding, limit * 2, ef_search)
+        logger.info(f"🔵 Vector search: {len(vector_results)} results")
+        
         fulltext_results = await self._fulltext_search(query, limit * 2)
+        logger.info(f"🟡 Full-text search: {len(fulltext_results)} results")
         
         # Apply RRF (Reciprocal Rank Fusion)
         fused_results = self._reciprocal_rank_fusion(
@@ -59,6 +62,7 @@ class HybridSearchService:
             fulltext_weight,
             limit
         )
+        logger.info(f"🔀 Hybrid search returned {len(fused_results)} results with RRF scores")
         
         return {
             "results": fused_results,

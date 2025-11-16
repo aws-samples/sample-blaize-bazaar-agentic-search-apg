@@ -160,11 +160,11 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
           <div className="flex flex-wrap gap-2">
             <span className="text-xs text-text-secondary">Try:</span>
             {[
-              'espresso machine',
-              'coffee maker',
-              'wireless headphones',
-              'laptop computer',
-              'gaming keyboard'
+              'headphones',
+              'laptop',
+              'camera',
+              'keyboard',
+              'mouse'
             ].map((sample) => (
               <button
                 key={sample}

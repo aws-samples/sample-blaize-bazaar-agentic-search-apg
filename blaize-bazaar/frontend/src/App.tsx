@@ -192,6 +192,8 @@ function App() {
             setSearchQuery(query)
             setSearchOverlayVisible(true)
           }}
+          cartItemCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
+          onCartClick={() => setShowCart(true)}
         />
 
         {/* Search Overlay */}
