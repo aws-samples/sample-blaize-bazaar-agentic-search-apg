@@ -943,9 +943,14 @@ async def chat_stream(request: ChatRequest):
                 yield f"data: {data}\n\n"
                 await asyncio.sleep(0.03)  # 30ms delay between words
             
-            # Send final response with all data
-            data = json.dumps({'type': 'complete', 'response': response})
-            yield f"data: {data}\n\n"
+            # Send final response with all data - use ensure_ascii=False to avoid encoding issues
+            try:
+                data = json.dumps({'type': 'complete', 'response': response}, ensure_ascii=False)
+                yield f"data: {data}\n\n"
+            except Exception as json_error:
+                logger.error(f"Failed to serialize response: {json_error}")
+                # Fallback: send response in parts
+                yield f"data: {json.dumps({'type': 'complete', 'response': {{'response': response['response'], 'products': response.get('products', []), 'suggestions': response.get('suggestions', []), 'success': response.get('success', True)}}})}\n\n"
             
         except Exception as e:
             logger.error(f"Streaming chat failed: {e}")
