@@ -251,7 +251,7 @@ cd "$(dirname "$0")/frontend"
 [ ! -d "node_modules" ] && npm install
 [ ! -d "dist" ] && npm run build
 echo "🚀 Starting React frontend on http://localhost:5173"
-NO_UPDATE_NOTIFIER=1 npx serve -s dist -l 5173 2>&1 | grep -v "xsel"
+NO_UPDATE_NOTIFIER=1 npx -y serve -s dist -l 5173 2>&1 | grep -v "xsel"
 EOF
 
 chmod +x "$REPO_PATH/blaize-bazaar/start-backend.sh" "$REPO_PATH/blaize-bazaar/start-frontend.sh"
