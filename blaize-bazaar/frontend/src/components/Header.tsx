@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../App'
 import ImageSearchModal from './ImageSearchModal'
-import { Camera, ShoppingBag } from 'lucide-react'
+import { Camera, ShoppingCart } from 'lucide-react'
 
 interface HeaderProps {
   activeSection?: 'shop' | 'collections' | 'tech'
@@ -195,22 +195,6 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch, cartItemCount = 
 
           {/* Right Side - Search, Cart & GitHub */}
           <div className="flex items-center gap-2 md:gap-4">
-            {/* Shopping Cart Icon */}
-            {onCartClick && (
-              <button
-                onClick={onCartClick}
-                className="relative p-2 rounded-lg hover:bg-white/10 dark:hover:bg-white/10 transition-all duration-300 group"
-                aria-label="Shopping Cart"
-                title="View shopping cart"
-              >
-                <ShoppingBag className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
-                {cartItemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse">
-                    {cartItemCount}
-                  </span>
-                )}
-              </button>
-            )}
             <div className="flex items-center gap-2">
               <div className="relative w-[380px] min-w-[280px] group" ref={searchRef}>
                 <input
@@ -273,6 +257,23 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch, cartItemCount = 
                 Search
               </button>
             </div>
+
+            {/* Shopping Cart Icon */}
+            {onCartClick && (
+              <button
+                onClick={onCartClick}
+                className="relative p-2 rounded-lg hover:bg-white/10 dark:hover:bg-white/10 transition-all duration-300 group"
+                aria-label="Shopping Cart"
+                title="View shopping cart"
+              >
+                <ShoppingCart className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse">
+                    {cartItemCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* GitHub Link */}
             <a
