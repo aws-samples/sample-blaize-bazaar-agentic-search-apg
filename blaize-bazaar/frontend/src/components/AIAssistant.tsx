@@ -3,7 +3,7 @@
  */
 import { useState, useRef, useEffect } from 'react'
 import { Send, ShoppingCart, X, AlertCircle } from 'lucide-react'
-import ProductCard from './ProductCard'
+import ProductCardCompact from './ProductCardCompact'
 import CartModal from './CartModal'
 import CheckoutModal from './CheckoutModal'
 import AgentWorkflowVisualizer from './AgentWorkflowVisualizer'
@@ -414,50 +414,52 @@ const AIAssistant = () => {
                   <QueryInsight query={message.content} agent={messages[index + 1].agent} />
                 )}
                 
-                {/* Message Bubble */}
-                <div
-                  className={`max-w-[85%] px-[18px] py-[14px] rounded-2xl text-base leading-relaxed animate-slideUp ${
-                    message.role === 'assistant'
-                      ? 'self-start text-text-primary'
-                      : 'self-end'
-                  }`}
-                  style={{
-                    background: message.role === 'assistant'
-                      ? 'linear-gradient(135deg, rgba(106, 27, 154, 0.1) 0%, rgba(186, 104, 200, 0.05) 100%)'
-                      : 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)',
-                    border: message.role === 'assistant' ? '1px solid rgba(186, 104, 200, 0.2)' : 'none',
-                    color: message.role === 'user' ? 'white' : undefined
-                  }}
-                >
-                  {message.role === 'assistant' ? (
-                    <MarkdownMessage content={message.products && message.products.length > 0 ? message.content.substring(0, 150) : message.content} />
-                  ) : (
-                    <span style={{ whiteSpace: 'pre-wrap' }}>{message.content}</span>
-                  )}
-                </div>
+                {/* Message Bubble - Skip if products exist */}
+                {!(message.products && message.products.length > 0) && (
+                  <div
+                    className={`max-w-[85%] px-[18px] py-[14px] rounded-2xl text-base leading-relaxed animate-slideUp ${
+                      message.role === 'assistant'
+                        ? 'self-start text-text-primary'
+                        : 'self-end'
+                    }`}
+                    style={{
+                      background: message.role === 'assistant'
+                        ? 'linear-gradient(135deg, rgba(106, 27, 154, 0.1) 0%, rgba(186, 104, 200, 0.05) 100%)'
+                        : 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)',
+                      border: message.role === 'assistant' ? '1px solid rgba(186, 104, 200, 0.2)' : 'none',
+                      color: message.role === 'user' ? 'white' : undefined
+                    }}
+                  >
+                    {message.role === 'assistant' ? (
+                      <MarkdownMessage content={message.content} />
+                    ) : (
+                      <span style={{ whiteSpace: 'pre-wrap' }}>{message.content}</span>
+                    )}
+                  </div>
+                )}
 
-                {/* Product Cards */}
+                {/* Product Cards - Compact Display */}
                 {message.products && message.products.length > 0 && (
-                  <div className="flex flex-col gap-2 ml-0">
-                    {message.products.map((product, idx) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onAddToCart={() => {
-                          if ((window as any).addToCart) {
-                            (window as any).addToCart({
-                              productId: product.id,
-                              name: product.name,
-                              price: product.price,
-                              quantity: 1,
-                              image: product.image || '📦'
-                            })
-                          }
-                        }}
-                        highlighted={idx === 0}
-                        aiRecommended={idx === 0}
-                      />
-                    ))}
+                  <div className="flex flex-col gap-3 w-full">
+                    {/* Short intro text - first 150 chars */}
+                    {message.content && (
+                      <div className="text-sm text-purple-300 font-medium">
+                        {message.content.substring(0, 150)}{message.content.length > 150 ? '...' : ''}
+                      </div>
+                    )}
+                    
+                    {/* Product cards */}
+                    <div className="flex flex-col gap-2">
+                      {message.products.map((product) => (
+                        <ProductCardCompact
+                          key={product.id}
+                          product={product}
+                          onAddToCart={() => {
+                            setCart(prev => [...prev, product])
+                          }}
+                        />
+                      ))}
+                    </div>
                   </div>
                 )}
 

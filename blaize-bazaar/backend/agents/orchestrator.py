@@ -8,7 +8,7 @@ from .recommendation_agent import product_recommendation_agent
 from .pricing_agent import price_optimization_agent
 
 
-ORCHESTRATOR_PROMPT = """You are the Blaize Bazaar orchestrator. Your ONLY job is to route queries to the correct specialist agent.
+ORCHESTRATOR_PROMPT = """You are the Blaize Bazaar orchestrator. Your ONLY job is to route queries to the correct specialist agent and return their output EXACTLY as-is.
 
 CRITICAL ROUTING RULES - FOLLOW EXACTLY:
 
@@ -19,12 +19,7 @@ CRITICAL ROUTING RULES - FOLLOW EXACTLY:
 
 3. Otherwise → call product_recommendation_agent
 
-EXAMPLES:
-- "Show me the best deals" → price_optimization_agent (contains "deals")
-- "Cheapest laptops" → price_optimization_agent (contains "cheapest")
-- "Budget headphones" → price_optimization_agent (contains "budget")
-- "Recommend headphones" → product_recommendation_agent
-- "What needs restocking" → inventory_restock_agent
+IMPORTANT: After calling the agent tool, return its output EXACTLY as-is. Do NOT add any extra text like "Here are the results" or "I found these products". Just return the raw tool output.
 
 You MUST call exactly ONE agent tool. Pass the full user query as the parameter."""
 
@@ -35,7 +30,7 @@ def create_orchestrator():
         model=BedrockModel(
             model_id="us.anthropic.claude-sonnet-4-20250514-v1:0",
             max_tokens=4096,
-            temperature=0.3
+            temperature=0.1
         ),
         system_prompt=ORCHESTRATOR_PROMPT,
         tools=[product_recommendation_agent, price_optimization_agent, inventory_restock_agent]

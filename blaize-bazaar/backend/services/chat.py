@@ -304,8 +304,8 @@ CURRENT REQUEST: {message}"""
         
         # Aggressive JSON extraction - try multiple patterns
         json_patterns = [
-            r'```json\s*(\[.*?\])\s*```',  # Standard markdown json block
-            r'```\s*(\[.*?\])\s*```',       # Generic code block
+            r'```json\s*(\[[\s\S]*?\])\s*```',  # Standard markdown json block
+            r'```\s*(\[[\s\S]*?\])\s*```',       # Generic code block
             r'(\[\s*\{[^\[]*"productId"[^\]]*\])',  # Raw JSON array with productId
             r'(\[\s*\{[^\[]*"product_description"[^\]]*\])'  # Raw JSON with product_description
         ]
@@ -324,8 +324,15 @@ CURRENT REQUEST: {message}"""
                     logger.warning(f"⚠️ Failed to parse JSON with pattern: {e}")
                     continue
         
-        # Fallback: if products found, override text with brief intro
-        if result["products"]:
+        # Extract intro text before "Products:" section
+        intro_match = re.search(r'^(.*?)(?=Products:|```json|$)', response_text, re.DOTALL | re.IGNORECASE)
+        if intro_match and not result["text"]:
+            intro_text = intro_match.group(1).strip()
+            if intro_text and len(intro_text) > 10:
+                result["text"] = intro_text
+        
+        # Fallback: if products found but no text, use brief intro
+        if result["products"] and not result["text"]:
             result["text"] = "Here are some great options for you!"
         
         if not products_data:
@@ -371,7 +378,7 @@ CURRENT REQUEST: {message}"""
                 "reviews": int(product.get("reviews", 0)),
                 "category": product.get("category", product.get("category_name", "")),
                 "inStock": product.get("quantity", 0) > 0 if "quantity" in product else product.get("inStock", True),
-                "image": product.get("image_url", product.get("imgurl", "📦")),
+                "image": product.get("image_url", product.get("imgUrl", product.get("imgurl", "📦"))),
                 "url": product_url
             })
         

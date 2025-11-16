@@ -26,7 +26,7 @@ def product_recommendation_agent(query: str) -> str:
         # Extract products array
         products = result_dict.get('products', [])
         
-        # Return as JSON array
-        return json.dumps(products)
+        # Return formatted string with JSON block for chat.py parsing
+        return f"Here are some great options for you!\n\nProducts:\n```json\n{json.dumps(products, indent=2)}\n```"
     except Exception as e:
         return json.dumps({"error": str(e)})
