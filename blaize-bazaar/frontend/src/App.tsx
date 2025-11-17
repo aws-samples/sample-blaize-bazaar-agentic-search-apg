@@ -466,7 +466,7 @@ function App() {
         {/* AI Assistant */}
         <AIAssistant />
 
-        {/* Developer Tools FAB */}
+        {/* Admin Panel FAB */}
         <button
           onClick={() => setShowDevTools(!showDevTools)}
           className="fixed bottom-8 left-8 z-50 p-4 rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 group"
@@ -475,11 +475,12 @@ function App() {
               ? 'linear-gradient(135deg, #ba68c8 0%, #6a1b9a 100%)'
               : 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
           }}
+          title="Admin Panel"
         >
           {showDevTools ? <X className="h-6 w-6 text-white transition-transform duration-300 group-hover:rotate-90" /> : <Wrench className="h-6 w-6 text-white transition-transform duration-300 group-hover:rotate-12" />}
         </button>
 
-        {/* Developer Tools Sidebar */}
+        {/* Admin Panel Sidebar */}
         {showDevTools && (
           <div className="fixed left-0 top-[72px] w-80 h-[calc(100vh-72px)] z-40 bg-gradient-to-b from-gray-900/98 to-gray-800/98 backdrop-blur-xl border-r border-purple-500/30 shadow-2xl animate-in slide-in-from-left duration-300">
             <div className="p-6 h-full flex flex-col">
