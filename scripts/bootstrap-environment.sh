@@ -337,7 +337,7 @@ log "✅ VS Code extensions installed"
 # ============================================================================
 
 log "Configuring VS Code settings..."
-SETTINGS_DIR="/home/$CODE_EDITOR_USER/.code-editor-server/User"
+SETTINGS_DIR="/home/$CODE_EDITOR_USER/.code-editor-server/data/User"
 sudo -u "$CODE_EDITOR_USER" mkdir -p "$SETTINGS_DIR"
 
 cat > "$SETTINGS_DIR/settings.json" << 'VSCODE_SETTINGS'
@@ -346,7 +346,7 @@ cat > "$SETTINGS_DIR/settings.json" << 'VSCODE_SETTINGS'
     "editor.fontSize": 16,
     "terminal.integrated.fontSize": 16,
     "explorer.compactFolders": false,
-    "explorer.autoReveal": false,
+    "explorer.autoReveal": true,
     "git.enabled": false,
     "git.decorations.enabled": false,
     "git.showProgress": false,
@@ -424,8 +424,9 @@ cat << 'EOF'
 
 📚 Quick Commands:
    workshop       - Navigate to workshop root
-   notebooks      - Navigate to Jupyter notebooks
    blaize-bazaar  - Navigate to Blaize Bazaar
+   backend        - Navigate to backend
+   frontend       - Navigate to frontend
    start-backend  - Launch FastAPI backend
    start-frontend - Launch React frontend
    psql           - Connect to PostgreSQL database
@@ -441,6 +442,9 @@ cat << 'EOF'
 ═══════════════════════════════════════════════════════════════════
 
 EOF
+
+# Auto-open the README to expand the workshop folder
+code /workshop/sample-dat406-build-agentic-ai-powered-search-apg/README.md 2>/dev/null || true
 
 # Exit cleanly so task completes
 exit 0
@@ -481,11 +485,16 @@ TASKS_EOF
 # Update workspace settings to enable auto-task detection
 cat > "$HOME_FOLDER/.vscode/settings.json" << 'WORKSPACE_SETTINGS'
 {
+    "workbench.colorTheme": "Default Dark Modern",
+    "editor.fontSize": 16,
+    "terminal.integrated.fontSize": 16,
     "python.defaultInterpreterPath": "/usr/bin/python3.13",
     "jupyter.kernels.filter": [],
     "notebook.defaultKernel": "python3",
     "task.autoDetect": "on",
-    "task.problemMatchers.neverPrompt": true
+    "task.problemMatchers.neverPrompt": true,
+    "explorer.autoReveal": true,
+    "explorer.expandSingleFolderWorkspaces": true
 }
 WORKSPACE_SETTINGS
 
