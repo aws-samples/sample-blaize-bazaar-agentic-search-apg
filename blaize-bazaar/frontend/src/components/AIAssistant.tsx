@@ -2,7 +2,7 @@
  * Connects to FastAPI backend for actual product search
  */
 import { useState, useRef, useEffect } from 'react'
-import { Send, X, AlertCircle } from 'lucide-react'
+import { Send, X, AlertCircle, Download } from 'lucide-react'
 import ProductCardCompact from './ProductCardCompact'
 import AgentWorkflowVisualizer from './AgentWorkflowVisualizer'
 import MarkdownMessage from './MarkdownMessage'
@@ -112,6 +112,31 @@ const AIAssistant = () => {
     }
   }
 
+  const handleExportConversation = () => {
+    const exportData = {
+      exported_at: new Date().toISOString(),
+      session_id: localStorage.getItem('blaize-session-id'),
+      messages: messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp,
+        agent: msg.agent,
+        products_count: msg.products?.length || 0,
+        suggestions: msg.suggestions
+      }))
+    }
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `blaize-conversation-${new Date().toISOString().split('T')[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const handleSend = async (customMessage?: string) => {
     const messageText = customMessage || inputValue
     if (!messageText.trim() || isLoading) return
@@ -127,18 +152,18 @@ const AIAssistant = () => {
     setInputValue('')
     setIsLoading(true)
 
-    // Add loading message with agent workflow
+    // Add loading message with skeleton
     setActiveAgent('Aurora AI')
     const loadingMessage: Message = {
       role: 'assistant',
-      content: '✨ Analyzing your request...',
+      content: '',
       timestamp: new Date(),
       agentStatus: 'thinking',
       agentExecution: {
         agent_steps: [
           { agent: 'Orchestrator', action: 'Analyzing query and routing to specialists', status: 'in_progress', timestamp: Date.now(), duration_ms: 0 }
         ],
-        tool_calls: [],  // Will be populated when response completes
+        tool_calls: [],
         reasoning_steps: [],
         total_duration_ms: 0,
         success_rate: 0
@@ -344,6 +369,13 @@ const AIAssistant = () => {
             </div>
             <div className="flex items-center gap-2">
               <button 
+                onClick={handleExportConversation}
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                title="Export conversation"
+              >
+                <Download className="h-4 w-4 text-text-primary" />
+              </button>
+              <button 
                 onClick={handleClearChat}
                 className="text-text-primary hover:text-accent-light transition-colors text-xl"
                 title="Clear chat history"
@@ -393,7 +425,12 @@ const AIAssistant = () => {
                       color: message.role === 'user' ? 'white' : undefined
                     }}
                   >
-                    {message.role === 'assistant' ? (
+                    {message.agentStatus === 'thinking' && !message.content ? (
+                      <div className="flex items-center gap-2 text-purple-300">
+                        <span className="animate-pulse">✨</span>
+                        <span>Analyzing your request...</span>
+                      </div>
+                    ) : message.role === 'assistant' ? (
                       <MarkdownMessage content={message.content} />
                     ) : (
                       <span style={{ whiteSpace: 'pre-wrap' }}>{message.content}</span>

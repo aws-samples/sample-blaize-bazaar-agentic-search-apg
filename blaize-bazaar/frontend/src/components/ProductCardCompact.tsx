@@ -1,4 +1,5 @@
 import { ShoppingCart, Star } from 'lucide-react'
+import { addRecentlyViewed } from '../utils/recentlyViewed'
 
 interface Product {
   id: string
@@ -27,12 +28,13 @@ const ProductCardCompact = ({ product, onAddToCart }: ProductCardCompactProps) =
   const displayRating = product.rating || product.stars
   
   return (
-    <div className="flex gap-3 p-3 rounded-xl bg-white/5 border border-purple-500/20 hover:border-purple-500/40 transition-all duration-300 group">
+    <div className="flex gap-3 p-3 rounded-xl bg-white/5 border border-purple-500/20 hover:border-purple-500/40 hover:bg-white/10 hover:shadow-lg hover:shadow-purple-500/20 hover:scale-[1.02] transition-all duration-300 group">
       {/* Product Image - Always show container */}
       <a 
         href={amazonUrl} 
         target="_blank" 
         rel="noopener noreferrer"
+        onClick={() => addRecentlyViewed({ id: product.id, name: product.name, price: product.price, image: product.image })}
         className="w-20 h-20 rounded-lg bg-white/10 flex-shrink-0 overflow-hidden hover:ring-2 hover:ring-purple-400 transition-all flex items-center justify-center"
       >
         {isImageUrl ? (
@@ -59,7 +61,7 @@ const ProductCardCompact = ({ product, onAddToCart }: ProductCardCompactProps) =
               {product.name}
             </h4>
           </a>
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-xs flex-wrap">
             {displayRating && (
               <div className="flex items-center gap-1 text-yellow-400">
                 <Star className="h-3 w-3 fill-current" />
@@ -70,14 +72,15 @@ const ProductCardCompact = ({ product, onAddToCart }: ProductCardCompactProps) =
               <span className="text-gray-400">({product.reviews.toLocaleString()})</span>
             )}
             {product.quantity !== undefined && (
-              <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                product.quantity === 0 ? 'bg-red-500/20 text-red-300' :
-                product.quantity < 10 ? 'bg-yellow-500/20 text-yellow-300' :
-                'bg-green-500/20 text-green-300'
-              }`}>
-                {product.quantity === 0 ? '⚠️ Out of Stock' :
-                 product.quantity < 10 ? `⚡ ${product.quantity} left` :
-                 `✓ ${product.quantity} in stock`}
+              <span 
+                className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                style={{
+                  background: product.quantity === 0 ? 'rgba(239, 68, 68, 0.2)' : product.quantity < 10 ? 'rgba(251, 191, 36, 0.2)' : 'rgba(34, 197, 94, 0.2)',
+                  color: product.quantity === 0 ? '#ef4444' : product.quantity < 10 ? '#fbbf24' : '#22c55e',
+                  border: `1px solid ${product.quantity === 0 ? 'rgba(239, 68, 68, 0.4)' : product.quantity < 10 ? 'rgba(251, 191, 36, 0.4)' : 'rgba(34, 197, 94, 0.4)'}`
+                }}
+              >
+                {product.quantity === 0 ? '⚠️ Out of Stock' : product.quantity < 10 ? `⚡ ${product.quantity} left` : `✓ ${product.quantity} in stock`}
               </span>
             )}
           </div>

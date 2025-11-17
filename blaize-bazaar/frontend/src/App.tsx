@@ -14,6 +14,7 @@ import AgentReasoningTraces from './components/AgentReasoningTraces'
 import HybridSearchComparison from './components/HybridSearchComparison'
 import CartPanel, { CartItem } from './components/CartPanel'
 import Toast from './components/Toast'
+import RecentlyViewed from './components/RecentlyViewed'
 import { Database, BarChart3, Activity, Brain, GitCompare, Wrench, X } from 'lucide-react'
 import './styles/premium-heading-styles.css'
 
@@ -48,7 +49,10 @@ function App() {
   const [productCount, setProductCount] = useState(0)
   const [categoryCount, setCategoryCount] = useState(0)
   const [featuredIndex, setFeaturedIndex] = useState(0)
-  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    const saved = localStorage.getItem('blaize-cart')
+    return saved ? JSON.parse(saved) : []
+  })
   const [showCart, setShowCart] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
@@ -88,6 +92,14 @@ function App() {
 
   const removeItem = (productId: string) => {
     setCartItems(prev => prev.filter(item => item.productId !== productId))
+  }
+
+  const clearCart = () => {
+    if (confirm('Are you sure you want to clear your cart?')) {
+      setCartItems([])
+      setToastMessage('Cart cleared')
+      setShowToast(true)
+    }
   }
 
   const handleCheckout = () => {
@@ -135,6 +147,11 @@ function App() {
     setCategoryCount(190)
   }, [])
 
+  // Persist cart to localStorage
+  useEffect(() => {
+    localStorage.setItem('blaize-cart', JSON.stringify(cartItems))
+  }, [cartItems])
+
   // Expose addToCart globally for chat integration
   useEffect(() => {
     (window as any).addToCart = addToCart
@@ -150,13 +167,19 @@ function App() {
     }
   }, [activeSection, featuredProducts.length])
 
-  // Keyboard shortcut: / or Ctrl+K to focus search
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // / or Ctrl+K to focus search
       if (e.key === '/' || (e.ctrlKey && e.key === 'k') || (e.metaKey && e.key === 'k')) {
         e.preventDefault()
         const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement
         if (searchInput) searchInput.focus()
+      }
+      // Ctrl+Shift+D to toggle Admin Panel
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'D') {
+        e.preventDefault()
+        setShowDevTools(prev => !prev)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -207,8 +230,7 @@ function App() {
         <main className="mt-[72px] relative z-10">
           {/* Shop Section (Hero) */}
           {activeSection === 'shop' && (
-            <section 
-              className="h-[calc(100vh-72px)] flex items-center relative"
+            <section className="animate-fadeIn h-[calc(100vh-72px)] flex items-center relative"
               style={{
                 backgroundImage: `url(${backgroundImage})`,
                 backgroundSize: 'cover',
@@ -318,7 +340,7 @@ function App() {
 
           {/* Collections Section */}
           {activeSection === 'collections' && (
-            <section className="max-w-[1400px] mx-auto px-10 py-24">
+            <section className="max-w-[1400px] mx-auto px-10 py-24 animate-fadeIn">
               <div className="text-center mb-12">
                 <h2 className="text-5xl font-light mb-4 text-gray-900 dark:text-white">Curated Collections</h2>
                 <p className="text-text-secondary text-lg">AI-powered collections tailored to your preferences</p>
@@ -371,7 +393,7 @@ function App() {
 
           {/* Architecture Section */}
           {activeSection === 'tech' && (
-            <section className="max-w-[1400px] mx-auto px-10 py-24">
+            <section className="max-w-[1400px] mx-auto px-10 py-24 animate-fadeIn">
               <div className="text-center mb-12">
                 <h2 className="text-5xl font-light mb-4 text-gray-900 dark:text-white">Architecture</h2>
               </div>
@@ -465,6 +487,9 @@ function App() {
 
         {/* AI Assistant */}
         <AIAssistant />
+
+        {/* Recently Viewed Products */}
+        {activeSection === 'shop' && <RecentlyViewed />}
 
         {/* Admin Panel FAB */}
         <button
@@ -589,6 +614,7 @@ function App() {
           onUpdateQuantity={updateQuantity}
           onRemoveItem={removeItem}
           onCheckout={handleCheckout}
+          onClearCart={clearCart}
         />
 
         {/* Toast Notification */}

@@ -3,7 +3,7 @@
  * Shows real-time pgvector queries with syntax highlighting and query plans
  */
 import { useState, useEffect, useRef } from 'react';
-import { X, Database, Clock, Zap, RefreshCw, Trash2, Eye, EyeOff } from 'lucide-react';
+import { X, Database, Clock, Zap, RefreshCw, Trash2, Eye, EyeOff, Copy, Check } from 'lucide-react';
 
 interface QueryLog {
   query_type: string;
@@ -36,6 +36,7 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
   const [stats, setStats] = useState<SummaryStats | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [expandedQuery, setExpandedQuery] = useState<number | null>(null);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const intervalRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -104,6 +105,16 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
     if (timeMs < 50) return 'text-green-400';
     if (timeMs < 150) return 'text-yellow-400';
     return 'text-red-400';
+  };
+
+  const copyToClipboard = async (text: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
   };
 
   if (!isOpen) return null;
@@ -299,7 +310,20 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
 
                   {/* Query SQL */}
                   <div className="px-4 py-3 bg-black/30">
-                    <div className="text-xs font-medium text-purple-300 mb-2">SQL Query:</div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs font-medium text-purple-300">SQL Query:</div>
+                      <button
+                        onClick={() => copyToClipboard(query.sql, idx)}
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-purple-400 hover:bg-purple-500/20 transition-colors"
+                        title="Copy SQL"
+                      >
+                        {copiedIndex === idx ? (
+                          <><Check className="h-3 w-3" /> Copied!</>
+                        ) : (
+                          <><Copy className="h-3 w-3" /> Copy</>
+                        )}
+                      </button>
+                    </div>
                     <pre className="text-xs text-green-300 font-mono overflow-x-auto custom-scrollbar whitespace-pre">
                       {formatSQL(query.sql)}
                     </pre>

@@ -1,4 +1,4 @@
-import { X, ShoppingBag, Trash2, Plus, Minus } from 'lucide-react'
+import { X, ShoppingBag, Trash2, Plus, Minus, Trash } from 'lucide-react'
 
 export interface CartItem {
   productId: string
@@ -15,9 +15,10 @@ interface CartPanelProps {
   onUpdateQuantity: (productId: string, quantity: number) => void
   onRemoveItem: (productId: string) => void
   onCheckout: () => void
+  onClearCart?: () => void
 }
 
-const CartPanel = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onCheckout }: CartPanelProps) => {
+const CartPanel = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onCheckout, onClearCart }: CartPanelProps) => {
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
@@ -40,12 +41,23 @@ const CartPanel = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onC
               <ShoppingBag className="h-6 w-6 text-purple-400" />
               <h2 className="text-2xl font-light text-white">Shopping Cart</h2>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-            >
-              <X className="h-5 w-5 text-gray-400" />
-            </button>
+            <div className="flex items-center gap-2">
+              {items.length > 0 && onClearCart && (
+                <button
+                  onClick={onClearCart}
+                  className="p-2 rounded-lg hover:bg-red-500/20 transition-colors group"
+                  title="Clear Cart"
+                >
+                  <Trash className="h-5 w-5 text-gray-400 group-hover:text-red-400" />
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
           </div>
           <p className="text-sm text-purple-300">{itemCount} {itemCount === 1 ? 'item' : 'items'}</p>
         </div>
