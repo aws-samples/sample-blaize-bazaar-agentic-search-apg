@@ -20,7 +20,8 @@ def price_optimization_agent(query: str) -> str:
     import json
     try:
         # Direct tool call - bypass LLM text generation
-        result = semantic_product_search(query=query, limit=5)
+        # Use min_rating=3.5 for better semantic search coverage
+        result = semantic_product_search(query=query, min_rating=3.5, limit=5)
         result_dict = json.loads(result)
         
         # Extract products array - semantic_product_search returns 'products' key

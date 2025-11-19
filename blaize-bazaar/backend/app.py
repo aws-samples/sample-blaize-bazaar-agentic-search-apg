@@ -349,7 +349,7 @@ async def semantic_search(
                 r['stars'] = r.get('rating', 0)
                 # RRF fields are already at top level from hybrid_search.py
         else:
-            # Prepare SQL with quality filters for better curation
+            # Prepare SQL with relaxed quality filters for better semantic coverage
             query_sql = """
                 SELECT 
                     "productId",
@@ -366,8 +366,7 @@ async def semantic_search(
                     quantity,
                     1 - (embedding <=> %s::vector) as similarity_score
                 FROM bedrock_integration.product_catalog
-                WHERE stars >= 3.5
-                  AND reviews >= 10
+                WHERE stars >= 3.0
                   AND "imgUrl" IS NOT NULL
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
@@ -548,7 +547,7 @@ async def image_search(
         # Get embedding
         query_embedding = embeddings.generate_embedding(search_query)
         
-        # Search database with quality filters
+        # Search database with relaxed quality filters
         query = """
             SELECT 
                 "productId",
@@ -565,8 +564,7 @@ async def image_search(
                 quantity,
                 1 - (embedding <=> %s::vector) as similarity_score
             FROM bedrock_integration.product_catalog
-            WHERE stars >= 3.5
-              AND reviews >= 10
+            WHERE stars >= 3.0
               AND "imgUrl" IS NOT NULL
             ORDER BY embedding <=> %s::vector
             LIMIT %s
