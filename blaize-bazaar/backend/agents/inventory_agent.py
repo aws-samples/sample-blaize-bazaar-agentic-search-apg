@@ -56,9 +56,9 @@ Products:
 ```
 
 Suggestions:
-- "Check low stock items"
-- "Restock recommendations"
-- "View inventory health"""",
+- Check low stock items
+- Restock recommendations
+- View inventory health""",
             tools=[get_inventory_health, get_product_by_category, restock_product]
         )
         
