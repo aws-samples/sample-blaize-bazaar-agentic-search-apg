@@ -136,3 +136,21 @@ def get_product_by_category(
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
+
+@tool
+def get_low_stock_products(limit: int = 3) -> str:
+    """Get products with low stock (quantity < 10) prioritized by demand
+    
+    Args:
+        limit: Number of results (default: 3)
+    """
+    if not _db_service:
+        return json.dumps({"error": "Database service not initialized"})
+    
+    try:
+        from services.business_logic import BusinessLogic
+        logic = BusinessLogic(_db_service)
+        result = _run_async(logic.get_low_stock_products(limit))
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})

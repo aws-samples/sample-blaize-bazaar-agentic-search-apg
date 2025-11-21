@@ -53,7 +53,7 @@ def product_recommendation_agent(query: str) -> str:
     result_dict = json.loads(result)
     products = result_dict.get('products', [])
     
-    return f"{intro}\n\nProducts:\n```json\n{json.dumps(products, indent=2)}\n```"
+    return f"{intro}\n\n```json\n{json.dumps(products, indent=2)}\n```"
 
 
 def _extract_user_preferences(text: str) -> dict:

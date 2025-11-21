@@ -389,6 +389,43 @@ class BusinessLogic:
             }
         }
     
+    async def get_low_stock_products(self, limit: int = 3) -> Dict[str, Any]:
+        """
+        Get products with low stock (quantity < 10) prioritized by demand.
+        
+        Args:
+            limit: Number of products to return
+            
+        Returns:
+            Dictionary with low-stock products
+        """
+        query = """
+            SELECT 
+                "productId",
+                product_description,
+                price,
+                stars,
+                reviews,
+                category_name,
+                quantity,
+                "imgUrl",
+                "productURL" as product_url
+            FROM bedrock_integration.product_catalog
+            WHERE quantity < 10
+              AND stars >= 3.0
+            ORDER BY quantity ASC, reviews DESC, stars DESC
+            LIMIT %s
+        """
+        
+        results = await self.db.fetch_all(query, limit)
+        products = [convert_decimals(dict(row)) for row in results]
+        
+        return {
+            "status": "success",
+            "count": len(products),
+            "products": products
+        }
+    
     def _generate_inventory_alerts(self, stats: Dict) -> List[str]:
         """Generate inventory alerts based on statistics"""
         alerts = []

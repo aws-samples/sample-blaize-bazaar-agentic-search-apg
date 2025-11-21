@@ -43,6 +43,6 @@ def price_optimization_agent(query: str) -> str:
             })
         
         # Return formatted string with JSON block for chat.py parsing
-        return f"Here are the best deals for you!\n\nProducts:\n```json\n{json.dumps(formatted_products, indent=2)}\n```"
+        return f"Here are the best deals for you!\n\n```json\n{json.dumps(formatted_products, indent=2)}\n```"
     except Exception as e:
         return json.dumps({"error": str(e)})
