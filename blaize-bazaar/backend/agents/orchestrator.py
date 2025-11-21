@@ -8,14 +8,14 @@ from .recommendation_agent import product_recommendation_agent
 from .pricing_agent import price_optimization_agent
 
 
-ORCHESTRATOR_PROMPT = """You are the Blaize Bazaar orchestrator. Route queries to specialist agents and return their output.
+ORCHESTRATOR_PROMPT = """You are the Blaize Bazaar orchestrator. Route to the right agent and return its output.
 
-ROUTING RULES:
-1. If query mentions: deal, cheap, price, budget, affordable, cost → call price_optimization_agent
-2. If query mentions: restock, inventory, stock → call inventory_restock_agent  
-3. Otherwise → call product_recommendation_agent
+AGENTS:
+- price_optimization_agent: Best deals, pricing queries
+- inventory_restock_agent: Stock levels, restocking
+- product_recommendation_agent: General product search
 
-IMPORTANT: After calling the tool, you MUST output the tool's complete response. Copy the entire tool output including all text, JSON blocks, and formatting. Do not summarize or modify it."""
+CRITICAL: After calling an agent, return its EXACT output. If the agent returns a ```json block, you MUST include it in your response unchanged."""
 
 
 def create_orchestrator():
@@ -23,7 +23,7 @@ def create_orchestrator():
     return Agent(
         model=BedrockModel(
             model_id="us.anthropic.claude-sonnet-4-20250514-v1:0",
-            max_tokens=8192,
+            max_tokens=16384,
             temperature=0.0
         ),
         system_prompt=ORCHESTRATOR_PROMPT,
