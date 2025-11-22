@@ -1,7 +1,7 @@
 #!/bin/bash
-# DAT406 Workshop - Stage 2: Labs Bootstrap (OPTIMIZED)
+# DAT406 Workshop - Stage 2: Labs Bootstrap
 # Optimizations: Parallel pip installs, reduced redundancy, faster execution
-# Duration: ~12-15 minutes (vs 20 minutes)
+# Duration: ~12-15 minutes
 
 set -uo pipefail  # Removed -e to allow graceful failures
 
@@ -189,6 +189,36 @@ if [ -n "$DB_HOST" ] && [ -f "$REPO_PATH/blaize-bazaar/backend/generate_mcp_conf
         
         if [ -f "$REPO_PATH/blaize-bazaar/config/mcp-server-config.json" ]; then
             log "✅ MCP config generated at blaize-bazaar/config/mcp-server-config.json"
+            
+            # Deploy MCP config to all Amazon Q locations
+            log "Deploying MCP config to Amazon Q..."
+            
+            # Create .amazonq directories
+            mkdir -p "/home/$CODE_EDITOR_USER/.aws/amazonq"
+            mkdir -p "$HOME_FOLDER/.amazonq"
+            mkdir -p "$REPO_PATH/.amazonq"
+            
+            # Read generated config and add useLegacyMcpJson for global config
+            MCP_CONFIG=$(cat "$REPO_PATH/blaize-bazaar/config/mcp-server-config.json")
+            MCP_CONFIG_WITH_LEGACY=$(echo "$MCP_CONFIG" | jq '. + {"useLegacyMcpJson": true}')
+            
+            # Deploy to global configs (with useLegacyMcpJson)
+            echo "$MCP_CONFIG_WITH_LEGACY" > "/home/$CODE_EDITOR_USER/.aws/amazonq/default.json"
+            echo "$MCP_CONFIG" > "/home/$CODE_EDITOR_USER/.aws/amazonq/mcp.json"
+            chmod 600 "/home/$CODE_EDITOR_USER/.aws/amazonq/default.json" "/home/$CODE_EDITOR_USER/.aws/amazonq/mcp.json"
+            
+            # Deploy to workspace configs
+            echo "$MCP_CONFIG" > "$HOME_FOLDER/.amazonq/default.json"
+            echo "$MCP_CONFIG" > "$HOME_FOLDER/.amazonq/mcp.json"
+            echo "$MCP_CONFIG" > "$REPO_PATH/.amazonq/default.json"
+            echo "$MCP_CONFIG" > "$REPO_PATH/.amazonq/mcp.json"
+            
+            # Fix permissions
+            chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "/home/$CODE_EDITOR_USER/.aws/amazonq"
+            chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$HOME_FOLDER/.amazonq"
+            chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH/.amazonq"
+            
+            log "✅ MCP config deployed to Amazon Q (global + workspace)"
         else
             warn "MCP config generation failed - will be generated on backend startup"
         fi
@@ -363,6 +393,7 @@ echo "✅ Notebooks (Jupyter) dependencies installed"
 echo "✅ Blaize Bazaar Backend (FastAPI + Strands) installed"
 echo "✅ Blaize Bazaar Frontend (React) dependencies installed"
 echo "✅ Database setup complete (21,704 products with indexes)"
+echo "✅ MCP server configured for Amazon Q"
 echo "✅ Bash environment configured (psql ready)"
 echo ""
 echo "Quick Start Commands:"
