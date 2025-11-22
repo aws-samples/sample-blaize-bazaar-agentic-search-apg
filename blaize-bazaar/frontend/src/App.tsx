@@ -402,9 +402,9 @@ function App() {
               <div className="mb-16">
                 <div className="grid grid-cols-3 gap-6">
                   {[
-                    { title: 'Semantic Search Foundations', img: 'diagram1.png', alt: 'Semantic Search Foundations' },
-                    { title: 'Context Management & Custom Agent Tools', img: 'diagram2.png', alt: 'Context Management & Custom Agent Tools' },
-                    { title: 'Multi-Agent Orchestration', img: 'diagram3.png', alt: 'Multi-Agent Orchestration' },
+                    { title: 'Semantic Search Foundations', img: 'part1_architecture.png', alt: 'Semantic Search Foundations' },
+                    { title: 'Context Management & Custom Agent Tools', img: 'part2_architecture.png', alt: 'Context Management & Custom Agent Tools' },
+                    { title: 'Multi-Agent Orchestration', img: 'part3_architecture.png', alt: 'Multi-Agent Orchestration' },
                   ].map((diagram, index) => (
                     <div 
                       key={index}
