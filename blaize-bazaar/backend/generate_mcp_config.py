@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Generate MCP server configuration for Aurora PostgreSQL using uvx.
+Generate MCP server configuration for Aurora PostgreSQL.
 
-This script reads environment variables set by bootstrap-labs.sh to generate
-the MCP server configuration file for use with Amazon Q and other MCP clients.
+Creates two config files:
+1. blaize-bazaar/config/mcp-server-config.json (for general MCP use)
+2. ~/.aws/amazonq/default.json (for Q Developer in IDE)
 
 Environment Variables Required (set by bootstrap-labs.sh):
 - DB_CLUSTER_ARN: Aurora cluster ARN
@@ -19,7 +20,7 @@ from pathlib import Path
 
 
 def generate_mcp_config():
-    """Generate MCP server configuration file using uvx."""
+    """Generate MCP server configuration files."""
     
     # Get environment variables (set by bootstrap-labs.sh)
     db_cluster_arn = os.environ.get('DB_CLUSTER_ARN')
@@ -38,66 +39,124 @@ def generate_mcp_config():
         print("This should be passed from CloudFormation outputs", file=sys.stderr)
         return 1
     
-    # Create MCP server configuration using uvx
-    config = {
+    # MCP server configuration (same for both files)
+    mcp_server_config = {
+        "command": "uvx",
+        "args": [
+            "awslabs.postgres-mcp-server@latest",
+            "--resource_arn", db_cluster_arn,
+            "--secret_arn", db_secret_arn,
+            "--database", db_name,
+            "--region", aws_region,
+            "--readonly", "True"
+        ],
+        "env": {
+            "AWS_REGION": aws_region,
+            "FASTMCP_LOG_LEVEL": "ERROR"
+        },
+        "disabled": False,
+        "autoApprove": []
+    }
+    
+    # =========================================================================
+    # File 1: Workshop config (blaize-bazaar/config/mcp-server-config.json)
+    # =========================================================================
+    workshop_config = {
         "mcpServers": {
-            "awslabs.postgres-mcp-server": {
-                "command": "uvx",
-                "args": [
-                    "awslabs.postgres-mcp-server@latest",
-                    "--resource_arn", db_cluster_arn,
-                    "--secret_arn", db_secret_arn,
-                    "--database", db_name,
-                    "--region", aws_region,
-                    "--readonly", "True"
-                ],
-                "env": {
-                    "AWS_REGION": aws_region,
-                    "FASTMCP_LOG_LEVEL": "ERROR"
-                },
-                "disabled": False,
-                "autoApprove": []
-            }
+            "awslabs.postgres-mcp-server": mcp_server_config
         }
     }
     
     # Determine output directory (../config from backend/)
-    output_dir = Path(__file__).parent.parent / "config"
-    
-    # Create directory if it doesn't exist
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Write configuration file
-    output_file = output_dir / "mcp-server-config.json"
+    workshop_dir = Path(__file__).parent.parent / "config"
+    workshop_dir.mkdir(parents=True, exist_ok=True)
+    workshop_file = workshop_dir / "mcp-server-config.json"
     
     try:
-        with open(output_file, 'w') as f:
-            json.dump(config, f, indent=2)
+        with open(workshop_file, 'w') as f:
+            json.dump(workshop_config, f, indent=2)
+        print(f"✅ Workshop config: {workshop_file}")
+    except Exception as e:
+        print(f"ERROR: Failed to write workshop config: {e}", file=sys.stderr)
+        return 1
+    
+    # =========================================================================
+    # File 2: Q Developer config (~/.aws/amazonq/default.json)
+    # =========================================================================
+    
+    # Q Developer configuration format
+    q_developer_config = {
+        "mcpServers": {
+            "awslabs.postgres-mcp-server": mcp_server_config
+        },
+        "useLegacyMcpJson": True  # Support for legacy mcp.json files
+    }
+    
+    # Determine Q Developer config location
+    home = Path.home()
+    q_config_dir = home / ".aws" / "amazonq"
+    q_config_dir.mkdir(parents=True, exist_ok=True)
+    q_config_file = q_config_dir / "default.json"
+    
+    try:
+        # Check if file already exists and merge configs
+        if q_config_file.exists():
+            with open(q_config_file, 'r') as f:
+                existing_config = json.load(f)
+            
+            # Merge MCP servers (keep existing, add/update ours)
+            if "mcpServers" not in existing_config:
+                existing_config["mcpServers"] = {}
+            
+            existing_config["mcpServers"]["awslabs.postgres-mcp-server"] = mcp_server_config
+            existing_config["useLegacyMcpJson"] = True
+            
+            q_developer_config = existing_config
         
-        print("=" * 70)
-        print("✅ MCP Configuration Generated Successfully!")
-        print("=" * 70)
-        print(f"📁 Location: {output_file}")
-        print()
-        print("🔧 Configuration Details:")
-        print(f"   Server: AWS Labs PostgreSQL MCP Server (uvx)")
-        print(f"   Database Cluster: {db_cluster_arn}")
-        print(f"   Secret ARN: {db_secret_arn}")
-        print(f"   Database: {db_name}")
-        print(f"   Region: {aws_region}")
-        print(f"   Read-only: True")
-        print()
-        print("🎯 Usage:")
-        print("   - Amazon Q Developer: Automatically detects this config")
-        print("   - MCP Clients: Use get_table_schema and run_query tools")
-        print("   - Schema Exploration: Safe read-only access to database")
-        print("=" * 70)
+        # Write Q Developer config
+        with open(q_config_file, 'w') as f:
+            json.dump(q_developer_config, f, indent=2)
         
-        return 0
+        print(f"✅ Q Developer config: {q_config_file}")
+        
+        # Set proper permissions
+        q_config_file.chmod(0o600)
         
     except Exception as e:
-        print(f"ERROR: Failed to write configuration file: {e}", file=sys.stderr)
+        print(f"ERROR: Failed to write Q Developer config: {e}", file=sys.stderr)
         return 1
+    
+    # =========================================================================
+    # Summary
+    # =========================================================================
+    print()
+    print("=" * 70)
+    print("✅ MCP Configuration Generated Successfully!")
+    print("=" * 70)
+    print()
+    print("📁 Configuration Files Created:")
+    print(f"   1. Workshop: {workshop_file}")
+    print(f"   2. Q Developer: {q_config_file}")
+    print()
+    print("🔧 Server Configuration:")
+    print(f"   • Server: AWS Labs PostgreSQL MCP Server (uvx)")
+    print(f"   • Database Cluster: {db_cluster_arn}")
+    print(f"   • Secret ARN: {db_secret_arn}")
+    print(f"   • Database: {db_name}")
+    print(f"   • Region: {aws_region}")
+    print(f"   • Read-only: True")
+    print()
+    print("🎯 Usage:")
+    print("   • Amazon Q Developer: Open Q Chat in VS Code")
+    print("   • Ask: 'What tables exist in bedrock_integration schema?'")
+    print("   • MCP tools available: get_table_schema, run_query")
+    print()
+    print("💡 Verification:")
+    print("   • Open VS Code → Amazon Q sidebar")
+    print("   • Settings → MCP Servers → Should see 'awslabs.postgres-mcp-server'")
+    print("=" * 70)
+    
+    return 0
 
 
 def main():
