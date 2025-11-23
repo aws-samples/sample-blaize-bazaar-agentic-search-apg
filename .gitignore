@@ -13,7 +13,6 @@ build/
 
 # Jupyter
 .ipynb_checkpoints/
-*.ipynb
 
 # Environment files (contain credentials)
 .env
