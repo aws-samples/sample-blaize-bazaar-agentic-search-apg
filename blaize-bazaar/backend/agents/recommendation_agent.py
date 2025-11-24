@@ -48,8 +48,12 @@ def product_recommendation_agent(query: str) -> str:
         enhanced_query = current_request
         intro = "Here are some great options for you!"
     
-    # Search with enhanced query
-    result = semantic_product_search(query=enhanced_query, limit=5)
+    # Search with enhanced query and price filter
+    result = semantic_product_search(
+        query=enhanced_query,
+        max_price=preferences['price_range'],
+        limit=5
+    )
     result_dict = json.loads(result)
     products = result_dict.get('products', [])
     

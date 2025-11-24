@@ -18,10 +18,22 @@ def price_optimization_agent(query: str) -> str:
         JSON array of products
     """
     import json
+    import re
     try:
-        # Direct tool call - bypass LLM text generation
+        # Extract price constraint from query
+        max_price = None
+        price_matches = re.findall(r'under \$?(\d+)', query.lower())
+        if price_matches:
+            max_price = float(max([int(p) for p in price_matches]))
+        
+        # Direct tool call with price filter
         # Use min_rating=3.5 for better semantic search coverage
-        result = semantic_product_search(query=query, min_rating=3.5, limit=5)
+        result = semantic_product_search(
+            query=query,
+            max_price=max_price,
+            min_rating=3.5,
+            limit=5
+        )
         result_dict = json.loads(result)
         
         # Extract products array - semantic_product_search returns 'products' key
