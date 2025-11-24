@@ -507,9 +507,18 @@ log "✅ Auto-open terminal configured"
 # STEP 10: PYTHON SETUP (~10 sec)
 # ============================================================================
 
-log "Upgrading pip..."
+log "Upgrading pip and installing workshop dependencies..."
 # Upgrade pip
 sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user --upgrade pip -q
+
+# Install notebook dependencies from requirements.txt
+if [ -f "$HOME_FOLDER/$REPO_NAME/notebooks/requirements.txt" ]; then
+    log "Installing notebook dependencies from requirements.txt..."
+    sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user -r "$HOME_FOLDER/$REPO_NAME/notebooks/requirements.txt" -q
+else
+    # Fallback to individual packages
+    sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user ipywidgets>=8.1.0 -q
+fi
 
 # Set AWS region and workshop shortcuts for user environment
 log "Configuring AWS region and workshop shortcuts..."

@@ -222,7 +222,7 @@ STOP IMMEDIATELY after providing this response. Do not query again. Do not ask f
             # Build conversation context
             conversation_context = ""
             if conversation_history:
-                recent_history = conversation_history[-6:]
+                recent_history = conversation_history[-16:]
                 for msg in recent_history:
                     role = msg.get('role', 'user')
                     content = msg.get('content', '')
@@ -390,11 +390,11 @@ CURRENT REQUEST: {message}"""
     
     def _generate_contextual_suggestions(self, query: str, conversation_history: Optional[List[Dict[str, str]]] = None) -> List[str]:
         """Generate contextual suggestions based on query type and conversation history"""
-        # Build context from last 3 user messages + current query
+        # Build context from last 8 user messages + current query
         context_text = query.lower()
         if conversation_history:
-            recent_user_messages = [msg['content'].lower() for msg in conversation_history[-6:] if msg.get('role') == 'user']
-            context_text = ' '.join(recent_user_messages[-3:] + [query.lower()])
+            recent_user_messages = [msg['content'].lower() for msg in conversation_history[-16:] if msg.get('role') == 'user']
+            context_text = ' '.join(recent_user_messages[-8:] + [query.lower()])
         
         query_lower = context_text
         
