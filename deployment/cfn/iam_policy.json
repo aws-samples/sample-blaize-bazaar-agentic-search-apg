@@ -35,7 +35,7 @@
       ],
       "Resource": [
         "arn:aws:bedrock:*::foundation-model/anthropic.claude-sonnet-4*",
-        "arn:aws:bedrock:*::foundation-model/us.anthropic.claude-sonnet-4*",
+        "arn:aws:bedrock:*::foundation-model/global.anthropic.claude-sonnet-4*",
         "arn:aws:bedrock:*::foundation-model/amazon.titan-embed-text-v2:0"
       ]
     },
