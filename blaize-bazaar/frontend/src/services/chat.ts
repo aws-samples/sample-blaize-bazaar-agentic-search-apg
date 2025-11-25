@@ -161,7 +161,7 @@ export async function sendChatMessage(query: string, conversationHistory: ChatMe
         id: p.id || p.productId || '',
         name: p.name || p.product_description || '',
         price: p.price || 0,
-        image: p.image || p.imgurl || '📦',
+        image: p.image || p.imgUrl || p.imgurl || '📦',
         category: p.category || p.category_name,
         rating: p.stars || p.rating,
         reviews: p.reviews,
