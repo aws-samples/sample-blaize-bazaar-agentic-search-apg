@@ -22,7 +22,7 @@ def create_orchestrator():
     """Create the orchestrator agent with all specialized agents as tools"""
     return Agent(
         model=BedrockModel(
-            model_id="us.anthropic.claude-sonnet-4-20250514-v1:0",
+            model_id="global.anthropic.claude-sonnet-4-20250514-v1:0",
             max_tokens=16384,
             temperature=0.0
         ),

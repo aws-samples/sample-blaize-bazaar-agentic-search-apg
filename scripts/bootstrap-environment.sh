@@ -644,7 +644,7 @@ if [ ! -z "${STAGE2_SCRIPT_URL}" ]; then
         export DB_NAME='${DB_NAME:-postgres}' && \
         export AWS_REGION='$AWS_REGION' && \
         export BEDROCK_EMBEDDING_MODEL='${BEDROCK_EMBEDDING_MODEL:-amazon.titan-embed-text-v2:0}' && \
-        export BEDROCK_CHAT_MODEL='${BEDROCK_CHAT_MODEL:-us.anthropic.claude-sonnet-4-20250514-v1:0}' && \
+        export BEDROCK_CHAT_MODEL='${BEDROCK_CHAT_MODEL:-global.anthropic.claude-sonnet-4-20250514-v1:0}' && \
         export ASSETS_BUCKET_NAME='${ASSETS_BUCKET_NAME:-}' && \
         export ASSETS_BUCKET_PREFIX='${ASSETS_BUCKET_PREFIX:-}' && \
         nohup /tmp/bootstrap-labs.sh > /var/log/bootstrap-labs.log 2>&1 &"
