@@ -443,8 +443,8 @@ cat << 'EOF'
 
 EOF
 
-# Auto-open README.md in preview mode
-code --command markdown.showPreview /workshop/sample-dat406-build-agentic-ai-powered-search-apg/README.md 2>/dev/null || true
+# Auto-open Part 1 notebook
+code /workshop/sample-dat406-build-agentic-ai-powered-search-apg/notebooks/Part_1_Semantic_Search_Foundations_Exercises.ipynb 2>/dev/null || true
 
 # Exit cleanly so task completes
 exit 0
