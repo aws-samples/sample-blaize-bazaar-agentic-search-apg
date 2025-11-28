@@ -443,8 +443,8 @@ cat << 'EOF'
 
 EOF
 
-# Auto-open the README to expand the workshop folder
-code /workshop/sample-dat406-build-agentic-ai-powered-search-apg/README.md 2>/dev/null || true
+# Auto-open README.md in preview mode
+code --command markdown.showPreview /workshop/sample-dat406-build-agentic-ai-powered-search-apg/README.md 2>/dev/null || true
 
 # Exit cleanly so task completes
 exit 0
