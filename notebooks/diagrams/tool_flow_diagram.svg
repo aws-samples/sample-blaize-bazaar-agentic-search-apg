@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <defs>
+    <!-- Purple gradient -->
+    <linearGradient id="purpleGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#581c87;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Green gradient for tools -->
+    <linearGradient id="greenGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#166534;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#22c55e;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Amber gradient for database -->
+    <linearGradient id="amberGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#b45309;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Blue gradient for Bedrock -->
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Background gradient -->
+    <linearGradient id="bgGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Drop shadow filter -->
+    <filter id="dropShadow2" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    
+    <!-- Arrow markers -->
+    <marker id="arrowPurple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#a855f7"/>
+    </marker>
+    
+    <marker id="arrowGreen2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#22c55e"/>
+    </marker>
+    
+    <marker id="arrowAmber" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#f59e0b"/>
+    </marker>
+    
+    <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="900" height="480" fill="url(#bgGrad2)" rx="12"/>
+  
+  <!-- Title -->
+  <text x="450" y="38" text-anchor="middle" fill="#ffffff" font-size="20" font-weight="600">
+    @tool Decorator: Agent-to-Database Flow
+  </text>
+  <text x="450" y="58" text-anchor="middle" fill="#a78bfa" font-size="12">
+    How Strands SDK tools connect agents to Aurora PostgreSQL
+  </text>
+  
+  <!-- Flow diagram - Left to Right -->
+  
+  <!-- Step 1: Agent -->
+  <g filter="url(#dropShadow2)">
+    <rect x="40" y="100" width="150" height="80" rx="10" fill="url(#purpleGrad2)"/>
+    <text x="115" y="130" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="600">🤖 Agent</text>
+    <text x="115" y="148" text-anchor="middle" fill="#e9d5ff" font-size="10">Strands SDK</text>
+    <text x="115" y="165" text-anchor="middle" fill="#fbbf24" font-size="9">Claude Sonnet 4</text>
+  </g>
+  
+  <!-- Arrow 1 -->
+  <line x1="190" y1="140" x2="235" y2="140" stroke="#a855f7" stroke-width="2" marker-end="url(#arrowPurple)"/>
+  <text x="212" y="132" text-anchor="middle" fill="#c4b5fd" font-size="9">decides</text>
+  
+  <!-- Step 2: @tool Decorator -->
+  <g filter="url(#dropShadow2)">
+    <rect x="240" y="90" width="180" height="100" rx="10" fill="url(#greenGrad2)"/>
+    <text x="330" y="118" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="600">⚙️ @tool Decorator</text>
+    <text x="330" y="138" text-anchor="middle" fill="#bbf7d0" font-size="10">Type validation</text>
+    <text x="330" y="155" text-anchor="middle" fill="#bbf7d0" font-size="10">Docstring → Agent hint</text>
+    <text x="330" y="172" text-anchor="middle" fill="#fef08a" font-size="9" font-family="monospace">from strands import tool</text>
+  </g>
+  
+  <!-- Arrow 2 -->
+  <line x1="420" y1="140" x2="465" y2="140" stroke="#22c55e" stroke-width="2" marker-end="url(#arrowGreen2)"/>
+  <text x="442" y="132" text-anchor="middle" fill="#86efac" font-size="9">calls</text>
+  
+  <!-- Step 3: Python Function -->
+  <g filter="url(#dropShadow2)">
+    <rect x="470" y="90" width="180" height="100" rx="10" fill="rgba(124,58,237,0.3)" stroke="#7c3aed" stroke-width="2"/>
+    <text x="560" y="118" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="600">📝 Tool Function</text>
+    <text x="560" y="138" text-anchor="middle" fill="#c4b5fd" font-size="9" font-family="monospace">def get_inventory_health():</text>
+    <text x="560" y="155" text-anchor="middle" fill="#c4b5fd" font-size="9" font-family="monospace">  with psycopg.connect()</text>
+    <text x="560" y="172" text-anchor="middle" fill="#c4b5fd" font-size="9" font-family="monospace">    cur.execute(SQL)</text>
+  </g>
+  
+  <!-- Arrow 3 -->
+  <line x1="650" y1="140" x2="695" y2="140" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrowAmber)"/>
+  <text x="672" y="132" text-anchor="middle" fill="#fcd34d" font-size="9">queries</text>
+  
+  <!-- Step 4: Aurora PostgreSQL -->
+  <g filter="url(#dropShadow2)">
+    <rect x="700" y="100" width="160" height="80" rx="10" fill="url(#amberGrad2)"/>
+    <text x="780" y="130" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="600">🗄️ Aurora PostgreSQL</text>
+    <text x="780" y="150" text-anchor="middle" fill="#fef3c7" font-size="10">pgvector 0.8.0</text>
+    <text x="780" y="167" text-anchor="middle" fill="#fef3c7" font-size="9">Product catalog + embeddings</text>
+  </g>
+  
+  <!-- Return path arrows (bottom) -->
+  <path d="M 780 180 L 780 210 L 115 210 L 115 180" stroke="#86efac" stroke-width="2" fill="none" marker-end="url(#arrowGreen2)" stroke-dasharray="6,3"/>
+  <text x="450" y="225" text-anchor="middle" fill="#86efac" font-size="10">JSON response → Agent reasoning</text>
+  
+  <!-- Tool Examples Section -->
+  <rect x="40" y="260" width="820" height="200" rx="10" fill="rgba(0,0,0,0.25)" stroke="rgba(124,58,237,0.3)" stroke-width="1"/>
+  <text x="450" y="285" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="600">7 Tools by Agent Domain</text>
+  
+  <!-- Inventory Tools -->
+  <g transform="translate(60, 305)">
+    <rect x="0" y="0" width="240" height="130" rx="8" fill="rgba(124,58,237,0.15)" stroke="#7c3aed" stroke-width="1"/>
+    <text x="120" y="22" text-anchor="middle" fill="#a855f7" font-size="12" font-weight="600">📦 Inventory Agent Tools</text>
+    <line x1="10" y1="32" x2="230" y2="32" stroke="rgba(124,58,237,0.3)" stroke-width="1"/>
+    <text x="20" y="52" fill="#86efac" font-size="10" font-family="monospace">get_inventory_health()</text>
+    <text x="20" y="70" fill="#c4b5fd" font-size="9">→ Stock levels, health score, alerts</text>
+    <text x="20" y="90" fill="#86efac" font-size="10" font-family="monospace">get_low_stock_products()</text>
+    <text x="20" y="108" fill="#c4b5fd" font-size="9">→ Products needing restock</text>
+    <text x="20" y="125" fill="#86efac" font-size="10" font-family="monospace">restock_product()</text>
+  </g>
+  
+  <!-- Pricing Tools -->
+  <g transform="translate(320, 305)">
+    <rect x="0" y="0" width="240" height="130" rx="8" fill="rgba(124,58,237,0.15)" stroke="#7c3aed" stroke-width="1"/>
+    <text x="120" y="22" text-anchor="middle" fill="#a855f7" font-size="12" font-weight="600">💰 Pricing Agent Tools</text>
+    <line x1="10" y1="32" x2="230" y2="32" stroke="rgba(124,58,237,0.3)" stroke-width="1"/>
+    <text x="20" y="52" fill="#86efac" font-size="10" font-family="monospace">get_category_price_analysis()</text>
+    <text x="20" y="70" fill="#c4b5fd" font-size="9">→ Min/max/avg prices by category</text>
+    <text x="20" y="90" fill="#86efac" font-size="10" font-family="monospace">get_product_by_category()</text>
+    <text x="20" y="108" fill="#c4b5fd" font-size="9">→ Filtered product listings</text>
+    <text x="20" y="125" fill="#86efac" font-size="10" font-family="monospace">semantic_product_search()</text>
+  </g>
+  
+  <!-- Recommendation Tools -->
+  <g transform="translate(580, 305)">
+    <rect x="0" y="0" width="260" height="130" rx="8" fill="rgba(124,58,237,0.15)" stroke="#7c3aed" stroke-width="1"/>
+    <text x="130" y="22" text-anchor="middle" fill="#a855f7" font-size="12" font-weight="600">⭐ Recommendation Agent Tools</text>
+    <line x1="10" y1="32" x2="250" y2="32" stroke="rgba(124,58,237,0.3)" stroke-width="1"/>
+    <text x="20" y="52" fill="#86efac" font-size="10" font-family="monospace">semantic_product_search()</text>
+    <text x="20" y="70" fill="#c4b5fd" font-size="9">→ Vector similarity with pgvector</text>
+    <text x="20" y="90" fill="#86efac" font-size="10" font-family="monospace">get_trending_products()</text>
+    <text x="20" y="108" fill="#c4b5fd" font-size="9">→ High-rated, popular items</text>
+    <text x="20" y="125" fill="#86efac" font-size="10" font-family="monospace">get_product_by_category()</text>
+  </g>
+  
+  <!-- Key insight callout -->
+  <rect x="40" y="445" width="320" height="25" rx="5" fill="rgba(34,197,94,0.15)" stroke="#22c55e" stroke-width="1"/>
+  <text x="200" y="462" text-anchor="middle" fill="#86efac" font-size="10">💡 Docstrings help agents decide when to call each tool</text>
+  
+  <!-- Bedrock callout -->
+  <rect x="540" y="445" width="320" height="25" rx="5" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="1"/>
+  <text x="700" y="462" text-anchor="middle" fill="#93c5fd" font-size="10">🧠 Embeddings via Amazon Titan Text v2 (1024-dim)</text>
+</svg>
