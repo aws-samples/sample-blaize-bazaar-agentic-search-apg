@@ -343,8 +343,8 @@ sudo -u "$CODE_EDITOR_USER" mkdir -p "$SETTINGS_DIR"
 cat > "$SETTINGS_DIR/settings.json" << 'VSCODE_SETTINGS'
 {
     "workbench.colorTheme": "Default Dark Modern",
-    "editor.fontSize": 16,
-    "terminal.integrated.fontSize": 16,
+    "editor.fontSize": 14,
+    "terminal.integrated.fontSize": 14,
     "explorer.compactFolders": false,
     "explorer.autoReveal": true,
     "git.enabled": false,
@@ -486,8 +486,8 @@ TASKS_EOF
 cat > "$HOME_FOLDER/.vscode/settings.json" << 'WORKSPACE_SETTINGS'
 {
     "workbench.colorTheme": "Default Dark Modern",
-    "editor.fontSize": 16,
-    "terminal.integrated.fontSize": 16,
+    "editor.fontSize": 14,
+    "terminal.integrated.fontSize": 14,
     "python.defaultInterpreterPath": "/usr/bin/python3.13",
     "jupyter.kernels.filter": [],
     "notebook.defaultKernel": "python3",
