@@ -54,6 +54,16 @@ start-frontend  # Terminal 2: React frontend (port 5173)
 
 ---
 
+## 📹 Quick Video Walkthrough
+
+Want to see what you're about to build? Watch this video walkthrough of the Blaize Bazaar application (no sound, set quality to 1080p or higher for best viewing):
+
+[![Blaize Bazaar Demo](https://img.youtube.com/vi/GRjSURMwK7c/maxresdefault.jpg)](https://youtu.be/GRjSURMwK7c?si=iQkHO6auIECfWmT7)
+
+**💡 Viewing Tip:** Watch at 1.5x speed to save time - click the settings gear icon in the video player.
+
+---
+
 ## 📁 Repository Structure
 
 ```
