@@ -36,7 +36,7 @@
 
 ## 🚀 Quick Start
 
-**Workshop Duration**: 2 hours | **Hands-on**: Parts 1 & 3 (50 min) | **Guided Demo**: Part 2 (20 min) | **Optional**: Part 4 (Self-paced)
+**Workshop Duration**: 2 hours | **Hands-on**: Parts 1, 2 & 3 (80 min) | **Optional**: Part 4 (Self-paced)
 
 Build enterprise-grade agentic AI applications with semantic search, multi-agent orchestration, and Model Context Protocol integration. Leverage Amazon Aurora PostgreSQL 17.5 with pgvector 0.8.0, Amazon Bedrock (Claude Sonnet 4 + Titan Text Embeddings v2), and modern full-stack technologies.
 
@@ -89,7 +89,7 @@ start-frontend  # Terminal 2: React frontend (port 5173)
 
 ## 🎯 Workshop Structure
 
-### Part 1: Semantic Search Foundations (25 min) - Hands-on Exercises
+### Part 1: Semantic Search Foundations (30 min) - Hands-on Exercises
 **Building semantic search with pgvector 0.8.0 and Aurora PostgreSQL**
 
 - Vector embeddings with Amazon Titan Text Embeddings v2 (1024 dimensions)
@@ -98,7 +98,7 @@ start-frontend  # Terminal 2: React frontend (port 5173)
 - Automatic iterative scanning for guaranteed recall
 - Session state management with Aurora PostgreSQL
 
-### Part 2: Context Management & Custom Agent Tools (20 min) - Interactive Guided Demo
+### Part 2: Context Management & Custom Agent Tools (25 min) - Hands-on Exercises
 **Building custom tools for Aurora PostgreSQL data access with MCP**
 
 - Custom tool creation with `@tool` decorator patterns
