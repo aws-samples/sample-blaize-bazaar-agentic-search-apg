@@ -3,6 +3,7 @@
  */
 import { useEffect, useState } from 'react'
 import { useTheme } from '../App'
+import { resolveAgentType, AGENT_IDENTITIES } from '../utils/agentIdentity'
 
 interface AgentStep {
   agent: string
@@ -65,11 +66,7 @@ const AgentWorkflowVisualizer = ({ execution, isActive }: Props) => {
   if (!execution) return null
 
   const getAgentIcon = (agent: string) => {
-    if (agent.includes('Orchestrator')) return '🎯'
-    if (agent.includes('Inventory')) return '📦'
-    if (agent.includes('Recommendation')) return '⭐'
-    if (agent.includes('Pricing')) return '💰'
-    return '🤖'
+    return AGENT_IDENTITIES[resolveAgentType(agent)]?.icon || '🤖'
   }
 
   return (
@@ -155,36 +152,49 @@ const AgentWorkflowVisualizer = ({ execution, isActive }: Props) => {
         ))}
       </div>
 
-      {/* Tool Calls Timeline - Enhanced with params and results */}
-      {!isActive && execution.tool_calls.length > 0 && (
+      {/* Tool Calls Timeline - Now streams in real-time */}
+      {execution.tool_calls.length > 0 && (
         <div className="mt-3 pt-2 border-t border-purple-500/20">
           <div className="text-[10px] font-semibold text-text-secondary mb-2">
-            🔧 Tool Calls (Real-time)
+            🔧 Tool Calls {isActive && <span className="text-purple-400 animate-pulse">(Live)</span>}
           </div>
           <div className="space-y-2">
-            {execution.tool_calls.map((tool, idx) => (
-              <div
-                key={idx}
-                className="p-2 rounded-lg"
-                style={{ background: 'rgba(34, 197, 94, 0.05)', border: '1px solid rgba(34, 197, 94, 0.2)' }}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-green-400 text-xs">✓</span>
-                  <span className="text-text-primary font-mono text-xs font-semibold">{tool.tool}()</span>
-                  <span className="ml-auto text-purple-400 text-[10px]">{tool.duration_ms}ms</span>
+            {execution.tool_calls.map((tool, idx) => {
+              const isExecuting = isActive && (tool.status === 'executing' || tool.status === 'in_progress')
+              return (
+                <div
+                  key={idx}
+                  className="p-2 rounded-lg animate-slideUp"
+                  style={{
+                    background: isExecuting ? 'rgba(139, 92, 246, 0.08)' : 'rgba(34, 197, 94, 0.05)',
+                    border: isExecuting ? '1px solid rgba(139, 92, 246, 0.4)' : '1px solid rgba(34, 197, 94, 0.2)',
+                    animation: isExecuting ? 'pipelineStep 1.5s ease-in-out infinite' : undefined,
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    {isExecuting ? (
+                      <span className="animate-spin text-purple-400 text-xs">⏳</span>
+                    ) : (
+                      <span className="text-green-400 text-xs">✓</span>
+                    )}
+                    <span className="text-text-primary font-mono text-xs font-semibold">{tool.tool}()</span>
+                    <span className="ml-auto text-purple-400 text-[10px]">
+                      {tool.duration_ms > 0 ? `${tool.duration_ms}ms` : isExecuting ? 'running...' : ''}
+                    </span>
+                  </div>
+                  {tool.params && (
+                    <div className="text-[10px] text-text-secondary ml-5 mb-0.5 font-mono">
+                      {tool.params}
+                    </div>
+                  )}
+                  {tool.result && (
+                    <div className="text-[10px] text-green-400 ml-5">
+                      → {tool.result}
+                    </div>
+                  )}
                 </div>
-                {tool.params && (
-                  <div className="text-[10px] text-text-secondary ml-5 mb-0.5">
-                    {tool.params}
-                  </div>
-                )}
-                {tool.result && (
-                  <div className="text-[10px] text-green-400 ml-5">
-                    → {tool.result}
-                  </div>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}

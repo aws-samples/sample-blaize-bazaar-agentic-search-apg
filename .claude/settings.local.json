@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc --noEmit)",
+      "Bash(npm install framer-motion)",
+      "Bash(npm run build)",
+      "Bash(python -c \"from services.chat import ChatService; print\\(''OK''\\)\")",
+      "Bash(python -c \"from services.chat import EnhancedChatService; print\\(''Backend imports OK''\\)\")",
+      "Bash(pip show strands-agents)",
+      "Bash(pip3 show strands-agents)",
+      "Bash(python3 -c \"import strands; print\\(strands.__file__\\)\")",
+      "Bash(python -c \"import strands; print\\(strands.__file__\\)\")",
+      "WebFetch(domain:strandsagents.com)"
+    ]
+  }
+}

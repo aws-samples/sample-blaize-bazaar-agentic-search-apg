@@ -1,5 +1,6 @@
 import { ShoppingCart, Star } from 'lucide-react'
 import { addRecentlyViewed } from '../utils/recentlyViewed'
+import { type AgentType } from '../utils/agentIdentity'
 
 interface Product {
   id: string
@@ -12,34 +13,41 @@ interface Product {
   category?: string
   url?: string
   quantity?: number
+  similarityScore?: number
+  originalPrice?: number
+  discountPercent?: number
+  inStock?: boolean
 }
 
 interface ProductCardCompactProps {
   product: Product
   onAddToCart?: () => void
+  agentSource?: AgentType
+  similarityScore?: number
 }
 
-const ProductCardCompact = ({ product, onAddToCart }: ProductCardCompactProps) => {
+const ProductCardCompact = ({ product, onAddToCart, similarityScore }: ProductCardCompactProps) => {
   // Construct Amazon URL from product ID if url is missing
   const amazonUrl = product.url || `https://www.amazon.com/dp/${product.id}`
-  
+
   // Check if image is a valid URL or emoji
   const isImageUrl = product.image && (product.image.startsWith('http') || product.image.startsWith('data:'))
   const displayRating = product.rating || product.stars
-  
+  const score = similarityScore || product.similarityScore
+
   return (
-    <div className="flex gap-3 p-3 rounded-xl bg-white/5 border border-purple-500/20 hover:border-purple-500/40 hover:bg-white/10 hover:shadow-lg hover:shadow-purple-500/20 hover:scale-[1.02] transition-all duration-300 group">
+    <div className="relative flex gap-3 p-3 rounded-xl bg-white/5 border border-purple-500/20 hover:border-purple-500/40 hover:bg-white/10 hover:shadow-lg hover:shadow-purple-500/20 hover:scale-[1.02] transition-all duration-300 group">
       {/* Product Image - Always show container */}
-      <a 
-        href={amazonUrl} 
-        target="_blank" 
+      <a
+        href={amazonUrl}
+        target="_blank"
         rel="noopener noreferrer"
         onClick={() => addRecentlyViewed({ id: product.id, name: product.name, price: product.price, image: product.image })}
         className="w-20 h-20 rounded-lg bg-white/10 flex-shrink-0 overflow-hidden hover:ring-2 hover:ring-purple-400 transition-all flex items-center justify-center"
       >
         {isImageUrl ? (
-          <img 
-            src={product.image} 
+          <img
+            src={product.image}
             alt={product.name}
             className="w-full h-full object-contain p-2"
           />
@@ -47,13 +55,13 @@ const ProductCardCompact = ({ product, onAddToCart }: ProductCardCompactProps) =
           <span className="text-3xl">{product.image || '📦'}</span>
         )}
       </a>
-      
+
       {/* Product Info */}
       <div className="flex-1 min-w-0 flex flex-col justify-between">
         <div>
-          <a 
-            href={amazonUrl} 
-            target="_blank" 
+          <a
+            href={amazonUrl}
+            target="_blank"
             rel="noopener noreferrer"
             className="block"
           >
@@ -72,7 +80,7 @@ const ProductCardCompact = ({ product, onAddToCart }: ProductCardCompactProps) =
               <span className="text-gray-400">({product.reviews.toLocaleString()})</span>
             )}
             {product.quantity !== undefined && (
-              <span 
+              <span
                 className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
                 style={{
                   background: product.quantity === 0 ? 'rgba(239, 68, 68, 0.2)' : product.quantity < 10 ? 'rgba(251, 191, 36, 0.2)' : 'rgba(34, 197, 94, 0.2)',
@@ -85,9 +93,19 @@ const ProductCardCompact = ({ product, onAddToCart }: ProductCardCompactProps) =
             )}
           </div>
         </div>
-        
+
         <div className="flex items-center justify-between mt-2">
-          <span className="text-purple-300 font-bold text-lg">${product.price.toFixed(2)}</span>
+          <div className="flex items-center gap-2">
+            {product.originalPrice && product.originalPrice > product.price && (
+              <>
+                <span className="text-white/40 text-xs line-through">${product.originalPrice.toFixed(2)}</span>
+                {product.discountPercent && product.discountPercent > 0 && (
+                  <span className="text-green-400 text-[10px] font-semibold">-{product.discountPercent}%</span>
+                )}
+              </>
+            )}
+            <span className="text-purple-300 font-bold text-lg">${product.price.toFixed(2)}</span>
+          </div>
           {onAddToCart && (
             <button
               onClick={onAddToCart}
@@ -98,6 +116,20 @@ const ProductCardCompact = ({ product, onAddToCart }: ProductCardCompactProps) =
           )}
         </div>
       </div>
+
+      {/* Similarity score bar (bottom) */}
+      {score && score > 0 && (
+        <div className="absolute bottom-0 left-0 right-0 h-1 rounded-b-xl overflow-hidden">
+          <div
+            className="h-full rounded-b-xl"
+            style={{
+              width: `${Math.min(score * 100, 100)}%`,
+              background: 'linear-gradient(90deg, #6a1b9a, #3b82f6)',
+              opacity: 0.6,
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }

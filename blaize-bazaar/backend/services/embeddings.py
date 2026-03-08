@@ -6,7 +6,8 @@ Provides async embedding generation for search queries and documents.
 """
 
 import logging
-from typing import List
+from functools import lru_cache
+from typing import List, Tuple
 
 import boto3
 import json
@@ -17,14 +18,18 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
+_EMBEDDING_CACHE: dict[str, List[float]] = {}
+_EMBEDDING_CACHE_MAX = 200
+
+
 class EmbeddingService:
     """
     Service for generating text embeddings using Amazon Titan v2.
-    
+
     Titan Text Embeddings v2 generates 1024-dimensional vectors optimized
     for semantic search and retrieval tasks.
     """
-    
+
     def __init__(self):
         """Initialize embeddings service with Bedrock client."""
         self.bedrock_runtime = boto3.client(
@@ -33,7 +38,7 @@ class EmbeddingService:
         )
         self.model_id = settings.BEDROCK_EMBEDDING_MODEL
         self.embedding_dimension = 1024
-        
+
         logger.debug(f"Initialized embeddings service: {self.model_id}")
     
     def generate_embedding(
@@ -57,17 +62,22 @@ class EmbeddingService:
         """
         if not text or not text.strip():
             raise ValueError("Text cannot be empty")
-        
+
         # Truncate if too long (Titan v2 has input limits)
         max_length = 8192  # characters
         text = text[:max_length].strip()
-        
+
+        # Check cache first
+        if text in _EMBEDDING_CACHE:
+            logger.debug("Embedding cache hit")
+            return _EMBEDDING_CACHE[text]
+
         try:
             # Prepare request body for Titan
             request_body = {
                 "inputText": text
             }
-            
+
             # Call Bedrock API
             response = self.bedrock_runtime.invoke_model(
                 modelId=self.model_id,
@@ -75,19 +85,25 @@ class EmbeddingService:
                 accept="application/json",
                 body=json.dumps(request_body)
             )
-            
+
             # Parse response
             response_body = json.loads(response['body'].read())
-            
+
             # Extract embedding vector (Titan format)
             embedding = response_body.get('embedding', [])
-            
+
             if not embedding or len(embedding) != self.embedding_dimension:
                 raise ValueError(
                     f"Invalid embedding dimension: expected {self.embedding_dimension}, "
                     f"got {len(embedding)}"
                 )
-            
+
+            # Store in cache (evict oldest if full)
+            if len(_EMBEDDING_CACHE) >= _EMBEDDING_CACHE_MAX:
+                oldest_key = next(iter(_EMBEDDING_CACHE))
+                del _EMBEDDING_CACHE[oldest_key]
+            _EMBEDDING_CACHE[text] = embedding
+
             return embedding
             
         except ClientError as e:

@@ -30,10 +30,8 @@ def product_recommendation_agent(query: str) -> str:
     
     # Build personalized query
     if preferences['categories']:
-        # User has search history - personalize
         enhanced_query = current_request
         
-        # Add category context if not already in query
         for cat in preferences['categories'][:2]:
             if cat.lower() not in current_request.lower():
                 enhanced_query += f" {cat}"
@@ -41,12 +39,8 @@ def product_recommendation_agent(query: str) -> str:
         if preferences['price_range']:
             if 'under' not in current_request.lower():
                 enhanced_query += f" under ${preferences['price_range']}"
-        
-        intro = f"Based on your interest in {', '.join(preferences['categories'][:2])}, here are personalized recommendations!"
     else:
-        # New user or no clear preferences - use query as-is
         enhanced_query = current_request
-        intro = "Here are some great options for you!"
     
     # Search with enhanced query and price filter
     result = semantic_product_search(
@@ -57,7 +51,7 @@ def product_recommendation_agent(query: str) -> str:
     result_dict = json.loads(result)
     products = result_dict.get('products', [])
     
-    return f"{intro}\n\n```json\n{json.dumps(products, indent=2)}\n```"
+    return f"```json\n{json.dumps(products, indent=2)}\n```"
 
 
 def _extract_user_preferences(text: str) -> dict:

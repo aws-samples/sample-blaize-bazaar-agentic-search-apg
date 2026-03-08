@@ -163,13 +163,14 @@ class SQLQueryLogger:
             cursor = connection.cursor()
             
             # Get text format (traditional DBA view)
-            explain_text_sql = f"EXPLAIN (ANALYZE, BUFFERS, VERBOSE, COSTS) {sql}"
+            # Use EXPLAIN without ANALYZE to avoid re-executing the query
+            explain_text_sql = f"EXPLAIN (BUFFERS, VERBOSE, COSTS) {sql}"
             cursor.execute(explain_text_sql, params)
             text_rows = cursor.fetchall()
             text_plan = "\n".join([row[0] for row in text_rows])
-            
+
             # Get JSON format (for programmatic parsing)
-            explain_json_sql = f"EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {sql}"
+            explain_json_sql = f"EXPLAIN (BUFFERS, COSTS, FORMAT JSON) {sql}"
             cursor.execute(explain_json_sql, params)
             json_result = cursor.fetchone()
             json_plan = None

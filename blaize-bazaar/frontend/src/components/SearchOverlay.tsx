@@ -1,9 +1,10 @@
 /**
- * Premium Search Overlay Component - Apple-inspired Design
- * Glassmorphism, smooth animations, and refined spacing
+ * Premium Search Overlay — Apple-inspired dark glassmorphism
+ * Full-screen takeover with elegant product cards
  */
-import { useEffect, useState } from 'react'
-import { Search, X, Sparkles, Zap, Database } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import { X, Sparkles, Zap, Database } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { apiClient } from '../services/api'
 
 interface SearchResult {
@@ -24,44 +25,49 @@ interface SearchOverlayProps {
   searchTerm: string
 }
 
-const SearchOverlay = ({ 
-  isVisible, 
-  onClose, 
+const SearchOverlay = ({
+  isVisible,
+  onClose,
   searchTerm
 }: SearchOverlayProps) => {
   const [results, setResults] = useState<SearchResult[]>([])
   const [allResults, setAllResults] = useState<SearchResult[]>([])
+  const [loading, setLoading] = useState(false)
   const [latency, setLatency] = useState('0ms')
   const [minPrice, setMinPrice] = useState<number>(0)
   const [maxPrice, setMaxPrice] = useState<number>(10000)
   const [minStars, setMinStars] = useState<number>(0)
   const [isSemanticSearch, setIsSemanticSearch] = useState(false)
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     if (isVisible && searchTerm) {
-      setResults([])
-      setAllResults([])
-      performSearch()
+      setLoading(true)
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        setResults([])
+        setAllResults([])
+        performSearch()
+      }, 300)
     }
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [isVisible, searchTerm])
 
   const performSearch = async () => {
     const startTime = performance.now()
-    
+
     try {
-      // Use fast category endpoint for known categories
       const categoryTerms = ['security cameras', 'vacuum cleaners', 'gaming consoles', 'shaving grooming', 'kids watches', 'kids play tractors']
       const isCategorySearch = categoryTerms.some(term => searchTerm.toLowerCase().includes(term))
-      
+
       let response
       if (isCategorySearch) {
-        // Fast category browse without embeddings
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
         const res = await fetch(`${apiUrl}/api/products/category/${encodeURIComponent(searchTerm)}?limit=10`)
         response = await res.json()
         setIsSemanticSearch(false)
       } else {
-        // Semantic search with embeddings
         response = await apiClient.search({
           query: searchTerm,
           limit: 10,
@@ -69,23 +75,18 @@ const SearchOverlay = ({
         })
         setIsSemanticSearch(true)
       }
-      
+
       const endTime = performance.now()
       setLatency(`${Math.round(endTime - startTime)}ms`)
-      
-      console.log('Search response:', response)
-      console.log('Response structure:', JSON.stringify(response, null, 2).substring(0, 500))
-      
+
       if (!response || !response.results || !Array.isArray(response.results)) {
-        console.error('Invalid response structure:', response)
         setResults([])
         setAllResults([])
+        setLoading(false)
         return
       }
-      
-      // Transform API response to SearchResult format
+
       const transformedResults: SearchResult[] = response.results.map((r: any) => {
-        // Handle both formats: {product: {...}} and direct product object
         const product = r.product || r
         return {
           id: product.productId || product.id || '',
@@ -99,310 +100,334 @@ const SearchOverlay = ({
           productUrl: product.producturl || product.productUrl || ''
         }
       })
-      
-      console.log('Transformed results:', transformedResults)
-      console.log('Number of results:', transformedResults.length)
+
       setAllResults(transformedResults)
       setResults(transformedResults)
-    } catch (error) {
-      console.error('Search failed:', error)
+    } catch {
       setResults([])
+    } finally {
+      setLoading(false)
     }
   }
 
   useEffect(() => {
-    const filtered = allResults.filter(r => 
-      r.price >= minPrice && 
-      r.price <= maxPrice && 
+    const filtered = allResults.filter(r =>
+      r.price >= minPrice &&
+      r.price <= maxPrice &&
       r.stars >= minStars
     )
     setResults(filtered)
   }, [minPrice, maxPrice, minStars, allResults])
 
-  if (!isVisible) return null
+  // Close on Escape
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    if (isVisible) window.addEventListener('keydown', handleEsc)
+    return () => window.removeEventListener('keydown', handleEsc)
+  }, [isVisible, onClose])
 
   const displayResults = results
+  const hasActiveFilters = minPrice > 0 || maxPrice < 10000 || minStars > 0
 
   return (
-    <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 
-                   animate-in fade-in duration-300"
-        onClick={onClose}
-      />
+    <AnimatePresence>
+      {isVisible && (
+        <>
+          {/* Backdrop — deep blur */}
+          <motion.div
+            className="fixed inset-0 z-40"
+            style={{ background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            onClick={onClose}
+          />
 
-      {/* Overlay Content */}
-      <div 
-        className="fixed top-20 left-1/2 -translate-x-1/2 w-full max-w-6xl z-50
-                   animate-in slide-in-from-top-4 fade-in duration-500"
-        style={{ maxHeight: 'calc(100vh - 120px)' }}
-      >
-        <div className="mx-4 rounded-[24px] overflow-hidden
-                       bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl
-                       shadow-2xl border border-white/20 dark:border-gray-700/50">
-          
-          {/* Header */}
-          <div className="px-8 py-6 border-b border-gray-100/50 dark:border-gray-700/50
-                         bg-gradient-to-r from-purple-50/50 via-white to-blue-50/50
-                         dark:from-purple-900/20 dark:via-gray-800 dark:to-blue-900/20">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-gradient-to-br from-purple-500 to-blue-500">
-                  <Search className="h-4 w-4 text-white" strokeWidth={2} />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Searching for
-                  </div>
-                  <div className="text-xl font-semibold bg-gradient-to-r from-purple-600 to-blue-600 
-                                dark:from-purple-400 dark:to-blue-400
-                                bg-clip-text text-transparent">
-                    "{searchTerm}"
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={onClose}
-                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700
-                         transition-all duration-300 group"
-              >
-                <X className="h-5 w-5 text-gray-500 dark:text-gray-400 
-                             group-hover:text-gray-900 dark:group-hover:text-white" strokeWidth={2} />
-              </button>
-            </div>
-
-            {/* Stats Bar */}
-            <div className="flex items-center gap-6 text-sm">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full 
-                            bg-white/80 dark:bg-gray-800/80 shadow-sm
-                            border border-gray-100 dark:border-gray-700">
-                <Zap className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" strokeWidth={2} />
-                <span className="font-semibold text-gray-900 dark:text-white">{latency}</span>
-                <span className="text-gray-500 dark:text-gray-400">response</span>
-              </div>
-              
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full 
-                            bg-white/80 dark:bg-gray-800/80 shadow-sm
-                            border border-gray-100 dark:border-gray-700">
-                <Sparkles className="h-3.5 w-3.5 text-purple-500 dark:text-purple-400" strokeWidth={2} />
-                <span className="font-semibold text-gray-900 dark:text-white">{displayResults.length}</span>
-                <span className="text-gray-500 dark:text-gray-400">results</span>
-              </div>
-
-              {isSemanticSearch && (
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full 
-                              bg-white/80 dark:bg-gray-800/80 shadow-sm
-                              border border-gray-100 dark:border-gray-700">
-                  <Database className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400" strokeWidth={2} />
-                  <span className="text-gray-500 dark:text-gray-400 font-medium">pgvector similarity</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Filters */}
-          <div className="px-8 py-4 border-b border-gray-100/50 dark:border-gray-700/50
-                         bg-white/50 dark:bg-gray-800/50">
-            <div className="flex items-center gap-6">
-              {/* Price Range */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Price:</span>
-                <input
-                  type="number"
-                  value={minPrice}
-                  onChange={(e) => setMinPrice(Number(e.target.value))}
-                  placeholder="Min"
-                  className="w-20 px-2 py-1 text-sm rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
-                />
-                <span className="text-gray-400">-</span>
-                <input
-                  type="number"
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(Number(e.target.value))}
-                  placeholder="Max"
-                  className="w-20 px-2 py-1 text-sm rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white"
-                />
-              </div>
-
-              {/* Star Rating */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Min Rating:</span>
-                <div className="flex gap-1">
-                  {[0, 3, 4, 4.5, 5].map(rating => (
-                    <button
-                      key={rating}
-                      onClick={() => setMinStars(rating)}
-                      className={`px-3 py-1 text-xs rounded-full transition-all ${
-                        minStars === rating
-                          ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {rating === 0 ? 'All' : `${rating}★`}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Reset */}
-              <button
-                onClick={() => {
-                  setMinPrice(0)
-                  setMaxPrice(10000)
-                  setMinStars(0)
+          {/* Overlay Panel */}
+          <motion.div
+            className="fixed inset-x-0 top-[72px] bottom-0 z-50 flex flex-col"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          >
+            <div className="max-w-[1200px] w-full mx-auto flex flex-col h-full px-4 md:px-6 pt-6 pb-4">
+              {/* Glass container */}
+              <div className="flex flex-col flex-1 min-h-0 rounded-2xl overflow-hidden"
+                style={{
+                  background: 'rgba(13, 13, 20, 0.92)',
+                  backdropFilter: 'blur(40px)',
+                  WebkitBackdropFilter: 'blur(40px)',
+                  border: '1px solid rgba(168, 85, 247, 0.15)',
+                  boxShadow: '0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
                 }}
-                className="ml-auto text-sm text-purple-600 dark:text-purple-400 hover:underline"
               >
-                Reset Filters
-              </button>
-            </div>
-          </div>
+                {/* Header */}
+                <div className="flex-shrink-0 px-6 md:px-8 py-5 border-b border-white/[0.06]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+                        style={{ background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(59, 130, 246, 0.2))', border: '1px solid rgba(168, 85, 247, 0.2)' }}>
+                        <Sparkles className="h-4.5 w-4.5 text-purple-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-white/40 text-xs font-medium uppercase tracking-widest mb-0.5">Results for</div>
+                        <h2 className="text-xl md:text-2xl font-light text-white truncate" style={{ letterSpacing: '-0.5px' }}>
+                          {searchTerm}
+                        </h2>
+                      </div>
+                    </div>
 
-          {/* Results Grid */}
-          <div className="p-6 overflow-y-auto custom-scrollbar" 
-               style={{ maxHeight: 'calc(100vh - 280px)' }}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {displayResults.map((result, index) => (
-                <a
-                  key={result.id}
-                  href={result.productUrl || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group relative p-5 rounded-2xl cursor-pointer block
-                           bg-white dark:bg-gray-800 
-                           hover:bg-gradient-to-br hover:from-purple-50/50 hover:to-blue-50/50
-                           dark:hover:from-purple-900/20 dark:hover:to-blue-900/20
-                           border border-gray-100 dark:border-gray-700 
-                           hover:border-purple-200 dark:hover:border-purple-700
-                           shadow-sm hover:shadow-xl
-                           transition-all duration-500 ease-out
-                           transform hover:scale-[1.02]"
-                  style={{
-                    animationDelay: `${index * 50}ms`,
-                    animation: 'slideIn 0.5s ease-out forwards'
-                  }}
-                >
-                  {/* Similarity Score Badge - Only for semantic search */}
-                  {isSemanticSearch && (
-                    <div className="absolute top-4 right-4 flex items-center gap-1.5
-                                  px-3 py-1.5 rounded-full
-                                  bg-gradient-to-r from-purple-500 to-blue-500
-                                  shadow-lg group-hover:shadow-xl
-                                  transition-all duration-300">
-                      <Sparkles className="h-3 w-3 text-white" strokeWidth={2} />
-                      <span className="text-xs font-bold text-white">
-                        {Math.round(result.similarity * 100)}%
-                      </span>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      {/* Stats pills */}
+                      <div className="hidden md:flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
+                          style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                          <Zap className="h-3 w-3 text-amber-400" />
+                          <span className="text-white/80 font-medium">{latency}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
+                          style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                          <span className="text-white/80 font-medium">{displayResults.length} results</span>
+                        </div>
+                        {isSemanticSearch && (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
+                            style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                            <Database className="h-3 w-3 text-blue-400" />
+                            <span className="text-blue-300 font-medium">pgvector</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Close */}
+                      <button
+                        onClick={onClose}
+                        className="p-2 rounded-xl hover:bg-white/[0.06] transition-colors duration-200"
+                      >
+                        <X className="h-5 w-5 text-white/40 hover:text-white transition-colors" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Filters — minimal pill row */}
+                  <div className="flex items-center gap-3 mt-4 flex-wrap">
+                    <span className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Filter</span>
+
+                    {/* Price quick filters */}
+                    {[
+                      { label: 'All prices', min: 0, max: 10000 },
+                      { label: 'Under $50', min: 0, max: 50 },
+                      { label: '$50–200', min: 50, max: 200 },
+                      { label: '$200+', min: 200, max: 10000 },
+                    ].map((f) => {
+                      const active = minPrice === f.min && maxPrice === f.max
+                      return (
+                        <button
+                          key={f.label}
+                          onClick={() => { setMinPrice(f.min); setMaxPrice(f.max) }}
+                          className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
+                          style={{
+                            background: active ? 'rgba(168, 85, 247, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                            border: `1px solid ${active ? 'rgba(168, 85, 247, 0.4)' : 'rgba(255, 255, 255, 0.06)'}`,
+                            color: active ? '#c084fc' : 'rgba(255, 255, 255, 0.5)',
+                          }}
+                        >
+                          {f.label}
+                        </button>
+                      )
+                    })}
+
+                    <div className="w-px h-4 bg-white/10 mx-1" />
+
+                    {/* Rating quick filters */}
+                    {[
+                      { label: 'Any rating', stars: 0 },
+                      { label: '4+ stars', stars: 4 },
+                      { label: '4.5+', stars: 4.5 },
+                    ].map((f) => {
+                      const active = minStars === f.stars
+                      return (
+                        <button
+                          key={f.label}
+                          onClick={() => setMinStars(f.stars)}
+                          className="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200"
+                          style={{
+                            background: active ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                            border: `1px solid ${active ? 'rgba(245, 158, 11, 0.3)' : 'rgba(255, 255, 255, 0.06)'}`,
+                            color: active ? '#fcd34d' : 'rgba(255, 255, 255, 0.5)',
+                          }}
+                        >
+                          {f.stars > 0 && <span className="mr-1">★</span>}
+                          {f.label}
+                        </button>
+                      )
+                    })}
+
+                    {hasActiveFilters && (
+                      <button
+                        onClick={() => { setMinPrice(0); setMaxPrice(10000); setMinStars(0) }}
+                        className="px-3 py-1.5 rounded-full text-xs font-medium text-purple-400 hover:text-purple-300 transition-colors"
+                      >
+                        Clear all
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Results area */}
+                <div className="flex-1 overflow-y-auto p-6 md:p-8 search-scroll">
+                  {/* Loading skeleton */}
+                  {loading && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {Array.from({ length: 6 }).map((_, i) => (
+                        <div key={i} className="rounded-2xl p-5 animate-pulse"
+                          style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                          <div className="flex gap-4">
+                            <div className="w-20 h-20 rounded-xl skeleton-shimmer" />
+                            <div className="flex-1 space-y-3 py-1">
+                              <div className="h-4 skeleton-shimmer rounded-lg w-3/4" />
+                              <div className="h-3 skeleton-shimmer rounded-lg w-1/2" />
+                              <div className="h-5 skeleton-shimmer rounded-lg w-1/4" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
 
-                  {/* Product Info */}
-                  <div className="flex items-start gap-4">
-                    {/* Product Image */}
-                    <div className="flex-shrink-0 w-16 h-16 rounded-2xl overflow-hidden
-                                  bg-gradient-to-br from-gray-50 to-gray-100
-                                  dark:from-gray-700 dark:to-gray-600
-                                  flex items-center justify-center
-                                  group-hover:scale-110 transition-transform duration-300">
-                      {result.icon ? (
-                        <img 
-                          src={result.icon} 
-                          alt={result.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none'
-                            const parent = e.currentTarget.parentElement
-                            if (parent) parent.innerHTML = '📦'
+                  {/* Empty state */}
+                  {!loading && displayResults.length === 0 && allResults.length > 0 && (
+                    <div className="flex flex-col items-center justify-center py-20">
+                      <div className="text-4xl mb-4">🔍</div>
+                      <p className="text-white/60 text-lg font-light">No results match your filters</p>
+                      <button
+                        onClick={() => { setMinPrice(0); setMaxPrice(10000); setMinStars(0) }}
+                        className="mt-4 text-sm text-purple-400 hover:text-purple-300 transition-colors"
+                      >
+                        Clear filters
+                      </button>
+                    </div>
+                  )}
+
+                  {!loading && displayResults.length === 0 && allResults.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-20">
+                      <div className="text-4xl mb-4">✨</div>
+                      <p className="text-white/60 text-lg font-light">Searching across 21,000+ products...</p>
+                    </div>
+                  )}
+
+                  {/* Product grid */}
+                  {!loading && displayResults.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {displayResults.map((result, index) => (
+                        <motion.a
+                          key={result.id}
+                          href={result.productUrl || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group relative rounded-2xl overflow-hidden block"
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.02)',
+                            border: '1px solid rgba(255, 255, 255, 0.06)',
                           }}
-                        />
-                      ) : (
-                        <span className="text-3xl">📦</span>
-                      )}
-                    </div>
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05, type: 'spring', stiffness: 300, damping: 25 }}
+                          whileHover={{
+                            scale: 1.02,
+                            borderColor: 'rgba(168, 85, 247, 0.3)',
+                            transition: { type: 'spring', stiffness: 400, damping: 15 }
+                          }}
+                        >
+                          {/* Hover glow */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-blue-500/0 group-hover:from-purple-500/[0.06] group-hover:to-blue-500/[0.04] transition-all duration-500" />
 
-                    {/* Details */}
-                    <div className="flex-1 min-w-0 pt-1">
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1.5
-                                   group-hover:text-purple-600 dark:group-hover:text-purple-400 
-                                   transition-colors duration-300
-                                   line-clamp-2">
-                        {result.name}
-                      </h3>
-                      
-                      <div className="inline-block px-2.5 py-1 rounded-full
-                                    bg-gray-100 dark:bg-gray-700 
-                                    group-hover:bg-purple-100 dark:group-hover:bg-purple-900/40
-                                    transition-colors duration-300">
-                        <span className="text-xs font-medium text-gray-600 dark:text-gray-300
-                                       group-hover:text-purple-600 dark:group-hover:text-purple-400">
-                          {result.category}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                          <div className="relative p-5 flex gap-5">
+                            {/* Product image — larger */}
+                            <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden flex items-center justify-center"
+                              style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
+                              {result.icon ? (
+                                <img
+                                  src={result.icon}
+                                  alt={result.name}
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none'
+                                    const parent = e.currentTarget.parentElement
+                                    if (parent) {
+                                      const span = document.createElement('span')
+                                      span.className = 'text-3xl'
+                                      span.textContent = '📦'
+                                      parent.appendChild(span)
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-3xl">📦</span>
+                              )}
+                            </div>
 
-                  {/* Price and Rating Footer */}
-                  <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700
-                                flex items-center justify-between">
-                    <div className="text-2xl font-bold 
-                                  bg-gradient-to-r from-purple-600 to-blue-600 
-                                  dark:from-purple-400 dark:to-blue-400
-                                  bg-clip-text text-transparent">
-                      ${result.price}
-                    </div>
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-[15px] font-medium text-white/90 group-hover:text-white mb-2 line-clamp-2 leading-snug transition-colors duration-300">
+                                {result.name}
+                              </h3>
 
-                    <div className="flex items-center gap-3 text-sm">
-                      <div className="flex items-center gap-1">
-                        <span className="text-amber-400">★</span>
-                        <span className="font-semibold text-gray-900 dark:text-white">
-                          {result.stars}
-                        </span>
-                      </div>
-                      <span className="text-gray-400 dark:text-gray-600">·</span>
-                      <span className="text-gray-500 dark:text-gray-400 font-medium">
-                        {result.reviews.toLocaleString()} reviews
-                      </span>
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-medium text-white/40"
+                                  style={{ background: 'rgba(255, 255, 255, 0.04)' }}>
+                                  {result.category}
+                                </span>
+                                {isSemanticSearch && result.similarity > 0 && (
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-medium"
+                                    style={{
+                                      background: 'rgba(168, 85, 247, 0.12)',
+                                      color: '#c084fc',
+                                    }}>
+                                    {Math.round(result.similarity * 100)}% match
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                <span className="text-lg font-semibold text-white" style={{ letterSpacing: '-0.3px' }}>
+                                  ${result.price.toFixed(2)}
+                                </span>
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="text-amber-400/80">★ {result.stars}</span>
+                                  <span className="text-white/20">·</span>
+                                  <span className="text-white/30">{result.reviews.toLocaleString()}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Similarity bar */}
+                          {isSemanticSearch && result.similarity > 0 && (
+                            <div className="h-[2px] w-full" style={{ background: 'rgba(255, 255, 255, 0.02)' }}>
+                              <motion.div
+                                className="h-full"
+                                style={{ background: 'linear-gradient(90deg, #7c2bad, #3b82f6)' }}
+                                initial={{ width: '0%' }}
+                                animate={{ width: `${Math.round(result.similarity * 100)}%` }}
+                                transition={{ delay: index * 0.05 + 0.3, duration: 0.8, ease: 'easeOut' }}
+                              />
+                            </div>
+                          )}
+                        </motion.a>
+                      ))}
                     </div>
-                  </div>
-                </a>
-              ))}
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <style>{`
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: linear-gradient(180deg, #a855f7 0%, #3b82f6 100%);
-          border-radius: 4px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(180deg, #9333ea 0%, #2563eb 100%);
-        }
-      `}</style>
-    </>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   )
 }
 

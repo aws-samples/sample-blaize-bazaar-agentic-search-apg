@@ -256,11 +256,12 @@ class BusinessLogic:
         """
         from services.embeddings import EmbeddingService
         import time
-        
-        # Generate query embedding with timing
+
+        # Generate query embedding with timing (reuse cached singleton)
         start_time = time.time()
-        embedding_service = EmbeddingService()
-        query_embedding = embedding_service.embed_query(query)
+        if not hasattr(self, '_embedding_service'):
+            self._embedding_service = EmbeddingService()
+        query_embedding = self._embedding_service.embed_query(query)
         embedding_time_ms = (time.time() - start_time) * 1000
         
         # Build SQL with filters - embedding first, then filters, then limit

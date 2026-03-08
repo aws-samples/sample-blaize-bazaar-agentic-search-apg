@@ -159,6 +159,21 @@
     background: rgba(186, 104, 200, 0.5);
   }
 
+  /* Search overlay scrollbar — ultra-thin, subtle */
+  .search-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+  .search-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .search-scroll::-webkit-scrollbar-thumb {
+    background: rgba(168, 85, 247, 0.2);
+    border-radius: 2px;
+  }
+  .search-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(168, 85, 247, 0.4);
+  }
+
   /* Custom scrollbar - Light mode */
   .light .custom-scrollbar::-webkit-scrollbar {
     width: 8px;
@@ -468,6 +483,23 @@
     animation: slideIn 0.3s ease-out;
   }
 
+  /* Pipeline step animation for query understanding */
+  @keyframes pipelineStep {
+    0%, 100% { opacity: 0.4; transform: scale(0.95); }
+    50% { opacity: 1; transform: scale(1.05); }
+  }
+  .pipeline-step {
+    animation: pipelineStep 1.5s ease-in-out infinite;
+  }
+
+  /* Handoff flow dash animation */
+  @keyframes dashFlow {
+    to { stroke-dashoffset: -20; }
+  }
+  .animate-dash-flow {
+    animation: dashFlow 1s linear infinite;
+  }
+
   /* Typing indicator animation */
   @keyframes typing {
     0%, 60%, 100% {
@@ -645,4 +677,64 @@
     pointer-events: none;
     animation: floatParticle 15s ease-in-out infinite;
   }
+
+  /* #15B: Purple shimmer for skeleton loaders */
+  @keyframes purpleShimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .skeleton-shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(139, 92, 246, 0.05) 25%,
+      rgba(139, 92, 246, 0.15) 50%,
+      rgba(139, 92, 246, 0.05) 75%
+    );
+    background-size: 200% 100%;
+    animation: purpleShimmer 1.5s ease-in-out infinite;
+  }
+
+  /* #15F: Layered glassmorphism depth levels */
+  .glass-depth-1 {
+    background: rgba(13, 13, 26, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .glass-depth-2 {
+    background: rgba(13, 13, 26, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .glass-depth-3 {
+    background: rgba(13, 13, 26, 0.95);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+  }
+
+  /* Premium animated gradient orbs — Apple-style */
+  @keyframes orbFloat1 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    25% { transform: translate(80px, -60px) scale(1.1); }
+    50% { transform: translate(-40px, -120px) scale(0.95); }
+    75% { transform: translate(60px, -30px) scale(1.05); }
+  }
+  @keyframes orbFloat2 {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(-100px, 50px) scale(1.15); }
+    66% { transform: translate(70px, 80px) scale(0.9); }
+  }
+  @keyframes orbFloat3 {
+    0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.15; }
+    50% { transform: translate(50px, -80px) scale(1.2); opacity: 0.25; }
+  }
+  .orb-float-1 { animation: orbFloat1 20s ease-in-out infinite; }
+  .orb-float-2 { animation: orbFloat2 25s ease-in-out infinite; }
+  .orb-float-3 { animation: orbFloat3 18s ease-in-out infinite; }
+
+  /* #15E: Category-adaptive accent colors */
+  .category-gaming { --category-accent: #22c55e; }
+  .category-audio { --category-accent: #3b82f6; }
+  .category-cameras { --category-accent: #f59e0b; }
+  .category-laptops { --category-accent: #8b5cf6; }
+  .category-default { --category-accent: #a855f7; }
 }

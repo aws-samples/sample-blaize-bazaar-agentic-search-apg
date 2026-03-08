@@ -58,3 +58,7 @@ lab1/**/*.ipynb
 
 # Large data files (hosted on S3)
 data/amazon-products-sample-with-embeddings.csv
+
+# Test environment
+tmp/
+.env

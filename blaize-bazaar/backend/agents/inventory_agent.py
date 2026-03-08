@@ -27,6 +27,6 @@ def inventory_restock_agent(query: str) -> str:
         result = _run_async(logic.get_low_stock_products(3))
         products = result.get('products', [])
         
-        return f"Top 3 items needing restock:\n\n```json\n{json.dumps(products, indent=2)}\n```"
+        return f"```json\n{json.dumps(products, indent=2)}\n```"
     except Exception as e:
         return f"Error in inventory agent: {str(e)}"

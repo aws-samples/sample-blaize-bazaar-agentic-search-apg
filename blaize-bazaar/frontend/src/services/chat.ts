@@ -34,6 +34,11 @@ export interface ChatProduct {
   rating?: number
   reviews?: number
   url?: string
+  similarityScore?: number
+  quantity?: number
+  inStock?: boolean
+  originalPrice?: number
+  discountPercent?: number
 }
 
 export interface AgentExecution {
@@ -85,24 +90,26 @@ export async function sendChatMessageStreaming(
     let lastContent = ''
 
     if (reader) {
+      let buffer = ''
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || '' // Keep incomplete line in buffer
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6))
               onUpdate(data)
-              
+
               // Track content updates
               if (data.type === 'content') {
                 lastContent = data.content
               }
-              
+
               if (data.type === 'complete') {
                 finalResponse = {
                   response: data.response.response,
@@ -111,8 +118,8 @@ export async function sendChatMessageStreaming(
                   agent_execution: data.response.agent_execution
                 }
               }
-            } catch (e) {
-              console.error('Failed to parse SSE data:', e)
+            } catch {
+              // Partial data, will be completed in next chunk
             }
           }
         }
@@ -187,26 +194,48 @@ export async function sendChatMessage(query: string, conversationHistory: ChatMe
 function generateSmartSuggestions(query: string, products: ChatProduct[]): string[] {
   const lowerQuery = query.toLowerCase()
   
-  // If we have products, offer relevant follow-ups
+  // Use actual product data to generate relevant suggestions
   if (products.length > 0) {
-    return ['Show similar items', 'Different price range', 'Other brands']
+    const avgPrice = products.reduce((sum, p) => sum + p.price, 0) / products.length
+    const categories = [...new Set(products.map(p => p.category).filter(Boolean))]
+    const suggestions: string[] = []
+
+    // Price-based follow-up
+    if (avgPrice > 100) {
+      suggestions.push(`Budget options under $${Math.round(avgPrice / 2)}`)
+    } else {
+      suggestions.push(`Premium options up to $${Math.round(avgPrice * 3)}`)
+    }
+
+    // Category-based follow-up
+    if (categories.length > 0) {
+      suggestions.push(`More in ${categories[0]}`)
+    }
+
+    // Action-based follow-up
+    if (products.length >= 2) {
+      suggestions.push('Compare the top picks')
+    } else {
+      suggestions.push("What's trending right now?")
+    }
+
+    return suggestions.slice(0, 3)
   }
   
-  // Default suggestions for different query types
+  // Query-type based fallbacks (no products returned)
   if (lowerQuery.includes('headphone') || lowerQuery.includes('audio') || lowerQuery.includes('earbud')) {
-    return ['Show wireless options', 'What about noise cancelling?', 'Under $100']
+    return ['Wireless under $80', 'Best for working out', 'Noise-cancelling options']
   }
   
   if (lowerQuery.includes('laptop') || lowerQuery.includes('computer')) {
-    return ['Show gaming laptops', 'Best for work', 'Under $1000']
+    return ['Best battery life', 'Lightweight under 3 lbs', 'Gaming laptops']
   }
   
-  if (lowerQuery.includes('phone')) {
-    return ['Show latest models', 'Best camera phones', 'Budget smartphones']
+  if (lowerQuery.includes('camera') || lowerQuery.includes('photo')) {
+    return ['Best for low light', 'Compact travel cameras', 'Camera accessories']
   }
   
-  // Default fallback
-  return ['🎧 Wireless earbuds', '💻 Laptops', '📱 Smartphones', '🎮 Gaming gear']
+  return ["What's trending?", 'Best rated under $50', 'Show me something surprising']
 }
 
 /**

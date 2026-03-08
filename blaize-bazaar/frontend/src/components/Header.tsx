@@ -4,23 +4,21 @@ import ImageSearchModal from './ImageSearchModal'
 import { Camera, ShoppingCart } from 'lucide-react'
 
 interface HeaderProps {
-  activeSection?: 'shop' | 'collections' | 'tech'
-  onNavigate?: (section: 'shop' | 'collections' | 'tech') => void
+  activeSection?: 'shop' | 'collections'
+  onNavigate?: (section: 'shop' | 'collections') => void
   onSearch?: (query: string) => void
   cartItemCount?: number
   onCartClick?: () => void
 }
 
-const Header = ({ activeSection = 'shop', onNavigate, onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
+const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestions, setSuggestions] = useState<Array<{text: string, category: string}>>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const [showCollectionsMenu, setShowCollectionsMenu] = useState(false)
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const [showImageSearch, setShowImageSearch] = useState(false)
   const { theme } = useTheme()
   const searchRef = useRef<HTMLDivElement>(null)
-  const collectionsRef = useRef<HTMLDivElement>(null)
 
   const placeholders = [
     'laptop under $800 for gaming',
@@ -30,18 +28,6 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch, cartItemCount = 
     'ergonomic keyboard for programming'
   ]
 
-  const categories = [
-    { icon: '🔌', name: 'Cables & Chargers', query: 'cable charger', img: 'https://m.media-amazon.com/images/I/71yHIdTRluL._AC_UL320_.jpg' },
-    { icon: '🏠', name: 'Smart Home', query: 'smart home security camera doorbell', img: 'https://m.media-amazon.com/images/I/61tKyzaZfzL._AC_UL320_.jpg' },
-    { icon: '📷', name: 'Cameras', query: 'camera', img: 'https://m.media-amazon.com/images/I/61+L7P7W0+S._AC_UL320_.jpg' },
-    { icon: '💻', name: 'Laptops', query: 'laptop', img: 'https://m.media-amazon.com/images/I/61KUIjmfe7L._AC_UL320_.jpg' },
-    { icon: '🎧', name: 'Headphones', query: 'headphones earbuds', img: 'https://m.media-amazon.com/images/I/71HmvDc4bZL._AC_UL320_.jpg' },
-    { icon: '🎮', name: 'Gaming', query: 'gaming', img: 'https://m.media-amazon.com/images/I/71vyo6WLiCL._AC_UL320_.jpg' },
-    { icon: '🏥', name: 'Health & Household', query: 'health household', img: 'https://m.media-amazon.com/images/I/71fwzimU8-L._AC_UL320_.jpg' },
-    { icon: '🎓', name: 'Learning & Education', query: 'learning education toys', img: 'https://m.media-amazon.com/images/I/71PPebaJrYL._AC_UL320_.jpg' },
-    { icon: '⚽', name: 'Sports & Outdoors', query: 'sports outdoors', img: 'https://m.media-amazon.com/images/I/81pWZ1kyDoL._AC_UL320_.jpg' },
-  ]
-
   useEffect(() => {
     const interval = setInterval(() => {
       setPlaceholderIndex((prev) => (prev + 1) % placeholders.length)
@@ -49,21 +35,6 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch, cartItemCount = 
     return () => clearInterval(interval)
   }, [])
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (collectionsRef.current && !collectionsRef.current.contains(e.target as Node)) {
-        setShowCollectionsMenu(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const handleNavClick = (section: 'shop' | 'collections' | 'tech') => {
-    if (onNavigate) {
-      onNavigate(section)
-    }
-  }
 
   const fetchSuggestions = async (query: string) => {
     if (query.length < 2) {
@@ -120,79 +91,13 @@ const Header = ({ activeSection = 'shop', onNavigate, onSearch, cartItemCount = 
             {/* Logo - Fixed width */}
             <div 
               className="logo gradient-text-chrome text-xl sm:text-2xl font-light tracking-tight cursor-pointer flex-shrink-0 whitespace-nowrap"
-              onClick={() => handleNavClick('shop')}
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               Blaize Bazaar
             </div>
 
-            {/* Center Navigation - Flex grow */}
-            <div className="hidden lg:flex items-center gap-6 xl:gap-10 flex-shrink-0">
-              <a
-                onClick={() => handleNavClick('shop')}
-                className={`nav-link text-base font-normal transition-colors duration-300 cursor-pointer relative ${
-                  activeSection === 'shop' ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                Shop
-                {activeSection === 'shop' && (
-                  <span className="absolute -bottom-[26px] left-0 right-0 h-[1px] bg-accent-light opacity-60" />
-                )}
-              </a>
-              <div 
-                ref={collectionsRef} 
-                className="relative"
-                onMouseEnter={() => setShowCollectionsMenu(true)}
-                onMouseLeave={() => setShowCollectionsMenu(false)}
-              >
-                <a
-                  onClick={() => handleNavClick('collections')}
-                  className={`nav-link text-base font-normal transition-colors duration-300 cursor-pointer relative ${
-                    activeSection === 'collections' ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
-                  }`}
-                >
-                  Collections
-                  {activeSection === 'collections' && (
-                    <span className="absolute -bottom-[26px] left-0 right-0 h-[1px] bg-accent-light opacity-60" />
-                  )}
-                </a>
-                {showCollectionsMenu && (
-                  <div className="absolute top-full pt-6 left-0 w-72">
-                    <div className="glass-strong rounded-2xl shadow-2xl border border-purple-500/20 overflow-hidden animate-slideUp">
-                      {categories.map((cat, i) => (
-                        <div
-                          key={i}
-                          onClick={() => {
-                            setShowCollectionsMenu(false)
-                            if (onSearch) onSearch(cat.query)
-                          }}
-                          className="px-3 py-2.5 hover:bg-purple-500/10 cursor-pointer border-b border-purple-500/10 last:border-0 transition-all duration-200 flex items-center gap-3"
-                        >
-                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 flex-shrink-0">
-                            <img 
-                              src={cat.img} 
-                              alt={cat.name}
-                              className="w-full h-full object-contain p-1"
-                            />
-                          </div>
-                          <span className="text-sm text-text-primary font-medium">{cat.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <a
-                onClick={() => handleNavClick('tech')}
-                className={`nav-link text-base font-normal transition-colors duration-300 cursor-pointer relative ${
-                  activeSection === 'tech' ? 'text-text-primary' : 'text-text-secondary hover:text-text-primary'
-                }`}
-              >
-                Architecture
-                {activeSection === 'tech' && (
-                  <span className="absolute -bottom-[26px] left-0 right-0 h-[1px] bg-accent-light opacity-60" />
-                )}
-              </a>
-            </div>
+            {/* Spacer for center alignment */}
+            <div className="hidden lg:block flex-shrink-0" />
 
             {/* Right Side - Search, Cart & GitHub */}
             <div className="flex items-center gap-2 flex-shrink-0">

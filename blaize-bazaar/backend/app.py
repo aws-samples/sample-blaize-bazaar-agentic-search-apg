@@ -376,10 +376,8 @@ async def semantic_search(
             import psycopg
             conn_string = f"host={settings.DB_HOST} port={settings.DB_PORT} dbname={settings.DB_NAME} user={settings.DB_USER} password={settings.DB_PASSWORD}"
             
-            # Force index usage with multiple settings
-            await db.execute_query("SET LOCAL enable_seqscan = off")
-            await db.execute_query("SET LOCAL random_page_cost = 1")
-            await db.execute_query("SET LOCAL cpu_tuple_cost = 0.01")
+            # Force index usage with multiple settings (batched for performance)
+            await db.execute_query("SET LOCAL enable_seqscan = off; SET LOCAL random_page_cost = 1; SET LOCAL cpu_tuple_cost = 0.01")
             
             # Execute query with index forced
             results = await db.fetch_all(
@@ -392,9 +390,7 @@ async def semantic_search(
             # Log the query
             query_logger_instance = get_query_logger()
             with psycopg.connect(conn_string) as conn:
-                conn.execute("SET LOCAL enable_seqscan = off")
-                conn.execute("SET LOCAL random_page_cost = 1")
-                conn.execute("SET LOCAL cpu_tuple_cost = 0.01")
+                conn.execute("SET LOCAL enable_seqscan = off; SET LOCAL random_page_cost = 1; SET LOCAL cpu_tuple_cost = 0.01")
                 
                 with query_logger_instance.log_query(
                     query_type="semantic_search",
@@ -874,87 +870,30 @@ async def chat(request: ChatRequest):
 @app.post("/api/chat/stream")
 async def chat_stream(request: ChatRequest):
     """
-    Streaming chat endpoint - sends agent thinking process in real-time
+    Streaming chat endpoint with real-time agent events via SSE.
+
+    Uses chat_service.chat_stream() which runs the orchestrator in a background
+    thread and yields events (tool calls, products, text) the moment they happen
+    via an asyncio.Queue bridge, instead of waiting for the full chain to finish.
     """
     from fastapi.responses import StreamingResponse
-    import asyncio
-    
+
     if not chat_service:
         raise HTTPException(status_code=503, detail="Chat service not initialized")
-    
+
     async def event_generator():
         try:
-            # Send initial event
-            data = json.dumps({'type': 'start', 'content': 'Initializing agent...'})
-            yield f"data: {data}\n\n"
-            await asyncio.sleep(0.1)
-            
-            # Send orchestrator step
-            data = json.dumps({'type': 'agent_step', 'agent': 'Orchestrator', 'action': 'Analyzing query and routing to specialists', 'status': 'in_progress'})
-            yield f"data: {data}\n\n"
-            await asyncio.sleep(0.3)
-            
-            # Determine which agent to use
-            query_lower = request.message.lower()
-            if 'inventory' in query_lower or 'stock' in query_lower or 'restock' in query_lower:
-                agent_name = 'Inventory Agent'
-                agent_action = 'Analyzing stock levels and inventory health'
-            elif 'recommend' in query_lower or 'suggest' in query_lower or 'need' in query_lower:
-                agent_name = 'Recommendation Agent'
-                agent_action = 'Finding matching products'
-            elif 'price' in query_lower or 'deal' in query_lower:
-                agent_name = 'Pricing Agent'
-                agent_action = 'Analyzing prices and deals'
-            else:
-                agent_name = 'Search Agent'
-                agent_action = 'Searching product catalog'
-            
-            # Send specialist agent step
-            data = json.dumps({'type': 'agent_step', 'agent': agent_name, 'action': agent_action, 'status': 'in_progress'})
-            yield f"data: {data}\n\n"
-            await asyncio.sleep(0.2)
-            
-            # Send tool call event
-            data = json.dumps({'type': 'tool_call', 'tool': 'semantic_product_search', 'status': 'executing'})
-            yield f"data: {data}\n\n"
-            await asyncio.sleep(0.3)
-            
-            # Get actual response with session persistence
             history = [{"role": msg.role, "content": msg.content} for msg in request.conversation_history]
-            response = await chat_service.chat(
+            async for event in chat_service.chat_stream(
                 message=request.message,
                 conversation_history=history,
                 session_id=request.session_id
-            )
-            
-            # Send completion event
-            data = json.dumps({'type': 'agent_step', 'agent': agent_name, 'action': agent_action, 'status': 'completed'})
-            yield f"data: {data}\n\n"
-            await asyncio.sleep(0.1)
-            
-            # Stream response content word by word
-            words = response['response'].split(' ')
-            current_text = ''
-            for i, word in enumerate(words):
-                current_text += word + ' '
-                data = json.dumps({'type': 'content', 'content': current_text.strip()})
-                yield f"data: {data}\n\n"
-                await asyncio.sleep(0.03)  # 30ms delay between words
-            
-            # Send final response with all data - use ensure_ascii=False to avoid encoding issues
-            try:
-                data = json.dumps({'type': 'complete', 'response': response}, ensure_ascii=False)
-                yield f"data: {data}\n\n"
-            except Exception as json_error:
-                logger.error(f"Failed to serialize response: {json_error}")
-                # Fallback: send response in parts
-                yield f"data: {json.dumps({'type': 'complete', 'response': {{'response': response['response'], 'products': response.get('products', []), 'suggestions': response.get('suggestions', []), 'success': response.get('success', True)}}})}\n\n"
-            
+            ):
+                yield f"data: {json.dumps(event, ensure_ascii=False, default=str)}\n\n"
         except Exception as e:
             logger.error(f"Streaming chat failed: {e}")
-            data = json.dumps({'type': 'error', 'error': str(e)})
-            yield f"data: {data}\n\n"
-    
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
