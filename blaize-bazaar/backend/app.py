@@ -146,7 +146,7 @@ async def lifespan(app: FastAPI):
         bedrock_service = BedrockService()
         logger.info("✅ Bedrock service initialized")
         
-        chat_service = ChatService()
+        chat_service = ChatService(db_service=db_service)
         logger.info("✅ Chat service initialized")
 
         # Initialize SQL query logger
@@ -319,14 +319,47 @@ async def semantic_search(
         request.query = request.query.replace("hybrid:", "").strip()
     
     try:
-        search_type = "hybrid" if use_hybrid else "vector"
+        # Determine search type based on request parameters
+        if request.search_mode == "keyword":
+            search_type = "keyword"
+        elif use_hybrid:
+            search_type = "hybrid"
+        else:
+            search_type = "vector"
         logger.info(f"🔍 {search_type.upper()} search: '{request.query}' (limit={request.limit})")
-        
-        # Generate query embedding
-        query_embedding = embeddings.generate_embedding(request.query)
-        logger.info(f"✅ Generated embedding vector (1024 dimensions)")
-        
-        if use_hybrid:
+
+        if search_type == "keyword":
+            # Keyword-only search — no embeddings, PostgreSQL full-text matching only
+            keyword_sql = """
+                SELECT
+                    "productId",
+                    product_description,
+                    "imgUrl" as imgurl,
+                    "productURL" as producturl,
+                    stars,
+                    reviews,
+                    price,
+                    category_id,
+                    "isBestSeller" as isbestseller,
+                    "boughtInLastMonth" as boughtinlastmonth,
+                    category_name,
+                    quantity,
+                    ts_rank(to_tsvector('english', product_description), plainto_tsquery('english', %s)) as similarity_score
+                FROM bedrock_integration.product_catalog
+                WHERE to_tsvector('english', product_description) @@ plainto_tsquery('english', %s)
+                  AND stars >= 3.0
+                  AND "imgUrl" IS NOT NULL
+                ORDER BY similarity_score DESC
+                LIMIT %s
+            """
+            results = await db.fetch_all(keyword_sql, request.query, request.query, request.limit)
+            logger.info(f"📦 Keyword search found {len(results)} products")
+
+        elif search_type == "hybrid":
+            # Generate query embedding for hybrid/vector paths
+            query_embedding = embeddings.generate_embedding(request.query)
+            logger.info(f"✅ Generated embedding vector (1024 dimensions)")
+
             # Hybrid search with RRF
             hybrid_service = HybridSearchService(db)
             hybrid_result = await hybrid_service.search(
@@ -349,6 +382,10 @@ async def semantic_search(
                 r['stars'] = r.get('rating', 0)
                 # RRF fields are already at top level from hybrid_search.py
         else:
+            # Generate query embedding for vector search
+            query_embedding = embeddings.generate_embedding(request.query)
+            logger.info(f"✅ Generated embedding vector (1024 dimensions)")
+
             # Prepare SQL with relaxed quality filters for better semantic coverage
             query_sql = """
                 SELECT 
@@ -857,7 +894,8 @@ async def chat(request: ChatRequest):
         response = await chat_service.chat(
             message=request.message,
             conversation_history=history,
-            session_id=request.session_id
+            session_id=request.session_id,
+            workshop_mode=request.workshop_mode
         )
         
         return ChatResponse(**response)
@@ -887,7 +925,8 @@ async def chat_stream(request: ChatRequest):
             async for event in chat_service.chat_stream(
                 message=request.message,
                 conversation_history=history,
-                session_id=request.session_id
+                session_id=request.session_id,
+                workshop_mode=request.workshop_mode
             ):
                 yield f"data: {json.dumps(event, ensure_ascii=False, default=str)}\n\n"
         except Exception as e:

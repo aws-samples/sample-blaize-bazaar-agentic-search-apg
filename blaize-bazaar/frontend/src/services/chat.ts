@@ -62,7 +62,8 @@ export interface ChatResponse {
 export async function sendChatMessageStreaming(
   query: string,
   conversationHistory: ChatMessage[] = [],
-  onUpdate: (data: any) => void
+  onUpdate: (data: any) => void,
+  workshopMode?: string
 ): Promise<ChatResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
@@ -76,7 +77,8 @@ export async function sendChatMessageStreaming(
           role: msg.role,
           content: msg.content
         })),
-        session_id: getSessionId()
+        session_id: getSessionId(),
+        workshop_mode: workshopMode || null
       }),
     })
 
@@ -168,7 +170,7 @@ export async function sendChatMessage(query: string, conversationHistory: ChatMe
         id: p.id || p.productId || '',
         name: p.name || p.product_description || '',
         price: p.price || 0,
-        image: p.image || p.imgUrl || p.imgurl || '📦',
+        image: p.image || p.imgUrl || p.imgurl || '',
         category: p.category || p.category_name,
         rating: p.stars || p.rating,
         reviews: p.reviews,
@@ -223,16 +225,20 @@ function generateSmartSuggestions(query: string, products: ChatProduct[]): strin
   }
   
   // Query-type based fallbacks (no products returned)
-  if (lowerQuery.includes('headphone') || lowerQuery.includes('audio') || lowerQuery.includes('earbud')) {
-    return ['Wireless under $80', 'Best for working out', 'Noise-cancelling options']
+  if (lowerQuery.includes('watch') || lowerQuery.includes('rolex') || lowerQuery.includes('time')) {
+    return ['Luxury watches under $500', 'Best everyday watches', 'Show all watches']
   }
   
-  if (lowerQuery.includes('laptop') || lowerQuery.includes('computer')) {
-    return ['Best battery life', 'Lightweight under 3 lbs', 'Gaming laptops']
+  if (lowerQuery.includes('laptop') || lowerQuery.includes('macbook') || lowerQuery.includes('computer')) {
+    return ['Best for programming', 'Lightweight laptops', 'Show all laptops']
   }
   
-  if (lowerQuery.includes('camera') || lowerQuery.includes('photo')) {
-    return ['Best for low light', 'Compact travel cameras', 'Camera accessories']
+  if (lowerQuery.includes('phone') || lowerQuery.includes('iphone') || lowerQuery.includes('samsung')) {
+    return ['Latest smartphones', 'Best phone under $300', 'Show all smartphones']
+  }
+
+  if (lowerQuery.includes('shoe') || lowerQuery.includes('sneaker') || lowerQuery.includes('nike')) {
+    return ['Running shoes under $100', 'Best rated sneakers', 'Show all shoes']
   }
   
   return ["What's trending?", 'Best rated under $50', 'Show me something surprising']

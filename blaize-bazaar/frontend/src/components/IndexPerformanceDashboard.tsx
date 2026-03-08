@@ -53,7 +53,7 @@ interface PerformanceResults {
 }
 
 const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboardProps) => {
-  const [query, setQuery] = useState('wireless headphones');
+  const [query, setQuery] = useState('luxury watch');
   const [efSearch, setEfSearch] = useState(40);
   const [limit, setLimit] = useState(10);
   const [results, setResults] = useState<PerformanceResults | null>(null);
@@ -105,31 +105,31 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-[90vw] max-w-[1200px] max-h-[90vh] glass-strong rounded-[20px] flex flex-col shadow-2xl overflow-hidden">
+      <div className="w-[90vw] max-w-[1200px] max-h-[90vh] wood-modal rounded-[20px] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-purple-500/20 flex justify-between items-center bg-purple-500/5">
+        <div className="px-6 py-4 wood-header flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <BarChart3 className="h-6 w-6 text-purple-400" />
+            <BarChart3 className="h-6 w-6 wood-text-accent" />
             <div>
-              <h2 className="text-xl font-semibold text-text-primary">
+              <h2 className="text-xl font-semibold wood-text-primary">
                 pgvector Index Performance Dashboard
               </h2>
-              <p className="text-xs text-text-secondary mt-0.5">
+              <p className="text-xs wood-text-secondary mt-0.5">
                 Compare HNSW index vs Sequential Scan • Median of 4 runs with cache clearing
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-purple-500/10 transition-colors">
-            <X className="h-5 w-5 text-text-secondary hover:text-text-primary" />
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+            <X className="h-5 w-5 wood-text-secondary hover:text-white" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-6 py-6 wood-scroll">
           {/* Controls Section */}
-          <div className="mb-6 p-6 rounded-xl bg-purple-500/10 border border-purple-500/20">
+          <div className="mb-6 p-6 rounded-xl wood-card">
             <div className="flex items-center gap-2 mb-4">
-              <Settings className="h-5 w-5 text-purple-400" />
+              <Settings className="h-5 w-5 text-white/50" />
               <h3 className="text-lg font-semibold text-text-primary">Test Configuration</h3>
             </div>
 
@@ -154,7 +154,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
               {/* ef_search Slider */}
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">
-                  ef_search: <span className="text-purple-400 font-bold">{efSearch}</span>
+                  ef_search: <span className="text-white/50 font-bold">{efSearch}</span>
                 </label>
                 <input
                   type="range"
@@ -163,9 +163,9 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                   step="10"
                   value={efSearch}
                   onChange={(e) => setEfSearch(parseInt(e.target.value))}
-                  className="w-full h-2 bg-purple-500/20 rounded-lg appearance-none cursor-pointer"
+                  className="w-full h-2 bg-white/[0.08] rounded-lg appearance-none cursor-pointer"
                   style={{
-                    accentColor: '#ba68c8'
+                    accentColor: '#999999'
                   }}
                 />
                 <div className="flex justify-between text-xs text-text-secondary mt-1">
@@ -202,7 +202,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
               disabled={loading || !query.trim()}
               className="mt-4 w-full px-6 py-3 rounded-lg font-semibold text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               style={{
-                background: loading ? 'rgba(255, 255, 255, 0.1)' : 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)'
+                background: loading ? 'rgba(255, 255, 255, 0.1)' : 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.10) 100%)'
               }}
             >
               {loading ? (
@@ -234,14 +234,14 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                 <Info className="h-6 w-6 text-blue-400 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <h4 className="text-base font-semibold text-blue-300 mb-3 flex items-center gap-2">
-                    ℹ️ Understanding Cache Behavior & Dataset Size
+                    Understanding Cache Behavior & Dataset Size
                   </h4>
                   
                   <div className="space-y-3">
                     {/* Dataset Size Context */}
                     <div className="p-3 rounded-lg bg-blue-500/10">
                       <p className="text-sm text-text-primary leading-relaxed font-medium mb-1">
-                        📊 Small Dataset Context
+                        Small Dataset Context
                       </p>
                       <p className="text-sm text-text-secondary leading-relaxed">
                         {results.comparison.dataset_context.size_note}
@@ -251,7 +251,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                     {/* Cache Behavior Explanation */}
                     <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                       <p className="text-sm text-yellow-300 font-medium mb-2">
-                        ⚠️ Why Timing Varies (This is Normal!)
+                        Why Timing Varies (This is Normal!)
                       </p>
                       <div className="text-sm text-text-secondary leading-relaxed space-y-2">
                         <p>
@@ -270,9 +270,9 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                     </div>
 
                     {/* When ef_search Matters */}
-                    <div className="p-3 rounded-lg bg-purple-500/10">
-                      <p className="text-sm text-purple-300 font-medium mb-2">
-                        🎯 When ef_search Tuning Shows Impact
+                    <div className="p-3 rounded-lg wood-card">
+                      <p className="text-sm text-white/40 font-medium mb-2">
+                        When ef_search Tuning Shows Impact
                       </p>
                       <ul className="text-sm text-text-secondary leading-relaxed space-y-1 list-decimal list-inside ml-2">
                         <li><strong className="text-text-primary">Large datasets</strong> (&gt;100K rows) - cache can't hold everything</li>
@@ -284,7 +284,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                     {/* Production Takeaway */}
                     <div className="pt-3 border-t border-blue-500/20">
                       <p className="text-xs text-blue-300 font-medium">
-                        💡 Production Takeaway: With small datasets and warm caches, timing becomes inconsistent. 
+                        Production Takeaway: With small datasets and warm caches, timing becomes inconsistent. 
                         This is normal PostgreSQL behavior. Focus on testing with enterprise-scale data for realistic ef_search tuning.
                       </p>
                     </div>
@@ -327,7 +327,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                     </div>
                     <div>
                       <div className="text-sm text-text-secondary">ef_search Parameter</div>
-                      <div className="text-lg font-semibold text-purple-400">{results.hnsw.ef_search}</div>
+                      <div className="text-lg font-semibold text-white/50">{results.hnsw.ef_search}</div>
                     </div>
                   </div>
                 </div>
@@ -367,9 +367,9 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
               </div>
 
               {/* Comparison Metrics */}
-              <div className="p-6 rounded-xl bg-purple-500/10 border border-purple-500/20">
+              <div className="p-6 rounded-xl wood-card">
                 <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="h-5 w-5 text-purple-400" />
+                  <TrendingUp className="h-5 w-5 text-white/50" />
                   <h3 className="text-lg font-semibold text-text-primary">Comparison Analysis</h3>
                   <span className="text-xs text-text-secondary">
                     ({results.comparison.dataset_size.toLocaleString()} rows)
@@ -377,27 +377,27 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                 </div>
 
                 <div className="grid grid-cols-4 gap-4 mb-4">
-                  <div className="text-center p-4 rounded-lg bg-purple-500/10">
+                  <div className="text-center p-4 rounded-lg wood-card">
                     <div className="text-sm text-text-secondary mb-1">Speedup</div>
                     <div className={`text-2xl font-bold ${getSpeedupColor(results.comparison.speedup_factor)}`}>
                       {results.comparison.speedup_factor}x
                     </div>
                   </div>
-                  <div className="text-center p-4 rounded-lg bg-purple-500/10">
+                  <div className="text-center p-4 rounded-lg wood-card">
                     <div className="text-sm text-text-secondary mb-1">Time Saved</div>
                     <div className="text-2xl font-bold text-green-400">
                       {results.comparison.time_saved_ms}ms
                     </div>
                   </div>
-                  <div className="text-center p-4 rounded-lg bg-purple-500/10">
+                  <div className="text-center p-4 rounded-lg wood-card">
                     <div className="text-sm text-text-secondary mb-1">Efficiency</div>
                     <div className="text-2xl font-bold text-blue-400">
                       {results.comparison.time_saved_pct}%
                     </div>
                   </div>
-                  <div className="text-center p-4 rounded-lg bg-purple-500/10">
+                  <div className="text-center p-4 rounded-lg wood-card">
                     <div className="text-sm text-text-secondary mb-1">Recall</div>
-                    <div className="text-2xl font-bold text-purple-400">
+                    <div className="text-2xl font-bold text-white/50">
                       {results.comparison.recall_pct}%
                     </div>
                   </div>
@@ -416,29 +416,29 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
               </div>
 
               {/* Insights */}
-              <div className="p-6 rounded-xl bg-purple-500/5 border border-purple-500/20">
-                <h3 className="text-lg font-semibold text-text-primary mb-3">💡 Query Insights</h3>
+              <div className="p-6 rounded-xl wood-card">
+                <h3 className="text-lg font-semibold text-text-primary mb-3">Query Insights</h3>
                 <div className="space-y-2 text-sm text-text-secondary">
                   <p>
-                    • HNSW index provides <strong className="text-purple-400">{results.comparison.speedup_factor}x speedup</strong> over sequential scan
+                    • HNSW index provides <strong className="text-white/50">{results.comparison.speedup_factor}x speedup</strong> over sequential scan
                   </p>
                   <p>
-                    • With ef_search={efSearch}, HNSW achieves <strong className="text-purple-400">{results.comparison.recall_pct}% recall</strong>
+                    • With ef_search={efSearch}, HNSW achieves <strong className="text-white/50">{results.comparison.recall_pct}% recall</strong>
                   </p>
                   <p>
                     • Current query latency: <strong className={getLatencyColor(results.hnsw.execution_time_ms)}>{results.hnsw.execution_time_ms}ms</strong> (median of {results.hnsw.num_runs} runs)
                   </p>
                   <p>
-                    • Dataset size: <strong className="text-purple-400">{results.comparison.dataset_size.toLocaleString()} rows</strong> ({results.comparison.dataset_context.size_category})
+                    • Dataset size: <strong className="text-white/50">{results.comparison.dataset_size.toLocaleString()} rows</strong> ({results.comparison.dataset_context.size_category})
                   </p>
                   {efSearch < 50 && !results.comparison.dataset_context.show_small_dataset_warning && (
                     <p className="text-yellow-400">
-                      ⚠️ Consider increasing ef_search for better recall (currently {efSearch})
+                      Consider increasing ef_search for better recall (currently {efSearch})
                     </p>
                   )}
                   {results.hnsw.execution_time_ms < 50 && (
                     <p className="text-green-400">
-                      ✅ Excellent performance! Query latency is optimal for enterprise
+                      Excellent performance! Query latency is optimal for enterprise
                     </p>
                   )}
                 </div>
@@ -448,15 +448,15 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
 
           {/* Educational Content */}
           {!results && !loading && (
-            <div className="p-6 rounded-xl bg-purple-500/5 border border-purple-500/20">
+            <div className="p-6 rounded-xl wood-card">
               <h3 className="text-lg font-semibold text-text-primary mb-3">About pgvector HNSW Indexes</h3>
               <div className="space-y-3 text-sm text-text-secondary">
                 <p>
-                  <strong className="text-purple-400">HNSW (Hierarchical Navigable Small World)</strong> is an approximate nearest neighbor (ANN) algorithm 
+                  <strong className="text-white/50">HNSW (Hierarchical Navigable Small World)</strong> is an approximate nearest neighbor (ANN) algorithm 
                   that provides fast similarity search at scale.
                 </p>
                 <p>
-                  <strong className="text-purple-400">ef_search parameter:</strong> Controls the trade-off between search accuracy and speed. 
+                  <strong className="text-white/50">ef_search parameter:</strong> Controls the trade-off between search accuracy and speed. 
                   Higher values search more thoroughly, increasing recall with slightly increased latency.
                 </p>
                 <ul className="list-disc list-inside space-y-1 ml-4">
@@ -490,7 +490,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                 </div>
                 
                 <p className="mt-4">
-                  <strong className="text-purple-400">Production tip:</strong> Start with ef_search=40 and tune based on your recall requirements 
+                  <strong className="text-white/50">Production tip:</strong> Start with ef_search=40 and tune based on your recall requirements 
                   and latency budget. This dashboard uses median of 4 runs with cache clearing for realistic benchmarking, 
                   but cache warming is expected behavior with frequently accessed data.
                 </p>
@@ -500,11 +500,11 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-purple-500/20 bg-purple-500/5">
-          <div className="flex items-start gap-3 text-xs text-text-secondary">
-            <Zap className="h-4 w-4 mt-0.5 text-purple-400 flex-shrink-0" />
+        <div className="px-6 py-4 wood-footer">
+          <div className="flex items-start gap-3 text-xs wood-text-secondary">
+            <Zap className="h-4 w-4 mt-0.5 wood-text-accent flex-shrink-0" />
             <div>
-              <p className="font-medium text-purple-300 mb-1">Production Database Tuning</p>
+              <p className="font-medium wood-text-primary mb-1">Production Database Tuning</p>
               <p>
                 Use this dashboard to find the optimal ef_search value for your workload. Monitor query latency vs recall 
                 to ensure your application meets performance SLAs while maintaining search quality.

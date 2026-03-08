@@ -118,7 +118,7 @@ const AgentHandoffVisualizer = ({ execution, isActive }: AgentHandoffVisualizerP
                 boxShadow: isActive ? '0 0 12px rgba(34, 197, 94, 0.4)' : undefined,
               }}
             >
-              <span>🔧</span>
+              <span style={{ fontSize: '10px' }}>T</span>
               <span className="font-mono max-w-[80px] truncate">{toolName}</span>
             </div>
             <span className="text-[9px] text-gray-500">

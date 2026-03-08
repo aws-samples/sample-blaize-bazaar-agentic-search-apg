@@ -263,7 +263,7 @@ const ContextDashboard = ({ sessionId, onClose }: ContextDashboardProps) => {
               <span className="text-sm font-medium text-text-primary">Active Prompt Versions</span>
             </div>
             <div className="group relative">
-              <button className="text-xs text-purple-400 hover:text-purple-300">ℹ️</button>
+              <button className="text-xs text-purple-400 hover:text-purple-300">info</button>
               <div className="absolute right-0 top-6 w-64 p-3 rounded-lg bg-purple-900/95 border border-purple-500/30 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                 <p className="text-xs text-purple-100 mb-2 font-semibold">Extend Prompts:</p>
                 <p className="text-xs text-purple-200 leading-relaxed">

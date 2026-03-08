@@ -93,7 +93,7 @@ const ProductModal = ({ product, onClose }: ProductModalProps) => {
                                 bg-gradient-to-r from-amber-400 to-orange-500
                                 shadow-lg">
                     <span className="text-sm font-bold text-white tracking-wide">
-                      ⭐ BESTSELLER
+                      BESTSELLER
                     </span>
                   </div>
                 )}

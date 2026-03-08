@@ -83,27 +83,30 @@ def restock_product(product_id: str, quantity: int) -> str:
 def semantic_product_search(
     query: str,
     max_price: float = None,
-    min_rating: float = 4.0,
+    min_rating: float = 0.0,
     category: str = None,
+    min_similarity: float = 0.1,
     limit: int = 5
 ) -> str:
-    """Search products using AI-powered semantic understanding with filters
-    
+    """Search products using AI-powered semantic understanding with filters.
+    Only returns products with a similarity score >= min_similarity to ensure relevance.
+
     Args:
         query: Natural language search query
         max_price: Maximum price filter (optional)
         min_rating: Minimum star rating (default: 4.0)
         category: Category filter (optional)
+        min_similarity: Minimum relevance threshold 0-1 (default: 0.35). Increase to get more relevant results.
         limit: Number of results (default: 5)
     """
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
-    
+
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
         result = _run_async(logic.semantic_product_search(
-            query, max_price, min_rating, category, limit
+            query, max_price, min_rating, category, min_similarity, limit
         ))
         return json.dumps(result, indent=2)
     except Exception as e:
@@ -112,7 +115,7 @@ def semantic_product_search(
 @tool
 def get_product_by_category(
     category: str,
-    min_rating: float = 4.0,
+    min_rating: float = 0.0,
     max_price: float = None,
     limit: int = 10
 ) -> str:

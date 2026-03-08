@@ -27,11 +27,10 @@ def price_optimization_agent(query: str) -> str:
             max_price = float(max([int(p) for p in price_matches]))
         
         # Direct tool call with price filter
-        # Use min_rating=3.5 for better semantic search coverage
         result = semantic_product_search(
             query=query,
             max_price=max_price,
-            min_rating=3.5,
+            min_rating=0.0,
             limit=5
         )
         result_dict = json.loads(result)

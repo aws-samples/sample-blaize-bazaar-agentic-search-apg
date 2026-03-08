@@ -72,7 +72,7 @@ const ProductComparison = ({ products, onClose }: ProductComparisonProps) => {
                   {isImageUrl ? (
                     <img src={product.image} alt={product.name} className="h-full object-contain p-1" />
                   ) : (
-                    <span className="text-2xl">{product.image || '📦'}</span>
+                    <span className="text-2xl">{product.image || ''}</span>
                   )}
                 </div>
 

@@ -4,36 +4,23 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class', // Enable class-based dark mode
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        // Dark theme backgrounds
-        'bg-primary': '#0a0a0f',
-        'bg-secondary': '#0d0d1a',
-        
-        // Purple accent colors (matching prototype)
-        'accent-purple': '#6a1b9a',
-        'accent-light': '#ba68c8',
-        
-        // Text colors - will be overridden by CSS variables
-        'text-primary': 'var(--text-primary, #ffffff)',
-        'text-secondary': 'var(--text-secondary, #a0a0a0)',
-        
-        // Aurora colors
-        'aurora-blue': '#00c8ff',
-        'aurora-green': '#00ff88',
-        
-        // Utility colors
-        'border-subtle': 'var(--border-color, rgba(106, 27, 154, 0.2))',
+        // Theme-aware via CSS variables
+        'bg-primary': 'var(--bg-primary)',
+        'bg-secondary': 'var(--bg-secondary)',
+        'text-primary': 'var(--text-primary, #f5f5f7)',
+        'text-secondary': 'var(--text-secondary, #a1a1a6)',
+        'border-subtle': 'var(--border-color, rgba(255, 255, 255, 0.08))',
+
+        // Apple blue links
+        'apple-blue': 'var(--link-color, #0071e3)',
+
+        // Utility
         'success': '#4ade80',
         'warning': '#fbbf24',
-        
-        // Light mode specific
-        'light-bg': '#f8f9fa',
-        'light-surface': '#ffffff',
-        'light-text': '#1a1a1a',
-        'light-text-muted': '#6b7280',
       },
       fontWeight: {
         'light': '300',

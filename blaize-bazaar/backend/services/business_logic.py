@@ -240,18 +240,20 @@ class BusinessLogic:
         self,
         query: str,
         max_price: float = None,
-        min_rating: float = 4.0,
+        min_rating: float = 0.0,
         category: str = None,
+        min_similarity: float = 0.1,
         limit: int = 5
     ) -> Dict[str, Any]:
         """
         Search products using semantic embeddings and pgvector similarity.
-        
+
         Args:
             query: Natural language search query
             max_price: Maximum price filter
             min_rating: Minimum star rating
             category: Category filter
+            min_similarity: Minimum similarity score (0-1) to filter out irrelevant results
             limit: Number of results
         """
         from services.embeddings import EmbeddingService
@@ -264,6 +266,33 @@ class BusinessLogic:
         query_embedding = self._embedding_service.embed_query(query)
         embedding_time_ms = (time.time() - start_time) * 1000
         
+        # Auto-detect category from query if not explicitly provided
+        if not category:
+            query_lower = query.lower()
+            category_map = {
+                'fragrance': 'Fragrances', 'perfume': 'Fragrances', 'cologne': 'Fragrances',
+                'laptop': 'Laptops', 'macbook': 'Laptops', 'notebook': 'Laptops',
+                'phone': 'Smartphones', 'smartphone': 'Smartphones', 'iphone': 'Smartphones', 'samsung galaxy': 'Smartphones',
+                'watch': 'Watches', 'rolex': 'Watches', 'timepiece': 'Watches',
+                'shoe': 'Shoes', 'sneaker': 'Shoes', 'nike': 'Shoes', 'jordan': 'Shoes',
+                'furniture': 'Furniture', 'sofa': 'Furniture', 'bed': 'Furniture', 'table': 'Furniture',
+                'kitchen': 'Kitchen Accessories', 'pan': 'Kitchen Accessories', 'knife': 'Kitchen Accessories',
+                'sunglasses': 'Sunglasses', 'shades': 'Sunglasses',
+                'bag': 'Bags', 'handbag': 'Bags', 'backpack': 'Bags',
+                'dress': 'Dresses', 'gown': 'Dresses',
+                'shirt': 'Shirts', 'tshirt': 'Shirts',
+                'sports': 'Sports Accessories', 'football': 'Sports Accessories', 'basketball': 'Sports Accessories',
+                'tablet': 'Tablets', 'ipad': 'Tablets',
+                'beauty': 'Beauty', 'mascara': 'Beauty', 'lipstick': 'Beauty',
+                'skin care': 'Skin Care', 'lotion': 'Skin Care',
+                'motorcycle': 'Motorcycle',
+                'jewel': 'Jewellery', 'earring': 'Jewellery',
+            }
+            for keyword, cat_name in category_map.items():
+                if keyword in query_lower:
+                    category = cat_name
+                    break
+
         # Build SQL with filters - embedding first, then filters, then limit
         conditions = ["quantity > 0"]
         params = [str(query_embedding)]  # Embedding as first param
@@ -309,7 +338,11 @@ class BusinessLogic:
         db_time_ms = (time.time() - db_start) * 1000
         
         products = [convert_decimals(dict(row)) for row in results]
-        
+
+        # Filter out low-relevance results
+        if min_similarity > 0:
+            products = [p for p in products if p.get("similarity", 0) >= min_similarity]
+
         return {
             "status": "success",
             "query": query,
@@ -318,7 +351,8 @@ class BusinessLogic:
             "filters": {
                 "max_price": max_price,
                 "min_rating": min_rating,
-                "category": category
+                "category": category,
+                "min_similarity": min_similarity
             },
             "performance": {
                 "bedrock_embedding_ms": round(embedding_time_ms, 2),

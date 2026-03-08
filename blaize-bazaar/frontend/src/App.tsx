@@ -9,27 +9,24 @@ import AIAssistant from './components/AIAssistant'
 import SearchOverlay from './components/SearchOverlay'
 import SQLInspector from './components/SQLInspector'
 import IndexPerformanceDashboard from './components/IndexPerformanceDashboard'
-import ContextDashboard from './components/ContextDashboard'
 import AgentReasoningTraces from './components/AgentReasoningTraces'
-import HybridSearchComparison from './components/HybridSearchComparison'
 import CartPanel, { CartItem } from './components/CartPanel'
 import Toast from './components/Toast'
 import RecentlyViewed from './components/RecentlyViewed'
 import ProactiveSuggestions from './components/ProactiveSuggestions'
-import PersonalizationRadar from './components/PersonalizationRadar'
-import AgentActivityDashboard from './components/AgentActivityDashboard'
 import DemoChatCarousel from './components/DemoChatCarousel'
 import { LayoutProvider, useLayout } from './contexts/LayoutContext'
 import { useMagneticCursor } from './hooks/useMagneticCursor'
 // useScrollReveal replaced by framer-motion whileInView on individual elements
 import { motion, AnimatePresence } from 'framer-motion'
-import { Database, BarChart3, Activity, Brain, GitCompare, Wrench, X, User, Radar } from 'lucide-react'
+import { Database, BarChart3, Brain, Wrench, X } from 'lucide-react'
 import './styles/premium-heading-styles.css'
 
-// Theme Context (locked to dark mode)
-type Theme = 'dark'
+// Theme Context — dark/light toggle
+type Theme = 'dark' | 'light'
 interface ThemeContextType {
   theme: Theme
+  toggleTheme: () => void
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
@@ -43,24 +40,28 @@ export const useTheme = () => {
 type Section = 'shop' | 'collections'
 
 function AppContent() {
-  const { mainContentMarginRight } = useLayout()
+  const { mainContentMarginRight, workshopMode, setWorkshopMode } = useLayout()
   const magneticCta = useMagneticCursor(0.15)
-  const [theme] = useState<Theme>('dark')
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = localStorage.getItem('blaize-theme')
+    return (saved === 'light' ? 'light' : 'dark') as Theme
+  })
+  const toggleTheme = () => {
+    setTheme(prev => {
+      const next = prev === 'dark' ? 'light' : 'dark'
+      localStorage.setItem('blaize-theme', next)
+      return next
+    })
+  }
   const [activeSection, setActiveSection] = useState<Section>('shop')
   const [searchOverlayVisible, setSearchOverlayVisible] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showSQLInspector, setShowSQLInspector] = useState(false)
   const [showIndexPerformance, setShowIndexPerformance] = useState(false)
-  const [showContextDashboard, setShowContextDashboard] = useState(false)
   const [agentPanelMode, setAgentPanelMode] = useState<'hidden' | 'collapsed' | 'expanded'>('hidden')
-  const [showHybridComparison, setShowHybridComparison] = useState(false)
   const [showDevTools, setShowDevTools] = useState(false)
-  const [showPersonalizationRadar, setShowPersonalizationRadar] = useState(false)
-  const [showAgentActivity, setShowAgentActivity] = useState(false)
   const [showProactiveSuggestions, setShowProactiveSuggestions] = useState(true)
   const [expandedDiagram, setExpandedDiagram] = useState<string | null>(null)
-  const [productCount, setProductCount] = useState(0)
-  const [categoryCount, setCategoryCount] = useState(0)
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('blaize-cart')
     return saved ? JSON.parse(saved) : []
@@ -68,6 +69,16 @@ function AppContent() {
   const [showCart, setShowCart] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+
+  // Hero background carousel
+  const heroImages = [
+    'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=1920&q=80',
+    'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&q=80',
+    'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=1920&q=80',
+    'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1920&q=80',
+    'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1920&q=80',
+  ]
+  const [heroIdx, setHeroIdx] = useState(0)
 
   // (scroll reveal now handled by framer-motion whileInView on each element)
 
@@ -116,46 +127,29 @@ function AppContent() {
   }
 
   const handleCheckout = () => {
-    alert(`🎉 Demo Checkout\n\nTotal: $${cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)}\n\nThis is a demo - no real transaction will occur.`)
+    alert(`Demo Checkout\n\nTotal: $${cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)}\n\nThis is a demo - no real transaction will occur.`)
     setCartItems([])
     setShowCart(false)
   }
 
-  // Apply dark theme to document
+  // Apply theme to document
   useEffect(() => {
-    document.documentElement.classList.add('dark')
-    document.documentElement.classList.remove('light')
-  }, [])
-
-  // Animated counter for product count
-  useEffect(() => {
-    if (activeSection === 'shop') {
-      let start = 0
-      const end = 21000
-      const duration = 2000
-      const increment = end / (duration / 16)
-      const timer = setInterval(() => {
-        start += increment
-        if (start >= end) {
-          setProductCount(end)
-          clearInterval(timer)
-        } else {
-          setProductCount(Math.floor(start))
-        }
-      }, 16)
-      return () => clearInterval(timer)
-    }
-  }, [activeSection])
-
-  // Set category count to 190 (total in database)
-  useEffect(() => {
-    setCategoryCount(190)
-  }, [])
+    document.documentElement.classList.remove('dark', 'light')
+    document.documentElement.classList.add(theme)
+  }, [theme])
 
   // Persist cart to localStorage
   useEffect(() => {
     localStorage.setItem('blaize-cart', JSON.stringify(cartItems))
   }, [cartItems])
+
+  // Hero image carousel — crossfade every 4s
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHeroIdx(prev => (prev + 1) % heroImages.length)
+    }, 4000)
+    return () => clearInterval(interval)
+  }, [heroImages.length])
 
   // Expose addToCart globally for chat integration
   useEffect(() => {
@@ -182,19 +176,8 @@ function AppContent() {
   }, [])
 
   return (
-    <ThemeContext.Provider value={{ theme }}>
-      <div className="min-h-screen bg-bg-primary relative transition-colors duration-300">
-        {/* Premium Ambient Orbs — Apple-style animated gradient blobs */}
-        <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-          <div className="absolute top-[-20%] left-[-10%] w-[800px] h-[800px] rounded-full orb-float-1"
-            style={{ background: 'radial-gradient(circle, rgba(106, 27, 154, 0.25) 0%, transparent 70%)', filter: 'blur(100px)' }} />
-          <div className="absolute top-[30%] right-[-15%] w-[700px] h-[700px] rounded-full orb-float-2"
-            style={{ background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)', filter: 'blur(120px)' }} />
-          <div className="absolute bottom-[-10%] left-[20%] w-[600px] h-[600px] rounded-full orb-float-3"
-            style={{ background: 'radial-gradient(circle, rgba(168, 85, 247, 0.18) 0%, transparent 70%)', filter: 'blur(90px)' }} />
-          <div className="absolute top-[60%] right-[30%] w-[500px] h-[500px] rounded-full orb-float-1"
-            style={{ background: 'radial-gradient(circle, rgba(236, 72, 153, 0.1) 0%, transparent 70%)', filter: 'blur(110px)', animationDelay: '-8s' }} />
-        </div>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      <div className="min-h-screen relative transition-colors duration-400" style={{ background: 'var(--bg-primary)' }}>
         {/* Header */}
         <Header
           activeSection={activeSection}
@@ -216,12 +199,22 @@ function AppContent() {
 
         {/* Main Content — Single scrollable page */}
         <main className="mt-[72px] relative z-10 transition-[margin-right] duration-300 ease-in-out" style={{ marginRight: mainContentMarginRight }}>
-          {/* Hero Section — Clean Apple-style */}
-          <section className="min-h-[100vh] flex flex-col items-center justify-center relative overflow-hidden"
-            style={{
-              background: 'radial-gradient(ellipse 120% 80% at 50% 30%, rgba(106, 27, 154, 0.12) 0%, transparent 50%), radial-gradient(ellipse 80% 50% at 80% 60%, rgba(59, 130, 246, 0.06) 0%, transparent 50%), radial-gradient(ellipse 60% 40% at 20% 70%, rgba(236, 72, 153, 0.05) 0%, transparent 50%)',
-            }}
-          >
+          {/* Hero Section — Always dark, Apple MacBook Pro style with video */}
+          <section className="min-h-[100vh] flex flex-col items-center justify-center relative overflow-hidden bg-black">
+            {/* Background image carousel — warm golden-hour, no faces */}
+            {heroImages.map((img, i) => (
+              <div
+                key={i}
+                className="absolute inset-0 w-full h-full bg-cover bg-center transition-opacity duration-[2000ms] ease-in-out"
+                style={{
+                  backgroundImage: `url(${img})`,
+                  opacity: i === heroIdx ? 0.35 : 0,
+                }}
+              />
+            ))}
+            {/* Gradient overlay for text readability + subtle blue AI glow */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/55" />
+            <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(41, 151, 255, 0.06) 0%, transparent 60%)' }} />
 
             <div className="relative z-10 text-center max-w-[900px] mx-auto px-8">
               <motion.div
@@ -231,47 +224,49 @@ function AppContent() {
               >
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8 text-xs font-medium tracking-wide uppercase"
                   style={{
-                    background: 'rgba(168, 85, 247, 0.1)',
-                    border: '1px solid rgba(168, 85, 247, 0.2)',
-                    color: '#c084fc',
-                    letterSpacing: '0.1em',
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    letterSpacing: '0.12em',
                   }}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  DAT406 — Multi-Agent AI Commerce
+                  {workshopMode === 'legacy' ? 'DAT406 — E-Commerce (Legacy)'
+                    : workshopMode === 'semantic' ? 'DAT406 — Semantic Search Enabled'
+                    : workshopMode === 'tools' ? 'DAT406 — AI Agent Tools'
+                    : 'DAT406 — Multi-Agent AI Commerce'}
                 </div>
               </motion.div>
 
               <motion.h1
-                className="text-[42px] md:text-[56px] xl:text-[72px] leading-[1.08] mb-6 text-white"
-                style={{ fontWeight: '200', letterSpacing: '-2px' }}
+                className="text-[48px] md:text-[64px] xl:text-[80px] leading-[1.05] mb-4 text-white"
+                style={{ fontWeight: 600, letterSpacing: '-0.02em' }}
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: 'spring', stiffness: 150, damping: 20, delay: 0.2 }}
               >
-                Shop smarter with<br />
-                <span className="gradient-text-chrome" style={{
-                  fontSize: 'inherit',
-                  fontFamily: '"Playfair Display", Georgia, serif',
-                  fontWeight: '600',
-                  letterSpacing: '0.01em'
-                }}>
-                  Blaize Bazaar
-                </span>
+                Blaize Bazaar
               </motion.h1>
 
               <motion.p
-                className="text-lg md:text-xl text-white/60 mb-10 md:mb-12 max-w-[600px] mx-auto leading-relaxed"
-                style={{ fontWeight: '300' }}
+                className="text-xl md:text-2xl mb-10 md:mb-12 max-w-[650px] mx-auto leading-relaxed"
+                style={{ fontWeight: 400, color: '#a1a1a6' }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.4 }}
               >
-                Five AI agents collaborate in real-time to search, compare, and recommend — powered by Aurora PostgreSQL, pgvector, and Strands Agents SDK.
+                {workshopMode === 'legacy'
+                  ? 'Traditional keyword search — try searching for "something to keep my drinks cold" and see what happens.'
+                  : workshopMode === 'semantic'
+                  ? 'Semantic search powered by Aurora PostgreSQL and pgvector — search by intent, not just keywords.'
+                  : workshopMode === 'tools'
+                  ? 'AI agent with custom tools answers questions about products, trends, and pricing.'
+                  : 'Five AI agents collaborate in real-time to search, compare, and recommend.'
+                }
               </motion.p>
 
               <motion.div
-                className="flex gap-4 justify-center mb-12"
+                className="flex gap-8 justify-center items-center mb-16"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.5 }}
@@ -280,23 +275,25 @@ function AppContent() {
                   ref={magneticCta.ref as React.RefObject<HTMLButtonElement>}
                   onMouseMove={magneticCta.onMouseMove}
                   onMouseLeave={magneticCta.onMouseLeave}
-                  className="px-8 py-3.5 font-medium rounded-full transition-all duration-300 text-white"
-                  style={{
-                    background: 'linear-gradient(135deg, #7c2bad 0%, #a855f7 100%)',
-                    boxShadow: '0 4px 20px rgba(168, 85, 247, 0.4)',
-                  }}
+                  className="px-7 py-3 rounded-full text-lg font-normal transition-all duration-300 hover:opacity-90"
                   onClick={() => {
-                    const bubble = document.querySelector('[alt="Chat"]')?.parentElement as HTMLElement
-                    if (bubble) bubble.click()
+                    if (workshopMode === 'legacy' || workshopMode === 'semantic') {
+                      setSearchOverlayVisible(true)
+                    } else {
+                      const bubble = document.querySelector('[alt="Chat"]')?.parentElement as HTMLElement
+                      if (bubble) bubble.click()
+                    }
                   }}
+                  style={{ background: '#0071e3', color: '#ffffff' }}
                 >
-                  Talk to the Agents
+                  {workshopMode === 'legacy' || workshopMode === 'semantic' ? 'Search Products' : 'Talk to the Agents'}
                 </button>
                 <button
-                  className="btn-secondary"
+                  className="px-7 py-3 rounded-full text-lg font-normal transition-all duration-300 hover:opacity-80"
                   onClick={() => {
                     document.getElementById('collections-section')?.scrollIntoView({ behavior: 'smooth' })
                   }}
+                  style={{ background: 'transparent', border: '2px solid rgba(255, 255, 255, 0.3)', color: '#f5f5f7' }}
                 >
                   Explore Collections
                 </button>
@@ -309,117 +306,224 @@ function AppContent() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.2, duration: 1 }}
               >
-                <span className="text-white/30 text-xs tracking-widest uppercase">Scroll to explore</span>
+                <span className="text-white/20 text-xs tracking-widest uppercase">Scroll to explore</span>
                 <motion.div
-                  className="w-5 h-8 rounded-full border border-white/20 flex justify-center pt-1.5"
+                  className="w-5 h-8 rounded-full border border-white/15 flex justify-center pt-1.5"
                   animate={{ y: [0, 5, 0] }}
                   transition={{ duration: 2, repeat: Infinity }}
                 >
-                  <div className="w-1 h-2 rounded-full bg-purple-400/60" />
+                  <div className="w-1 h-2 rounded-full bg-white/30" />
                 </motion.div>
               </motion.div>
             </div>
           </section>
 
-          {/* Collections Section — each card reveals independently on scroll */}
-          <section
-            id="collections-section"
-            className="max-w-[1400px] mx-auto px-6 lg:px-10 py-16 lg:py-24"
-          >
-            <motion.div
-              className="text-center mb-16"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-60px' }}
-              transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-            >
-              <h2 className="text-3xl lg:text-5xl font-light mb-4 text-gray-900 dark:text-white">Curated Collections</h2>
-              <p className="text-text-secondary text-lg">AI-powered collections tailored to your preferences</p>
-            </motion.div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
-              {[
-                { icon: '🔌', title: 'Cables & Chargers', count: 'Power everything, beautifully', query: 'cable charger', img: 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=600&q=80', badge: 'Most Popular' },
-                { icon: '🏠', title: 'Smart Home', count: 'Your home, intelligently connected', query: 'smart home security camera doorbell', img: 'https://images.unsplash.com/photo-1558002038-1055907df827?w=600&q=80', badge: 'Trending' },
-                { icon: '📷', title: 'Cameras', count: 'Capture every moment', query: 'camera', img: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&q=80' },
-                { icon: '💻', title: 'Laptops', count: 'Performance meets portability', query: 'laptop', img: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&q=80' },
-                { icon: '🎧', title: 'Headphones', count: 'Immersive sound, zero distractions', query: 'headphones earbuds', img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80' },
-                { icon: '🎮', title: 'Gaming', count: 'Level up your setup', query: 'gaming', img: 'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?w=600&q=80' },
-                { icon: '🏥', title: 'Health & Wellness', count: 'Feel your best, every day', query: 'health household', img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=80' },
-                { icon: '🎓', title: 'Learning & Education', count: 'Curiosity starts here', query: 'learning education toys', img: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&q=80' },
-                { icon: '⚽', title: 'Sports & Outdoors', count: 'Gear up for adventure', query: 'sports outdoors', img: 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&q=80' },
-              ].map((collection, index) => (
-                <motion.div
-                  key={index}
-                  className="card cursor-pointer overflow-hidden group relative"
-                  initial={{ opacity: 0, y: 50, scale: 0.95 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: true, margin: '-80px' }}
-                  transition={{
-                    delay: (index % 3) * 0.1,
-                    type: 'spring',
-                    stiffness: 200,
-                    damping: 22,
-                  }}
-                  whileHover={{ scale: 1.03, transition: { type: 'spring', stiffness: 400, damping: 10 } }}
-                  onClick={() => {
-                    setSearchQuery(collection.query)
-                    setSearchOverlayVisible(true)
-                  }}
-                >
-                  <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500/0 via-purple-500/50 to-purple-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
-                  {collection.badge && (
-                    <div className="absolute top-4 right-4 z-10 px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg animate-pulse">
-                      {collection.badge}
+          {/* Collections — Apple-style stacked full-width blocks */}
+          <div id="collections-section">
+            {/* Featured blocks — alternating dark/light */}
+            {/* Interleaved full-width dark blocks and 2-up light grids */}
+            {/* 1. Smartphones — full-width dark */}
+            {[
+              { title: 'Smartphones', subtitle: 'The future in your pocket.', query: 'smartphone iphone samsung', img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=1920&q=80', video: 'https://videos.pexels.com/video-files/3255275/3255275-uhd_2560_1440_25fps.mp4' },
+            ].map((block, index) => (
+              <motion.section
+                key={`dark-${index}`}
+                className="min-h-[80vh] flex flex-col items-center justify-center relative overflow-hidden"
+                style={{ background: '#000000' }}
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ duration: 0.8 }}
+              >
+                <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.15 }} poster={block.img}>
+                  <source src={block.video} type="video/mp4" />
+                </video>
+                <div className="relative z-10 text-center px-8">
+                  <motion.h2 className="text-[48px] md:text-[56px] lg:text-[64px] font-semibold mb-3" style={{ color: '#f5f5f7', letterSpacing: '-0.015em', lineHeight: 1.07 }} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25 }}>{block.title}</motion.h2>
+                  <motion.p className="text-xl md:text-2xl mb-8" style={{ color: '#a1a1a6', fontWeight: 400 }} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.1 }}>{block.subtitle}</motion.p>
+                  <motion.div className="flex gap-4 justify-center items-center" initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.2 }}>
+                    <button className="px-8 py-3 rounded-full text-base font-medium transition-all duration-300 hover:brightness-110 hover:scale-105" onClick={() => { setSearchQuery(block.query); setSearchOverlayVisible(true) }} style={{ background: '#0071e3', color: '#ffffff' }}>Shop now</button>
+                  </motion.div>
+                </div>
+              </motion.section>
+            ))}
+
+            {/* 2. Watches — full-width dark */}
+            {[
+              { title: 'Watches', subtitle: 'Time, elevated.', query: 'watch rolex leather', img: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=1920&q=80', video: 'https://videos.pexels.com/video-files/4065924/4065924-uhd_2560_1440_24fps.mp4' },
+            ].map((block, index) => (
+              <motion.section
+                key={`dark2-${index}`}
+                className="min-h-[80vh] flex flex-col items-center justify-center relative overflow-hidden"
+                style={{ background: '#000000' }}
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ duration: 0.8 }}
+              >
+                <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.15 }} poster={block.img}>
+                  <source src={block.video} type="video/mp4" />
+                </video>
+                <div className="relative z-10 text-center px-8">
+                  <motion.h2 className="text-[48px] md:text-[56px] lg:text-[64px] font-semibold mb-3" style={{ color: '#f5f5f7', letterSpacing: '-0.015em', lineHeight: 1.07 }} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25 }}>{block.title}</motion.h2>
+                  <motion.p className="text-xl md:text-2xl mb-8" style={{ color: '#a1a1a6', fontWeight: 400 }} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.1 }}>{block.subtitle}</motion.p>
+                  <motion.div className="flex gap-4 justify-center items-center" initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.2 }}>
+                    <button className="px-8 py-3 rounded-full text-base font-medium transition-all duration-300 hover:brightness-110 hover:scale-105" onClick={() => { setSearchQuery(block.query); setSearchOverlayVisible(true) }} style={{ background: '#0071e3', color: '#ffffff' }}>Shop now</button>
+                  </motion.div>
+                </div>
+              </motion.section>
+            ))}
+
+            {/* 3. Laptops + Cameras — 2-up light grid */}
+            {[
+              {
+                bg: 'light' as const,
+                items: [
+                  { title: 'Laptops', subtitle: 'Power to do it all.', query: 'laptop macbook dell', img: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800&q=80' },
+                  { title: 'Furniture', subtitle: 'Live beautifully.', query: 'furniture sofa bed table', img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&q=80' },
+                ]
+              },
+            ].map((row, rowIdx) => (
+              <section key={`lc-${rowIdx}`} className="grid grid-cols-1 md:grid-cols-2" style={{ background: '#f5f5f7' }}>
+                {row.items.map((item, itemIdx) => (
+                  <motion.div key={itemIdx} className="min-h-[60vh] flex flex-col items-center justify-start pt-12 md:pt-14 relative overflow-hidden cursor-pointer group" style={{ borderRight: itemIdx === 0 ? '1px solid rgba(0,0,0,0.06)' : 'none' }} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: itemIdx * 0.1, type: 'spring', stiffness: 200, damping: 25 }} onClick={() => { setSearchQuery(item.query); setSearchOverlayVisible(true) }}>
+                    <div className="relative z-10 text-center px-8">
+                      <h3 className="text-[28px] md:text-[36px] font-semibold mb-1" style={{ color: '#1d1d1f', letterSpacing: '-0.01em', lineHeight: 1.1 }}>{item.title}</h3>
+                      <p className="text-base mb-4" style={{ color: '#6e6e73' }}>{item.subtitle}</p>
+                      <div className="flex gap-3 justify-center">
+                        <span className="px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:brightness-110 hover:scale-105 cursor-pointer" style={{ background: '#0066cc', color: '#ffffff' }}>Shop now</span>
+                      </div>
                     </div>
-                  )}
-                  <div className="relative w-full h-52 mb-4 rounded-xl overflow-hidden">
-                    <img
-                      src={collection.img}
-                      alt={collection.title}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-                  </div>
-                  <div className="text-2xl font-normal mb-2 text-gray-900 dark:text-white transition-colors duration-300 group-hover:text-purple-300">{collection.title}</div>
-                  <div className="text-white/40 text-sm font-light">{collection.count}</div>
-                </motion.div>
-              ))}
-            </div>
-          </section>
-
-          {/* Agent Demo — "Meet the agents" */}
-          <DemoChatCarousel onOpenChat={() => {
-            const bubble = document.querySelector('[alt="Chat"]')?.parentElement as HTMLElement
-            if (bubble) bubble.click()
-          }} />
-
-          {/* Footer with Stats */}
-          <footer className="border-t border-purple-500/20 bg-gradient-to-b from-transparent to-purple-900/10">
-            <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-12">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-6 mb-8">
-                {[
-                  { value: `${(productCount / 1000).toFixed(0)}K+`, label: 'Products' },
-                  { value: `${categoryCount || '9+'}`, label: 'Categories' },
-                  { value: '5', label: 'AI Agents' },
-                  { value: 'pgvector', label: 'Vector Search' },
-                  { value: 'Strands', label: 'Agent SDK' },
-                ].map((stat, i) => (
-                  <motion.div
-                    key={i}
-                    className="text-center"
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: '-40px' }}
-                    transition={{ delay: i * 0.1, type: 'spring', stiffness: 250, damping: 22 }}
-                  >
-                    <div className="text-4xl font-light text-purple-300 mb-2">{stat.value}</div>
-                    <div className="text-sm text-text-secondary">{stat.label}</div>
+                    <div className="relative z-10 mt-4 w-full flex justify-center flex-1">
+                      <img src={item.img} alt={item.title} className="max-w-[90%] md:max-w-[85%] w-full h-auto max-h-[50vh] object-contain transition-transform duration-700 group-hover:scale-105" style={{ filter: 'drop-shadow(0 16px 32px rgba(0, 0, 0, 0.08))' }} />
+                    </div>
                   </motion.div>
                 ))}
-              </div>
-              <div className="text-center text-xs text-text-secondary pt-8 border-t border-purple-500/10">
-                <p className="mb-2">© 2026 Shayon Sanyal | DAT406: Build Agentic AI-Powered Search with Amazon Aurora</p>
-                <p className="text-purple-400">Aurora PostgreSQL • Amazon Bedrock • pgvector • AWS Strands Agents SDK • Multi-Agent Orchestration</p>
+              </section>
+            ))}
+
+            {/* 4. Fragrances — full-width dark */}
+            {[
+              { title: 'Fragrances', subtitle: 'Scent that speaks.', query: 'fragrance perfume calvin klein chanel', img: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=1920&q=80', video: 'https://videos.pexels.com/video-files/3165335/3165335-uhd_2560_1440_30fps.mp4' },
+            ].map((block, index) => (
+              <motion.section
+                key={`dark3-${index}`}
+                className="min-h-[80vh] flex flex-col items-center justify-center relative overflow-hidden"
+                style={{ background: '#000000' }}
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ duration: 0.8 }}
+              >
+                <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.15 }} poster={block.img}>
+                  <source src={block.video} type="video/mp4" />
+                </video>
+                <div className="relative z-10 text-center px-8">
+                  <motion.h2 className="text-[48px] md:text-[56px] lg:text-[64px] font-semibold mb-3" style={{ color: '#f5f5f7', letterSpacing: '-0.015em', lineHeight: 1.07 }} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25 }}>{block.title}</motion.h2>
+                  <motion.p className="text-xl md:text-2xl mb-8" style={{ color: '#a1a1a6', fontWeight: 400 }} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.1 }}>{block.subtitle}</motion.p>
+                  <motion.div className="flex gap-4 justify-center items-center" initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.2 }}>
+                    <button className="px-8 py-3 rounded-full text-base font-medium transition-all duration-300 hover:brightness-110 hover:scale-105" onClick={() => { setSearchQuery(block.query); setSearchOverlayVisible(true) }} style={{ background: '#0071e3', color: '#ffffff' }}>Shop now</button>
+                  </motion.div>
+                </div>
+              </motion.section>
+            ))}
+
+            {/* 5-6. Remaining 2-up grids */}
+            {[
+              {
+                bg: 'light' as const,
+                items: [
+                  { title: 'Sunglasses', subtitle: 'See the world differently.', query: 'sunglasses', img: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&q=80' },
+                  { title: 'Sports', subtitle: 'Gear up for adventure.', query: 'sports football basketball tennis', img: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&q=80' },
+                ]
+              },
+              {
+                bg: 'dark' as const,
+                items: [
+                  { title: 'Shoes', subtitle: 'Step into something new.', query: 'shoes nike jordan sneakers', img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' },
+                  { title: 'Kitchen', subtitle: 'Cook with confidence.', query: 'kitchen accessories pan knife', img: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80' },
+                ]
+              },
+            ].map((row, rowIdx) => (
+              <section
+                key={`grid-${rowIdx}`}
+                className="grid grid-cols-1 md:grid-cols-2"
+                style={{ background: row.bg === 'dark' ? '#000000' : '#f5f5f7' }}
+              >
+                {row.items.map((item, itemIdx) => (
+                  <motion.div
+                    key={itemIdx}
+                    className={`min-h-[60vh] flex flex-col items-center ${row.bg === 'light' ? 'justify-start pt-12 md:pt-14' : 'justify-center'} relative overflow-hidden cursor-pointer group`}
+                    style={{ borderRight: itemIdx === 0 ? `1px solid ${row.bg === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}` : 'none' }}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: itemIdx * 0.1, type: 'spring', stiffness: 200, damping: 25 }}
+                    onClick={() => {
+                      setSearchQuery(item.query)
+                      setSearchOverlayVisible(true)
+                    }}
+                  >
+                    {/* Dark grids: image as background */}
+                    {row.bg === 'dark' && (
+                      <div
+                        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                        style={{ backgroundImage: `url(${item.img})`, opacity: 0.12 }}
+                      />
+                    )}
+                    <div className="relative z-10 text-center px-8">
+                      <h3
+                        className={`font-semibold mb-1 ${row.bg === 'light' ? 'text-[28px] md:text-[36px]' : 'text-[36px] md:text-[44px] mb-2'}`}
+                        style={{ color: row.bg === 'dark' ? '#f5f5f7' : '#1d1d1f', letterSpacing: '-0.01em', lineHeight: 1.1 }}
+                      >
+                        {item.title}
+                      </h3>
+                      <p className={`${row.bg === 'light' ? 'text-base mb-4' : 'text-lg mb-6'}`} style={{ color: row.bg === 'dark' ? '#a1a1a6' : '#6e6e73' }}>
+                        {item.subtitle}
+                      </p>
+                      <div className="flex gap-3 justify-center">
+                        <span
+                          className={`rounded-full text-sm font-medium transition-all duration-300 hover:brightness-110 hover:scale-105 cursor-pointer ${row.bg === 'light' ? 'px-5 py-2' : 'px-6 py-2.5'}`}
+                          style={{ background: row.bg === 'dark' ? '#0071e3' : '#0066cc', color: '#ffffff' }}
+                        >Shop now</span>
+                      </div>
+                    </div>
+                    {/* Light grids: prominent product image below text */}
+                    {row.bg === 'light' && (
+                      <div className="relative z-10 mt-4 w-full flex justify-center flex-1">
+                        <img
+                          src={item.img}
+                          alt={item.title}
+                          className="max-w-[90%] md:max-w-[85%] w-full h-auto max-h-[50vh] object-contain transition-transform duration-700 group-hover:scale-105"
+                          style={{ filter: 'drop-shadow(0 16px 32px rgba(0, 0, 0, 0.08))' }}
+                        />
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </section>
+            ))}
+          </div>
+
+          {/* Agent Demo — only visible when chat is unlocked (Lab 2+) */}
+          {(workshopMode === 'tools' || workshopMode === 'full') && (
+            <DemoChatCarousel onOpenChat={() => {
+              const bubble = document.querySelector('[alt="Chat"]')?.parentElement as HTMLElement
+              if (bubble) bubble.click()
+            }} />
+          )}
+
+          {/* Footer */}
+          <footer style={{ borderTop: '1px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
+            <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-8">
+              <div className="text-center text-xs" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
+                <p className="mb-1.5">© 2026 Shayon Sanyal | DAT406: Build Agentic AI-Powered Search with Amazon Aurora</p>
+                <p>
+                  {workshopMode === 'legacy' ? 'Aurora PostgreSQL • Keyword Search'
+                    : workshopMode === 'semantic' ? 'Aurora PostgreSQL • Amazon Bedrock • pgvector'
+                    : workshopMode === 'tools' ? 'Aurora PostgreSQL • Amazon Bedrock • pgvector • Strands Agents SDK'
+                    : 'Aurora PostgreSQL • Amazon Bedrock • pgvector • Strands Agents SDK • Multi-Agent Orchestration'}
+                </p>
               </div>
             </div>
           </footer>
@@ -431,107 +535,106 @@ function AppContent() {
         {/* Recently Viewed Products */}
         <RecentlyViewed />
 
-        {/* Dev Tools — Auto-folding left panel */}
+        {/* Dev Tools — Warm panel */}
         <div
           className="fixed left-0 top-[72px] z-40"
           style={{ height: 'calc(100vh - 72px)' }}
           onMouseEnter={() => setShowDevTools(true)}
           onMouseLeave={() => setShowDevTools(false)}
         >
-          {/* Collapsed tab (always visible) */}
+          {/* Collapsed tab */}
           <div
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-10 py-5 rounded-r-xl flex flex-col items-center gap-2 cursor-pointer transition-opacity duration-300"
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-8 py-6 rounded-r-lg flex flex-col items-center gap-2 cursor-pointer transition-opacity duration-300"
             style={{
-              background: 'rgba(13, 13, 26, 0.85)',
-              border: '1px solid rgba(168, 85, 247, 0.25)',
-              borderLeft: 'none',
-              backdropFilter: 'blur(12px)',
+              background: 'linear-gradient(180deg, #221a10, #18120a)',
+              border: '1px solid rgba(140, 100, 55, 0.3)',
+              borderLeft: 'none', boxShadow: '2px 0 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(200,160,100,0.08)',
               opacity: showDevTools ? 0 : 1,
               pointerEvents: showDevTools ? 'none' : 'auto',
             }}
           >
-            <Wrench className="h-4 w-4 text-purple-400" />
-            <span className="text-[9px] text-purple-400/70 font-semibold tracking-widest uppercase" style={{ writingMode: 'vertical-lr' }}>DEV</span>
+            <Wrench className="h-3.5 w-3.5" style={{ color: 'rgba(220, 180, 120, 0.8)' }} />
+            <span className="text-[8px] font-semibold tracking-widest uppercase" style={{ writingMode: 'vertical-lr', color: 'rgba(210, 170, 115, 0.65)' }}>Tools</span>
           </div>
 
           {/* Expanded panel */}
           <div
-            className="h-full bg-gradient-to-b from-gray-900/98 to-gray-800/98 backdrop-blur-xl border-r border-purple-500/30 shadow-2xl transition-all duration-300 ease-in-out overflow-hidden"
-            style={{ width: showDevTools ? 320 : 0 }}
+            className="h-full transition-all duration-300 ease-in-out overflow-hidden wood-panel"
+            style={{
+              width: showDevTools ? 300 : 0,
+              borderRight: '1px solid rgba(140, 100, 55, 0.25)',
+              boxShadow: '4px 0 24px rgba(0, 0, 0, 0.5), inset -1px 0 0 rgba(200, 160, 100, 0.06)',
+            }}
           >
-            <div className="w-80 p-6 h-full flex flex-col">
-              <div className="mb-6">
-                <h2 className="text-2xl font-light text-white mb-2">Developer Tools</h2>
-                <p className="text-sm text-purple-300">Workshop debugging & monitoring</p>
+            <div className="w-[300px] p-5 h-full flex flex-col wood-scroll overflow-y-auto" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+              {/* Header */}
+              <div className="mb-5 pb-4" style={{ borderBottom: '1px solid rgba(160, 120, 70, 0.12)' }}>
+                <h2 className="text-xl font-semibold mb-1 wood-text-primary" style={{ letterSpacing: '-0.01em' }}>Developer Tools</h2>
+                <p className="text-[13px] wood-text-secondary">Workshop debugging & monitoring</p>
               </div>
-              <div className="flex-1 space-y-3 overflow-y-auto">
-                <button onClick={() => { setShowSQLInspector(true); setShowDevTools(false); }} className="w-full p-4 rounded-xl bg-purple-900/30 hover:bg-purple-800/50 hover:scale-[1.02] border border-purple-500/30 text-left transition-all duration-200">
-                  <div className="flex items-start gap-3">
-                    <Database className="h-5 w-5 text-purple-400 flex-shrink-0" />
-                    <div>
-                      <p className="text-white font-medium mb-1">SQL Query Inspector</p>
-                      <p className="text-xs text-purple-300">Monitor pgvector queries</p>
-                    </div>
-                  </div>
-                </button>
-                <button onClick={() => { setShowIndexPerformance(true); setShowDevTools(false); }} className="w-full p-4 rounded-xl bg-purple-900/30 hover:bg-purple-800/50 hover:scale-[1.02] border border-purple-500/30 text-left transition-all duration-200">
-                  <div className="flex items-start gap-3">
-                    <BarChart3 className="h-5 w-5 text-purple-400 flex-shrink-0" />
-                    <div>
-                      <p className="text-white font-medium mb-1">Index Performance</p>
-                      <p className="text-xs text-purple-300">Tune HNSW parameters</p>
-                    </div>
-                  </div>
-                </button>
-                <button onClick={() => { setShowContextDashboard(!showContextDashboard); setShowDevTools(false); }} className="w-full p-4 rounded-xl bg-purple-900/30 hover:bg-purple-800/50 hover:scale-[1.02] border border-purple-500/30 text-left transition-all duration-200">
-                  <div className="flex items-start gap-3">
-                    <Activity className="h-5 w-5 text-purple-400 flex-shrink-0" />
-                    <div>
-                      <p className="text-white font-medium mb-1">Context Monitor</p>
-                      <p className="text-xs text-purple-300">Token & prompt management</p>
-                    </div>
-                  </div>
-                </button>
-                <button onClick={() => { setAgentPanelMode(agentPanelMode === 'expanded' ? 'hidden' : 'expanded'); setShowDevTools(false); }} className="w-full p-4 rounded-xl bg-purple-900/30 hover:bg-purple-800/50 hover:scale-[1.02] border border-purple-500/30 text-left transition-all duration-200">
-                  <div className="flex items-start gap-3">
-                    <Brain className="h-5 w-5 text-purple-400 flex-shrink-0" />
-                    <div>
-                      <p className="text-white font-medium mb-1">Agent Reasoning Traces</p>
-                      <p className="text-xs text-purple-300">Multi-agent workflow</p>
-                    </div>
-                  </div>
-                </button>
-                <button onClick={() => { setShowHybridComparison(true); setShowDevTools(false); }} className="w-full p-4 rounded-xl bg-purple-900/30 hover:bg-purple-800/50 hover:scale-[1.02] border border-purple-500/30 text-left transition-all duration-200">
-                  <div className="flex items-start gap-3">
-                    <GitCompare className="h-5 w-5 text-purple-400 flex-shrink-0" />
-                    <div>
-                      <p className="text-white font-medium mb-1">Hybrid Search Comparison</p>
-                      <p className="text-xs text-purple-300">Vector vs Hybrid side-by-side</p>
-                    </div>
-                  </div>
-                </button>
-                <button onClick={() => { setShowPersonalizationRadar(true); setShowDevTools(false); }} className="w-full p-4 rounded-xl bg-purple-900/30 hover:bg-purple-800/50 hover:scale-[1.02] border border-purple-500/30 text-left transition-all duration-200">
-                  <div className="flex items-start gap-3">
-                    <Radar className="h-5 w-5 text-purple-400 flex-shrink-0" />
-                    <div>
-                      <p className="text-white font-medium mb-1">Personalization Radar</p>
-                      <p className="text-xs text-purple-300">User preference analysis</p>
-                    </div>
-                  </div>
-                </button>
-                <button onClick={() => { setShowAgentActivity(true); setShowDevTools(false); }} className="w-full p-4 rounded-xl bg-purple-900/30 hover:bg-purple-800/50 hover:scale-[1.02] border border-purple-500/30 text-left transition-all duration-200">
-                  <div className="flex items-start gap-3">
-                    <User className="h-5 w-5 text-purple-400 flex-shrink-0" />
-                    <div>
-                      <p className="text-white font-medium mb-1">Agent Activity Dashboard</p>
-                      <p className="text-xs text-purple-300">Session analytics & flow</p>
-                    </div>
-                  </div>
-                </button>
 
-                {/* Architecture Diagrams */}
-                <div className="pt-3 mt-3 border-t border-purple-500/20">
-                  <p className="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-3">Architecture</p>
+              <div className="flex-1 space-y-1.5">
+                {/* Workshop Mode Switcher */}
+                <div className="mb-4 pb-4" style={{ borderBottom: '1px solid rgba(160, 120, 70, 0.1)' }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider mb-2.5 wood-text-secondary">Workshop Progression</p>
+                  {([
+                    { key: 'legacy' as const, label: 'Legacy', desc: 'Keyword Only' },
+                    { key: 'semantic' as const, label: 'Lab 1', desc: 'Semantic Search' },
+                    { key: 'tools' as const, label: 'Lab 2', desc: 'Agent Tools' },
+                    { key: 'full' as const, label: 'Lab 3', desc: 'Orchestration' },
+                  ] as const).map((mode) => (
+                    <button
+                      key={mode.key}
+                      onClick={() => setWorkshopMode(mode.key)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-200 mb-0.5"
+                      style={{
+                        background: workshopMode === mode.key ? 'rgba(180, 140, 90, 0.12)' : 'transparent',
+                        border: workshopMode === mode.key ? '1px solid rgba(180, 140, 90, 0.2)' : '1px solid transparent',
+                      }}
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 transition-all duration-200"
+                        style={{
+                          background: workshopMode === mode.key ? '#c8a870' : 'transparent',
+                          border: workshopMode === mode.key ? '2px solid #c8a870' : '2px solid rgba(160, 120, 70, 0.25)',
+                        }}
+                      />
+                      <div>
+                        <span className="text-[13px] font-medium" style={{ color: workshopMode === mode.key ? '#f0e4d0' : 'rgba(210, 185, 150, 0.7)' }}>
+                          {mode.label}
+                        </span>
+                        <span className="text-[11px] ml-1.5" style={{ color: workshopMode === mode.key ? 'rgba(220, 185, 130, 0.85)' : 'rgba(190, 150, 100, 0.5)' }}>
+                          {mode.desc}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Tool buttons */}
+                {[
+                  { icon: <Database className="h-4 w-4" />, label: 'SQL Inspector', desc: 'Monitor pgvector queries', action: () => { setShowSQLInspector(true); setShowDevTools(false) } },
+                  { icon: <BarChart3 className="h-4 w-4" />, label: 'Index Performance', desc: 'Tune HNSW parameters', action: () => { setShowIndexPerformance(true); setShowDevTools(false) } },
+                  { icon: <Brain className="h-4 w-4" />, label: 'Agent Traces', desc: 'Multi-agent workflow', action: () => { setAgentPanelMode(agentPanelMode === 'expanded' ? 'hidden' : 'expanded'); setShowDevTools(false) } },
+                ].map((tool, idx) => (
+                  <button
+                    key={idx}
+                    onClick={tool.action}
+                    className="w-full p-3 rounded-lg text-left transition-all duration-200 hover:translate-x-0.5 wood-card"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="wood-text-accent">{tool.icon}</span>
+                      <div>
+                        <p className="text-[14px] font-medium mb-0.5 wood-text-primary">{tool.label}</p>
+                        <p className="text-[12px] wood-text-secondary">{tool.desc}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+
+                {/* Architecture */}
+                <div className="pt-3 mt-3" style={{ borderTop: '1px solid rgba(160, 120, 70, 0.1)' }}>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider mb-2.5 wood-text-secondary">Architecture</p>
                   {[
                     { title: 'Semantic Search', img: 'part1_architecture.png' },
                     { title: 'Custom Agent Tools', img: 'part2_architecture.png' },
@@ -539,38 +642,22 @@ function AppContent() {
                   ].map((diagram, idx) => (
                     <button
                       key={idx}
-                      onClick={() => { setExpandedDiagram(diagram.img); setShowDevTools(false); }}
-                      className="w-full p-3 rounded-xl bg-purple-900/20 hover:bg-purple-800/40 hover:scale-[1.02] border border-purple-500/20 text-left transition-all duration-200 mb-2"
+                      onClick={() => { setExpandedDiagram(diagram.img); setShowDevTools(false) }}
+                      className="w-full p-2.5 rounded-lg text-left transition-all duration-200 mb-1 hover:translate-x-0.5 wood-card"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg">🏗️</span>
-                        <p className="text-sm text-white font-medium">{diagram.title}</p>
-                      </div>
+                      <p className="text-[13px] font-medium wood-text-accent">{diagram.title}</p>
                     </button>
                   ))}
                 </div>
               </div>
-              <div className="mt-6 pt-4 border-t border-purple-500/30">
-                <p className="text-xs text-purple-400 text-center">Workshop Tools • DAT406</p>
+
+              {/* Footer */}
+              <div className="mt-4 pt-3 wood-footer rounded-b-lg px-2 py-3">
+                <p className="text-[10px] text-center" style={{ color: 'rgba(190, 150, 100, 0.5)' }}>Workshop Tools · DAT406</p>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Context Dashboard - Floating Panel (Next to FABs) */}
-        {showContextDashboard && (
-          <div className="fixed bottom-8 left-24 z-40 w-[420px] max-h-[calc(100vh-100px)] overflow-y-auto">
-            <div 
-              className="rounded-2xl shadow-2xl backdrop-blur-xl border border-purple-500/30 p-5"
-              style={{
-                background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.95) 0%, rgba(31, 41, 55, 0.95) 100%)'
-              }}
-            >
-              <ContextDashboard onClose={() => setShowContextDashboard(false)} />
-            </div>
-          </div>
-        )}
-        
 
         {/* SQL Inspector Modal */}
         <SQLInspector
@@ -590,24 +677,6 @@ function AppContent() {
           onCollapse={() => setAgentPanelMode('collapsed')}
           onExpand={() => setAgentPanelMode('expanded')}
           onClose={() => setAgentPanelMode('hidden')}
-        />
-
-        {/* Hybrid Search Comparison Modal */}
-        <HybridSearchComparison
-          isOpen={showHybridComparison}
-          onClose={() => setShowHybridComparison(false)}
-        />
-
-        {/* Personalization Radar */}
-        <PersonalizationRadar
-          isOpen={showPersonalizationRadar}
-          onClose={() => setShowPersonalizationRadar(false)}
-        />
-
-        {/* Agent Activity Dashboard */}
-        <AgentActivityDashboard
-          isOpen={showAgentActivity}
-          onClose={() => setShowAgentActivity(false)}
         />
 
         {/* Proactive Suggestions */}
@@ -658,7 +727,7 @@ function AppContent() {
               >
                 <button
                   onClick={() => setExpandedDiagram(null)}
-                  className="absolute -top-12 right-0 p-2 rounded-full bg-purple-600 hover:bg-purple-700 transition-colors"
+                  className="absolute -top-12 right-0 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors border border-white/10"
                 >
                   <X className="h-6 w-6 text-white" />
                 </button>

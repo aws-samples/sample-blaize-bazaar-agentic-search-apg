@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { X, Sparkles } from 'lucide-react'
 import { aggregateSessionPreferences } from '../utils/preferenceExtractor'
 import { getRecentlyViewed } from '../utils/recentlyViewed'
+import { useTheme } from '../App'
 
 interface ProactiveSuggestionsProps {
   onSuggestionClick: (query: string) => void
@@ -13,6 +14,7 @@ interface ProactiveSuggestionsProps {
 }
 
 const ProactiveSuggestions = ({ onSuggestionClick, onDismiss }: ProactiveSuggestionsProps) => {
+  const { theme } = useTheme()
   const [suggestions, setSuggestions] = useState<Array<{ text: string; query: string }>>([])
   const [isDismissing, setIsDismissing] = useState(false)
 
@@ -68,16 +70,16 @@ const ProactiveSuggestions = ({ onSuggestionClick, onDismiss }: ProactiveSuggest
     <div
       className="fixed top-[80px] left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-4 py-2.5 rounded-full"
       style={{
-        background: 'rgba(13, 13, 26, 0.9)',
-        border: '1px solid rgba(139, 92, 246, 0.3)',
+        background: theme === 'dark' ? 'rgba(0, 0, 0, 0.95)' : 'rgba(255, 255, 255, 0.97)',
+        border: '1px solid var(--border-color)',
         backdropFilter: 'blur(20px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+        boxShadow: theme === 'dark' ? '0 8px 32px rgba(0, 0, 0, 0.3)' : '0 8px 32px rgba(0, 0, 0, 0.1)',
         transform: isDismissing ? 'translate(-50%, -20px)' : 'translate(-50%, 0)',
         opacity: isDismissing ? 0 : 1,
         transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
       }}
     >
-      <Sparkles className="h-4 w-4 text-purple-400 flex-shrink-0" />
+      <Sparkles className="h-4 w-4 text-text-secondary flex-shrink-0" />
       <div className="flex items-center gap-2">
         {suggestions.map((s, idx) => (
           <button
@@ -85,17 +87,17 @@ const ProactiveSuggestions = ({ onSuggestionClick, onDismiss }: ProactiveSuggest
             onClick={() => onSuggestionClick(s.query)}
             className="px-3 py-1 rounded-full text-xs font-medium transition-all hover:scale-105 whitespace-nowrap"
             style={{
-              background: 'rgba(139, 92, 246, 0.15)',
-              border: '1px solid rgba(139, 92, 246, 0.25)',
-              color: '#c084fc',
+              background: 'var(--input-bg)',
+              border: '1px solid var(--border-color)',
+              color: 'var(--text-secondary)',
             }}
           >
             {s.text}
           </button>
         ))}
       </div>
-      <button onClick={handleDismiss} className="p-1 rounded-full hover:bg-white/10 transition-colors flex-shrink-0">
-        <X className="h-3 w-3 text-gray-400" />
+      <button onClick={handleDismiss} className="p-1 rounded-full transition-colors flex-shrink-0" style={{ ['--tw-bg-opacity' as any]: 1 }} onMouseEnter={(e) => e.currentTarget.style.background = 'var(--input-bg)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+        <X className="h-3 w-3 text-text-secondary" />
       </button>
     </div>
   )

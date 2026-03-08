@@ -140,7 +140,7 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && runComparison()}
-              placeholder="Enter search query (e.g., 'wireless headphones')"
+              placeholder="Enter search query (e.g., 'luxury watch for a gift')"
               className="flex-1 px-4 py-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-text-primary placeholder-text-secondary focus:outline-none focus:border-purple-500/50"
             />
             <button
@@ -190,7 +190,7 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
               <div>
                 <div className="mb-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-blue-400">🔵 Vector-Only Search</h3>
+                    <h3 className="text-lg font-semibold text-blue-400">Vector-Only Search</h3>
                     <span className="text-sm text-blue-300">{vectorTime.toFixed(0)}ms</span>
                   </div>
                   <p className="text-xs text-text-secondary">Semantic similarity using pgvector HNSW index</p>
@@ -223,8 +223,8 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
                           </div>
                           <p className="text-sm text-text-primary mb-2 line-clamp-2">{result.product_description}</p>
                           <div className="flex items-center gap-3 text-xs text-text-secondary">
-                            <span>⭐ {result.rating}</span>
-                            <span>💬 {result.reviews} reviews</span>
+                            <span>★ {result.rating}</span>
+                            <span>{result.reviews} reviews</span>
                           </div>
                         </div>
                       </div>
@@ -237,7 +237,7 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
               <div>
                 <div className="mb-4 p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-purple-400">🟣 Hybrid Search (RRF)</h3>
+                    <h3 className="text-lg font-semibold text-purple-400">Hybrid Search (RRF)</h3>
                     <span className="text-sm text-purple-300">{hybridTime.toFixed(0)}ms</span>
                   </div>
                   <p className="text-xs text-text-secondary">Vector + Full-Text with Reciprocal Rank Fusion</p>
@@ -278,11 +278,11 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
                           </div>
                           <p className="text-sm text-text-primary mb-2 line-clamp-2">{result.product_description}</p>
                           <div className="flex items-center gap-3 text-xs text-text-secondary">
-                            <span>⭐ {result.rating}</span>
-                            <span>💬 {result.reviews} reviews</span>
+                            <span>★ {result.rating}</span>
+                            <span>{result.reviews} reviews</span>
                             {result.vector_rank && <span className="text-blue-400">V:{result.vector_rank}</span>}
                             {result.fulltext_rank && <span className="text-yellow-400">FT:{result.fulltext_rank}</span>}
-                            {isNewResult && <span className="text-green-400 font-semibold">✨ NEW</span>}
+                            {isNewResult && <span className="text-green-400 font-semibold">NEW</span>}
                             {isReranked && <span className="text-amber-400">↑ Was #{vectorIdx + 1}</span>}
                           </div>
                         </div>

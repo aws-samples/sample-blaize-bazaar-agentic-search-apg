@@ -42,10 +42,16 @@ def product_recommendation_agent(query: str) -> str:
     else:
         enhanced_query = current_request
     
-    # Search with enhanced query and price filter
+    # Search with enhanced query, price filter, and category filter
+    category_filter = None
+    if preferences['categories']:
+        category_filter = preferences['categories'][0]
+
     result = semantic_product_search(
         query=enhanced_query,
         max_price=preferences['price_range'],
+        category=category_filter,
+        min_similarity=0.15,
         limit=5
     )
     result_dict = json.loads(result)
@@ -66,14 +72,40 @@ def _extract_user_preferences(text: str) -> dict:
     
     # Extract categories from past searches
     category_keywords = {
-        'laptop': 'laptops',
-        'headphone': 'headphones',
-        'earbud': 'headphones',
-        'camera': 'cameras',
-        'gaming': 'gaming',
-        'smart home': 'smart home',
-        'cable': 'cables',
-        'charger': 'chargers'
+        'laptop': 'Laptops',
+        'macbook': 'Laptops',
+        'phone': 'Smartphones',
+        'smartphone': 'Smartphones',
+        'iphone': 'Smartphones',
+        'samsung': 'Smartphones',
+        'watch': 'Mens Watches',
+        'rolex': 'Mens Watches',
+        'fragrance': 'Fragrances',
+        'perfume': 'Fragrances',
+        'cologne': 'Fragrances',
+        'shoe': 'Mens Shoes',
+        'sneaker': 'Mens Shoes',
+        'nike': 'Mens Shoes',
+        'jordan': 'Mens Shoes',
+        'furniture': 'Furniture',
+        'sofa': 'Furniture',
+        'bed': 'Furniture',
+        'kitchen': 'Kitchen Accessories',
+        'cook': 'Kitchen Accessories',
+        'sunglasses': 'Sunglasses',
+        'bag': 'Womens Bags',
+        'handbag': 'Womens Bags',
+        'dress': 'Womens Dresses',
+        'shirt': 'Mens Shirts',
+        'sports': 'Sports Accessories',
+        'football': 'Sports Accessories',
+        'basketball': 'Sports Accessories',
+        'tablet': 'Tablets',
+        'ipad': 'Tablets',
+        'beauty': 'Beauty',
+        'makeup': 'Beauty',
+        'skin': 'Skin Care',
+        'motorcycle': 'Motorcycle',
     }
     
     text_lower = text.lower()
@@ -88,7 +120,7 @@ def _extract_user_preferences(text: str) -> dict:
         preferences['price_range'] = max([int(p) for p in price_matches])
     
     # Extract common keywords
-    keywords = ['wireless', 'gaming', 'portable', 'professional', 'budget', 'noise cancel']
+    keywords = ['luxury', 'premium', 'budget', 'comfortable', 'lightweight', 'professional', 'classic', 'vintage', 'modern']
     for kw in keywords:
         if kw in text_lower:
             preferences['keywords'].append(kw)

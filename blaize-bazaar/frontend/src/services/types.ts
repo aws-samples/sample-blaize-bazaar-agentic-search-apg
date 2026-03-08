@@ -36,6 +36,7 @@ export interface SearchQuery {
   limit?: number
   min_similarity?: number
   filters?: SearchFilters
+  search_mode?: string
 }
 
 export interface SearchResponse {

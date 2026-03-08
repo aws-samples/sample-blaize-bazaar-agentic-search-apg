@@ -32,8 +32,8 @@ def create_orchestrator():
     """Create the orchestrator agent with all specialized agents as tools"""
     return Agent(
         model=BedrockModel(
-            model_id="global.anthropic.claude-sonnet-4-20250514-v1:0",
-            max_tokens=16384,
+            model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
+            max_tokens=4096,
             temperature=0.0
         ),
         system_prompt=ORCHESTRATOR_PROMPT,

@@ -120,7 +120,7 @@ const AgentActivityDashboard = ({ isOpen, onClose }: AgentActivityDashboardProps
                     return (
                       <div key={agent} className="flex items-center gap-3">
                         <div className="flex items-center gap-1.5 w-32">
-                          <span className="text-sm">{identity?.icon || '🤖'}</span>
+                          <span className="text-sm">{identity?.icon || 'AI'}</span>
                           <span className="text-xs text-gray-300 truncate">{identity?.name || agent}</span>
                         </div>
                         <div className="flex-1 h-4 rounded-full bg-white/5 overflow-hidden">
@@ -160,7 +160,7 @@ const AgentActivityDashboard = ({ isOpen, onClose }: AgentActivityDashboardProps
               {/* Orchestrator */}
               <div className="flex flex-col items-center gap-1">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: AGENT_IDENTITIES.orchestrator.gradient }}>
-                  <span className="text-sm">🎯</span>
+                  <span className="text-sm font-bold" style={{ color: 'rgba(168, 85, 247, 0.8)' }}>O</span>
                 </div>
                 <span className="text-[9px] text-gray-500">Orchestrator</span>
               </div>

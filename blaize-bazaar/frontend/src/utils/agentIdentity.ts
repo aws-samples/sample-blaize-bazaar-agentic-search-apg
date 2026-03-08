@@ -18,7 +18,7 @@ export interface AgentIdentity {
 export const AGENT_IDENTITIES: Record<AgentType, AgentIdentity> = {
   orchestrator: {
     name: 'Orchestrator',
-    icon: '🎯',
+    icon: 'O',
     gradient: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
     bgColor: 'rgba(168, 85, 247, 0.1)',
     borderColor: 'rgba(168, 85, 247, 0.3)',
@@ -27,7 +27,7 @@ export const AGENT_IDENTITIES: Record<AgentType, AgentIdentity> = {
   },
   search: {
     name: 'Search Agent',
-    icon: '🔍',
+    icon: 'S',
     gradient: 'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)',
     bgColor: 'rgba(59, 130, 246, 0.1)',
     borderColor: 'rgba(59, 130, 246, 0.3)',
@@ -36,7 +36,7 @@ export const AGENT_IDENTITIES: Record<AgentType, AgentIdentity> = {
   },
   inventory: {
     name: 'Inventory Agent',
-    icon: '📦',
+    icon: 'I',
     gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
     bgColor: 'rgba(16, 185, 129, 0.1)',
     borderColor: 'rgba(16, 185, 129, 0.3)',
@@ -45,7 +45,7 @@ export const AGENT_IDENTITIES: Record<AgentType, AgentIdentity> = {
   },
   pricing: {
     name: 'Pricing Agent',
-    icon: '💰',
+    icon: 'P',
     gradient: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)',
     bgColor: 'rgba(245, 158, 11, 0.1)',
     borderColor: 'rgba(245, 158, 11, 0.3)',
@@ -54,7 +54,7 @@ export const AGENT_IDENTITIES: Record<AgentType, AgentIdentity> = {
   },
   recommendation: {
     name: 'Recommendation Agent',
-    icon: '⭐',
+    icon: 'R',
     gradient: 'linear-gradient(135deg, #eab308 0%, #f97316 100%)',
     bgColor: 'rgba(234, 179, 8, 0.1)',
     borderColor: 'rgba(234, 179, 8, 0.3)',

@@ -94,7 +94,7 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
   const getQueryTypeColor = (type: string): string => {
     const colors: Record<string, string> = {
       'semantic_search': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-      'image_search': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+      'image_search': 'bg-white/[0.08] text-white/40 border-white/10',
       'autocomplete': 'bg-green-500/20 text-green-300 border-green-500/30',
       'category_browse': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
     };
@@ -121,21 +121,21 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-[90vw] h-[90vh] glass-strong rounded-[20px] flex flex-col shadow-2xl overflow-hidden">
+      <div className="w-[90vw] h-[90vh] wood-modal rounded-[20px] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-purple-500/20 flex justify-between items-center bg-purple-500/5">
+        <div className="px-6 py-4 wood-header flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Database className="h-6 w-6 text-purple-400" />
+            <Database className="h-6 w-6 wood-text-accent" />
             <div>
-              <h2 className="text-xl font-semibold text-text-primary">
+              <h2 className="text-xl font-semibold wood-text-primary">
                 Live SQL Query Inspector
               </h2>
-              <p className="text-xs text-text-secondary mt-0.5">
+              <p className="text-xs wood-text-secondary mt-0.5">
                 Real-time pgvector query monitoring with EXPLAIN analysis
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             {/* Auto-refresh toggle */}
             <button
@@ -158,16 +158,16 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
                 </>
               )}
             </button>
-            
+
             {/* Refresh button */}
             <button
               onClick={fetchQueries}
-              className="p-2 rounded-lg hover:bg-purple-500/10 transition-colors"
+              className="p-2 rounded-lg hover:bg-white/10 transition-colors"
               title="Refresh now"
             >
-              <RefreshCw className="h-4 w-4 text-text-secondary hover:text-purple-400" />
+              <RefreshCw className="h-4 w-4 text-text-secondary hover:text-white/50" />
             </button>
-            
+
             {/* Clear button */}
             <button
               onClick={handleClearLogs}
@@ -176,16 +176,16 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
             >
               <Trash2 className="h-4 w-4 text-text-secondary hover:text-red-400" />
             </button>
-            
+
             {/* Close button */}
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-purple-500/10 transition-colors">
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
               <X className="h-5 w-5 text-text-secondary hover:text-text-primary" />
             </button>
           </div>
         </div>
 
         {/* Performance Info Banner */}
-        <div className="px-6 py-3 bg-blue-500/10 border-b border-blue-500/30">
+        <div className="px-6 py-3 wood-info border-b" style={{ borderColor: 'rgba(160, 120, 70, 0.12)' }}>
           <div className="flex items-start gap-3">
             <Zap className="h-5 w-5 mt-0.5 text-blue-400 flex-shrink-0" />
             <div className="text-xs">
@@ -198,9 +198,9 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
                 <span className="text-gray-300"> Processing (~50ms)</span>
               </p>
               <p className="text-blue-200/70 mt-1.5">
-                💡 <span className="font-medium">HNSW Index Optimization:</span> Using <code className="px-1 py-0.5 bg-black/30 rounded text-purple-300">SET LOCAL enable_seqscan=off</code>, 
-                <code className="px-1 py-0.5 bg-black/30 rounded text-purple-300">random_page_cost=1</code>, and 
-                <code className="px-1 py-0.5 bg-black/30 rounded text-purple-300">cpu_tuple_cost=0.01</code> to force PostgreSQL to use the HNSW index for sub-millisecond vector similarity search.
+                <Zap className="h-3.5 w-3.5 inline text-yellow-400" /> <span className="font-medium">HNSW Index Optimization:</span> Using <code className="px-1 py-0.5 bg-black/30 rounded text-white/40">SET LOCAL enable_seqscan=off</code>, 
+                <code className="px-1 py-0.5 bg-black/30 rounded text-white/40">random_page_cost=1</code>, and 
+                <code className="px-1 py-0.5 bg-black/30 rounded text-white/40">cpu_tuple_cost=0.01</code> to force PostgreSQL to use the HNSW index for sub-millisecond vector similarity search.
               </p>
             </div>
           </div>
@@ -208,11 +208,11 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
 
         {/* Stats Summary */}
         {stats && (
-          <div className="px-6 py-3 bg-purple-500/5 border-b border-purple-500/20">
+          <div className="px-6 py-3 border-b" style={{ background: 'rgba(160, 120, 70, 0.03)', borderColor: 'rgba(160, 120, 70, 0.1)' }}>
             <div className="grid grid-cols-5 gap-4">
               <div className="text-center">
                 <div className="text-xs text-text-secondary">Total Queries</div>
-                <div className="text-lg font-semibold text-purple-400">{stats.total_queries}</div>
+                <div className="text-lg font-semibold text-white/50">{stats.total_queries}</div>
               </div>
               <div className="text-center">
                 <div className="text-xs text-text-secondary">Avg Time</div>
@@ -241,7 +241,7 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
         )}
 
         {/* Query List */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-6 py-4 wood-scroll">
           {queries.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-text-secondary">
               <Database className="h-16 w-16 mb-4 opacity-30" />
@@ -253,10 +253,10 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
               {queries.map((query, idx) => (
                 <div
                   key={idx}
-                  className="rounded-xl border border-purple-500/20 bg-purple-500/5 overflow-hidden transition-all duration-300 hover:border-purple-500/40"
+                  className="rounded-xl overflow-hidden transition-all duration-300 wood-card"
                 >
                   {/* Query Header */}
-                  <div className="px-4 py-3 flex items-center justify-between bg-purple-500/10">
+                  <div className="px-4 py-3 flex items-center justify-between" style={{ background: 'rgba(160, 120, 70, 0.04)' }}>
                     <div className="flex items-center gap-3">
                       <span className={`px-2 py-1 rounded-md text-xs font-medium border ${getQueryTypeColor(query.query_type)}`}>
                         {query.query_type}
@@ -281,7 +281,7 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
                     </div>
                     <button
                       onClick={() => setExpandedQuery(expandedQuery === idx ? null : idx)}
-                      className="text-xs text-purple-400 hover:text-purple-300"
+                      className="text-xs text-white/50 hover:text-white/40"
                     >
                       {expandedQuery === idx ? 'Hide More' : 'More Details'}
                     </button>
@@ -289,8 +289,8 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
 
                   {/* Query Plan (Primary View) */}
                   {query.query_plan && query.query_plan.text && (
-                    <div className="px-4 py-3 bg-black/40 border-b border-purple-500/20">
-                      <div className="text-xs font-medium text-purple-300 mb-2 flex items-center gap-2">
+                    <div className="px-4 py-3 bg-black/40 border-b border-white/[0.08]">
+                      <div className="text-xs font-medium text-white/40 mb-2 flex items-center gap-2">
                         <Zap className="h-3 w-3" />
                         EXPLAIN (ANALYZE, BUFFERS, VERBOSE)
                       </div>
@@ -303,7 +303,7 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
                   {/* Search Query */}
                   {query.search_query && (
                     <div className="px-4 py-2 bg-blue-500/10 border-b border-blue-500/20">
-                      <div className="text-xs font-medium text-blue-300 mb-1">🔍 Search Query:</div>
+                      <div className="text-xs font-medium text-blue-300 mb-1">Search Query:</div>
                       <div className="text-sm text-blue-200 font-medium">"{query.search_query}"</div>
                     </div>
                   )}
@@ -311,10 +311,10 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
                   {/* Query SQL */}
                   <div className="px-4 py-3 bg-black/30">
                     <div className="flex items-center justify-between mb-2">
-                      <div className="text-xs font-medium text-purple-300">SQL Query:</div>
+                      <div className="text-xs font-medium text-white/40">SQL Query:</div>
                       <button
                         onClick={() => copyToClipboard(query.sql, idx)}
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-purple-400 hover:bg-purple-500/20 transition-colors"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-white/50 hover:bg-white/10 transition-colors"
                         title="Copy SQL"
                       >
                         {copiedIndex === idx ? (
@@ -331,11 +331,11 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
 
                   {/* Expanded Details */}
                   {expandedQuery === idx && (
-                    <div className="border-t border-purple-500/20">
+                    <div className="border-t border-white/[0.08]">
                       {/* Parameters */}
                       {query.params && query.params.length > 0 && (
-                        <div className="px-4 py-3 border-b border-purple-500/20">
-                          <div className="text-xs font-medium text-purple-300 mb-2">Parameters:</div>
+                        <div className="px-4 py-3 border-b border-white/[0.08]">
+                          <div className="text-xs font-medium text-white/40 mb-2">Parameters:</div>
                           <div className="space-y-1">
                             {query.params.map((param, pidx) => (
                               <div key={pidx} className="text-xs text-text-secondary font-mono">
@@ -348,8 +348,8 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
 
                       {/* JSON Query Plan */}
                       {query.query_plan && query.query_plan.json && (
-                        <div className="px-4 py-3 border-b border-purple-500/20">
-                          <div className="text-xs font-medium text-purple-300 mb-2">Query Plan (JSON Format):</div>
+                        <div className="px-4 py-3 border-b border-white/[0.08]">
+                          <div className="text-xs font-medium text-white/40 mb-2">Query Plan (JSON Format):</div>
                           <pre className="text-xs text-text-secondary font-mono overflow-x-auto custom-scrollbar bg-black/30 p-3 rounded-lg">
                             {JSON.stringify(query.query_plan.json, null, 2)}
                           </pre>
@@ -357,7 +357,7 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
                       )}
 
                       {/* Timestamp */}
-                      <div className="px-4 py-2 bg-purple-500/5 text-xs text-text-secondary">
+                      <div className="px-4 py-2 bg-white/[0.04] text-xs text-text-secondary">
                         Executed at: {new Date(query.timestamp).toLocaleString()}
                       </div>
                     </div>
@@ -369,14 +369,14 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-purple-500/20 bg-purple-500/5">
-          <div className="flex items-start gap-3 text-xs text-text-secondary">
-            <Zap className="h-4 w-4 mt-0.5 text-purple-400 flex-shrink-0" />
+        <div className="px-6 py-4 wood-footer">
+          <div className="flex items-start gap-3 text-xs wood-text-secondary">
+            <Zap className="h-4 w-4 mt-0.5 wood-text-accent flex-shrink-0" />
             <div>
-              <p className="font-medium text-purple-300 mb-1">Disclaimer</p>
+              <p className="font-medium wood-text-primary mb-1">Disclaimer</p>
               <p>
                 SQL Inspector is built for the DAT406 workshop for illustrative and educational purposes only. 
-                Inspect actual pgvector queries with <span className="text-purple-400">&lt;=&gt;</span> operator, 
+                Inspect actual pgvector queries with <span className="text-white/50">&lt;=&gt;</span> operator, 
                 view HNSW index usage, analyze execution times, and understand query plans for optimization.
               </p>
             </div>
@@ -386,7 +386,7 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
 
       <style>{`
         .sql-code .sql-keyword {
-          color: #ba68c8;
+          color: rgba(255, 255, 255, 0.5);
           font-weight: 600;
         }
         .sql-code .sql-operator {

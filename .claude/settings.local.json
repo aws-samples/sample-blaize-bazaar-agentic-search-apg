@@ -10,7 +10,14 @@
       "Bash(pip3 show strands-agents)",
       "Bash(python3 -c \"import strands; print\\(strands.__file__\\)\")",
       "Bash(python -c \"import strands; print\\(strands.__file__\\)\")",
-      "WebFetch(domain:strandsagents.com)"
+      "WebFetch(domain:strandsagents.com)",
+      "WebFetch(domain:www.pexels.com)",
+      "Bash(curl -sI \"https://videos.pexels.com/video-files/7609195/7609195-hd_1920_1080_25fps.mp4\")",
+      "Bash(curl -sL \"https://images.pexels.com/photos/18337612/pexels-photo-18337612.jpeg?w=600&q=60\" -o /tmp/pexels_18337612.jpg)",
+      "Bash(curl -sL \"https://images.pexels.com/photos/35541612/pexels-photo-35541612.jpeg?w=600&q=60\" -o /tmp/pexels_35541612.jpg)",
+      "Bash(curl -sL \"https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&q=60\" -o /tmp/unsplash_earth.jpg)",
+      "Bash(curl -sL \"https://images.pexels.com/photos/6956352/pexels-photo-6956352.jpeg?w=600&q=60\" -o /tmp/pexels_6956352.jpg)",
+      "Bash(npx tsc --noEmit --skipLibCheck)"
     ]
   }
 }

@@ -10,10 +10,10 @@ from .product import ProductWithScore
 
 class SearchRequest(BaseModel):
     """Search request model for Lab 1 semantic search"""
-    
+
     query: str = Field(
-        ..., 
-        min_length=1, 
+        ...,
+        min_length=1,
         max_length=2000,
         description="Search query text"
     )
@@ -28,6 +28,10 @@ class SearchRequest(BaseModel):
         ge=0,
         le=1,
         description="Minimum similarity score threshold (0-1)"
+    )
+    search_mode: str = Field(
+        default="vector",
+        description="Search mode: 'vector', 'hybrid', or 'keyword'"
     )
 
 
@@ -90,6 +94,7 @@ class ChatRequest(BaseModel):
     message: str
     conversation_history: List[ChatMessage] = []
     session_id: Optional[str] = None
+    workshop_mode: Optional[str] = Field(default=None, description="Workshop progression mode: 'legacy', 'semantic', 'tools', 'full'")
 
 
 class ChatResponse(BaseModel):

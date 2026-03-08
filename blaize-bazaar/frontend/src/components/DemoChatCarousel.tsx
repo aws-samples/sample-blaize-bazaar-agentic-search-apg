@@ -5,7 +5,8 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain } from 'lucide-react'
+import { Brain, Search, Target, DollarSign, Database, Send } from 'lucide-react'
+import { useTheme } from '../App'
 
 // ─── Data Types ───
 
@@ -28,14 +29,22 @@ interface DemoSlide {
   featureName: string
   featureColor: string
   featureGlow: string
-  featureIcon: string
+  featureIconKey: 'search' | 'target' | 'dollar' | 'brain' | 'database'
   userMessage: string
-  aiAvatarEmoji: string
+  aiAvatarIconKey: 'search' | 'target' | 'dollar' | 'brain' | 'database'
   aiAvatarLabel: string
   agentBadges: AgentBadge[]
   aiResponseText: string
   productCards?: DemoProductCard[]
   contextNote?: string
+}
+
+const ICON_MAP = {
+  search: Search,
+  target: Target,
+  dollar: DollarSign,
+  brain: Brain,
+  database: Database,
 }
 
 // ─── Slide Data ───
@@ -46,9 +55,9 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureName: 'Semantic Search',
     featureColor: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
     featureGlow: 'rgba(59, 130, 246, 0.4)',
-    featureIcon: '🔍',
+    featureIconKey: 'search',
     userMessage: 'Find me a good camera under $500 for travel photography',
-    aiAvatarEmoji: '🧠',
+    aiAvatarIconKey: 'brain',
     aiAvatarLabel: 'Orchestrator',
     agentBadges: [
       { label: 'Search Agent', bgColor: 'rgba(59, 130, 246, 0.2)', textColor: '#93c5fd' },
@@ -64,9 +73,9 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureName: 'Multi-Agent Orchestration',
     featureColor: 'linear-gradient(135deg, #a855f7, #ec4899)',
     featureGlow: 'rgba(168, 85, 247, 0.4)',
-    featureIcon: '🎯',
+    featureIconKey: 'target',
     userMessage: 'How does the 4K Mirrorless compare to the Compact for hiking?',
-    aiAvatarEmoji: '🎯',
+    aiAvatarIconKey: 'target',
     aiAvatarLabel: 'Orchestrator',
     agentBadges: [
       { label: 'Search Agent', bgColor: 'rgba(59, 130, 246, 0.2)', textColor: '#93c5fd' },
@@ -81,9 +90,9 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureName: 'Price Intelligence',
     featureColor: 'linear-gradient(135deg, #f59e0b, #ea580c)',
     featureGlow: 'rgba(245, 158, 11, 0.4)',
-    featureIcon: '💰',
+    featureIconKey: 'dollar',
     userMessage: 'Any deals on noise-cancelling headphones right now?',
-    aiAvatarEmoji: '💰',
+    aiAvatarIconKey: 'dollar',
     aiAvatarLabel: 'Pricing Agent',
     agentBadges: [
       { label: 'Pricing Agent', bgColor: 'rgba(245, 158, 11, 0.2)', textColor: '#fcd34d' },
@@ -100,9 +109,9 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureName: 'Conversation Memory',
     featureColor: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
     featureGlow: 'rgba(139, 92, 246, 0.4)',
-    featureIcon: '🧠',
+    featureIconKey: 'brain',
     userMessage: 'What about the camera you recommended — does it do 4K video?',
-    aiAvatarEmoji: '🧠',
+    aiAvatarIconKey: 'brain',
     aiAvatarLabel: 'Orchestrator',
     agentBadges: [
       { label: 'Search Agent', bgColor: 'rgba(59, 130, 246, 0.2)', textColor: '#93c5fd' },
@@ -115,9 +124,9 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureName: 'Inventory Awareness',
     featureColor: 'linear-gradient(135deg, #10b981, #059669)',
     featureGlow: 'rgba(16, 185, 129, 0.4)',
-    featureIcon: '📦',
+    featureIconKey: 'database',
     userMessage: 'Is the Compact Travel Camera in stock? I need it by Friday.',
-    aiAvatarEmoji: '📦',
+    aiAvatarIconKey: 'database',
     aiAvatarLabel: 'Inventory Agent',
     agentBadges: [
       { label: 'Inventory Agent', bgColor: 'rgba(16, 185, 129, 0.2)', textColor: '#6ee7b7' },
@@ -175,6 +184,7 @@ interface DemoChatCarouselProps {
 }
 
 const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
+  const { theme } = useTheme()
   const [activeIndex, setActiveIndex] = useState(0)
   const [direction, setDirection] = useState(1)
   const [isPaused, setIsPaused] = useState(false)
@@ -216,19 +226,21 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
           viewport={{ once: true, margin: '-80px' }}
           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         >
-          <h2 className="text-3xl lg:text-4xl font-extralight text-white mb-4 tracking-tight">
-            Meet the <span className="text-purple-400">agents</span>
+          <h2 className="text-3xl lg:text-4xl font-extralight mb-4 tracking-tight" style={{ color: 'var(--text-primary)' }}>
+            Meet the <span style={{ color: 'var(--link-color)' }}>agents</span>
           </h2>
-          <p className="text-white/40 text-lg font-light">Five specialized AI agents collaborate to find exactly what you need</p>
+          <p className="text-lg font-light" style={{ color: 'var(--text-secondary)' }}>Five specialized AI agents collaborate to find exactly what you need</p>
         </motion.div>
 
         {/* Chat demo card */}
         <motion.div
           className="relative max-w-[700px] mx-auto rounded-3xl overflow-hidden"
           style={{
-            background: 'rgba(13, 13, 26, 0.8)',
-            border: '1px solid rgba(168, 85, 247, 0.2)',
-            boxShadow: '0 40px 80px rgba(0, 0, 0, 0.5), 0 0 80px rgba(168, 85, 247, 0.08)',
+            background: theme === 'dark' ? 'rgba(0, 0, 0, 0.9)' : '#ffffff',
+            border: theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.1)',
+            boxShadow: theme === 'dark'
+              ? '0 40px 80px rgba(0, 0, 0, 0.5)'
+              : '0 40px 80px rgba(0, 0, 0, 0.1), 0 8px 24px rgba(0, 0, 0, 0.06)',
           }}
           initial={{ opacity: 0, y: 40, scale: 0.95 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
@@ -239,16 +251,17 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
             if (!resumeTimer.current) setIsPaused(false)
           }}
         >
-          {/* Chat header (constant) */}
-          <div className="px-6 py-4 border-b border-purple-500/20 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-              style={{ background: 'linear-gradient(135deg, #7c2bad, #a855f7)' }}>
+          {/* Chat header */}
+          <div className="px-6 py-4 flex items-center gap-3"
+            style={{ borderBottom: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` }}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ background: 'var(--link-color)' }}>
               <Brain className="w-4 h-4 text-white" />
             </div>
             <div>
-              <div className="text-white text-sm font-medium">Blaize AI Assistant</div>
-              <div className="text-green-400 text-[10px] flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400" /> 5 agents online
+              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Blaize AI Assistant</div>
+              <div className="text-[10px] flex items-center gap-1" style={{ color: '#22c55e' }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#22c55e' }} /> 5 agents online
               </div>
             </div>
           </div>
@@ -267,6 +280,7 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
               >
                 {/* Feature badge */}
                 <div className="px-6 pt-4 pb-1">
+                  {(() => { const FeatureIcon = ICON_MAP[slide.featureIconKey]; return (
                   <motion.span
                     className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold tracking-wide uppercase text-white"
                     style={{
@@ -282,9 +296,10 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
                     }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                   >
-                    <span>{slide.featureIcon}</span>
+                    <FeatureIcon className="w-3 h-3" />
                     {slide.featureName}
                   </motion.span>
+                  ); })()}
                 </div>
 
                 {/* Messages */}
@@ -296,21 +311,31 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
                 >
                   {/* User message */}
                   <motion.div className="flex justify-end" variants={msgFromRight}>
-                    <div className="bg-purple-600/30 border border-purple-500/30 rounded-2xl rounded-br-sm px-4 py-3 max-w-[80%]">
-                      <p className="text-white text-sm">{slide.userMessage}</p>
+                    <div className="rounded-2xl rounded-br-sm px-4 py-3 max-w-[80%]"
+                      style={{
+                        background: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                        border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'}`,
+                      }}>
+                      <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{slide.userMessage}</p>
                     </div>
                   </motion.div>
 
                   {/* AI response */}
                   <motion.div className="flex gap-3 items-start" variants={msgFromLeft}>
+                    {(() => { const AvatarIcon = ICON_MAP[slide.aiAvatarIconKey]; return (
                     <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs"
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center"
                         style={{ background: slide.featureColor }}>
-                        {slide.aiAvatarEmoji}
+                        <AvatarIcon className="w-3.5 h-3.5 text-white" />
                       </div>
-                      <span className="text-[9px] text-purple-400">{slide.aiAvatarLabel}</span>
+                      <span className="text-[9px]" style={{ color: 'var(--text-secondary)' }}>{slide.aiAvatarLabel}</span>
                     </div>
-                    <div className="bg-white/5 border border-purple-500/15 rounded-2xl rounded-bl-sm px-4 py-3 flex-1">
+                    ); })()}
+                    <div className="rounded-2xl rounded-bl-sm px-4 py-3 flex-1"
+                      style={{
+                        background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                        border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+                      }}>
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
                         {slide.agentBadges.map((badge, i) => (
                           <span key={i} className="text-[10px] px-2 py-0.5 rounded-full font-medium"
@@ -319,7 +344,7 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
                           </span>
                         ))}
                       </div>
-                      <p className="text-white/80 text-sm">{slide.aiResponseText}</p>
+                      <p className="text-sm" style={{ color: 'var(--text-primary)', opacity: 0.8 }}>{slide.aiResponseText}</p>
                     </div>
                   </motion.div>
 
@@ -328,18 +353,21 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
                     <motion.div className="ml-10 flex flex-col sm:flex-row gap-3" variants={msgFromBelow}>
                       {slide.productCards.map((card, i) => (
                         <div key={i} className="flex-1 rounded-xl p-3 flex items-center gap-3"
-                          style={{ background: 'rgba(168, 85, 247, 0.06)', border: '1px solid rgba(168, 85, 247, 0.15)' }}>
-                          <img src={card.image} alt={card.name} className="w-12 h-12 rounded-lg object-cover" />
+                          style={{
+                            background: theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+                            border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+                          }}>
+                          <img src={card.image} alt={card.name} className="w-14 h-14 rounded-lg object-cover" />
                           <div>
-                            <div className="text-white text-xs font-medium">{card.name}</div>
+                            <div className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>{card.name}</div>
                             <div className="flex items-center gap-1">
                               {card.originalPrice && (
-                                <span className="text-white/40 text-[10px] line-through">{card.originalPrice}</span>
+                                <span className="text-[10px] line-through" style={{ color: 'var(--text-secondary)' }}>{card.originalPrice}</span>
                               )}
-                              <span className="text-purple-400 text-xs font-semibold">{card.price}</span>
+                              <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)', opacity: 0.8 }}>{card.price}</span>
                             </div>
+                            <div className="text-yellow-500 text-[11px] mt-0.5">{'★'.repeat(Math.floor(parseFloat(card.rating)))} {card.rating}</div>
                           </div>
-                          <div className="ml-auto text-yellow-400 text-xs">★ {card.rating}</div>
                         </div>
                       ))}
                     </motion.div>
@@ -348,10 +376,11 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
                   {/* Context note */}
                   {slide.contextNote && (
                     <motion.div
-                      className="ml-10 flex items-center gap-1.5 text-[10px] text-purple-400/60 italic"
+                      className="ml-10 flex items-center gap-1.5 text-[10px] italic"
+                      style={{ color: 'var(--text-secondary)' }}
                       variants={msgFromBelow}
                     >
-                      <span className="w-1 h-1 rounded-full bg-purple-400/40" />
+                      <span className="w-1 h-1 rounded-full" style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)' }} />
                       {slide.contextNote}
                     </motion.div>
                   )}
@@ -360,14 +389,17 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
             </AnimatePresence>
           </div>
 
-          {/* Input bar (constant) */}
+          {/* Input bar */}
           <div className="px-6 pb-5">
             <div className="flex items-center gap-3 rounded-xl px-4 py-3"
-              style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(168, 85, 247, 0.15)' }}>
-              <span className="text-white/30 text-sm flex-1">Ask about any product...</span>
+              style={{
+                background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+                border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+              }}>
+              <span className="text-sm flex-1" style={{ color: 'var(--text-secondary)' }}>Ask about any product...</span>
               <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #7c2bad, #a855f7)' }}>
-                <span className="text-white text-xs">↑</span>
+                style={{ background: 'var(--link-color)' }}>
+                <Send className="w-3.5 h-3.5 text-white" />
               </div>
             </div>
           </div>
@@ -377,10 +409,14 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
             className="absolute inset-0 w-full h-full cursor-pointer z-10 group"
             onClick={onOpenChat}
           >
-            <div className="absolute inset-0 bg-purple-500/0 group-hover:bg-purple-500/5 transition-colors duration-300 rounded-3xl" />
-            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 px-4 py-2 rounded-full text-xs font-medium text-white"
-              style={{ background: 'linear-gradient(135deg, #7c2bad, #a855f7)', boxShadow: '0 4px 20px rgba(168, 85, 247, 0.4)' }}>
-              Try the Live Chat →
+            <div className="absolute inset-0 transition-colors duration-300 rounded-3xl"
+              style={{ background: 'transparent' }}
+              onMouseEnter={(e) => e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            />
+            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 px-4 py-2 rounded-full text-xs font-medium"
+              style={{ background: 'var(--link-color)', color: '#fff', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)' }}>
+              Try the Live Chat
             </div>
           </button>
         </motion.div>
@@ -399,12 +435,12 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
                 style={{
                   width: index === activeIndex ? 24 : 8,
                   background: index === activeIndex
-                    ? 'rgba(168, 85, 247, 0.8)'
-                    : 'rgba(255, 255, 255, 0.15)',
+                    ? (theme === 'dark' ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)')
+                    : (theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'),
                 }}
               />
               {/* Tooltip */}
-              <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-white/60 whitespace-nowrap pointer-events-none">
+              <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] text-text-secondary whitespace-nowrap pointer-events-none">
                 {s.featureName}
               </div>
             </button>

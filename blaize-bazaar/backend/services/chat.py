@@ -14,6 +14,22 @@ from typing import List, Dict, Any, Optional
 import re
 
 
+def _safe_float(val, default=0.0):
+    """Safely convert a value to float, stripping currency symbols."""
+    try:
+        return float(str(val).replace("$", "").replace(",", "").strip())
+    except (ValueError, TypeError):
+        return default
+
+
+def _safe_int(val, default=0):
+    """Safely convert a value to int, stripping currency symbols."""
+    try:
+        return int(float(str(val).replace("$", "").replace(",", "").strip()))
+    except (ValueError, TypeError):
+        return default
+
+
 def _repair_json(raw: str) -> str:
     """Best-effort repair of common LLM JSON quirks."""
     # Remove trailing commas before ] or }
@@ -48,7 +64,7 @@ logger = logging.getLogger(__name__)
 class EnhancedChatService:
     """Enhanced chat service with product card support"""
     
-    def __init__(self):
+    def __init__(self, db_service=None):
         """Initialize with Strands SDK for multi-agent orchestration"""
         from config import settings
         
@@ -56,6 +72,7 @@ class EnhancedChatService:
         self.region = settings.AWS_REGION
         self.bedrock = boto3.client('bedrock-runtime', region_name=self.region)
         self.session_storage_dir = "/tmp/blaize-sessions"
+        self.db_service = db_service
         
         # Check Strands availability
         try:
@@ -94,8 +111,8 @@ CRITICAL RULES:
 WHEN NO EXACT MATCH IS FOUND:
 - Do NOT write paragraphs explaining what's missing
 - Instead, broaden the search terms and show the closest alternatives
-- Example: If "wireless headphones" returns nothing, try "headphone" or "earbuds" or "audio"
-- Say something like: "Here's what we have in audio gear:" — then show products
+- Example: If "wireless headphones" returns nothing, try "watch" or "shoes" or "laptop"
+- Say something like: "Here's what we have:" — then show products
 
 CONTEXT AWARENESS:
 - Check CONVERSATION HISTORY for follow-up queries
@@ -153,34 +170,43 @@ STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
         self,
         message: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
-        session_id: Optional[str] = None
+        session_id: Optional[str] = None,
+        workshop_mode: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Enhanced chat that returns structured product data
-        
-        Uses Strands orchestrator with specialized agents.
-        Agents access database via direct asyncpg connection.
-        Context Manager tracks tokens for conversation state.
-        
-        Returns:
-            {
-                "response": "text response",
-                "products": [array of product objects],
-                "suggestions": [array of quick action strings],
-                "success": true,
-                "context_tracking": true
-            }
+
+        Routes based on workshop_mode:
+        - 'legacy'/'semantic': Chat disabled
+        - 'tools': Single agent with basic tools (Lab 2)
+        - 'full'/None: Full orchestrator (Lab 3)
         """
         try:
-            logger.info(f"💬 Enhanced chat processing: '{message[:60]}...'")
-            
+            # Workshop mode routing
+            if workshop_mode in ("legacy", "semantic"):
+                return {
+                    "response": "Chat is not available in this workshop mode. Progress to Lab 2 to unlock agent tools.",
+                    "products": [],
+                    "suggestions": [],
+                    "tool_calls": [],
+                    "success": True,
+                    "context_tracking": False,
+                    "orchestrator_enabled": False,
+                    "model": self.model_id
+                }
+
+            logger.info(f"💬 Enhanced chat processing: '{message[:60]}...' (mode={workshop_mode or 'full'})")
+
             # Require Strands
             if not self.strands_available:
                 raise RuntimeError(
                     "Strands SDK not available. Install with: "
                     "pip install strands-agents strands-agents-tools"
                 )
-            
+
+            if workshop_mode == "tools":
+                return await self._single_agent_chat(message, conversation_history, session_id)
+
             return await self._strands_enhanced_chat(message, conversation_history, session_id)
             
         except Exception as e:
@@ -291,7 +317,7 @@ CURRENT REQUEST: {message}"""
                 logger.info("📊 Using inferred agent execution (OTEL not active)")
             
             # Extract structured data from response
-            parsed = self._parse_agent_response(response_text, message, conversation_history)
+            parsed = await self._parse_agent_response(response_text, message, conversation_history)
             
             result = {
                 "response": parsed["text"],
@@ -312,7 +338,268 @@ CURRENT REQUEST: {message}"""
             logger.error(f"❌ Orchestrator execution failed: {e}", exc_info=True)
             raise RuntimeError(f"Agent execution failed: {str(e)}")
     
-    def _parse_agent_response(self, response_text: str, query: str = "", conversation_history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
+    async def _single_agent_stream(
+        self,
+        message: str,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        session_id: Optional[str] = None
+    ):
+        """Streaming single-agent mode for Lab 2."""
+        import asyncio
+        import time
+
+        from services.context_manager import get_context_manager
+        context_manager = get_context_manager()
+        context_manager.add_message("user", message)
+
+        try:
+            from strands import Agent
+            from strands.models.bedrock import BedrockModel
+            from services.agent_tools import (
+                semantic_product_search,
+                get_trending_products,
+                get_category_price_analysis,
+            )
+
+            agent = Agent(
+                model=BedrockModel(model_id=self.model_id, max_tokens=8192, temperature=0.0),
+                system_prompt=(
+                    "You are a product search assistant for Blaize Bazaar.\n"
+                    "Use the available tools to find products, trends, and pricing info.\n"
+                    "Return results as JSON with product details. Be concise."
+                ),
+                tools=[semantic_product_search, get_trending_products, get_category_price_analysis]
+            )
+
+            # Build conversation context
+            conversation_context = ""
+            if conversation_history:
+                for msg in conversation_history[-16:]:
+                    role = msg.get('role', 'user')
+                    content = msg.get('content', '')[:300]
+                    conversation_context += f"{role.upper()}: {content}\n\n"
+
+            full_message = message
+            if conversation_context:
+                full_message = f"CONVERSATION HISTORY:\n{conversation_context}\n---\nCURRENT REQUEST: {message}"
+
+            yield {"type": "start", "content": "Initializing single agent..."}
+            yield {"type": "agent_step", "agent": "SearchAssistant", "action": "Analyzing query", "status": "in_progress"}
+
+            # Queue-based streaming bridge
+            loop = asyncio.get_running_loop()
+            queue: asyncio.Queue = asyncio.Queue()
+
+            def streaming_callback(**kwargs):
+                if "data" in kwargs:
+                    try:
+                        asyncio.run_coroutine_threadsafe(queue.put({"_text": kwargs["data"]}), loop).result(timeout=10)
+                    except Exception:
+                        pass
+
+            agent.callback_handler = streaming_callback
+
+            # Hook tool events
+            try:
+                from strands.hooks.events import BeforeToolCallEvent, AfterToolCallEvent
+
+                def on_before_tool(event: BeforeToolCallEvent):
+                    tool_name = ""
+                    if hasattr(event, 'tool_use') and isinstance(event.tool_use, dict):
+                        tool_name = event.tool_use.get("name", "")
+                    if tool_name:
+                        try:
+                            asyncio.run_coroutine_threadsafe(queue.put({"_tool_start": tool_name}), loop).result(timeout=5)
+                        except Exception:
+                            pass
+
+                def on_after_tool(event: AfterToolCallEvent):
+                    tool_name = ""
+                    if hasattr(event, 'tool_use') and isinstance(event.tool_use, dict):
+                        tool_name = event.tool_use.get("name", "")
+                    result_str = str(event.result) if hasattr(event, 'result') and event.result else ""
+                    try:
+                        asyncio.run_coroutine_threadsafe(queue.put({"_tool_done": tool_name, "_result": result_str}), loop).result(timeout=10)
+                    except Exception:
+                        pass
+
+                agent.add_hook(on_before_tool)
+                agent.add_hook(on_after_tool)
+            except (ImportError, AttributeError):
+                pass
+
+            start_time = time.time()
+            agent_result = [None]
+            agent_error = [None]
+
+            async def run_agent():
+                try:
+                    agent_result[0] = await asyncio.to_thread(agent, full_message)
+                except Exception as e:
+                    agent_error[0] = e
+                finally:
+                    await queue.put({"_done": True})
+
+            task = asyncio.create_task(run_agent())
+            products_sent = []
+
+            while True:
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=120)
+                except asyncio.TimeoutError:
+                    yield {"type": "error", "error": "Agent execution timed out"}
+                    break
+
+                if "_done" in event:
+                    break
+
+                if "_tool_start" in event:
+                    yield {"type": "agent_step", "agent": "SearchAssistant", "action": "Searching", "status": "in_progress"}
+                    yield {"type": "tool_call", "tool": event["_tool_start"], "status": "executing"}
+
+                elif "_tool_done" in event:
+                    result_str = event.get("_result", "")
+                    if result_str:
+                        raw_products = self._extract_products_from_result(result_str)
+                        if raw_products:
+                            formatted = await self._format_products(raw_products)
+                            sent_ids = {p.get("id") or p.get("productId") for p in products_sent}
+                            sent_names = {p.get("name") or p.get("product_description") for p in products_sent}
+                            new_products = [
+                                p for p in formatted
+                                if (p.get("id") or p.get("productId")) not in sent_ids
+                                and (p.get("name") or p.get("product_description")) not in sent_names
+                            ]
+                            for i, product in enumerate(new_products):
+                                yield {"type": "product", "product": product, "index": i, "total": len(new_products)}
+                            products_sent.extend(new_products)
+
+                    yield {"type": "agent_step", "agent": "SearchAssistant", "action": "Done", "status": "completed"}
+
+            await task
+
+            if agent_error[0]:
+                yield {"type": "error", "error": str(agent_error[0])}
+                return
+
+            response_text = str(agent_result[0]) if agent_result[0] else ""
+            context_manager.add_message("assistant", response_text)
+            parsed = await self._parse_agent_response(response_text, message, conversation_history)
+
+            if parsed["text"]:
+                yield {"type": "content", "content": parsed["text"]}
+
+            if not products_sent and parsed["products"]:
+                for i, product in enumerate(parsed["products"]):
+                    yield {"type": "product", "product": product, "index": i, "total": len(parsed["products"])}
+                products_sent = parsed["products"]
+
+            duration_ms = int((time.time() - start_time) * 1000)
+            yield {
+                "type": "complete",
+                "response": {
+                    "response": parsed["text"],
+                    "products": products_sent,
+                    "suggestions": parsed["suggestions"],
+                    "success": True,
+                    "context_tracking": True,
+                    "orchestrator_enabled": False,
+                    "agent_execution": {
+                        "agent_steps": [{"agent": "SearchAssistant", "action": "Processing", "status": "completed", "timestamp": start_time, "duration_ms": duration_ms}],
+                        "tool_calls": [], "reasoning_steps": [],
+                        "total_duration_ms": duration_ms, "success_rate": 1.0
+                    },
+                    "model": self.model_id
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Single-agent stream failed: {e}", exc_info=True)
+            yield {"type": "error", "error": str(e)}
+
+    async def _single_agent_chat(
+        self,
+        message: str,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        session_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Single-agent mode for Lab 2 — basic tools, no orchestrator routing."""
+        import asyncio
+        import time
+
+        logger.info(f"🔧 Single-agent mode: '{message[:60]}...'")
+
+        from services.context_manager import get_context_manager
+        context_manager = get_context_manager()
+        context_manager.add_message("user", message)
+
+        try:
+            from strands import Agent
+            from strands.models.bedrock import BedrockModel
+            from services.agent_tools import (
+                semantic_product_search,
+                get_trending_products,
+                get_category_price_analysis,
+            )
+
+            agent = Agent(
+                model=BedrockModel(
+                    model_id=self.model_id,
+                    max_tokens=8192,
+                    temperature=0.0
+                ),
+                system_prompt=(
+                    "You are a product search assistant for Blaize Bazaar.\n"
+                    "Use the available tools to find products, trends, and pricing info.\n"
+                    "Return results as JSON with product details.\n"
+                    "Be concise and helpful."
+                ),
+                tools=[semantic_product_search, get_trending_products, get_category_price_analysis]
+            )
+
+            # Build conversation context
+            conversation_context = ""
+            if conversation_history:
+                for msg in conversation_history[-16:]:
+                    role = msg.get('role', 'user')
+                    content = msg.get('content', '')[:300]
+                    conversation_context += f"{role.upper()}: {content}\n\n"
+
+            full_message = message
+            if conversation_context:
+                full_message = f"CONVERSATION HISTORY:\n{conversation_context}\n---\nCURRENT REQUEST: {message}"
+
+            start_time = time.time()
+            response = await asyncio.to_thread(agent, full_message)
+            duration_ms = int((time.time() - start_time) * 1000)
+
+            response_text = str(response) if response else ""
+            context_manager.add_message("assistant", response_text)
+
+            parsed = await self._parse_agent_response(response_text, message, conversation_history)
+
+            return {
+                "response": parsed["text"],
+                "products": parsed["products"],
+                "suggestions": parsed["suggestions"],
+                "success": True,
+                "context_tracking": True,
+                "orchestrator_enabled": False,
+                "agent_execution": {
+                    "agent_steps": [{"agent": "SearchAssistant", "action": "Processing", "status": "completed", "timestamp": start_time, "duration_ms": duration_ms}],
+                    "tool_calls": [],
+                    "reasoning_steps": [],
+                    "total_duration_ms": duration_ms,
+                    "success_rate": 1.0
+                },
+                "model": self.model_id
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Single-agent chat failed: {e}", exc_info=True)
+            raise RuntimeError(f"Single-agent execution failed: {str(e)}")
+
+    async def _parse_agent_response(self, response_text: str, query: str = "", conversation_history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
         """
         Parse agent response to extract:
         - Text response
@@ -344,7 +631,7 @@ CURRENT REQUEST: {message}"""
                 for attempt, text in enumerate([raw, _repair_json(raw)]):
                     try:
                         products_data = json.loads(text)
-                        result["products"] = self._format_products(products_data)
+                        result["products"] = await self._format_products(products_data)
                         if attempt == 1:
                             logger.info("🔧 JSON repaired successfully")
                         logger.info(f"📦 Extracted {len(result['products'])} products from JSON")
@@ -394,7 +681,7 @@ CURRENT REQUEST: {message}"""
         
         return result
     
-    def _format_products(self, products_data: List[Dict]) -> List[Dict]:
+    async def _format_products(self, products_data: List[Dict]) -> List[Dict]:
         """Format products for frontend display with URL mapping"""
         formatted = []
 
@@ -403,7 +690,11 @@ CURRENT REQUEST: {message}"""
             # Map product_url to url with fallback
             product_url = product.get("product_url") or product.get("productURL") or f"https://www.amazon.com/dp/{product_id}"
 
-            price = float(product.get("price", 0))
+            raw_price = str(product.get("price", "0")).replace("$", "").replace(",", "").strip()
+            try:
+                price = float(raw_price)
+            except (ValueError, TypeError):
+                price = 0.0
 
             # Synthesize original price: ~40% of products show a discount (10-25%)
             original_price = None
@@ -418,18 +709,43 @@ CURRENT REQUEST: {message}"""
 
             formatted.append({
                 "id": product_id,
-                "name": product.get("name", product.get("product_description", ""))[:50],
+                "name": (product.get("name", product.get("product_description", "")).split(" — ")[0].split(" - ")[0])[:80],
                 "price": price,
-                "stars": float(product.get("stars", 0)),
-                "reviews": int(product.get("reviews", 0)),
+                "stars": _safe_float(product.get("stars", 0)),
+                "reviews": _safe_int(product.get("reviews", 0)),
                 "category": product.get("category", product.get("category_name", "")),
-                "quantity": int(product.get("quantity", 0)),
-                "inStock": product.get("quantity", 0) > 0 if "quantity" in product else product.get("inStock", True),
-                "image": product.get("image_url", product.get("imgUrl", product.get("imgurl", "📦"))),
+                "quantity": _safe_int(product.get("quantity", 0)),
+                "inStock": _safe_int(product.get("quantity", 0)) > 0 if "quantity" in product else product.get("inStock", True),
+                "image": product.get("image_url", product.get("image", product.get("imgUrl", product.get("imgurl", product.get("thumbnail", ""))))),
                 "url": product_url,
                 "originalPrice": original_price,
                 "discountPercent": discount_percent,
             })
+
+        # Always backfill images from database — LLM often drops image URLs
+        if formatted and self.db_service:
+            try:
+                names = [p.get("name", "")[:60] for p in formatted if p.get("name")]
+                if names:
+                    placeholders = " OR ".join(["product_description ILIKE %s"] * len(names))
+                    params = [f"%{n[:30]}%" for n in names]
+                    rows = await self.db_service.fetch_all(
+                        f'SELECT "productId", product_description, "imgUrl" FROM bedrock_integration.product_catalog WHERE {placeholders}',
+                        *params
+                    )
+                    img_lookup = {}
+                    for r in rows:
+                        desc = (r.get("product_description") or "").split(" — ")[0].split(" - ")[0][:30].lower()
+                        url = r.get("imgUrl") or ""
+                        if desc and url:
+                            img_lookup[desc] = url
+                    
+                    for p in formatted:
+                        name_key = (p.get("name") or "")[:30].lower()
+                        if name_key in img_lookup:
+                            p["image"] = img_lookup[name_key]
+            except Exception as e:
+                logger.error(f"🖼️ BACKFILL FAILED: {e}", exc_info=True)
 
         return formatted
     
@@ -448,7 +764,7 @@ CURRENT REQUEST: {message}"""
                 prices = re.findall(r'\$(\d+)', text)
                 mentioned_prices.extend(int(p) for p in prices)
                 # Track categories mentioned
-                for cat in ['headphone', 'laptop', 'camera', 'gaming', 'smart home', 'speaker', 'watch', 'cable', 'charger']:
+                for cat in ['watch', 'laptop', 'phone', 'smartphone', 'shoe', 'sneaker', 'furniture', 'sofa', 'fragrance', 'perfume', 'sunglasses', 'kitchen', 'bag', 'dress', 'shirt', 'sports', 'tablet']:
                     if cat in text:
                         mentioned_categories.add(cat)
 
@@ -462,14 +778,26 @@ CURRENT REQUEST: {message}"""
                 price_suggestions.append(f"Premium options up to ${max_price * 3}")
 
         # Category-specific follow-ups based on what was actually discussed
-        if any(w in query_lower for w in ['headphone', 'earphone', 'earbud', 'audio']):
-            suggestions = ["Wireless under $80", "Best for working out", "Compare noise-cancelling vs open-back"]
-        elif any(w in query_lower for w in ['laptop', 'notebook', 'chromebook']):
-            suggestions = ["Best battery life laptops", "Lightweight under 3 lbs", "Compare specs of top 3"]
-        elif any(w in query_lower for w in ['camera', 'photo', 'photography']):
-            suggestions = ["Best for low light", "Compact travel cameras", "Camera accessories under $30"]
-        elif any(w in query_lower for w in ['gaming', 'game', 'controller']):
-            suggestions = ["Top-rated gaming headsets", "Gaming accessories under $40", "Best value gaming gear"]
+        if any(w in query_lower for w in ['watch', 'rolex', 'timepiece']):
+            suggestions = ["Luxury watches under $500", "Best everyday watches", "Show all watches"]
+        elif any(w in query_lower for w in ['laptop', 'macbook', 'notebook']):
+            suggestions = ["Best for programming", "Lightweight laptops", "Show all laptops"]
+        elif any(w in query_lower for w in ['phone', 'smartphone', 'iphone', 'samsung']):
+            suggestions = ["Latest models under $300", "Best camera phones", "Show all smartphones"]
+        elif any(w in query_lower for w in ['shoe', 'sneaker', 'nike', 'jordan']):
+            suggestions = ["Running shoes under $100", "Best rated sneakers", "Show all shoes"]
+        elif any(w in query_lower for w in ['fragrance', 'perfume', 'cologne']):
+            suggestions = ["Top fragrances under $80", "Best for everyday wear", "Show all fragrances"]
+        elif any(w in query_lower for w in ['furniture', 'sofa', 'bed', 'table']):
+            suggestions = ["Living room essentials", "Best rated furniture", "Under $500"]
+        elif any(w in query_lower for w in ['kitchen', 'cook', 'pan', 'knife']):
+            suggestions = ["Essential kitchen tools", "Best rated cookware", "Under $30"]
+        elif any(w in query_lower for w in ['sunglasses', 'glasses']):
+            suggestions = ["Classic styles under $50", "Best for summer", "Compare top brands"]
+        elif any(w in query_lower for w in ['bag', 'handbag', 'backpack']):
+            suggestions = ["Leather bags under $100", "Best everyday bags", "Compare styles"]
+        elif any(w in query_lower for w in ['sports', 'football', 'basketball', 'tennis']):
+            suggestions = ["Best sports gear", "Equipment under $30", "Compare top brands"]
         elif any(w in query_lower for w in ['deal', 'cheap', 'budget', 'price', 'affordable']):
             suggestions = ["Highest rated under $25", "Best value across all categories", "Flash deals today"]
         elif any(w in query_lower for w in ['stock', 'inventory', 'restock']):
@@ -550,7 +878,8 @@ CURRENT REQUEST: {message}"""
         self,
         message: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
-        session_id: Optional[str] = None
+        session_id: Optional[str] = None,
+        workshop_mode: Optional[str] = None
     ):
         """
         Async generator yielding SSE events with real-time agent streaming.
@@ -561,6 +890,18 @@ CURRENT REQUEST: {message}"""
         """
         import asyncio
         import time
+
+        # Workshop mode: chat disabled for legacy/semantic
+        if workshop_mode in ("legacy", "semantic"):
+            yield {"type": "content", "content": "Chat is not available in this workshop mode. Progress to Lab 2 to unlock agent tools."}
+            yield {"type": "complete", "response": {"response": "Chat is not available in this workshop mode.", "products": [], "suggestions": [], "success": True}}
+            return
+
+        # Workshop mode: single-agent for tools mode
+        if workshop_mode == "tools":
+            async for event in self._single_agent_stream(message, conversation_history, session_id):
+                yield event
+            return
 
         if not self.strands_available:
             yield {"type": "error", "error": "Strands SDK not available"}
@@ -728,7 +1069,7 @@ CURRENT REQUEST: {message}"""
                 if result_str:
                     raw_products = self._extract_products_from_result(result_str)
                     if raw_products:
-                        formatted = self._format_products(raw_products)
+                        formatted = await self._format_products(raw_products)
                         # Deduplicate: skip products already sent (by id or name)
                         sent_ids = {p.get("id") or p.get("productId") for p in products_sent}
                         sent_names = {p.get("name") or p.get("product_description") for p in products_sent}
@@ -768,7 +1109,7 @@ CURRENT REQUEST: {message}"""
         response_text = str(orchestrator_result[0]) if orchestrator_result[0] else ""
         context_manager.add_message("assistant", response_text)
 
-        parsed = self._parse_agent_response(response_text, message, conversation_history)
+        parsed = await self._parse_agent_response(response_text, message, conversation_history)
 
         # Send clean text content
         if parsed["text"]:

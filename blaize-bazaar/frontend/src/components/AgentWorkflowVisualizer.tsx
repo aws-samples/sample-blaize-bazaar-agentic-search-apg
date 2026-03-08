@@ -66,7 +66,7 @@ const AgentWorkflowVisualizer = ({ execution, isActive }: Props) => {
   if (!execution) return null
 
   const getAgentIcon = (agent: string) => {
-    return AGENT_IDENTITIES[resolveAgentType(agent)]?.icon || '🤖'
+    return AGENT_IDENTITIES[resolveAgentType(agent)]?.icon || 'AI'
   }
 
   return (
@@ -79,7 +79,7 @@ const AgentWorkflowVisualizer = ({ execution, isActive }: Props) => {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-text-primary">🔄 Agent Workflow</span>
+          <span className="text-xs font-semibold text-text-primary">Agent Workflow</span>
           <span className="text-[10px] text-text-secondary">
             {execution.total_duration_ms}ms
           </span>
@@ -92,7 +92,7 @@ const AgentWorkflowVisualizer = ({ execution, isActive }: Props) => {
       {/* Routing Decision */}
       {execution.routing_decision && (
         <div className="mb-3 p-2.5 rounded-lg" style={{ background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-          <div className="text-[10px] font-semibold text-purple-300 mb-1.5">🎯 Agent Routing Decision</div>
+          <div className="text-[10px] font-semibold text-purple-300 mb-1.5">Agent Routing Decision</div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-medium text-text-primary">{execution.routing_decision.selected_agent}</span>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-semibold">
@@ -156,7 +156,7 @@ const AgentWorkflowVisualizer = ({ execution, isActive }: Props) => {
       {execution.tool_calls.length > 0 && (
         <div className="mt-3 pt-2 border-t border-purple-500/20">
           <div className="text-[10px] font-semibold text-text-secondary mb-2">
-            🔧 Tool Calls {isActive && <span className="text-purple-400 animate-pulse">(Live)</span>}
+            Tool Calls {isActive && <span className="text-purple-400 animate-pulse">(Live)</span>}
           </div>
           <div className="space-y-2">
             {execution.tool_calls.map((tool, idx) => {
@@ -203,7 +203,7 @@ const AgentWorkflowVisualizer = ({ execution, isActive }: Props) => {
       {execution.reasoning_steps.length > 0 && (
         <div className="mt-2 pt-2 border-t border-purple-500/20">
           <div className="text-[10px] font-semibold text-text-secondary mb-1.5">
-            🧠 Claude 4 Reasoning
+            Claude 4 Reasoning
           </div>
           {execution.reasoning_steps.map((reasoning, idx) => (
             <div

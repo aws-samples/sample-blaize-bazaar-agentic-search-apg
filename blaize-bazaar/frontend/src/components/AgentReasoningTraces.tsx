@@ -82,7 +82,7 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
     const steps: AgentStep[] = [
       { id: '1', agent: 'Orchestrator', action: 'Analyzing user query and routing to specialists', status: 'in_progress', timestamp: Date.now() },
       { id: '2', agent: 'Orchestrator', action: 'Query classified as product search → Routing to Search Agent', status: 'pending', timestamp: Date.now() + 500 },
-      { id: '3', agent: 'Search Agent', action: 'Generating semantic embedding for query', status: 'pending', timestamp: Date.now() + 1000, tool_calls: [{ tool: 'generate_embedding', params: { query: 'wireless headphones' } }] },
+      { id: '3', agent: 'Search Agent', action: 'Generating semantic embedding for query', status: 'pending', timestamp: Date.now() + 1000, tool_calls: [{ tool: 'generate_embedding', params: { query: 'luxury watch' } }] },
       { id: '4', agent: 'Search Agent', action: 'Executing pgvector similarity search', status: 'pending', timestamp: Date.now() + 1500, tool_calls: [{ tool: 'semantic_product_search', params: { limit: 10, ef_search: 40 } }] },
       { id: '5', agent: 'Search Agent', action: 'Found 10 matching products', status: 'pending', timestamp: Date.now() + 2000, result: '10 products with avg similarity 0.87' },
       { id: '6', agent: 'Orchestrator', action: 'Synthesizing final response', status: 'pending', timestamp: Date.now() + 2500 },
@@ -134,15 +134,15 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
         <div
           className="flex flex-col items-center gap-2 px-2 py-4 rounded-l-xl transition-all hover:px-3"
           style={{
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(168, 85, 247, 0.2) 100%)',
-            border: '1px solid rgba(139, 92, 246, 0.3)',
+            background: 'linear-gradient(135deg, #1e1915 0%, #171310 100%)',
+            border: '1px solid rgba(160, 120, 70, 0.15)',
             borderRight: 'none',
           }}
         >
-          <Brain className="h-5 w-5 text-purple-400" />
-          <ChevronLeft className="h-4 w-4 text-purple-400" />
+          <Brain className="h-5 w-5 wood-text-accent" />
+          <ChevronLeft className="h-4 w-4 wood-text-secondary" />
           {traces.length > 0 && (
-            <span className="text-[10px] text-purple-300 font-semibold">{traces.length}</span>
+            <span className="text-[10px] text-white/40 font-semibold">{traces.length}</span>
           )}
         </div>
       </div>
@@ -152,35 +152,30 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
   // Expanded: right side panel
   return (
     <div
-      className="fixed right-0 top-[72px] w-[380px] h-[calc(100vh-72px)] z-40 flex flex-col animate-slideIn"
+      className="fixed right-0 top-[72px] w-[380px] h-[calc(100vh-72px)] z-40 flex flex-col animate-slideIn wood-panel"
       style={{
-        background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.98) 0%, rgba(31, 41, 55, 0.98) 100%)',
-        borderLeft: '1px solid rgba(139, 92, 246, 0.3)',
-        boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.3)',
+        borderLeft: '1px solid rgba(160, 120, 70, 0.15)',
+        boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.4), inset 1px 0 0 rgba(200, 160, 100, 0.04)',
       }}
     >
       {/* Header */}
       <div
-        className="px-4 py-3 border-b flex items-center justify-between flex-shrink-0"
-        style={{
-          background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%)',
-          borderColor: 'rgba(139, 92, 246, 0.2)',
-        }}
+        className="px-4 py-3 wood-header flex items-center justify-between flex-shrink-0"
       >
         <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-purple-400" />
+          <Brain className="h-5 w-5 wood-text-accent" />
           <div>
             <h2 className="text-sm font-semibold text-text-primary">Agent Traces</h2>
             <p className="text-[10px] text-text-secondary">
-              {traceMode === 'live' ? '🔴 Live' : '🟢 Demo'} · {traces.length} steps
+              <span className="inline-flex items-center gap-1">{traceMode === 'live' ? <><span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" /> Live</> : <><span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" /> Demo</>}</span> · {traces.length} steps
             </p>
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={onCollapse} className="p-1.5 rounded-lg hover:bg-purple-500/20 transition-colors">
+          <button onClick={onCollapse} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
             <ChevronRight className="h-4 w-4 text-text-secondary" />
           </button>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-purple-500/20 transition-colors">
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
             <X className="h-4 w-4 text-text-secondary" />
           </button>
         </div>
@@ -194,7 +189,7 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
           disabled={isRecording}
           className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
           style={{
-            background: isRecording ? 'rgba(139, 92, 246, 0.2)' : 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+            background: isRecording ? 'rgba(255, 255, 255, 0.06)' : 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.10) 100%)',
             color: 'white',
           }}
         >
@@ -208,23 +203,23 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
       </div>
 
       {/* Traces Timeline */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 wood-scroll">
         {traces.length === 0 ? (
           <div className="text-center py-12">
-            <Brain className="h-12 w-12 text-purple-400/30 mx-auto mb-3" />
+            <Brain className="h-12 w-12 text-white/20 mx-auto mb-3" />
             <p className="text-xs text-text-secondary">No traces yet. Use AI Assistant or click Simulate.</p>
           </div>
         ) : (
           traces.map((step, index) => (
             <div key={step.id} className="relative">
               {index < traces.length - 1 && (
-                <div className="absolute left-5 top-10 w-0.5 h-6 bg-gradient-to-b from-purple-500/50 to-transparent" />
+                <div className="absolute left-5 top-10 w-0.5 h-6 bg-gradient-to-b from-white/20 to-transparent" />
               )}
               <div
                 className="relative rounded-lg border p-3 transition-all"
                 style={{
-                  background: step.status === 'in_progress' ? 'rgba(139, 92, 246, 0.1)' : 'rgba(31, 41, 55, 0.5)',
-                  borderColor: step.status === 'in_progress' ? 'rgba(139, 92, 246, 0.5)' : step.status === 'completed' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(75, 85, 99, 0.3)',
+                  background: step.status === 'in_progress' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(31, 41, 55, 0.5)',
+                  borderColor: step.status === 'in_progress' ? 'rgba(255, 255, 255, 0.15)' : step.status === 'completed' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(75, 85, 99, 0.3)',
                 }}
               >
                 <div className="flex items-start gap-3">
@@ -240,9 +235,9 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
                     {step.tool_calls && step.tool_calls.length > 0 && (
                       <div className="space-y-1 mt-2">
                         {step.tool_calls.map((tool, ti) => (
-                          <div key={ti} className="flex items-center gap-1.5 p-1.5 rounded bg-purple-500/10 border border-purple-500/20">
-                            <Database className="h-3 w-3 text-purple-400" />
-                            <span className="text-[10px] font-mono text-purple-300">{tool.tool}</span>
+                          <div key={ti} className="flex items-center gap-1.5 p-1.5 rounded bg-white/[0.04] border border-white/[0.08]">
+                            <Database className="h-3 w-3 text-white/50" />
+                            <span className="text-[10px] font-mono text-white/40">{tool.tool}</span>
                             {tool.duration_ms && (
                               <>
                                 <ArrowRight className="h-2 w-2 text-gray-500" />
@@ -270,9 +265,9 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 border-t flex-shrink-0" style={{ background: 'rgba(17, 24, 39, 0.8)', borderColor: 'rgba(75, 85, 99, 0.3)' }}>
-        <p className="text-[10px] text-text-secondary">
-          <strong className="text-purple-300">Strands OpenTelemetry</strong> · Auto-captured traces
+      <div className="px-4 py-2 wood-footer flex-shrink-0">
+        <p className="text-[10px] wood-text-secondary">
+          <strong className="wood-text-accent">Strands OpenTelemetry</strong> · Auto-captured traces
         </p>
       </div>
     </div>

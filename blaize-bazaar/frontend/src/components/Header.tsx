@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../App'
 import ImageSearchModal from './ImageSearchModal'
-import { Camera, ShoppingCart } from 'lucide-react'
+import { Camera, ShoppingCart, Sun, Moon } from 'lucide-react'
 
 interface HeaderProps {
   activeSection?: 'shop' | 'collections'
@@ -17,15 +17,15 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const [showImageSearch, setShowImageSearch] = useState(false)
-  const { theme } = useTheme()
+  const { theme, toggleTheme } = useTheme()
   const searchRef = useRef<HTMLDivElement>(null)
 
   const placeholders = [
-    'laptop under $800 for gaming',
-    'wireless headphones with noise cancellation',
-    'camera for travel photography',
-    '4K monitor under $500',
-    'ergonomic keyboard for programming'
+    'comfortable running shoes under $100',
+    'luxury watch for a gift',
+    'best laptop for programming',
+    'something to keep drinks cold',
+    'kitchen accessories for cooking'
   ]
 
   useEffect(() => {
@@ -77,12 +77,12 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
         className="fixed top-0 left-0 right-0 z-50 border-b"
         style={{
           background: theme === 'dark' 
-            ? 'rgba(10, 10, 15, 0.95)' 
+            ? 'rgba(0, 0, 0, 0.85)' 
             : 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(30px)',
-          WebkitBackdropFilter: 'blur(30px)',
+          backdropFilter: 'blur(40px)',
+          WebkitBackdropFilter: 'blur(40px)',
           borderColor: theme === 'dark' 
-            ? 'rgba(106, 27, 154, 0.3)' 
+            ? 'rgba(255, 255, 255, 0.08)' 
             : 'rgba(0, 0, 0, 0.1)'
         }}
       >
@@ -90,7 +90,8 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
           <div className="h-full max-w-[1920px] mx-auto flex items-center justify-between gap-4">
             {/* Logo - Fixed width */}
             <div 
-              className="logo gradient-text-chrome text-xl sm:text-2xl font-light tracking-tight cursor-pointer flex-shrink-0 whitespace-nowrap"
+              className="text-xl sm:text-2xl cursor-pointer flex-shrink-0 whitespace-nowrap"
+              style={{ fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               Blaize Bazaar
@@ -115,12 +116,15 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
                     className="w-full px-3 py-2 pr-20 text-sm input-field rounded-lg overflow-hidden text-ellipsis whitespace-nowrap"
                   />
                   {showSuggestions && suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-2 glass-strong rounded-xl overflow-hidden shadow-xl border border-accent-light/20 max-h-80 overflow-y-auto z-50">
+                    <div className="absolute top-full left-0 right-0 mt-2 glass-strong rounded-xl overflow-hidden shadow-xl max-h-80 overflow-y-auto z-50" style={{ border: '1px solid var(--border-color)' }}>
                       {suggestions.map((suggestion, idx) => (
                         <div
                           key={idx}
                           onClick={() => handleSuggestionSelect(suggestion.text)}
-                          className="px-4 py-3 cursor-pointer hover:bg-accent-light/10 transition-colors border-b border-accent-light/10 last:border-b-0"
+                          className="px-4 py-3 cursor-pointer transition-colors last:border-b-0"
+                          style={{ borderBottom: '1px solid var(--border-color)' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--input-bg)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                         >
                           <div className="text-sm text-text-primary font-medium">{suggestion.text}</div>
                           <div className="text-xs text-text-secondary mt-1">{suggestion.category}</div>
@@ -132,15 +136,18 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
                   {/* Camera Icon for Image Search */}
                   <button
                     onClick={() => setShowImageSearch(true)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-purple-500/20 transition-all duration-300 group/camera z-10"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-all duration-300 group/camera z-10"
+                    style={{ background: 'transparent' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--input-bg)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                     title="Search by image - AI-powered visual search"
                   >
-                    <Camera className="h-4 w-4 text-purple-400 group-hover/camera:text-purple-300 transition-colors" />
+                    <Camera className="h-4 w-4 text-text-secondary group-hover/camera:text-text-primary transition-colors" />
                   </button>
                   
                   {/* Search capabilities hint - only on larger screens */}
                   <div className="hidden xl:block absolute -bottom-8 left-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <span className="text-xs text-purple-400 whitespace-nowrap">🔍 Semantic Search + 📸 Visual Search</span>
+                    <span className="text-xs text-text-secondary whitespace-nowrap">Semantic Search + Visual Search</span>
                   </div>
                   
                   {searchQuery && (
@@ -155,10 +162,10 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
                 <button
                   onClick={() => searchQuery.trim() && onSearch?.(searchQuery)}
                   disabled={!searchQuery.trim()}
-                  className="hidden sm:block px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  className="hidden sm:block px-3 md:px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                   style={{
-                    background: searchQuery.trim() ? 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)' : 'rgba(255, 255, 255, 0.1)',
-                    color: 'white'
+                    background: searchQuery.trim() ? 'var(--link-color)' : 'var(--input-bg)',
+                    color: searchQuery.trim() ? '#ffffff' : 'var(--text-secondary)'
                   }}
                 >
                   Search
@@ -169,25 +176,47 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
               {onCartClick && (
                 <button
                   onClick={onCartClick}
-                  className="relative p-2 rounded-lg hover:bg-white/10 dark:hover:bg-white/10 transition-all duration-300 group flex-shrink-0"
+                  className="relative p-2 rounded-lg transition-all duration-300 group flex-shrink-0"
+                  style={{ background: 'transparent' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--input-bg)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   aria-label="Shopping Cart"
                   title="View shopping cart"
                 >
                   <ShoppingCart className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
                   {cartItemCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse">
+                    <span className="absolute -top-1 -right-1 text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse"
+                      style={{ background: 'var(--link-color)', color: '#fff' }}>
                       {cartItemCount}
                     </span>
                   )}
                 </button>
               )}
 
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className="p-2 rounded-lg transition-all duration-300 group flex-shrink-0"
+                style={{ background: 'transparent' }}
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {theme === 'dark' ? (
+                  <Sun className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
+                ) : (
+                  <Moon className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
+                )}
+              </button>
+
               {/* GitHub Link */}
               <a
                 href="https://github.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-2 rounded-lg hover:bg-white/10 dark:hover:bg-white/10 transition-all duration-300 group flex-shrink-0"
+                className="p-2 rounded-lg transition-all duration-300 group flex-shrink-0"
+                style={{ background: 'transparent' }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--input-bg)'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                 aria-label="View on GitHub"
                 title="View source code on GitHub"
               >
