@@ -535,7 +535,7 @@ function AppContent() {
         {/* Recently Viewed Products */}
         <RecentlyViewed />
 
-        {/* Dev Tools — Warm panel */}
+        {/* Dev Tools — Clean dark panel */}
         <div
           className="fixed left-0 top-[72px] z-40"
           style={{ height: 'calc(100vh - 72px)' }}
@@ -546,37 +546,40 @@ function AppContent() {
           <div
             className="absolute left-0 top-1/2 -translate-y-1/2 w-11 py-8 rounded-r-xl flex flex-col items-center gap-3 cursor-pointer transition-opacity duration-300"
             style={{
-              background: 'linear-gradient(180deg, #221a10, #18120a)',
-              border: '1px solid rgba(140, 100, 55, 0.3)',
-              borderLeft: 'none', boxShadow: '2px 0 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(200,160,100,0.08)',
+              background: 'rgba(0, 0, 0, 0.95)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderLeft: 'none', boxShadow: '2px 0 12px rgba(0,0,0,0.4)',
               opacity: showDevTools ? 0 : 1,
               pointerEvents: showDevTools ? 'none' : 'auto',
             }}
           >
-            <Wrench className="h-5 w-5" style={{ color: 'rgba(220, 180, 120, 0.85)' }} />
-            <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ writingMode: 'vertical-lr', color: 'rgba(210, 170, 115, 0.7)' }}>Tools</span>
+            <Wrench className="h-5 w-5" style={{ color: 'rgba(255, 255, 255, 0.7)' }} />
+            <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ writingMode: 'vertical-lr', color: 'rgba(255, 255, 255, 0.5)' }}>Tools</span>
           </div>
 
           {/* Expanded panel */}
           <div
-            className="h-full transition-all duration-300 ease-in-out overflow-hidden wood-panel"
+            className="h-full transition-all duration-300 ease-in-out overflow-hidden"
             style={{
               width: showDevTools ? 300 : 0,
-              borderRight: '1px solid rgba(140, 100, 55, 0.25)',
-              boxShadow: '4px 0 24px rgba(0, 0, 0, 0.5), inset -1px 0 0 rgba(200, 160, 100, 0.06)',
+              background: 'rgba(0, 0, 0, 0.95)',
+              backdropFilter: 'blur(40px)',
+              WebkitBackdropFilter: 'blur(40px)',
+              borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: '4px 0 24px rgba(0, 0, 0, 0.5)',
             }}
           >
-            <div className="w-[300px] p-5 h-full flex flex-col wood-scroll overflow-y-auto" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+            <div className="w-[300px] p-5 h-full flex flex-col overflow-y-auto search-scroll" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
               {/* Header */}
-              <div className="mb-5 pb-4" style={{ borderBottom: '1px solid rgba(160, 120, 70, 0.12)' }}>
-                <h2 className="text-2xl font-semibold mb-1.5 wood-text-primary" style={{ letterSpacing: '-0.01em' }}>Developer Tools</h2>
-                <p className="text-[15px] wood-text-secondary">Workshop debugging & monitoring</p>
+              <div className="mb-5 pb-4" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                <h2 className="text-2xl font-semibold mb-1.5" style={{ letterSpacing: '-0.02em', color: '#ffffff' }}>Developer Tools</h2>
+                <p className="text-[15px]" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Workshop debugging & monitoring</p>
               </div>
 
               <div className="flex-1 space-y-2">
                 {/* Workshop Mode Switcher */}
-                <div className="mb-4 pb-4" style={{ borderBottom: '1px solid rgba(160, 120, 70, 0.1)' }}>
-                  <p className="text-[13px] font-semibold uppercase tracking-wider mb-3 wood-text-secondary">Workshop Progression</p>
+                <div className="mb-4 pb-4" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                  <p className="text-[13px] font-semibold uppercase tracking-wider mb-3" style={{ color: '#ffffff' }}>Workshop Progression</p>
                   {([
                     { key: 'legacy' as const, label: 'Legacy', desc: 'Keyword Only' },
                     { key: 'semantic' as const, label: 'Lab 1', desc: 'Semantic Search' },
@@ -588,22 +591,22 @@ function AppContent() {
                       onClick={() => setWorkshopMode(mode.key)}
                       className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-left transition-all duration-200 mb-1"
                       style={{
-                        background: workshopMode === mode.key ? 'rgba(180, 140, 90, 0.12)' : 'transparent',
-                        border: workshopMode === mode.key ? '1px solid rgba(180, 140, 90, 0.2)' : '1px solid transparent',
+                        background: workshopMode === mode.key ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                        border: workshopMode === mode.key ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
                       }}
                     >
                       <span
                         className="w-3 h-3 rounded-full flex-shrink-0 transition-all duration-200"
                         style={{
-                          background: workshopMode === mode.key ? '#c8a870' : 'transparent',
-                          border: workshopMode === mode.key ? '2px solid #c8a870' : '2px solid rgba(160, 120, 70, 0.25)',
+                          background: workshopMode === mode.key ? '#ffffff' : 'transparent',
+                          border: workshopMode === mode.key ? '2px solid #ffffff' : '2px solid rgba(255, 255, 255, 0.2)',
                         }}
                       />
                       <div>
-                        <span className="text-[15px] font-medium" style={{ color: workshopMode === mode.key ? '#f0e4d0' : 'rgba(210, 185, 150, 0.7)' }}>
+                        <span className="text-[15px] font-medium" style={{ color: workshopMode === mode.key ? '#ffffff' : 'rgba(255, 255, 255, 0.75)' }}>
                           {mode.label}
                         </span>
-                        <span className="text-[13px] ml-2" style={{ color: workshopMode === mode.key ? 'rgba(220, 185, 130, 0.85)' : 'rgba(190, 150, 100, 0.5)' }}>
+                        <span className="text-[13px] ml-2" style={{ color: workshopMode === mode.key ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.45)' }}>
                           {mode.desc}
                         </span>
                       </div>
@@ -620,21 +623,24 @@ function AppContent() {
                   <button
                     key={idx}
                     onClick={tool.action}
-                    className="w-full p-3.5 rounded-lg text-left transition-all duration-200 hover:translate-x-0.5 wood-card"
+                    className="w-full p-3.5 rounded-lg text-left transition-all duration-200 hover:translate-x-0.5"
+                    style={{ background: 'transparent' }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   >
                     <div className="flex items-start gap-3">
-                      <span className="wood-text-accent mt-0.5">{tool.icon}</span>
+                      <span className="mt-0.5" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{tool.icon}</span>
                       <div>
-                        <p className="text-[16px] font-medium mb-0.5 wood-text-primary">{tool.label}</p>
-                        <p className="text-[13px] wood-text-secondary">{tool.desc}</p>
+                        <p className="text-[16px] font-medium mb-0.5" style={{ color: '#ffffff' }}>{tool.label}</p>
+                        <p className="text-[13px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{tool.desc}</p>
                       </div>
                     </div>
                   </button>
                 ))}
 
                 {/* Architecture */}
-                <div className="pt-3 mt-3" style={{ borderTop: '1px solid rgba(160, 120, 70, 0.1)' }}>
-                  <p className="text-[13px] font-semibold uppercase tracking-wider mb-3 wood-text-secondary">Architecture</p>
+                <div className="pt-3 mt-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                  <p className="text-[13px] font-semibold uppercase tracking-wider mb-3" style={{ color: '#ffffff' }}>Architecture</p>
                   {[
                     { title: 'Semantic Search', img: 'part1_architecture.png' },
                     { title: 'Custom Agent Tools', img: 'part2_architecture.png' },
@@ -643,17 +649,20 @@ function AppContent() {
                     <button
                       key={idx}
                       onClick={() => { setExpandedDiagram(diagram.img); setShowDevTools(false) }}
-                      className="w-full p-3 rounded-lg text-left transition-all duration-200 mb-1 hover:translate-x-0.5 wood-card"
+                      className="w-full p-3 rounded-lg text-left transition-all duration-200 mb-1 hover:translate-x-0.5"
+                      style={{ background: 'transparent' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
-                      <p className="text-[15px] font-medium wood-text-accent">{diagram.title}</p>
+                      <p className="text-[15px] font-medium" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>{diagram.title}</p>
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="mt-4 pt-3 wood-footer rounded-b-lg px-2 py-3">
-                <p className="text-[12px] text-center" style={{ color: 'rgba(190, 150, 100, 0.5)' }}>Workshop Tools · DAT406</p>
+              <div className="mt-4 pt-3 rounded-b-lg px-2 py-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                <p className="text-[12px] text-center" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>Workshop Tools · DAT406</p>
               </div>
             </div>
           </div>

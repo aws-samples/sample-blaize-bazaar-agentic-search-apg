@@ -29,7 +29,7 @@ interface SearchOverlayProps {
 
 type SortOption = 'relevance' | 'price_asc' | 'price_desc' | 'top_rated'
 
-const ITEMS_PER_PAGE = 3
+const ITEMS_PER_PAGE = 6
 
 const renderStars = (rating: number, size = 'h-3.5 w-3.5') => {
   const fullStars = Math.floor(rating)
@@ -416,21 +416,17 @@ const SearchOverlay = ({
 
                 {/* Results area */}
                 <div className="flex-1 overflow-y-auto p-6 md:p-8 search-scroll">
-                  {/* Loading skeleton — single column, large cards */}
+                  {/* Loading skeleton — 3-column grid */}
                   {loading && (
-                    <div className="space-y-5 max-w-[800px] mx-auto">
+                    <div className="grid grid-cols-3 gap-5 max-w-[1100px] mx-auto">
                       {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="rounded-2xl p-6 animate-pulse"
+                        <div key={i} className="rounded-2xl p-5 animate-pulse flex flex-col"
                           style={{ background: 'var(--input-bg)', border: '1px solid var(--border-color)' }}>
-                          <div className="flex gap-6">
-                            <div className="w-32 h-32 rounded-xl skeleton-shimmer flex-shrink-0" />
-                            <div className="flex-1 space-y-3 py-2">
-                              <div className="h-5 skeleton-shimmer rounded-lg w-4/5" />
-                              <div className="h-4 skeleton-shimmer rounded-lg w-1/2" />
-                              <div className="h-3 skeleton-shimmer rounded-lg w-1/3 mt-4" />
-                              <div className="h-6 skeleton-shimmer rounded-lg w-1/4 mt-2" />
-                            </div>
-                          </div>
+                          <div className="w-full aspect-square rounded-xl skeleton-shimmer mb-4" />
+                          <div className="h-4 skeleton-shimmer rounded-lg w-4/5 mb-2" />
+                          <div className="h-3 skeleton-shimmer rounded-lg w-1/2 mb-4" />
+                          <div className="h-3 skeleton-shimmer rounded-lg w-1/3 mb-2" />
+                          <div className="h-5 skeleton-shimmer rounded-lg w-1/3 mt-auto" />
                         </div>
                       ))}
                     </div>
@@ -457,96 +453,92 @@ const SearchOverlay = ({
                     </div>
                   )}
 
-                  {/* Product list — single column, large showcase cards */}
+                  {/* Product grid — 3 vertical cards per row */}
                   {!loading && paginatedResults.length > 0 && (
                     <>
-                      <div className="space-y-5 max-w-[800px] mx-auto">
+                      <div className="grid grid-cols-3 gap-5 max-w-[1100px] mx-auto">
                         {paginatedResults.map((result, index) => (
                           <motion.a
                             key={result.id}
                             href={result.productUrl || '#'}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="group relative rounded-2xl overflow-hidden block"
+                            className="group relative rounded-2xl overflow-hidden flex flex-col"
                             style={{
                               background: 'var(--input-bg)',
                               border: '1px solid var(--border-color)',
                             }}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.08, type: 'spring', stiffness: 300, damping: 25 }}
+                            transition={{ delay: index * 0.06, type: 'spring', stiffness: 300, damping: 25 }}
                             whileHover={{
-                              scale: 1.01,
+                              scale: 1.02,
                               transition: { type: 'spring', stiffness: 400, damping: 20 }
                             }}
                           >
                             {/* Hover glow */}
                             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-500"
-                              style={{ background: theme === 'dark' ? 'linear-gradient(135deg, rgba(255,255,255,0.03), transparent 60%)' : 'linear-gradient(135deg, rgba(0,0,0,0.02), transparent 60%)' }} />
+                              style={{ background: theme === 'dark' ? 'linear-gradient(180deg, rgba(255,255,255,0.04), transparent 60%)' : 'linear-gradient(180deg, rgba(0,0,0,0.02), transparent 60%)' }} />
 
-                            <div className="relative p-6 flex gap-6">
-                              {/* Product image — large */}
-                              <div className="flex-shrink-0 w-32 h-32 rounded-xl overflow-hidden flex items-center justify-center"
-                                style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }}>
-                                {result.icon ? (
-                                  <img
-                                    src={result.icon}
-                                    alt={result.name}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                    onError={(e) => {
-                                      e.currentTarget.style.display = 'none'
-                                      const parent = e.currentTarget.parentElement
-                                      if (parent && !parent.querySelector('svg')) {
-                                        const div = document.createElement('div')
-                                        div.className = 'w-10 h-10 text-text-secondary opacity-30'
-                                        div.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>'
-                                        parent.appendChild(div)
-                                      }
-                                    }}
-                                  />
-                                ) : (
-                                  <Package className="h-10 w-10 text-text-secondary opacity-30" />
-                                )}
-                              </div>
+                            {/* Product image — tall */}
+                            <div className="relative w-full aspect-square rounded-t-2xl overflow-hidden flex items-center justify-center"
+                              style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+                              {result.icon ? (
+                                <img
+                                  src={result.icon}
+                                  alt={result.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none'
+                                    const parent = e.currentTarget.parentElement
+                                    if (parent && !parent.querySelector('svg')) {
+                                      const div = document.createElement('div')
+                                      div.className = 'w-12 h-12 text-text-secondary opacity-30'
+                                      div.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>'
+                                      parent.appendChild(div)
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <Package className="h-12 w-12 text-text-secondary opacity-30" />
+                              )}
 
-                              {/* Info — spacious layout */}
-                              <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
-                                <div>
-                                  <h3 className="text-[17px] font-medium text-text-primary mb-2 line-clamp-2 leading-snug transition-colors duration-300">
-                                    {result.name}
-                                  </h3>
+                              {/* Similarity badge on image */}
+                              {isSemanticSearch && result.similarity > 0 && (
+                                <span className="absolute top-3 right-3 px-2.5 py-1 rounded-lg text-[11px] font-medium"
+                                  style={{
+                                    background: 'rgba(0, 0, 0, 0.6)',
+                                    backdropFilter: 'blur(8px)',
+                                    color: 'rgba(147, 197, 253, 0.95)',
+                                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                                  }}>
+                                  {Math.round(result.similarity * 100)}% match
+                                </span>
+                              )}
+                            </div>
 
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <span className="px-2.5 py-0.5 rounded-md text-[11px] font-medium text-text-secondary"
-                                      style={{ background: 'var(--input-bg)', border: '1px solid var(--border-color)' }}>
-                                      {result.category}
-                                    </span>
-                                    {isSemanticSearch && result.similarity > 0 && (
-                                      <span className="px-2.5 py-0.5 rounded-md text-[11px] font-medium"
-                                        style={{
-                                          background: 'rgba(59, 130, 246, 0.08)',
-                                          border: '1px solid rgba(59, 130, 246, 0.15)',
-                                          color: 'rgba(147, 197, 253, 0.9)',
-                                        }}>
-                                        {Math.round(result.similarity * 100)}% match
-                                      </span>
-                                    )}
+                            {/* Info */}
+                            <div className="relative flex-1 flex flex-col p-5">
+                              <span className="px-2 py-0.5 rounded-md text-[11px] font-medium text-text-secondary self-start mb-2"
+                                style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', border: '1px solid var(--border-color)' }}>
+                                {result.category}
+                              </span>
+
+                              <h3 className="text-[15px] font-medium text-text-primary mb-3 leading-snug transition-colors duration-300">
+                                {result.name}
+                              </h3>
+
+                              <div className="mt-auto">
+                                <div className="flex items-center gap-1.5 mb-2">
+                                  <div className="flex items-center gap-0.5">
+                                    {renderStars(result.stars, 'h-3 w-3')}
                                   </div>
+                                  <span className="text-text-secondary text-[11px] font-medium">{result.stars}</span>
+                                  <span className="text-text-secondary opacity-40 text-[11px]">({result.reviews.toLocaleString()})</span>
                                 </div>
-
-                                <div className="flex items-center justify-between">
-                                  <span className="text-xl font-semibold text-text-primary" style={{ letterSpacing: '-0.3px' }}>
-                                    ${result.price.toFixed(2)}
-                                  </span>
-                                  <div className="flex items-center gap-2.5">
-                                    <div className="flex items-center gap-0.5">
-                                      {renderStars(result.stars)}
-                                    </div>
-                                    <span className="text-text-secondary text-[12px] font-medium">{result.stars}</span>
-                                    <span className="text-text-secondary opacity-40">·</span>
-                                    <span className="text-text-secondary text-[12px]">{result.reviews.toLocaleString()} reviews</span>
-                                  </div>
-                                </div>
+                                <span className="text-xl font-semibold text-text-primary" style={{ letterSpacing: '-0.3px' }}>
+                                  ${result.price.toFixed(2)}
+                                </span>
                               </div>
                             </div>
 
@@ -558,7 +550,7 @@ const SearchOverlay = ({
                                   style={{ background: `linear-gradient(90deg, var(--link-color), var(--border-color))` }}
                                   initial={{ width: '0%' }}
                                   animate={{ width: `${Math.round(result.similarity * 100)}%` }}
-                                  transition={{ delay: index * 0.08 + 0.3, duration: 0.8, ease: 'easeOut' }}
+                                  transition={{ delay: index * 0.06 + 0.3, duration: 0.8, ease: 'easeOut' }}
                                 />
                               </div>
                             )}

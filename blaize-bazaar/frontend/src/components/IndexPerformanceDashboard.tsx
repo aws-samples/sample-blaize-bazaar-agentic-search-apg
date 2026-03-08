@@ -105,29 +105,30 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-[90vw] max-w-[1200px] max-h-[90vh] wood-modal rounded-[20px] flex flex-col overflow-hidden">
+      <div className="w-[90vw] max-w-[1200px] max-h-[90vh] rounded-[20px] flex flex-col overflow-hidden"
+        style={{ background: 'rgba(0, 0, 0, 0.95)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
         {/* Header */}
-        <div className="px-6 py-4 wood-header flex justify-between items-center">
+        <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
           <div className="flex items-center gap-3">
-            <BarChart3 className="h-6 w-6 wood-text-accent" />
+            <BarChart3 className="h-6 w-6" style={{ color: 'rgba(255, 255, 255, 0.6)' }} />
             <div>
-              <h2 className="text-xl font-semibold wood-text-primary">
+              <h2 className="text-xl font-semibold" style={{ color: '#ffffff' }}>
                 pgvector Index Performance Dashboard
               </h2>
-              <p className="text-xs wood-text-secondary mt-0.5">
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
                 Compare HNSW index vs Sequential Scan • Median of 4 runs with cache clearing
               </p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
-            <X className="h-5 w-5 wood-text-secondary hover:text-white" />
+            <X className="h-5 w-5" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 wood-scroll">
+        <div className="flex-1 overflow-y-auto px-6 py-6 search-scroll">
           {/* Controls Section */}
-          <div className="mb-6 p-6 rounded-xl wood-card">
+          <div className="mb-6 p-6 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
             <div className="flex items-center gap-2 mb-4">
               <Settings className="h-5 w-5 text-white/50" />
               <h3 className="text-lg font-semibold text-text-primary">Test Configuration</h3>
@@ -270,7 +271,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                     </div>
 
                     {/* When ef_search Matters */}
-                    <div className="p-3 rounded-lg wood-card">
+                    <div className="p-3 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
                       <p className="text-sm text-white/40 font-medium mb-2">
                         When ef_search Tuning Shows Impact
                       </p>
@@ -367,7 +368,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
               </div>
 
               {/* Comparison Metrics */}
-              <div className="p-6 rounded-xl wood-card">
+              <div className="p-6 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
                 <div className="flex items-center gap-2 mb-4">
                   <TrendingUp className="h-5 w-5 text-white/50" />
                   <h3 className="text-lg font-semibold text-text-primary">Comparison Analysis</h3>
@@ -377,25 +378,25 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                 </div>
 
                 <div className="grid grid-cols-4 gap-4 mb-4">
-                  <div className="text-center p-4 rounded-lg wood-card">
+                  <div className="text-center p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
                     <div className="text-sm text-text-secondary mb-1">Speedup</div>
                     <div className={`text-2xl font-bold ${getSpeedupColor(results.comparison.speedup_factor)}`}>
                       {results.comparison.speedup_factor}x
                     </div>
                   </div>
-                  <div className="text-center p-4 rounded-lg wood-card">
+                  <div className="text-center p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
                     <div className="text-sm text-text-secondary mb-1">Time Saved</div>
                     <div className="text-2xl font-bold text-green-400">
                       {results.comparison.time_saved_ms}ms
                     </div>
                   </div>
-                  <div className="text-center p-4 rounded-lg wood-card">
+                  <div className="text-center p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
                     <div className="text-sm text-text-secondary mb-1">Efficiency</div>
                     <div className="text-2xl font-bold text-blue-400">
                       {results.comparison.time_saved_pct}%
                     </div>
                   </div>
-                  <div className="text-center p-4 rounded-lg wood-card">
+                  <div className="text-center p-4 rounded-lg border border-white/[0.06] bg-white/[0.02]">
                     <div className="text-sm text-text-secondary mb-1">Recall</div>
                     <div className="text-2xl font-bold text-white/50">
                       {results.comparison.recall_pct}%
@@ -416,7 +417,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
               </div>
 
               {/* Insights */}
-              <div className="p-6 rounded-xl wood-card">
+              <div className="p-6 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
                 <h3 className="text-lg font-semibold text-text-primary mb-3">Query Insights</h3>
                 <div className="space-y-2 text-sm text-text-secondary">
                   <p>
@@ -448,7 +449,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
 
           {/* Educational Content */}
           {!results && !loading && (
-            <div className="p-6 rounded-xl wood-card">
+            <div className="p-6 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
               <h3 className="text-lg font-semibold text-text-primary mb-3">About pgvector HNSW Indexes</h3>
               <div className="space-y-3 text-sm text-text-secondary">
                 <p>
@@ -500,11 +501,11 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 wood-footer">
-          <div className="flex items-start gap-3 text-xs wood-text-secondary">
-            <Zap className="h-4 w-4 mt-0.5 wood-text-accent flex-shrink-0" />
+        <div className="px-6 py-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+          <div className="flex items-start gap-3 text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+            <Zap className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
             <div>
-              <p className="font-medium wood-text-primary mb-1">Production Database Tuning</p>
+              <p className="font-medium mb-1" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Production Database Tuning</p>
               <p>
                 Use this dashboard to find the optimal ef_search value for your workload. Monitor query latency vs recall 
                 to ensure your application meets performance SLAs while maintaining search quality.

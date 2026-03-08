@@ -134,13 +134,13 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
         <div
           className="flex flex-col items-center gap-2 px-2 py-4 rounded-l-xl transition-all hover:px-3"
           style={{
-            background: 'linear-gradient(135deg, #1e1915 0%, #171310 100%)',
-            border: '1px solid rgba(160, 120, 70, 0.15)',
+            background: 'rgba(0, 0, 0, 0.95)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRight: 'none',
           }}
         >
-          <Brain className="h-5 w-5 wood-text-accent" />
-          <ChevronLeft className="h-4 w-4 wood-text-secondary" />
+          <Brain className="h-5 w-5" style={{ color: 'rgba(255, 255, 255, 0.6)' }} />
+          <ChevronLeft className="h-4 w-4" style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
           {traces.length > 0 && (
             <span className="text-[10px] text-white/40 font-semibold">{traces.length}</span>
           )}
@@ -152,18 +152,22 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
   // Expanded: right side panel
   return (
     <div
-      className="fixed right-0 top-[72px] w-[380px] h-[calc(100vh-72px)] z-40 flex flex-col animate-slideIn wood-panel"
+      className="fixed right-0 top-[72px] w-[380px] h-[calc(100vh-72px)] z-40 flex flex-col animate-slideIn"
       style={{
-        borderLeft: '1px solid rgba(160, 120, 70, 0.15)',
-        boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.4), inset 1px 0 0 rgba(200, 160, 100, 0.04)',
+        background: 'rgba(0, 0, 0, 0.95)',
+        backdropFilter: 'blur(40px)',
+        WebkitBackdropFilter: 'blur(40px)',
+        borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
+        boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.5)',
       }}
     >
       {/* Header */}
       <div
-        className="px-4 py-3 wood-header flex items-center justify-between flex-shrink-0"
+        className="px-4 py-3 flex items-center justify-between flex-shrink-0"
+        style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}
       >
         <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 wood-text-accent" />
+          <Brain className="h-5 w-5" style={{ color: 'rgba(255, 255, 255, 0.6)' }} />
           <div>
             <h2 className="text-sm font-semibold text-text-primary">Agent Traces</h2>
             <p className="text-[10px] text-text-secondary">
@@ -203,7 +207,7 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
       </div>
 
       {/* Traces Timeline */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 wood-scroll">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 search-scroll">
         {traces.length === 0 ? (
           <div className="text-center py-12">
             <Brain className="h-12 w-12 text-white/20 mx-auto mb-3" />
@@ -265,9 +269,9 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 wood-footer flex-shrink-0">
-        <p className="text-[10px] wood-text-secondary">
-          <strong className="wood-text-accent">Strands OpenTelemetry</strong> · Auto-captured traces
+      <div className="px-4 py-2 flex-shrink-0" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+        <p className="text-[10px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+          <strong style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Strands OpenTelemetry</strong> · Auto-captured traces
         </p>
       </div>
     </div>

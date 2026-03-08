@@ -322,15 +322,12 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
 
                   {/* AI response */}
                   <motion.div className="flex gap-3 items-start" variants={msgFromLeft}>
-                    {(() => { const AvatarIcon = ICON_MAP[slide.aiAvatarIconKey]; return (
                     <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                      <div className="w-7 h-7 rounded-full flex items-center justify-center"
-                        style={{ background: slide.featureColor }}>
-                        <AvatarIcon className="w-3.5 h-3.5 text-white" />
+                      <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
+                        <img src={`${import.meta.env.BASE_URL}chat-icon.jpeg`} alt="AI" className="w-full h-full object-cover" />
                       </div>
                       <span className="text-[9px]" style={{ color: 'var(--text-secondary)' }}>{slide.aiAvatarLabel}</span>
                     </div>
-                    ); })()}
                     <div className="rounded-2xl rounded-bl-sm px-4 py-3 flex-1"
                       style={{
                         background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',

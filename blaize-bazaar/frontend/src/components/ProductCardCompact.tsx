@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { ShoppingCart, Star, ExternalLink } from 'lucide-react'
 import { addRecentlyViewed } from '../utils/recentlyViewed'
 import { type AgentType } from '../utils/agentIdentity'
@@ -51,8 +50,6 @@ const renderStars = (rating: number) => {
 }
 
 const ProductCardCompact = ({ product, onAddToCart, similarityScore }: ProductCardCompactProps) => {
-  const [hovered, setHovered] = useState(false)
-
   // Construct Amazon URL from product ID if url is missing
   const amazonUrl = product.url || `https://www.amazon.com/dp/${product.id}`
 
@@ -72,15 +69,11 @@ const ProductCardCompact = ({ product, onAddToCart, similarityScore }: ProductCa
 
   return (
     <div
-      className="relative flex gap-3.5 p-3.5 rounded-xl transition-all duration-300 group"
+      className="relative flex gap-3.5 p-3.5 rounded-xl transition-all duration-300 group hover:scale-[1.015] hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] hover:border-white/15"
       style={{
         background: 'var(--input-bg)',
-        border: hovered ? '1px solid rgba(255,255,255,0.15)' : '1px solid var(--border-color)',
-        boxShadow: hovered ? '0 4px 20px rgba(0,0,0,0.3)' : 'none',
-        transform: hovered ? 'scale(1.015)' : 'scale(1)',
+        border: '1px solid var(--border-color)',
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
       {/* Product Image */}
       <a
@@ -89,7 +82,7 @@ const ProductCardCompact = ({ product, onAddToCart, similarityScore }: ProductCa
         rel="noopener noreferrer"
         onClick={() => addRecentlyViewed({ id: product.id, name: product.name, price: product.price, image: product.image })}
         className="w-[88px] h-[88px] rounded-xl flex-shrink-0 overflow-hidden transition-all flex items-center justify-center"
-        style={{ background: 'rgba(255,255,255,0.04)' }}
+        style={{ background: 'rgba(255,255,255,0.09)' }}
       >
         {isImageUrl ? (
           <img
@@ -158,7 +151,7 @@ const ProductCardCompact = ({ product, onAddToCart, similarityScore }: ProductCa
                 )}
               </>
             )}
-            <span className="font-bold text-lg" style={{ color: 'var(--link-color)' }}>${product.price.toFixed(2)}</span>
+            <span className="font-extrabold text-[19px] tracking-tight" style={{ color: 'var(--link-color)' }}>${product.price.toFixed(2)}</span>
           </div>
           <div className="flex items-center gap-1.5">
             {/* View link */}

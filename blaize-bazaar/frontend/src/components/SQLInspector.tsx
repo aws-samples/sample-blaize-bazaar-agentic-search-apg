@@ -121,16 +121,17 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-[90vw] h-[90vh] wood-modal rounded-[20px] flex flex-col overflow-hidden">
+      <div className="w-[90vw] h-[90vh] rounded-[20px] flex flex-col overflow-hidden"
+        style={{ background: 'rgba(0, 0, 0, 0.95)', backdropFilter: 'blur(40px)', WebkitBackdropFilter: 'blur(40px)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
         {/* Header */}
-        <div className="px-6 py-4 wood-header flex justify-between items-center">
+        <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
           <div className="flex items-center gap-3">
-            <Database className="h-6 w-6 wood-text-accent" />
+            <Database className="h-6 w-6" style={{ color: 'rgba(255, 255, 255, 0.6)' }} />
             <div>
-              <h2 className="text-xl font-semibold wood-text-primary">
+              <h2 className="text-xl font-semibold" style={{ color: '#ffffff' }}>
                 Live SQL Query Inspector
               </h2>
-              <p className="text-xs wood-text-secondary mt-0.5">
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
                 Real-time pgvector query monitoring with EXPLAIN analysis
               </p>
             </div>
@@ -185,7 +186,7 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
         </div>
 
         {/* Performance Info Banner */}
-        <div className="px-6 py-3 wood-info border-b" style={{ borderColor: 'rgba(160, 120, 70, 0.12)' }}>
+        <div className="px-6 py-3 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.06)', background: 'rgba(255, 255, 255, 0.02)' }}>
           <div className="flex items-start gap-3">
             <Zap className="h-5 w-5 mt-0.5 text-blue-400 flex-shrink-0" />
             <div className="text-xs">
@@ -208,7 +209,7 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
 
         {/* Stats Summary */}
         {stats && (
-          <div className="px-6 py-3 border-b" style={{ background: 'rgba(160, 120, 70, 0.03)', borderColor: 'rgba(160, 120, 70, 0.1)' }}>
+          <div className="px-6 py-3 border-b" style={{ background: 'rgba(255, 255, 255, 0.02)', borderColor: 'rgba(255, 255, 255, 0.06)' }}>
             <div className="grid grid-cols-5 gap-4">
               <div className="text-center">
                 <div className="text-xs text-text-secondary">Total Queries</div>
@@ -241,7 +242,7 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
         )}
 
         {/* Query List */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 wood-scroll">
+        <div className="flex-1 overflow-y-auto px-6 py-4 search-scroll">
           {queries.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-text-secondary">
               <Database className="h-16 w-16 mb-4 opacity-30" />
@@ -253,10 +254,11 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
               {queries.map((query, idx) => (
                 <div
                   key={idx}
-                  className="rounded-xl overflow-hidden transition-all duration-300 wood-card"
+                  className="rounded-xl overflow-hidden transition-all duration-300"
+                  style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}
                 >
                   {/* Query Header */}
-                  <div className="px-4 py-3 flex items-center justify-between" style={{ background: 'rgba(160, 120, 70, 0.04)' }}>
+                  <div className="px-4 py-3 flex items-center justify-between" style={{ background: 'rgba(255, 255, 255, 0.02)' }}>
                     <div className="flex items-center gap-3">
                       <span className={`px-2 py-1 rounded-md text-xs font-medium border ${getQueryTypeColor(query.query_type)}`}>
                         {query.query_type}
@@ -369,11 +371,11 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 wood-footer">
-          <div className="flex items-start gap-3 text-xs wood-text-secondary">
-            <Zap className="h-4 w-4 mt-0.5 wood-text-accent flex-shrink-0" />
+        <div className="px-6 py-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+          <div className="flex items-start gap-3 text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+            <Zap className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
             <div>
-              <p className="font-medium wood-text-primary mb-1">Disclaimer</p>
+              <p className="font-medium mb-1" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Disclaimer</p>
               <p>
                 SQL Inspector is built for the DAT406 workshop for illustrative and educational purposes only. 
                 Inspect actual pgvector queries with <span className="text-white/50">&lt;=&gt;</span> operator, 
