@@ -544,17 +544,17 @@ function AppContent() {
         >
           {/* Collapsed tab */}
           <div
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-8 py-6 rounded-r-lg flex flex-col items-center gap-2 cursor-pointer transition-opacity duration-300"
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-11 py-8 rounded-r-xl flex flex-col items-center gap-3 cursor-pointer transition-opacity duration-300"
             style={{
               background: 'linear-gradient(180deg, #221a10, #18120a)',
               border: '1px solid rgba(140, 100, 55, 0.3)',
-              borderLeft: 'none', boxShadow: '2px 0 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(200,160,100,0.08)',
+              borderLeft: 'none', boxShadow: '2px 0 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(200,160,100,0.08)',
               opacity: showDevTools ? 0 : 1,
               pointerEvents: showDevTools ? 'none' : 'auto',
             }}
           >
-            <Wrench className="h-3.5 w-3.5" style={{ color: 'rgba(220, 180, 120, 0.8)' }} />
-            <span className="text-[8px] font-semibold tracking-widest uppercase" style={{ writingMode: 'vertical-lr', color: 'rgba(210, 170, 115, 0.65)' }}>Tools</span>
+            <Wrench className="h-5 w-5" style={{ color: 'rgba(220, 180, 120, 0.85)' }} />
+            <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ writingMode: 'vertical-lr', color: 'rgba(210, 170, 115, 0.7)' }}>Tools</span>
           </div>
 
           {/* Expanded panel */}
@@ -569,14 +569,14 @@ function AppContent() {
             <div className="w-[300px] p-5 h-full flex flex-col wood-scroll overflow-y-auto" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
               {/* Header */}
               <div className="mb-5 pb-4" style={{ borderBottom: '1px solid rgba(160, 120, 70, 0.12)' }}>
-                <h2 className="text-xl font-semibold mb-1 wood-text-primary" style={{ letterSpacing: '-0.01em' }}>Developer Tools</h2>
-                <p className="text-[13px] wood-text-secondary">Workshop debugging & monitoring</p>
+                <h2 className="text-2xl font-semibold mb-1.5 wood-text-primary" style={{ letterSpacing: '-0.01em' }}>Developer Tools</h2>
+                <p className="text-[15px] wood-text-secondary">Workshop debugging & monitoring</p>
               </div>
 
-              <div className="flex-1 space-y-1.5">
+              <div className="flex-1 space-y-2">
                 {/* Workshop Mode Switcher */}
                 <div className="mb-4 pb-4" style={{ borderBottom: '1px solid rgba(160, 120, 70, 0.1)' }}>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider mb-2.5 wood-text-secondary">Workshop Progression</p>
+                  <p className="text-[13px] font-semibold uppercase tracking-wider mb-3 wood-text-secondary">Workshop Progression</p>
                   {([
                     { key: 'legacy' as const, label: 'Legacy', desc: 'Keyword Only' },
                     { key: 'semantic' as const, label: 'Lab 1', desc: 'Semantic Search' },
@@ -586,24 +586,24 @@ function AppContent() {
                     <button
                       key={mode.key}
                       onClick={() => setWorkshopMode(mode.key)}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-200 mb-0.5"
+                      className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-left transition-all duration-200 mb-1"
                       style={{
                         background: workshopMode === mode.key ? 'rgba(180, 140, 90, 0.12)' : 'transparent',
                         border: workshopMode === mode.key ? '1px solid rgba(180, 140, 90, 0.2)' : '1px solid transparent',
                       }}
                     >
                       <span
-                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 transition-all duration-200"
+                        className="w-3 h-3 rounded-full flex-shrink-0 transition-all duration-200"
                         style={{
                           background: workshopMode === mode.key ? '#c8a870' : 'transparent',
                           border: workshopMode === mode.key ? '2px solid #c8a870' : '2px solid rgba(160, 120, 70, 0.25)',
                         }}
                       />
                       <div>
-                        <span className="text-[13px] font-medium" style={{ color: workshopMode === mode.key ? '#f0e4d0' : 'rgba(210, 185, 150, 0.7)' }}>
+                        <span className="text-[15px] font-medium" style={{ color: workshopMode === mode.key ? '#f0e4d0' : 'rgba(210, 185, 150, 0.7)' }}>
                           {mode.label}
                         </span>
-                        <span className="text-[11px] ml-1.5" style={{ color: workshopMode === mode.key ? 'rgba(220, 185, 130, 0.85)' : 'rgba(190, 150, 100, 0.5)' }}>
+                        <span className="text-[13px] ml-2" style={{ color: workshopMode === mode.key ? 'rgba(220, 185, 130, 0.85)' : 'rgba(190, 150, 100, 0.5)' }}>
                           {mode.desc}
                         </span>
                       </div>
@@ -613,20 +613,20 @@ function AppContent() {
 
                 {/* Tool buttons */}
                 {[
-                  { icon: <Database className="h-4 w-4" />, label: 'SQL Inspector', desc: 'Monitor pgvector queries', action: () => { setShowSQLInspector(true); setShowDevTools(false) } },
-                  { icon: <BarChart3 className="h-4 w-4" />, label: 'Index Performance', desc: 'Tune HNSW parameters', action: () => { setShowIndexPerformance(true); setShowDevTools(false) } },
-                  { icon: <Brain className="h-4 w-4" />, label: 'Agent Traces', desc: 'Multi-agent workflow', action: () => { setAgentPanelMode(agentPanelMode === 'expanded' ? 'hidden' : 'expanded'); setShowDevTools(false) } },
+                  { icon: <Database className="h-5 w-5" />, label: 'SQL Inspector', desc: 'Monitor pgvector queries', action: () => { setShowSQLInspector(true); setShowDevTools(false) } },
+                  { icon: <BarChart3 className="h-5 w-5" />, label: 'Index Performance', desc: 'Tune HNSW parameters', action: () => { setShowIndexPerformance(true); setShowDevTools(false) } },
+                  { icon: <Brain className="h-5 w-5" />, label: 'Agent Traces', desc: 'Multi-agent workflow', action: () => { setAgentPanelMode(agentPanelMode === 'expanded' ? 'hidden' : 'expanded'); setShowDevTools(false) } },
                 ].map((tool, idx) => (
                   <button
                     key={idx}
                     onClick={tool.action}
-                    className="w-full p-3 rounded-lg text-left transition-all duration-200 hover:translate-x-0.5 wood-card"
+                    className="w-full p-3.5 rounded-lg text-left transition-all duration-200 hover:translate-x-0.5 wood-card"
                   >
                     <div className="flex items-start gap-3">
-                      <span className="wood-text-accent">{tool.icon}</span>
+                      <span className="wood-text-accent mt-0.5">{tool.icon}</span>
                       <div>
-                        <p className="text-[14px] font-medium mb-0.5 wood-text-primary">{tool.label}</p>
-                        <p className="text-[12px] wood-text-secondary">{tool.desc}</p>
+                        <p className="text-[16px] font-medium mb-0.5 wood-text-primary">{tool.label}</p>
+                        <p className="text-[13px] wood-text-secondary">{tool.desc}</p>
                       </div>
                     </div>
                   </button>
@@ -634,7 +634,7 @@ function AppContent() {
 
                 {/* Architecture */}
                 <div className="pt-3 mt-3" style={{ borderTop: '1px solid rgba(160, 120, 70, 0.1)' }}>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider mb-2.5 wood-text-secondary">Architecture</p>
+                  <p className="text-[13px] font-semibold uppercase tracking-wider mb-3 wood-text-secondary">Architecture</p>
                   {[
                     { title: 'Semantic Search', img: 'part1_architecture.png' },
                     { title: 'Custom Agent Tools', img: 'part2_architecture.png' },
@@ -643,9 +643,9 @@ function AppContent() {
                     <button
                       key={idx}
                       onClick={() => { setExpandedDiagram(diagram.img); setShowDevTools(false) }}
-                      className="w-full p-2.5 rounded-lg text-left transition-all duration-200 mb-1 hover:translate-x-0.5 wood-card"
+                      className="w-full p-3 rounded-lg text-left transition-all duration-200 mb-1 hover:translate-x-0.5 wood-card"
                     >
-                      <p className="text-[13px] font-medium wood-text-accent">{diagram.title}</p>
+                      <p className="text-[15px] font-medium wood-text-accent">{diagram.title}</p>
                     </button>
                   ))}
                 </div>
@@ -653,7 +653,7 @@ function AppContent() {
 
               {/* Footer */}
               <div className="mt-4 pt-3 wood-footer rounded-b-lg px-2 py-3">
-                <p className="text-[10px] text-center" style={{ color: 'rgba(190, 150, 100, 0.5)' }}>Workshop Tools · DAT406</p>
+                <p className="text-[12px] text-center" style={{ color: 'rgba(190, 150, 100, 0.5)' }}>Workshop Tools · DAT406</p>
               </div>
             </div>
           </div>

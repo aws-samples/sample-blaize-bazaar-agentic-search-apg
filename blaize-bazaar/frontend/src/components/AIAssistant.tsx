@@ -649,7 +649,7 @@ const AIAssistant = () => {
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
             <motion.div
-              className="px-4 py-2.5 rounded-full text-sm whitespace-nowrap"
+              className="px-5 py-3 rounded-full text-[15px] font-medium whitespace-nowrap"
               style={{
                 background: theme === 'dark' ? 'rgba(0, 0, 0, 0.9)' : '#ffffff',
                 backdropFilter: 'blur(12px)',
@@ -663,7 +663,7 @@ const AIAssistant = () => {
               Ask me anything
             </motion.div>
             <motion.div
-              className="w-[60px] h-[60px] rounded-full flex-shrink-0 overflow-hidden"
+              className="w-[76px] h-[76px] rounded-full flex-shrink-0 overflow-hidden"
               style={{
                 boxShadow: '0 6px 28px rgba(0, 0, 0, 0.5)',
                 border: '2px solid var(--border-color)',
@@ -683,7 +683,7 @@ const AIAssistant = () => {
         <div className="fixed bottom-6 right-6 z-[998]">
           <motion.div
             onClick={() => setIsOpen(false)}
-            className="w-[52px] h-[52px] rounded-full flex items-center justify-center cursor-pointer overflow-hidden opacity-40 hover:opacity-80 transition-opacity"
+            className="w-[60px] h-[60px] rounded-full flex items-center justify-center cursor-pointer overflow-hidden opacity-40 hover:opacity-80 transition-opacity"
             style={{
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
               border: '2px solid var(--border-color)',
