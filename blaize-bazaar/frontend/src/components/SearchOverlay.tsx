@@ -524,7 +524,7 @@ const SearchOverlay = ({
                                 {result.category}
                               </span>
 
-                              <h3 className="text-[15px] font-medium text-text-primary mb-3 leading-snug transition-colors duration-300">
+                              <h3 className="text-[15px] font-medium text-text-primary mb-3 leading-snug transition-colors duration-300 line-clamp-2">
                                 {result.name}
                               </h3>
 

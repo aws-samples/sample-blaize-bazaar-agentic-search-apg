@@ -17,7 +17,23 @@
       "Bash(curl -sL \"https://images.pexels.com/photos/35541612/pexels-photo-35541612.jpeg?w=600&q=60\" -o /tmp/pexels_35541612.jpg)",
       "Bash(curl -sL \"https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&q=60\" -o /tmp/unsplash_earth.jpg)",
       "Bash(curl -sL \"https://images.pexels.com/photos/6956352/pexels-photo-6956352.jpeg?w=600&q=60\" -o /tmp/pexels_6956352.jpg)",
-      "Bash(npx tsc --noEmit --skipLibCheck)"
+      "Bash(npx tsc --noEmit --skipLibCheck)",
+      "WebFetch(domain:jsondata.reactbd.com)",
+      "Bash(curl -s \"https://jsondata.reactbd.com/api/products?page=1&perPage=2\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(curl -s \"https://dummyjson.com/products?limit=2&select=id,title,description,price,rating,stock,brand,category,thumbnail,images\")",
+      "Bash(curl -s \"https://dummyjson.com/products?limit=194&select=id,title,category,price,rating,stock\")",
+      "Bash(PYTHONUNBUFFERED=1 python tmp/load_1000_products.py)",
+      "Bash(PYTHONUNBUFFERED=1 python tmp/export_catalog.py)",
+      "Bash(curl -sI \"https://images.unsplash.com/photo-1461896836934-bd45ba8fcf9b?w=400&q=80\")",
+      "Bash(python3 -c \":*)",
+      "Bash(PYTHONUNBUFFERED=1 python tmp/fix_broken_images_v2.py)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=400&q=80\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://images.unsplash.com/photo-1526676037777-05a232554f77?w=400&q=80\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=400&q=80\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://images.unsplash.com/photo-1556767576-5ec41e3239ea?w=400&q=80\")",
+      "WebFetch(domain:unsplash.com)",
+      "Bash(PYTHONUNBUFFERED=1 python3 -c \":*)"
     ]
   }
 }

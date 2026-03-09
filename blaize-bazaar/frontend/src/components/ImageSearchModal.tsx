@@ -132,21 +132,20 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+        <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
           <div className="flex items-center gap-3">
-            <Camera className="h-6 w-6" style={{ color: 'rgba(255, 255, 255, 0.6)' }} />
-            <h2 className="text-xl font-semibold" style={{ color: '#ffffff' }}>
-              Visual Product Search
+            <Camera className="h-5 w-5" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
+            <h2 className="text-lg font-semibold tracking-tight" style={{ color: '#ffffff' }}>
+              Visual Search
             </h2>
-            <Sparkles className="h-5 w-5" style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
           </div>
           <button
             onClick={handleClose}
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-            style={{ color: 'rgba(255, 255, 255, 0.5)' }}
+            className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
+            style={{ color: 'rgba(255, 255, 255, 0.4)' }}
             aria-label="Close modal"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
@@ -155,10 +154,10 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
           {!preview ? (
             /* Upload Zone */
             <div
-              className="border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300"
+              className="border border-dashed rounded-2xl p-10 text-center transition-all duration-300"
               style={{
-                borderColor: dragActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)',
-                background: dragActive ? 'rgba(255, 255, 255, 0.04)' : 'transparent',
+                borderColor: dragActive ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.08)',
+                background: dragActive ? 'rgba(255, 255, 255, 0.03)' : 'transparent',
                 cursor: 'pointer',
               }}
               onDrop={handleDrop}
@@ -174,23 +173,17 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
                 className="hidden"
               />
 
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: 'rgba(255, 255, 255, 0.06)' }}>
-                  <Upload className="h-10 w-10" style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
+              <div className="flex flex-col items-center gap-5">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                  <Camera className="h-7 w-7" style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
                 </div>
 
                 <div>
-                  <p className="text-lg font-medium mb-2" style={{ color: '#ffffff' }}>
-                    Drop an image or click to upload
+                  <p className="text-base font-medium mb-1.5 tracking-tight" style={{ color: '#ffffff' }}>
+                    Drop an image or click to browse
                   </p>
-                  <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-                    JPEG, PNG, or WebP • Max 5MB
-                  </p>
-                </div>
-
-                <div className="mt-2 px-6 py-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                  <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
-                    Try uploading a photo of headphones, laptops, or any product
+                  <p className="text-xs tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.35)' }}>
+                    JPEG, PNG, or WebP up to 5 MB
                   </p>
                 </div>
               </div>
@@ -209,8 +202,8 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
                 {analyzing && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl backdrop-blur-sm">
                     <div className="flex flex-col items-center gap-3">
-                      <Loader className="h-8 w-8 animate-spin" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
-                      <p className="text-sm" style={{ color: '#ffffff' }}>Analyzing with Claude Sonnet 4...</p>
+                      <Loader className="h-6 w-6 animate-spin" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
+                      <p className="text-xs font-medium tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Analyzing with Claude Sonnet 4.6</p>
                     </div>
                   </div>
                 )}
@@ -219,34 +212,34 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
               {/* Analysis Results */}
               {analysis && !analyzing && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-green-400">
-                    <Sparkles className="h-5 w-5" />
-                    <span className="font-medium">AI Analysis Complete</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-400/80" />
+                    <span className="text-xs font-medium tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Analysis complete</span>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255, 255, 255, 0.06)' }}>
                     {/* Description */}
-                    <div className="p-4 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                      <p className="text-xs mb-1 font-medium" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>DESCRIPTION</p>
-                      <p className="text-sm" style={{ color: '#ffffff' }}>{analysis.description}</p>
+                    <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                      <p className="text-[10px] uppercase tracking-widest mb-1 font-medium" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>Description</p>
+                      <p className="text-sm leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{analysis.description}</p>
                     </div>
 
                     {/* Category */}
-                    <div className="p-4 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                      <p className="text-xs mb-1 font-medium" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>CATEGORY</p>
-                      <p className="text-sm" style={{ color: '#ffffff' }}>{analysis.category}</p>
+                    <div className="px-4 py-3" style={{ borderBottom: analysis.key_features?.length ? '1px solid rgba(255, 255, 255, 0.04)' : 'none' }}>
+                      <p className="text-[10px] uppercase tracking-widest mb-1 font-medium" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>Category</p>
+                      <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{analysis.category}</p>
                     </div>
 
                     {/* Key Features */}
                     {analysis.key_features && analysis.key_features.length > 0 && (
-                      <div className="p-4 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                        <p className="text-xs mb-2 font-medium" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>KEY FEATURES</p>
-                        <div className="flex flex-wrap gap-2">
+                      <div className="px-4 py-3">
+                        <p className="text-[10px] uppercase tracking-widest mb-2 font-medium" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>Features</p>
+                        <div className="flex flex-wrap gap-1.5">
                           {analysis.key_features.map((feature, idx) => (
                             <span
                               key={idx}
-                              className="px-3 py-1 rounded-full text-xs"
-                              style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)', color: 'rgba(255, 255, 255, 0.6)' }}
+                              className="px-2.5 py-1 rounded-full text-[11px]"
+                              style={{ background: 'rgba(255, 255, 255, 0.05)', color: 'rgba(255, 255, 255, 0.5)' }}
                             >
                               {feature}
                             </span>
@@ -256,10 +249,9 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs mt-4" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
-                    <Sparkles className="h-4 w-4" />
-                    <span>Results shown in search overlay</span>
-                  </div>
+                  <p className="text-[11px] text-center tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>
+                    Matching results shown in search overlay
+                  </p>
                 </div>
               )}
 
@@ -278,10 +270,10 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
                     setAnalysis(null);
                     setError(null);
                   }}
-                  className="w-full px-4 py-3 rounded-lg font-medium transition-all duration-300"
-                  style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)', color: '#ffffff' }}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-white/10"
+                  style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.08)', color: 'rgba(255, 255, 255, 0.7)' }}
                 >
-                  Try Another Image
+                  Try another image
                 </button>
               )}
             </div>
@@ -289,15 +281,15 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
         </div>
 
         {/* Footer Info */}
-        <div className="px-6 py-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', background: 'rgba(255, 255, 255, 0.02)' }}>
-          <div className="flex items-start gap-3 text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
-            <Sparkles className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
-            <div>
-              <p className="font-medium mb-1" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Powered by Claude Sonnet 4 Vision</p>
-              <p>
-                AI analyzes your image to understand product type, features, and style, 
-                then searches our catalog using semantic understanding with pgvector.
-              </p>
+        <div className="px-6 py-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'rgba(255, 255, 255, 0.06)' }}>
+                <Sparkles className="h-3 w-3" style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
+              </div>
+              <span className="text-xs font-medium tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                Claude Sonnet 4.6 Vision + Amazon Titan Embeddings + pgvector
+              </span>
             </div>
           </div>
         </div>

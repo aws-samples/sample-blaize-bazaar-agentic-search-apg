@@ -254,12 +254,20 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
           {/* Chat header */}
           <div className="px-6 py-4 flex items-center gap-3"
             style={{ borderBottom: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` }}>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center"
-              style={{ background: 'var(--link-color)' }}>
-              <Brain className="w-4 h-4 text-white" />
-            </div>
+            <motion.div
+              className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0"
+              style={{
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+                border: '1.5px solid var(--border-color)',
+              }}
+              animate={{ y: [0, -3, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+              whileHover={{ scale: 1.15 }}
+            >
+              <img src={`${import.meta.env.BASE_URL}chat-icon.jpeg`} alt="AI" className="w-full h-full object-cover" />
+            </motion.div>
             <div>
-              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Blaize AI Assistant</div>
+              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Blaize AI</div>
               <div className="text-[10px] flex items-center gap-1" style={{ color: '#22c55e' }}>
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#22c55e' }} /> 5 agents online
               </div>
@@ -322,12 +330,6 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
 
                   {/* AI response */}
                   <motion.div className="flex gap-3 items-start" variants={msgFromLeft}>
-                    <div className="flex flex-col items-center gap-1 flex-shrink-0">
-                      <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
-                        <img src={`${import.meta.env.BASE_URL}chat-icon.jpeg`} alt="AI" className="w-full h-full object-cover" />
-                      </div>
-                      <span className="text-[9px]" style={{ color: 'var(--text-secondary)' }}>{slide.aiAvatarLabel}</span>
-                    </div>
                     <div className="rounded-2xl rounded-bl-sm px-4 py-3 flex-1"
                       style={{
                         background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
