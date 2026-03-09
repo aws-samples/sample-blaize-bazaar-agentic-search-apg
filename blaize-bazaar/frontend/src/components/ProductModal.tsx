@@ -245,7 +245,7 @@ const ProductModal = ({ product, onClose }: ProductModalProps) => {
                   </h3>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <div className="mb-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}">Product ID</div>
+                      <div className="mb-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Product ID</div>
                       <div className="font-mono font-semibold text-white">
                         {productId}
                       </div>
@@ -253,7 +253,7 @@ const ProductModal = ({ product, onClose }: ProductModalProps) => {
 
                     {category_name && (
                       <div>
-                        <div className="mb-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}">Category</div>
+                        <div className="mb-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Category</div>
                         <div className="font-semibold text-white">
                           {category_name}
                         </div>
@@ -261,7 +261,7 @@ const ProductModal = ({ product, onClose }: ProductModalProps) => {
                     )}
 
                     <div>
-                      <div className="mb-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}">Availability</div>
+                      <div className="mb-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Availability</div>
                       <div className={`font-semibold ${
                         quantity === 0
                           ? 'text-red-400'
@@ -274,7 +274,7 @@ const ProductModal = ({ product, onClose }: ProductModalProps) => {
                     </div>
 
                     <div>
-                      <div className="mb-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}">Status</div>
+                      <div className="mb-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Status</div>
                       <div className="font-semibold text-white">
                         {quantity === 0 ? 'Unavailable' : 'Available'}
                       </div>

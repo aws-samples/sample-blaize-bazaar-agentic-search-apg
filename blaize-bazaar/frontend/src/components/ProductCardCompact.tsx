@@ -1,4 +1,5 @@
-import { ShoppingCart, Star, ExternalLink } from 'lucide-react'
+import { useState } from 'react'
+import { ShoppingCart, Star, ExternalLink, Lightbulb } from 'lucide-react'
 import { addRecentlyViewed } from '../utils/recentlyViewed'
 import { type AgentType } from '../utils/agentIdentity'
 
@@ -24,6 +25,7 @@ interface ProductCardCompactProps {
   onAddToCart?: () => void
   agentSource?: AgentType
   similarityScore?: number
+  recommendationReasons?: string[]
 }
 
 const renderStars = (rating: number) => {
@@ -49,7 +51,8 @@ const renderStars = (rating: number) => {
   return stars
 }
 
-const ProductCardCompact = ({ product, onAddToCart, similarityScore }: ProductCardCompactProps) => {
+const ProductCardCompact = ({ product, onAddToCart, similarityScore, recommendationReasons }: ProductCardCompactProps) => {
+  const [showReasons, setShowReasons] = useState(false)
   // Construct Amazon URL from product ID if url is missing
   const amazonUrl = product.url || `https://www.amazon.com/dp/${product.id}`
 
@@ -139,6 +142,37 @@ const ProductCardCompact = ({ product, onAddToCart, similarityScore }: ProductCa
               <span className="text-text-secondary opacity-60 text-[11px]">({product.reviews.toLocaleString()})</span>
             )}
           </div>
+
+          {/* Why recommended tooltip */}
+          {recommendationReasons && recommendationReasons.length > 0 && (
+            <div className="mt-1.5 relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowReasons(!showReasons) }}
+                className="flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-md transition-colors hover:bg-white/10"
+                style={{ color: 'rgba(251, 191, 36, 0.8)' }}
+              >
+                <Lightbulb className="h-3 w-3" />
+                Why recommended
+              </button>
+              {showReasons && (
+                <div
+                  className="absolute left-0 top-full mt-1 z-20 p-2.5 rounded-lg text-[11px] space-y-1 min-w-[200px]"
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.92)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    backdropFilter: 'blur(20px)',
+                  }}
+                >
+                  {recommendationReasons.map((reason, i) => (
+                    <div key={i} className="flex items-start gap-1.5" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                      <span style={{ color: 'rgba(251, 191, 36, 0.6)' }}>•</span>
+                      {reason}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between mt-2">

@@ -186,22 +186,22 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
         </div>
 
         {/* Performance Info Banner */}
-        <div className="px-6 py-3 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.06)', background: 'rgba(255, 255, 255, 0.02)' }}>
+        <div className="px-6 py-3" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)', background: 'rgba(255, 255, 255, 0.02)' }}>
           <div className="flex items-start gap-3">
-            <Zap className="h-5 w-5 mt-0.5 text-blue-400 flex-shrink-0" />
-            <div className="text-xs">
-              <p className="font-semibold text-blue-300 mb-1">Performance Breakdown</p>
-              <p className="text-blue-200/80 leading-relaxed">
-                <span className="font-medium text-blue-300">Total Search Time (~400ms)</span> = 
-                <span className="text-yellow-300"> Bedrock Embeddings (~200ms)</span> + 
-                <span className="text-green-300"> Database Query (&lt;1ms)</span> + 
-                <span className="text-orange-300"> Network Latency (~150ms)</span> + 
-                <span className="text-gray-300"> Processing (~50ms)</span>
+            <Zap className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
+            <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+              <p className="font-semibold mb-1" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Search Pipeline Breakdown (approximate)</p>
+              <p className="leading-relaxed">
+                <span className="font-medium" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>End-to-end (~300-500ms)</span> =
+                <span style={{ color: '#fbbf24' }}> Titan v2 Embedding (~150-250ms)</span> +
+                <span style={{ color: '#34d399' }}> pgvector HNSW Query (&lt;5ms warm)</span> +
+                <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}> Network + Processing (~100ms)</span>
               </p>
-              <p className="text-blue-200/70 mt-1.5">
-                <Zap className="h-3.5 w-3.5 inline text-yellow-400" /> <span className="font-medium">HNSW Index Optimization:</span> Using <code className="px-1 py-0.5 bg-black/30 rounded text-white/40">SET LOCAL enable_seqscan=off</code>, 
-                <code className="px-1 py-0.5 bg-black/30 rounded text-white/40">random_page_cost=1</code>, and 
-                <code className="px-1 py-0.5 bg-black/30 rounded text-white/40">cpu_tuple_cost=0.01</code> to force PostgreSQL to use the HNSW index for sub-millisecond vector similarity search.
+              <p className="mt-1.5" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+                <span className="font-medium" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>HNSW Optimizer Hints:</span>{' '}
+                <code className="px-1 py-0.5 rounded" style={{ background: 'rgba(255, 255, 255, 0.04)', color: 'rgba(255, 255, 255, 0.35)' }}>enable_seqscan=off</code>{' '}
+                <code className="px-1 py-0.5 rounded" style={{ background: 'rgba(255, 255, 255, 0.04)', color: 'rgba(255, 255, 255, 0.35)' }}>random_page_cost=1</code>{' '}
+                <code className="px-1 py-0.5 rounded" style={{ background: 'rgba(255, 255, 255, 0.04)', color: 'rgba(255, 255, 255, 0.35)' }}>cpu_tuple_cost=0.01</code>
               </p>
             </div>
           </div>

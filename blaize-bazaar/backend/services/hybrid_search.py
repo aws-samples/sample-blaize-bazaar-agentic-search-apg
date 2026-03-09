@@ -42,10 +42,13 @@ class HybridSearchService:
             fulltext_weight: Weight for full-text search (0-1)
             ef_search: HNSW ef_search parameter
         """
-        # Normalize weights
+        # === WIRE IT LIVE (Lab 1) — RRF Weight Normalization ===
+        # Try adjusting these weights to see how they affect search results!
+        # Default: vector=0.6, fulltext=0.4 — try 0.8/0.2 for more semantic results
         total = vector_weight + fulltext_weight
         vector_weight /= total
         fulltext_weight /= total
+        # === END WIRE IT LIVE ===
         
         # Run both searches in parallel
         vector_results = await self._vector_search(embedding, limit * 2, ef_search)
@@ -159,7 +162,10 @@ class HybridSearchService:
         where k=60 is a constant that reduces impact of high ranks
         """
         scores = {}
-        
+
+        # === WIRE IT LIVE (Lab 1) — RRF Scoring Formula ===
+        # RRF Score = weight / (k + rank) — higher k smooths out rank differences
+        # Try changing k from 60 to 10 to amplify top-ranked results
         # Score vector results
         for rank, result in enumerate(vector_results, 1):
             pid = result['product_id']

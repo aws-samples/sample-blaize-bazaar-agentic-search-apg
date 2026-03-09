@@ -54,6 +54,8 @@ export interface ChatResponse {
   products: ChatProduct[]
   suggestions?: string[]
   agent_execution?: AgentExecution
+  token_count?: number
+  estimated_cost_usd?: number
 }
 
 /**
@@ -63,7 +65,8 @@ export async function sendChatMessageStreaming(
   query: string,
   conversationHistory: ChatMessage[] = [],
   onUpdate: (data: any) => void,
-  workshopMode?: string
+  workshopMode?: string,
+  guardrailsEnabled?: boolean
 ): Promise<ChatResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
@@ -78,7 +81,8 @@ export async function sendChatMessageStreaming(
           content: msg.content
         })),
         session_id: getSessionId(),
-        workshop_mode: workshopMode || null
+        workshop_mode: workshopMode || null,
+        guardrails_enabled: guardrailsEnabled || false
       }),
     })
 
@@ -117,7 +121,9 @@ export async function sendChatMessageStreaming(
                   response: data.response.response,
                   products: data.response.products || [],
                   suggestions: data.response.suggestions || [],
-                  agent_execution: data.response.agent_execution
+                  agent_execution: data.response.agent_execution,
+                  token_count: data.response.token_count,
+                  estimated_cost_usd: data.response.estimated_cost_usd
                 }
               }
             } catch {

@@ -3,7 +3,7 @@
  * Compare vector-only vs hybrid search results
  */
 import { useState } from 'react';
-import { X, Search, Zap, TrendingUp } from 'lucide-react';
+import { X, Search, Zap, TrendingUp, BarChart3, CheckCircle, XCircle } from 'lucide-react';
 
 interface SearchResult {
   product_id: string;
@@ -24,6 +24,26 @@ interface HybridSearchComparisonProps {
   onClose: () => void;
 }
 
+interface EvalResult {
+  query: string;
+  category: string;
+  precision_at_k: number;
+  ndcg_at_k: number;
+  matches?: number;
+  retrieved_count?: number;
+  error?: string;
+}
+
+interface EvalData {
+  method: string;
+  k: number;
+  avg_precision_at_k: number;
+  avg_ndcg_at_k: number;
+  evaluated: number;
+  total_queries: number;
+  results: EvalResult[];
+}
+
 const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps) => {
   const [query, setQuery] = useState('');
   const [vectorResults, setVectorResults] = useState<SearchResult[]>([]);
@@ -31,12 +51,32 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
   const [isLoading, setIsLoading] = useState(false);
   const [vectorTime, setVectorTime] = useState(0);
   const [hybridTime, setHybridTime] = useState(0);
+  const [activeTab, setActiveTab] = useState<'compare' | 'eval'>('compare');
+  const [vectorEval, setVectorEval] = useState<EvalData | null>(null);
+  const [hybridEval, setHybridEval] = useState<EvalData | null>(null);
+  const [evalLoading, setEvalLoading] = useState(false);
+
+  const runEvaluation = async () => {
+    setEvalLoading(true);
+    try {
+      const [vRes, hRes] = await Promise.all([
+        fetch('/api/search/eval?method=vector&k=5'),
+        fetch('/api/search/eval?method=hybrid&k=5'),
+      ]);
+      if (vRes.ok) setVectorEval(await vRes.json());
+      if (hRes.ok) setHybridEval(await hRes.json());
+    } catch (error) {
+      console.error('Evaluation failed:', error);
+    } finally {
+      setEvalLoading(false);
+    }
+  };
 
   const runComparison = async () => {
     if (!query.trim()) return;
-    
+
     setIsLoading(true);
-    
+
     try {
       // Vector-only search
       const vectorStart = performance.now();
@@ -47,8 +87,6 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
       });
       const vectorData = await vectorRes.json();
       setVectorTime(performance.now() - vectorStart);
-      console.log('Vector data:', vectorData);
-      // Extract product data - handle both nested and flat structures
       const vectorProducts = vectorData.results?.map((r: any) => {
         const product = r.product || r;
         return {
@@ -63,8 +101,8 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
         };
       }) || [];
       setVectorResults(vectorProducts);
-      
-      // Hybrid search - using semantic endpoint with hybrid prefix
+
+      // Hybrid search
       const hybridStart = performance.now();
       const hybridRes = await fetch('/api/search', {
         method: 'POST',
@@ -73,11 +111,8 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
       });
       const hybridData = await hybridRes.json();
       setHybridTime(performance.now() - hybridStart);
-      console.log('Hybrid data:', hybridData);
-      // Extract product data - handle both nested and flat structures
       const hybridProducts = hybridData.results?.map((r: any) => {
         const product = r.product || r;
-        console.log('Hybrid product raw:', product);
         return {
           product_id: product.productId || product.product_id,
           product_description: product.product_description,
@@ -86,14 +121,13 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
           price: product.price,
           rating: product.stars || product.rating,
           reviews: product.reviews,
-          rrf_score: r.rrf_score || product.rrf_score,  // Check both levels
+          rrf_score: r.rrf_score || product.rrf_score,
           vector_rank: r.vector_rank || product.vector_rank,
           fulltext_rank: r.fulltext_rank || product.fulltext_rank
         };
       }) || [];
-      console.log('Processed hybrid products:', hybridProducts);
       setHybridResults(hybridProducts);
-      
+
     } catch (error) {
       console.error('Comparison failed:', error);
     } finally {
@@ -104,36 +138,138 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div
-        className="w-[95vw] max-w-[1400px] max-h-[90vh] rounded-2xl shadow-2xl border overflow-hidden flex flex-col"
+        className="w-[95vw] max-w-[1400px] max-h-[90vh] rounded-[20px] flex flex-col overflow-hidden shadow-2xl"
         style={{
-          background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.98) 0%, rgba(31, 41, 55, 0.98) 100%)',
-          borderColor: 'rgba(139, 92, 246, 0.3)',
+          background: 'rgba(0, 0, 0, 0.95)',
+          backdropFilter: 'blur(40px)',
+          WebkitBackdropFilter: 'blur(40px)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
         }}
       >
         {/* Header */}
-        <div
-          className="px-6 py-4 border-b flex items-center justify-between"
-          style={{
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%)',
-            borderColor: 'rgba(139, 92, 246, 0.2)',
-          }}
-        >
+        <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
           <div className="flex items-center gap-3">
-            <TrendingUp className="h-6 w-6 text-purple-400" />
+            <TrendingUp className="h-6 w-6" style={{ color: 'rgba(255, 255, 255, 0.6)' }} />
             <div>
-              <h2 className="text-xl font-semibold text-text-primary">Hybrid Search Comparison</h2>
-              <p className="text-xs text-text-secondary">Vector-only vs Hybrid (Vector + Full-Text + RRF)</p>
+              <h2 className="text-xl font-semibold" style={{ color: '#ffffff' }}>Hybrid Search</h2>
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                Compare results & evaluate quality
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-purple-500/20 transition-colors">
-            <X className="h-5 w-5 text-text-secondary" />
-          </button>
+          <div className="flex items-center gap-2">
+            {(['compare', 'eval'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize"
+                style={{
+                  background: activeTab === tab ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                  color: activeTab === tab ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
+                  border: activeTab === tab ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid transparent',
+                }}
+              >
+                {tab === 'eval' ? 'Eval' : 'Compare'}
+              </button>
+            ))}
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 transition-colors ml-2">
+              <X className="h-5 w-5" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
+            </button>
+          </div>
         </div>
 
+        {activeTab === 'eval' ? (
+          /* Evaluation Tab */
+          <div className="flex-1 overflow-y-auto px-6 py-6 search-scroll">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-sm font-semibold" style={{ color: '#ffffff' }}>Search Quality Evaluation</h3>
+                <p className="text-xs mt-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+                  Precision@5 and NDCG@5 against 25 golden queries
+                </p>
+              </div>
+              <button
+                onClick={runEvaluation}
+                disabled={evalLoading}
+                className="px-4 py-2 rounded-xl font-medium text-sm transition-all disabled:opacity-40 flex items-center gap-2"
+                style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.12)', color: '#ffffff' }}
+              >
+                <BarChart3 className="h-4 w-4" />
+                {evalLoading ? 'Evaluating...' : 'Run Evaluation'}
+              </button>
+            </div>
+
+            {vectorEval && hybridEval ? (
+              <>
+                {/* Metric Cards Side by Side */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  {/* Vector Metrics */}
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                    <h4 className="text-sm font-semibold mb-3" style={{ color: '#60a5fa' }}>Vector Search</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
+                        <div className="text-xl font-bold" style={{ color: '#ffffff' }}>{(vectorEval.avg_precision_at_k * 100).toFixed(1)}%</div>
+                        <div className="text-[10px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Precision@5</div>
+                      </div>
+                      <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
+                        <div className="text-xl font-bold" style={{ color: '#ffffff' }}>{(vectorEval.avg_ndcg_at_k * 100).toFixed(1)}%</div>
+                        <div className="text-[10px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>NDCG@5</div>
+                      </div>
+                    </div>
+                    <div className="text-[10px] mt-2 text-center" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>{vectorEval.evaluated}/{vectorEval.total_queries} queries</div>
+                  </div>
+
+                  {/* Hybrid Metrics */}
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(168, 85, 247, 0.06)', border: '1px solid rgba(168, 85, 247, 0.15)' }}>
+                    <h4 className="text-sm font-semibold mb-3" style={{ color: '#c084fc' }}>Hybrid Search (RRF)</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
+                        <div className="text-xl font-bold" style={{ color: '#ffffff' }}>{(hybridEval.avg_precision_at_k * 100).toFixed(1)}%</div>
+                        <div className="text-[10px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Precision@5</div>
+                      </div>
+                      <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
+                        <div className="text-xl font-bold" style={{ color: '#ffffff' }}>{(hybridEval.avg_ndcg_at_k * 100).toFixed(1)}%</div>
+                        <div className="text-[10px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>NDCG@5</div>
+                      </div>
+                    </div>
+                    <div className="text-[10px] mt-2 text-center" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>{hybridEval.evaluated}/{hybridEval.total_queries} queries</div>
+                  </div>
+                </div>
+
+                {/* Per-Query Results Table */}
+                <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Per-Query Breakdown</h4>
+                <div className="space-y-1">
+                  {vectorEval.results.map((vr, idx) => {
+                    const hr = hybridEval.results[idx];
+                    return (
+                      <div key={vr.query} className="flex items-center gap-3 p-2 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.02)' }}>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-xs truncate block" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>{vr.query}</span>
+                          <span className="text-[10px]" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>{vr.category}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {vr.precision_at_k > 0 ? <CheckCircle className="h-3 w-3" style={{ color: 'rgba(52, 211, 153, 0.6)' }} /> : <XCircle className="h-3 w-3" style={{ color: 'rgba(248, 113, 113, 0.6)' }} />}
+                          <span className="text-[10px] w-12 text-right" style={{ color: 'rgba(96, 165, 250, 0.7)' }}>{(vr.precision_at_k * 100).toFixed(0)}%</span>
+                          <span className="text-[10px] w-12 text-right" style={{ color: 'rgba(192, 132, 252, 0.7)' }}>{hr ? (hr.precision_at_k * 100).toFixed(0) : 0}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-16">
+                <BarChart3 className="h-16 w-16 mx-auto mb-4" style={{ color: 'rgba(255, 255, 255, 0.1)' }} />
+                <p style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Click "Run Evaluation" to compare vector vs hybrid search quality</p>
+              </div>
+            )}
+          </div>
+        ) : (
+        <>
         {/* Search Input */}
-        <div className="p-6 border-b border-purple-500/20">
+        <div className="px-6 py-4" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
           <div className="flex gap-3 mb-3">
             <input
               type="text"
@@ -141,35 +277,27 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
               onChange={(e) => setQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && runComparison()}
               placeholder="Enter search query (e.g., 'luxury watch for a gift')"
-              className="flex-1 px-4 py-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-text-primary placeholder-text-secondary focus:outline-none focus:border-purple-500/50"
+              className="flex-1 px-4 py-3 rounded-xl text-sm text-white placeholder-white/30 focus:outline-none"
+              style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)' }}
             />
             <button
               onClick={runComparison}
               disabled={isLoading || !query.trim()}
-              className="px-6 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              style={{
-                background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
-                color: 'white',
-              }}
+              className="px-6 py-3 rounded-xl font-medium text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+              style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.12)', color: '#ffffff' }}
             >
               <Search className="h-4 w-4" />
               {isLoading ? 'Comparing...' : 'Compare'}
             </button>
           </div>
-          {/* Sample Queries */}
           <div className="flex flex-wrap gap-2">
-            <span className="text-xs text-text-secondary">Try:</span>
-            {[
-              'headphones',
-              'laptop',
-              'camera',
-              'keyboard',
-              'mouse'
-            ].map((sample) => (
+            <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.35)' }}>Try:</span>
+            {['luxury watch', 'running shoes', 'wireless earbuds', 'skincare routine', 'kitchen knife'].map((sample) => (
               <button
                 key={sample}
                 onClick={() => setQuery(sample)}
-                className="text-xs px-3 py-1 rounded-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 transition-colors"
+                className="text-xs px-3 py-1 rounded-full transition-colors"
+                style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)', color: 'rgba(255, 255, 255, 0.5)' }}
               >
                 {sample}
               </button>
@@ -178,116 +306,114 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
         </div>
 
         {/* Results */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto px-6 py-6 search-scroll">
           {vectorResults.length === 0 && hybridResults.length === 0 ? (
             <div className="text-center py-16">
-              <Zap className="h-16 w-16 text-purple-400/30 mx-auto mb-4" />
-              <p className="text-text-secondary">Enter a query and click Compare to see the difference</p>
+              <Zap className="h-16 w-16 mx-auto mb-4" style={{ color: 'rgba(255, 255, 255, 0.1)' }} />
+              <p style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Enter a query and click Compare to see the difference</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-6">
               {/* Vector-Only Results */}
               <div>
-                <div className="mb-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-blue-400">Vector-Only Search</h3>
-                    <span className="text-sm text-blue-300">{vectorTime.toFixed(0)}ms</span>
+                <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-base font-semibold" style={{ color: '#60a5fa' }}>Vector-Only Search</h3>
+                    <span className="text-sm font-mono" style={{ color: 'rgba(96, 165, 250, 0.7)' }}>{vectorTime.toFixed(0)}ms</span>
                   </div>
-                  <p className="text-xs text-text-secondary">Semantic similarity using pgvector HNSW index</p>
+                  <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Semantic similarity via pgvector HNSW</p>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {vectorResults.map((result, idx) => (
-                    <a
+                    <div
                       key={result.product_id}
-                      href={result.product_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block p-3 rounded-lg bg-blue-500/5 border border-blue-500/20 hover:bg-blue-500/10 transition-all hover:scale-[1.02]"
+                      className="p-3 rounded-xl transition-all"
+                      style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}
                     >
                       <div className="flex gap-3">
                         <img
                           src={result.img_url}
                           alt={result.product_description}
-                          className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                          onError={(e) => { e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%23374151" width="80" height="80"/%3E%3C/svg%3E'; }}
+                          className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                          style={{ background: 'rgba(255, 255, 255, 0.04)' }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg font-bold text-blue-400">#{idx + 1}</span>
-                              <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300">
-                                {result.similarity ? `${(result.similarity * 100).toFixed(1)}%` : 'N/A'}
-                              </span>
-                            </div>
-                            <span className="text-sm font-bold text-green-400">${result.price}</span>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-bold" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>#{idx + 1}</span>
+                            <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(59, 130, 246, 0.1)', color: 'rgba(96, 165, 250, 0.8)' }}>
+                              {result.similarity ? `${(result.similarity * 100).toFixed(1)}%` : 'N/A'}
+                            </span>
+                            <span className="ml-auto text-sm font-semibold" style={{ color: '#34d399' }}>${result.price}</span>
                           </div>
-                          <p className="text-sm text-text-primary mb-2 line-clamp-2">{result.product_description}</p>
-                          <div className="flex items-center gap-3 text-xs text-text-secondary">
+                          <p className="text-sm line-clamp-1" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{result.product_description}</p>
+                          <div className="flex items-center gap-3 text-xs mt-1" style={{ color: 'rgba(255, 255, 255, 0.35)' }}>
                             <span>★ {result.rating}</span>
                             <span>{result.reviews} reviews</span>
                           </div>
                         </div>
                       </div>
-                    </a>
+                    </div>
                   ))}
                 </div>
               </div>
 
               {/* Hybrid Results */}
               <div>
-                <div className="mb-4 p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-purple-400">Hybrid Search (RRF)</h3>
-                    <span className="text-sm text-purple-300">{hybridTime.toFixed(0)}ms</span>
+                <div className="mb-4 p-4 rounded-xl" style={{ background: 'rgba(168, 85, 247, 0.06)', border: '1px solid rgba(168, 85, 247, 0.15)' }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-base font-semibold" style={{ color: '#c084fc' }}>Hybrid Search (RRF)</h3>
+                    <span className="text-sm font-mono" style={{ color: 'rgba(192, 132, 252, 0.7)' }}>{hybridTime.toFixed(0)}ms</span>
                   </div>
-                  <p className="text-xs text-text-secondary">Vector + Full-Text with Reciprocal Rank Fusion</p>
+                  <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Vector + Full-Text with Reciprocal Rank Fusion</p>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {hybridResults.map((result, idx) => {
                     const vectorIdx = vectorResults.findIndex(v => v.product_id === result.product_id);
                     const isReranked = vectorIdx !== -1 && vectorIdx !== idx;
                     const isNewResult = vectorIdx === -1;
-                    
+
                     return (
-                    <a
+                    <div
                       key={result.product_id}
-                      href={result.product_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block p-3 rounded-lg bg-purple-500/5 border hover:bg-purple-500/10 transition-all hover:scale-[1.02]"
+                      className="p-3 rounded-xl transition-all"
                       style={{
-                        borderColor: isNewResult ? 'rgba(34, 197, 94, 0.5)' : isReranked ? 'rgba(251, 191, 36, 0.5)' : 'rgba(168, 85, 247, 0.2)'
+                        background: 'rgba(255, 255, 255, 0.02)',
+                        border: isNewResult
+                          ? '1px solid rgba(52, 211, 153, 0.3)'
+                          : isReranked
+                          ? '1px solid rgba(251, 191, 36, 0.3)'
+                          : '1px solid rgba(255, 255, 255, 0.06)'
                       }}
                     >
                       <div className="flex gap-3">
                         <img
                           src={result.img_url}
                           alt={result.product_description}
-                          className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
-                          onError={(e) => { e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="80" height="80"%3E%3Crect fill="%23374151" width="80" height="80"/%3E%3C/svg%3E'; }}
+                          className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                          style={{ background: 'rgba(255, 255, 255, 0.04)' }}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg font-bold text-purple-400">#{idx + 1}</span>
-                              <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-300">
-                                RRF: {result.rrf_score ? result.rrf_score.toFixed(4) : 'N/A'}
-                              </span>
-                            </div>
-                            <span className="text-sm font-bold text-green-400">${result.price}</span>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-bold" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>#{idx + 1}</span>
+                            <span className="text-[11px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(168, 85, 247, 0.1)', color: 'rgba(192, 132, 252, 0.8)' }}>
+                              RRF: {result.rrf_score ? result.rrf_score.toFixed(4) : 'N/A'}
+                            </span>
+                            <span className="ml-auto text-sm font-semibold" style={{ color: '#34d399' }}>${result.price}</span>
                           </div>
-                          <p className="text-sm text-text-primary mb-2 line-clamp-2">{result.product_description}</p>
-                          <div className="flex items-center gap-3 text-xs text-text-secondary">
+                          <p className="text-sm line-clamp-1" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{result.product_description}</p>
+                          <div className="flex items-center gap-3 text-xs mt-1" style={{ color: 'rgba(255, 255, 255, 0.35)' }}>
                             <span>★ {result.rating}</span>
                             <span>{result.reviews} reviews</span>
-                            {result.vector_rank && <span className="text-blue-400">V:{result.vector_rank}</span>}
-                            {result.fulltext_rank && <span className="text-yellow-400">FT:{result.fulltext_rank}</span>}
-                            {isNewResult && <span className="text-green-400 font-semibold">NEW</span>}
-                            {isReranked && <span className="text-amber-400">↑ Was #{vectorIdx + 1}</span>}
+                            {result.vector_rank && <span style={{ color: 'rgba(96, 165, 250, 0.6)' }}>V:{result.vector_rank}</span>}
+                            {result.fulltext_rank && <span style={{ color: 'rgba(251, 191, 36, 0.6)' }}>FT:{result.fulltext_rank}</span>}
+                            {isNewResult && <span style={{ color: '#34d399' }}>NEW</span>}
+                            {isReranked && <span style={{ color: '#fbbf24' }}>Was #{vectorIdx + 1}</span>}
                           </div>
                         </div>
                       </div>
-                    </a>
+                    </div>
                   )})}
                 </div>
               </div>
@@ -296,18 +422,18 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
         </div>
 
         {/* Footer */}
-        <div
-          className="px-6 py-3 border-t"
-          style={{
-            background: 'rgba(17, 24, 39, 0.8)',
-            borderColor: 'rgba(75, 85, 99, 0.3)',
-          }}
-        >
-          <p className="text-xs text-text-secondary">
-            <strong className="text-purple-300">Hybrid Search:</strong> Combines semantic similarity (vector) 
-            with keyword matching (full-text) using Reciprocal Rank Fusion. V: Vector rank, FT: Full-text rank.
-          </p>
+        <div className="px-6 py-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+          <div className="flex items-start gap-3 text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+            <Zap className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
+            <p>
+              <span className="font-medium" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Hybrid Search</span> combines
+              semantic similarity (vector) with keyword matching (full-text) using Reciprocal Rank Fusion.
+              V = Vector rank, FT = Full-text rank. Green border = new result from full-text, Yellow = re-ranked.
+            </p>
+          </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

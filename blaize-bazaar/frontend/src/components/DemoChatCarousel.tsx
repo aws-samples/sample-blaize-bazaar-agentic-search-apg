@@ -181,9 +181,10 @@ const msgFromBelow = {
 
 interface DemoChatCarouselProps {
   onOpenChat: () => void
+  compact?: boolean
 }
 
-const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
+const DemoChatCarousel = ({ onOpenChat, compact = false }: DemoChatCarouselProps) => {
   const { theme } = useTheme()
   const [activeIndex, setActiveIndex] = useState(0)
   const [direction, setDirection] = useState(1)
@@ -215,26 +216,10 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
 
   const slide = DEMO_SLIDES[activeIndex]
 
-  return (
-    <section className="py-16 lg:py-28 relative overflow-hidden">
-      <div className="max-w-[1100px] mx-auto px-6 lg:px-8">
-        {/* Section heading */}
+  const cardContent = (
+    <>
         <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-        >
-          <h2 className="text-3xl lg:text-4xl font-extralight mb-4 tracking-tight" style={{ color: 'var(--text-primary)' }}>
-            Meet the <span style={{ color: 'var(--link-color)' }}>agents</span>
-          </h2>
-          <p className="text-lg font-light" style={{ color: 'var(--text-secondary)' }}>Five specialized AI agents collaborate to find exactly what you need</p>
-        </motion.div>
-
-        {/* Chat demo card */}
-        <motion.div
-          className="relative max-w-[700px] mx-auto rounded-3xl overflow-hidden"
+          className={`relative ${compact ? 'max-w-[520px]' : 'max-w-[700px]'} mx-auto rounded-3xl overflow-hidden`}
           style={{
             background: theme === 'dark' ? 'rgba(0, 0, 0, 0.9)' : '#ffffff',
             border: theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.1)',
@@ -445,6 +430,31 @@ const DemoChatCarousel = ({ onOpenChat }: DemoChatCarouselProps) => {
             </button>
           ))}
         </div>
+    </>
+  )
+
+  // Compact mode: return just the card + dots (for hero embedding)
+  if (compact) {
+    return <div className="w-full">{cardContent}</div>
+  }
+
+  // Full mode: section with heading
+  return (
+    <section className="py-16 lg:py-28 relative overflow-hidden">
+      <div className="max-w-[1100px] mx-auto px-6 lg:px-8">
+        <motion.div
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-80px' }}
+          transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+        >
+          <h2 className="text-3xl lg:text-4xl font-extralight mb-4 tracking-tight" style={{ color: 'var(--text-primary)' }}>
+            Meet the <span style={{ color: 'var(--link-color)' }}>agents</span>
+          </h2>
+          <p className="text-lg font-light" style={{ color: 'var(--text-secondary)' }}>Five specialized AI agents collaborate to find exactly what you need</p>
+        </motion.div>
+        {cardContent}
       </div>
     </section>
   )

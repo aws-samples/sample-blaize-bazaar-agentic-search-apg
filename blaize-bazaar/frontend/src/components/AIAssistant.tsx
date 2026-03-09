@@ -48,10 +48,11 @@ function setCachedResponse(query: string, data: { response: string; products?: C
 }
 
 const AIAssistant = () => {
-  const { chatMode, setChatMode, setChatOpen, workshopMode } = useLayout()
+  const { chatMode, setChatMode, setChatOpen, workshopMode, guardrailsEnabled } = useLayout()
   const { theme } = useTheme()
   const [isOpen, setIsOpenRaw] = useState(false)
   const setIsOpen = (open: boolean) => { setIsOpenRaw(open); setChatOpen(open) }
+  const [sessionCost, setSessionCost] = useState(0)
 
   const loadConversationHistory = (): Message[] => {
     try {
@@ -256,8 +257,14 @@ const AIAssistant = () => {
             })
           }
         },
-        workshopMode
+        workshopMode,
+        guardrailsEnabled
       )
+
+      // Accumulate session cost
+      if (response.estimated_cost_usd) {
+        setSessionCost(prev => prev + response.estimated_cost_usd!)
+      }
 
       // Update the existing message in-place (products may already be streamed in)
       let agentType: 'search' | 'pricing' | 'recommendation' | 'orchestrator' = 'orchestrator'
@@ -381,6 +388,26 @@ const AIAssistant = () => {
                 </div>
               </div>
               <div className="flex items-center gap-1">
+                {/* Cost pill — visible in tools/full mode */}
+                {(workshopMode === 'tools' || workshopMode === 'full') && sessionCost > 0 && (
+                  <span
+                    className="text-[11px] px-2 py-0.5 rounded-full mr-1"
+                    style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', color: 'var(--text-secondary)' }}
+                    title="Estimated session cost"
+                  >
+                    ${sessionCost.toFixed(4)}
+                  </span>
+                )}
+                {/* Guardrails indicator */}
+                {workshopMode === 'full' && guardrailsEnabled && (
+                  <span
+                    className="text-[11px] px-2 py-0.5 rounded-full mr-1"
+                    style={{ background: 'rgba(52, 211, 153, 0.1)', color: '#34d399' }}
+                    title="Guardrails active"
+                  >
+                    Guarded
+                  </span>
+                )}
                 <button
                   onClick={handleClearChat}
                   className="px-2.5 py-1 rounded-lg transition-colors text-[11px]"
@@ -642,6 +669,7 @@ const AIAssistant = () => {
         {!isOpen && (
           <motion.div
             className="fixed bottom-6 right-6 z-[1000] flex items-center gap-3 cursor-pointer"
+            data-tour="chat-bubble"
             onClick={() => setIsOpen(true)}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}

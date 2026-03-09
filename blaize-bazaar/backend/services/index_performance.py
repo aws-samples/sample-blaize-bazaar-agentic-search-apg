@@ -440,6 +440,85 @@ class IndexPerformanceService:
         else:
             return f"Consider tuning ef_search (currently {ef_search}) or checking index health. Dataset size: {dataset_size:,} rows."
     
+    async def get_quantization_comparison(self) -> Dict[str, Any]:
+        """
+        Compare full-precision (float32) vs quantized index sizes.
+        Queries actual HNSW index size and calculates theoretical SQ/BQ savings.
+
+        Note: We can't create additional indexes on the shared Aurora cluster,
+        so SQ and BQ sizes are estimated from the float32 baseline.
+        """
+        with psycopg.connect(self.conn_string) as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                # Get actual index size
+                cur.execute("""
+                    SELECT pg_relation_size(indexrelid) as index_bytes,
+                           pg_size_pretty(pg_relation_size(indexrelid)) as index_size
+                    FROM pg_indexes
+                    JOIN pg_class ON pg_class.relname = indexname
+                    WHERE tablename = 'product_catalog'
+                      AND indexname LIKE '%embedding%'
+                    LIMIT 1
+                """)
+                row = cur.fetchone()
+                if not row:
+                    return {"error": "No embedding index found"}
+
+                index_bytes = row["index_bytes"]
+                index_size = row["index_size"]
+
+                # Get row count
+                cur.execute("""
+                    SELECT COUNT(*) as cnt
+                    FROM bedrock_integration.product_catalog
+                    WHERE embedding IS NOT NULL
+                """)
+                row_count = cur.fetchone()["cnt"]
+
+        # Calculations
+        dim = 1024
+        bytes_per_vec_f32 = dim * 4  # 4096 bytes
+        bytes_per_vec_sq = dim * 1   # 1024 bytes (int8)
+        bytes_per_vec_bq = dim // 8  # 128 bytes (1-bit)
+
+        sq_estimated_bytes = int(index_bytes * (bytes_per_vec_sq / bytes_per_vec_f32))
+        bq_estimated_bytes = int(index_bytes * (bytes_per_vec_bq / bytes_per_vec_f32))
+
+        def pretty(b: int) -> str:
+            if b > 1_073_741_824:
+                return f"{b / 1_073_741_824:.1f} GB"
+            return f"{b / 1_048_576:.1f} MB"
+
+        return {
+            "row_count": row_count,
+            "dimensions": dim,
+            "full_precision": {
+                "type": "float32",
+                "bytes_per_vector": bytes_per_vec_f32,
+                "index_bytes": index_bytes,
+                "index_size": index_size,
+            },
+            "scalar_quantization": {
+                "type": "int8 (SQ)",
+                "bytes_per_vector": bytes_per_vec_sq,
+                "estimated_index_bytes": sq_estimated_bytes,
+                "estimated_index_size": pretty(sq_estimated_bytes),
+                "memory_reduction": "4x",
+            },
+            "binary_quantization": {
+                "type": "1-bit (BQ)",
+                "bytes_per_vector": bytes_per_vec_bq,
+                "estimated_index_bytes": bq_estimated_bytes,
+                "estimated_index_size": pretty(bq_estimated_bytes),
+                "memory_reduction": "32x",
+            },
+            "sql_examples": {
+                "sq": f"CREATE INDEX ON bedrock_integration.product_catalog USING hnsw ((embedding::halfvec({dim})) halfvec_cosine_ops) WITH (m = 16, ef_construction = 64);",
+                "bq": f"-- pgvector 0.8.0+ required for binary quantization\n-- Binary quantization trades accuracy for massive memory savings\n-- Best for initial candidate retrieval with re-ranking",
+            },
+            "note": "SQ/BQ sizes are estimated — cannot create additional indexes on shared Aurora cluster.",
+        }
+
     async def get_index_stats(self) -> Dict[str, Any]:
         """
         Get statistics about pgvector indexes

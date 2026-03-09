@@ -52,6 +52,16 @@ interface PerformanceResults {
   };
 }
 
+interface QuantData {
+  row_count: number;
+  dimensions: number;
+  full_precision: { type: string; bytes_per_vector: number; index_bytes: number; index_size: string };
+  scalar_quantization: { type: string; bytes_per_vector: number; estimated_index_bytes: number; estimated_index_size: string; memory_reduction: string };
+  binary_quantization: { type: string; bytes_per_vector: number; estimated_index_bytes: number; estimated_index_size: string; memory_reduction: string };
+  sql_examples: { sq: string; bq: string };
+  note: string;
+}
+
 const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboardProps) => {
   const [query, setQuery] = useState('luxury watch');
   const [efSearch, setEfSearch] = useState(40);
@@ -59,6 +69,17 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
   const [results, setResults] = useState<PerformanceResults | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'benchmark' | 'quantization'>('benchmark');
+  const [quantData, setQuantData] = useState<QuantData | null>(null);
+  const [quantLoading, setQuantLoading] = useState(false);
+
+  const fetchQuantization = async () => {
+    setQuantLoading(true);
+    try {
+      const res = await fetch('/api/performance/quantization');
+      if (res.ok) setQuantData(await res.json());
+    } catch { /* ignore */ } finally { setQuantLoading(false); }
+  };
 
   const runComparison = async () => {
     setLoading(true);
@@ -120,13 +141,116 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
-            <X className="h-5 w-5" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
-          </button>
+          <div className="flex items-center gap-2">
+            {(['benchmark', 'quantization'] as const).map(tab => (
+              <button key={tab} onClick={() => { setActiveTab(tab); if (tab === 'quantization' && !quantData) fetchQuantization(); }}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize"
+                style={{ background: activeTab === tab ? 'rgba(255, 255, 255, 0.1)' : 'transparent', color: activeTab === tab ? '#ffffff' : 'rgba(255, 255, 255, 0.4)', border: activeTab === tab ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid transparent' }}>
+                {tab}
+              </button>
+            ))}
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 transition-colors ml-2">
+              <X className="h-5 w-5" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-6 search-scroll">
+          {activeTab === 'quantization' ? (
+            /* Quantization Tab */
+            <div className="space-y-6">
+              {quantLoading ? (
+                <div className="text-center py-16">
+                  <BarChart3 className="h-12 w-12 mx-auto mb-3 animate-pulse" style={{ color: 'rgba(255, 255, 255, 0.2)' }} />
+                  <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Loading quantization data...</p>
+                </div>
+              ) : quantData ? (
+                <>
+                  {/* Side-by-side cards */}
+                  <div className="grid grid-cols-3 gap-4">
+                    {/* Full Precision */}
+                    <div className="p-5 rounded-xl" style={{ background: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                      <h4 className="text-sm font-semibold mb-3" style={{ color: '#60a5fa' }}>Full Precision</h4>
+                      <div className="text-2xl font-bold mb-1" style={{ color: '#ffffff' }}>{quantData.full_precision.index_size}</div>
+                      <div className="text-[10px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{quantData.full_precision.type} · {quantData.full_precision.bytes_per_vector} B/vec</div>
+                      <div className="mt-3 h-3 rounded-full" style={{ background: 'rgba(59, 130, 246, 0.4)' }} />
+                    </div>
+                    {/* Scalar Quantization */}
+                    <div className="p-5 rounded-xl" style={{ background: 'rgba(52, 211, 153, 0.06)', border: '1px solid rgba(52, 211, 153, 0.15)' }}>
+                      <h4 className="text-sm font-semibold mb-3" style={{ color: '#34d399' }}>Scalar Quantization</h4>
+                      <div className="text-2xl font-bold mb-1" style={{ color: '#ffffff' }}>{quantData.scalar_quantization.estimated_index_size}</div>
+                      <div className="text-[10px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{quantData.scalar_quantization.type} · {quantData.scalar_quantization.bytes_per_vector} B/vec</div>
+                      <div className="mt-3 flex items-center gap-2">
+                        <div className="h-3 rounded-full flex-1" style={{ background: 'rgba(52, 211, 153, 0.4)', width: '25%', maxWidth: '25%' }} />
+                        <span className="text-xs font-bold" style={{ color: '#34d399' }}>{quantData.scalar_quantization.memory_reduction} smaller</span>
+                      </div>
+                    </div>
+                    {/* Binary Quantization */}
+                    <div className="p-5 rounded-xl" style={{ background: 'rgba(168, 85, 247, 0.06)', border: '1px solid rgba(168, 85, 247, 0.15)' }}>
+                      <h4 className="text-sm font-semibold mb-3" style={{ color: '#c084fc' }}>Binary Quantization</h4>
+                      <div className="text-2xl font-bold mb-1" style={{ color: '#ffffff' }}>{quantData.binary_quantization.estimated_index_size}</div>
+                      <div className="text-[10px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{quantData.binary_quantization.type} · {quantData.binary_quantization.bytes_per_vector} B/vec</div>
+                      <div className="mt-3 flex items-center gap-2">
+                        <div className="h-3 rounded-full" style={{ background: 'rgba(168, 85, 247, 0.4)', width: '3%', minWidth: '4px' }} />
+                        <span className="text-xs font-bold" style={{ color: '#c084fc' }}>{quantData.binary_quantization.memory_reduction} smaller</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Memory bar chart */}
+                  <div className="p-5 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider mb-4" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Memory Comparison</h4>
+                    <div className="space-y-3">
+                      {[
+                        { label: 'float32', bytes: quantData.full_precision.index_bytes, color: 'rgba(96, 165, 250, 0.6)' },
+                        { label: 'int8 (SQ)', bytes: quantData.scalar_quantization.estimated_index_bytes, color: 'rgba(52, 211, 153, 0.6)' },
+                        { label: '1-bit (BQ)', bytes: quantData.binary_quantization.estimated_index_bytes, color: 'rgba(192, 132, 252, 0.6)' },
+                      ].map(item => {
+                        const pct = (item.bytes / quantData!.full_precision.index_bytes) * 100;
+                        return (
+                          <div key={item.label} className="flex items-center gap-3">
+                            <span className="text-xs w-16 text-right" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>{item.label}</span>
+                            <div className="flex-1 h-5 rounded" style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
+                              <div className="h-full rounded transition-all" style={{ width: `${Math.max(pct, 1)}%`, background: item.color }} />
+                            </div>
+                            <span className="text-xs w-12 text-right" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{pct.toFixed(0)}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-3 text-[10px]" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>{quantData.row_count.toLocaleString()} vectors · {quantData.dimensions} dimensions</div>
+                  </div>
+
+                  {/* SQL Example */}
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>CREATE INDEX (Scalar Quantization)</h4>
+                    <pre className="text-xs p-3 rounded-lg overflow-x-auto" style={{ background: 'rgba(0, 0, 0, 0.5)', color: 'rgba(52, 211, 153, 0.8)' }}>
+                      {quantData.sql_examples.sq}
+                    </pre>
+                    <p className="text-[10px] mt-2" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>{quantData.note}</p>
+                  </div>
+
+                  {/* Educational note */}
+                  <div className="p-3 rounded-xl flex items-start gap-2" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                    <Info className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
+                    <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+                      <span className="font-medium" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>pgvector 0.8.0+</span> supports scalar (SQ) and binary (BQ) quantization.
+                      SQ reduces each float32 to int8 (4x savings) with minimal recall loss.
+                      BQ compresses to 1-bit (32x savings) — best for initial candidate retrieval with re-ranking.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-16">
+                  <BarChart3 className="h-16 w-16 mx-auto mb-4" style={{ color: 'rgba(255, 255, 255, 0.1)' }} />
+                  <p style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Click to load quantization comparison</p>
+                  <button onClick={fetchQuantization} className="mt-4 px-4 py-2 rounded-xl text-sm" style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#ffffff' }}>Load Data</button>
+                </div>
+              )}
+            </div>
+          ) : (
+          <>
           {/* Controls Section */}
           <div className="mb-6 p-6 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
             <div className="flex items-center gap-2 mb-4">
@@ -498,6 +622,8 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
               </div>
             </div>
           )}
+          </>
+          )}
         </div>
 
         {/* Footer */}
@@ -507,7 +633,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
             <div>
               <p className="font-medium mb-1" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Production Database Tuning</p>
               <p>
-                Use this dashboard to find the optimal ef_search value for your workload. Monitor query latency vs recall 
+                Use this dashboard to find the optimal ef_search value for your workload. Monitor query latency vs recall
                 to ensure your application meets performance SLAs while maintaining search quality.
               </p>
             </div>

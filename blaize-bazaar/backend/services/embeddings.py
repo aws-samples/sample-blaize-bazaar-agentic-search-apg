@@ -6,12 +6,19 @@ Provides async embedding generation for search queries and documents.
 """
 
 import logging
+import time
 from functools import lru_cache
 from typing import List, Tuple
 
 import boto3
 import json
 from botocore.exceptions import ClientError
+
+try:
+    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+    HAS_TENACITY = True
+except ImportError:
+    HAS_TENACITY = False
 
 from config import settings
 
@@ -20,6 +27,24 @@ logger = logging.getLogger(__name__)
 
 _EMBEDDING_CACHE: dict[str, List[float]] = {}
 _EMBEDDING_CACHE_MAX = 200
+_CACHE_HITS = 0
+_CACHE_MISSES = 0
+_TOTAL_EMBEDDING_COST = 0.0
+_EMBEDDING_COST_PER_CALL = 0.00002  # ~$0.02 per 1K Titan v2 calls
+
+
+def get_cache_stats() -> dict:
+    """Return embedding cache statistics for the Context & Cost dashboard."""
+    total = _CACHE_HITS + _CACHE_MISSES
+    return {
+        "cache_size": len(_EMBEDDING_CACHE),
+        "cache_max": _EMBEDDING_CACHE_MAX,
+        "hits": _CACHE_HITS,
+        "misses": _CACHE_MISSES,
+        "hit_rate": round(_CACHE_HITS / total, 4) if total > 0 else 0.0,
+        "total_requests": total,
+        "total_embedding_cost_usd": round(_TOTAL_EMBEDDING_COST, 6),
+    }
 
 
 class EmbeddingService:
@@ -39,8 +64,62 @@ class EmbeddingService:
         self.model_id = settings.BEDROCK_EMBEDDING_MODEL
         self.embedding_dimension = 1024
 
+        # Retry event tracking for frontend indicators
+        self._retry_callbacks = []
         logger.debug(f"Initialized embeddings service: {self.model_id}")
-    
+
+    def on_retry(self, callback):
+        """Register a callback for retry events: callback(attempt, max_attempts)"""
+        self._retry_callbacks.append(callback)
+
+    def _notify_retry(self, attempt: int, max_attempts: int = 3):
+        for cb in self._retry_callbacks:
+            try:
+                cb(attempt, max_attempts)
+            except Exception:
+                pass
+
+    def _call_bedrock_embedding(self, request_body: dict) -> dict:
+        """
+        Call Bedrock embedding API with retry logic.
+
+        Wire It Live: Participants add @tenacity.retry decorator here.
+        Hint: @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=0.5, max=5))
+        """
+        # --- Wire It Live: Add retry decorator ---
+        # If tenacity is available, we retry manually to emit events
+        max_attempts = 3
+        last_error = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = self.bedrock_runtime.invoke_model(
+                    modelId=self.model_id,
+                    contentType="application/json",
+                    accept="application/json",
+                    body=json.dumps(request_body)
+                )
+                return json.loads(response['body'].read())
+            except ClientError as e:
+                last_error = e
+                error_code = e.response['Error']['Code']
+                if error_code in ('ThrottlingException', 'ServiceUnavailableException', 'ModelTimeoutException'):
+                    if attempt < max_attempts:
+                        self._notify_retry(attempt, max_attempts)
+                        wait_time = min(0.5 * (2 ** (attempt - 1)), 5)
+                        logger.warning(f"Bedrock API retry {attempt}/{max_attempts}, waiting {wait_time}s: {error_code}")
+                        time.sleep(wait_time)
+                        continue
+                raise
+            except Exception as e:
+                last_error = e
+                if attempt < max_attempts:
+                    self._notify_retry(attempt, max_attempts)
+                    time.sleep(0.5 * attempt)
+                    continue
+                raise
+        raise last_error  # type: ignore
+        # --- End Wire It Live ---
+
     def generate_embedding(
         self,
         text: str,
@@ -67,10 +146,15 @@ class EmbeddingService:
         max_length = 8192  # characters
         text = text[:max_length].strip()
 
+        global _CACHE_HITS, _CACHE_MISSES, _TOTAL_EMBEDDING_COST
+
         # Check cache first
         if text in _EMBEDDING_CACHE:
+            _CACHE_HITS += 1
             logger.debug("Embedding cache hit")
             return _EMBEDDING_CACHE[text]
+
+        _CACHE_MISSES += 1
 
         try:
             # Prepare request body for Titan
@@ -78,16 +162,8 @@ class EmbeddingService:
                 "inputText": text
             }
 
-            # Call Bedrock API
-            response = self.bedrock_runtime.invoke_model(
-                modelId=self.model_id,
-                contentType="application/json",
-                accept="application/json",
-                body=json.dumps(request_body)
-            )
-
-            # Parse response
-            response_body = json.loads(response['body'].read())
+            # Call Bedrock API with retry logic
+            response_body = self._call_bedrock_embedding(request_body)
 
             # Extract embedding vector (Titan format)
             embedding = response_body.get('embedding', [])
@@ -97,6 +173,8 @@ class EmbeddingService:
                     f"Invalid embedding dimension: expected {self.embedding_dimension}, "
                     f"got {len(embedding)}"
                 )
+
+            _TOTAL_EMBEDDING_COST += _EMBEDDING_COST_PER_CALL
 
             # Store in cache (evict oldest if full)
             if len(_EMBEDDING_CACHE) >= _EMBEDDING_CACHE_MAX:

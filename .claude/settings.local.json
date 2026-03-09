@@ -33,7 +33,18 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=400&q=80\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://images.unsplash.com/photo-1556767576-5ec41e3239ea?w=400&q=80\")",
       "WebFetch(domain:unsplash.com)",
-      "Bash(PYTHONUNBUFFERED=1 python3 -c \":*)"
+      "Bash(PYTHONUNBUFFERED=1 python3 -c \":*)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''services/chat.py''\\).read\\(\\)\\); print\\(''chat.py: OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''services/embeddings.py''\\).read\\(\\)\\); ast.parse\\(open\\(''services/chat.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''All Python files parse OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''services/otel_trace_extractor.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Python files parse OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''services/chat.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''services/search_eval.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''services/rag_demo.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''services/index_performance.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''services/business_logic.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Python syntax OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''services/guardrails.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Python syntax OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''services/embeddings.py''\\).read\\(\\)\\); ast.parse\\(open\\(''services/guardrails.py''\\).read\\(\\)\\); ast.parse\\(open\\(''services/business_logic.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Python syntax OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Python syntax OK''\\)\")"
     ]
   }
 }

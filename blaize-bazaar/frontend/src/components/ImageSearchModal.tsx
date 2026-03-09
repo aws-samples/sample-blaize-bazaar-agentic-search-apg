@@ -3,7 +3,7 @@
  * Upload or drag-drop product images to find similar items
  */
 import { useState, useRef } from 'react';
-import { Camera, X, Upload, Loader, Sparkles } from 'lucide-react';
+import { Camera, X, Loader, Sparkles } from 'lucide-react';
 
 interface ImageSearchModalProps {
   isOpen: boolean;

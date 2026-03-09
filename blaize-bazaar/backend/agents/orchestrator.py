@@ -39,3 +39,15 @@ def create_orchestrator():
         system_prompt=ORCHESTRATOR_PROMPT,
         tools=[product_recommendation_agent, price_optimization_agent, inventory_restock_agent]
     )
+
+
+# === WIRE IT LIVE (Lab 3) ===
+# TODO: Add guardrails-aware orchestrator variant
+# When guardrails_enabled is True, the orchestrator should:
+# 1. Add content moderation rules to the system prompt
+# 2. Filter agent responses through a guardrails check before returning
+# 3. Block requests for weapons, alcohol, tobacco, or inappropriate content
+#
+# Hint: Create a create_guarded_orchestrator() that wraps the base orchestrator
+# with an additional guardrails system prompt and post-processing step.
+# === END WIRE IT LIVE ===

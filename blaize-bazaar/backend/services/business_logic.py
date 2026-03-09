@@ -461,6 +461,85 @@ class BusinessLogic:
             "products": products
         }
     
+    async def personalized_search(
+        self,
+        query: str,
+        preferences: Dict[str, Any] = None,
+        limit: int = 5,
+    ) -> Dict[str, Any]:
+        """
+        Personalized product search with preference-based re-ranking.
+
+        Runs a base semantic search then boosts scores for products
+        matching user preferences (favorite categories, price range).
+
+        Wire It Live: Participants implement the boost formula.
+
+        Args:
+            query: Natural language search query
+            preferences: Dict with keys like 'categories', 'price_range', 'brands'
+            limit: Number of results
+        """
+        # Run base semantic search
+        base_results = await self.semantic_product_search(query, limit=limit * 2)
+        products = base_results.get("products", [])
+        preferences = preferences or {}
+
+        preferred_categories = [c.lower() for c in preferences.get("categories", [])]
+        price_range = preferences.get("price_range", {})
+        min_price = price_range.get("min")
+        max_price = price_range.get("max")
+
+        for product in products:
+            reasons: List[str] = []
+            boost = 0.0
+            category = (product.get("category_name") or "").lower()
+
+            # --- Wire It Live: Personalization Boost ---
+            # TODO (Workshop): Implement your own boost formula here.
+            # Hint: boost matching categories by +0.1, matching price range by +0.05
+
+            # Category match
+            if preferred_categories and any(pc in category for pc in preferred_categories):
+                boost += 0.1
+                reasons.append(f"Matches your interest in {product.get('category_name', 'this category')}")
+
+            # Price range match
+            price = float(product.get("price", 0))
+            if min_price is not None and max_price is not None:
+                if min_price <= price <= max_price:
+                    boost += 0.05
+                    reasons.append(f"Within your ${min_price}–${max_price} budget")
+            elif max_price is not None and price <= max_price:
+                boost += 0.05
+                reasons.append(f"Under your ${max_price} budget")
+
+            # High rating boost
+            stars = float(product.get("stars", 0))
+            if stars >= 4.5:
+                boost += 0.03
+                reasons.append("Highly rated by customers")
+
+            # --- End Wire It Live ---
+
+            product["personalization_boost"] = round(boost, 3)
+            product["recommendation_reasons"] = reasons
+            original_sim = product.get("similarity", 0)
+            product["personalized_score"] = round(original_sim + boost, 4)
+
+        # Re-rank by personalized score
+        products.sort(key=lambda p: p.get("personalized_score", 0), reverse=True)
+        products = products[:limit]
+
+        return {
+            "status": "success",
+            "query": query,
+            "count": len(products),
+            "products": products,
+            "preferences_applied": preferences,
+            "personalization": True,
+        }
+
     def _generate_inventory_alerts(self, stats: Dict) -> List[str]:
         """Generate inventory alerts based on statistics"""
         alerts = []

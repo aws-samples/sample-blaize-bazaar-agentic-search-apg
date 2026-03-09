@@ -19,7 +19,15 @@ import { LayoutProvider, useLayout } from './contexts/LayoutContext'
 import { useMagneticCursor } from './hooks/useMagneticCursor'
 // useScrollReveal replaced by framer-motion whileInView on individual elements
 import { motion, AnimatePresence } from 'framer-motion'
-import { Database, BarChart3, Brain, Wrench, X } from 'lucide-react'
+import HybridSearchComparison from './components/HybridSearchComparison'
+import AgentActivityDashboard from './components/AgentActivityDashboard'
+import ContextDashboard from './components/ContextDashboard'
+import RAGDemo from './components/RAGDemo'
+import PersonalizationDemo from './components/PersonalizationDemo'
+import GuardrailsDemo from './components/GuardrailsDemo'
+import SpotlightWalkthrough from './components/SpotlightWalkthrough'
+import type { TourAction } from './data/tourSteps'
+import { Database, BarChart3, Brain, Wrench, X, Zap, Activity, DollarSign, Shield, BookOpen, User, AlertOctagon } from 'lucide-react'
 import './styles/premium-heading-styles.css'
 
 // Theme Context — dark/light toggle
@@ -40,7 +48,7 @@ export const useTheme = () => {
 type Section = 'shop' | 'collections'
 
 function AppContent() {
-  const { mainContentMarginRight, workshopMode, setWorkshopMode } = useLayout()
+  const { mainContentMarginRight, workshopMode, setWorkshopMode, guardrailsEnabled, setGuardrailsEnabled, showOnboarding, setShowOnboarding } = useLayout()
   const magneticCta = useMagneticCursor(0.15)
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('blaize-theme')
@@ -69,6 +77,14 @@ function AppContent() {
   const [showCart, setShowCart] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const [showHybridComparison, setShowHybridComparison] = useState(false)
+  const [showAgentDashboard, setShowAgentDashboard] = useState(false)
+  const [showContextDashboard, setShowContextDashboard] = useState(false)
+  const [showRAGDemo, setShowRAGDemo] = useState(false)
+  const [showPersonalization, setShowPersonalization] = useState(false)
+  const [showGuardrailsDemo, setShowGuardrailsDemo] = useState(false)
+  const [chaosMode, setChaosMode] = useState(false)
+  const [modeToast, setModeToast] = useState<string | null>(null)
 
   // Hero background carousel
   const heroImages = [
@@ -81,6 +97,87 @@ function AppContent() {
   const [heroIdx, setHeroIdx] = useState(0)
 
   // (scroll reveal now handled by framer-motion whileInView on each element)
+
+  // Mode-aware dev tools — buttons filtered by current workshop mode
+  const MODE_ORDER = ['legacy', 'semantic', 'tools', 'full'] as const
+  const modeIndex = MODE_ORDER.indexOf(workshopMode)
+  const devToolButtons = [
+    { icon: <Database className="h-5 w-5" />, label: 'SQL Inspector', desc: 'Monitor pgvector queries', action: () => { setShowSQLInspector(true); setShowDevTools(false) }, minMode: 'semantic' as const },
+    { icon: <Zap className="h-5 w-5" />, label: 'Hybrid Search', desc: 'Vector vs hybrid comparison', action: () => { setShowHybridComparison(true); setShowDevTools(false) }, minMode: 'semantic' as const },
+    { icon: <BarChart3 className="h-5 w-5" />, label: 'Index Performance', desc: 'Tune HNSW parameters', action: () => { setShowIndexPerformance(true); setShowDevTools(false) }, minMode: 'semantic' as const },
+    { icon: <BookOpen className="h-5 w-5" />, label: 'RAG Demo', desc: 'Naive vs RAG comparison', action: () => { setShowRAGDemo(true); setShowDevTools(false) }, minMode: 'semantic' as const },
+    { icon: <Brain className="h-5 w-5" />, label: 'Agent Traces', desc: 'Multi-agent workflow', action: () => { setAgentPanelMode(agentPanelMode === 'expanded' ? 'hidden' : 'expanded'); setShowDevTools(false) }, minMode: 'tools' as const },
+    { icon: <Activity className="h-5 w-5" />, label: 'Agent Dashboard', desc: 'Session agent stats', action: () => { setShowAgentDashboard(true); setShowDevTools(false) }, minMode: 'tools' as const },
+    { icon: <DollarSign className="h-5 w-5" />, label: 'Context & Cost', desc: 'Token usage & cost', action: () => { setShowContextDashboard(true); setShowDevTools(false) }, minMode: 'tools' as const },
+    { icon: <User className="h-5 w-5" />, label: 'Personalization', desc: 'Preference-based re-ranking', action: () => { setShowPersonalization(true); setShowDevTools(false) }, minMode: 'tools' as const },
+    { icon: <Shield className="h-5 w-5" />, label: 'Guardrails Demo', desc: 'Content safety & PII detection', action: () => { setShowGuardrailsDemo(true); setShowDevTools(false) }, minMode: 'full' as const },
+    { icon: <AlertOctagon className="h-5 w-5" />, label: chaosMode ? 'Chaos: ON' : 'Chaos Mode', desc: chaosMode ? 'Click to disable' : 'Test resilience & retries', action: () => {
+      const next = !chaosMode
+      setChaosMode(next)
+      fetch('/api/dev/chaos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: next }) }).catch(() => {})
+      setShowDevTools(false)
+    }, minMode: 'full' as const },
+  ]
+  const visibleButtons = devToolButtons.filter(b => MODE_ORDER.indexOf(b.minMode) <= modeIndex)
+
+  // Mode switch handler with enhanced toast
+  const MODE_LABELS: Record<string, string> = {
+    legacy: 'Legacy — Keyword Only',
+    semantic: 'Lab 1 — Semantic Search',
+    tools: 'Lab 2 — Agent Tools',
+    full: 'Lab 3 — Orchestration',
+  }
+  const MODE_FEATURES: Record<string, string[]> = {
+    legacy: ['Keyword-only search', 'Full-text matching'],
+    semantic: ['+ Vector search (pgvector)', '+ Hybrid search comparison', '+ SQL Inspector', '+ Index Performance'],
+    tools: ['+ AI Chat Assistant', '+ Agent reasoning traces', '+ Custom tool integration', '+ Cost tracking'],
+    full: ['+ Multi-agent orchestration', '+ Guardrails & safety', '+ Context management', '+ Full observability'],
+  }
+  const handleModeSwitch = (mode: typeof workshopMode) => {
+    setWorkshopMode(mode) // auto-starts tour via LayoutContext if not completed
+    setModeToast(MODE_LABELS[mode] || mode)
+    setTimeout(() => setModeToast(null), 4000)
+  }
+
+  // Tour action dispatcher — maps action keys to UI state changes
+  const handleTourAction = (actionKey: TourAction['actionKey']) => {
+    switch (actionKey) {
+      case 'focus-search': {
+        const input = document.querySelector('[data-tour="search-bar"] input') as HTMLInputElement
+        input?.focus()
+        break
+      }
+      case 'open-sql-inspector':
+        setShowSQLInspector(true)
+        break
+      case 'open-hybrid-search':
+        setShowHybridComparison(true)
+        break
+      case 'open-agent-traces':
+        setAgentPanelMode('expanded')
+        break
+      case 'open-context-dashboard':
+        setShowContextDashboard(true)
+        break
+      case 'open-chat': {
+        const bubble = document.querySelector('[data-tour="chat-bubble"]') as HTMLElement
+        bubble?.click()
+        break
+      }
+      case 'open-guardrails':
+        setShowGuardrailsDemo(true)
+        break
+      case 'toggle-chaos': {
+        const next = !chaosMode
+        setChaosMode(next)
+        fetch('/api/dev/chaos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: next }) }).catch(() => {})
+        break
+      }
+      case 'open-dev-tools':
+        setShowDevTools(true)
+        break
+    }
+  }
 
   // Cart management functions
   const addToCart = (item: CartItem) => {
@@ -216,106 +313,176 @@ function AppContent() {
             <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/55" />
             <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(41, 151, 255, 0.06) 0%, transparent 60%)' }} />
 
-            <div className="relative z-10 text-center max-w-[900px] mx-auto px-8">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.1 }}
-              >
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8 text-xs font-medium tracking-wide uppercase"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.06)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    color: 'rgba(255, 255, 255, 0.6)',
-                    letterSpacing: '0.12em',
-                  }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  {workshopMode === 'legacy' ? 'DAT406 — E-Commerce (Legacy)'
-                    : workshopMode === 'semantic' ? 'DAT406 — Semantic Search Enabled'
-                    : workshopMode === 'tools' ? 'DAT406 — AI Agent Tools'
-                    : 'DAT406 — Multi-Agent AI Commerce'}
-                </div>
-              </motion.div>
+            {/* Hero content — split layout for agent modes, centered for legacy/semantic */}
+            {(() => {
+              const isAgentMode = workshopMode === 'tools' || workshopMode === 'full'
 
-              <motion.h1
-                className="text-[48px] md:text-[64px] xl:text-[80px] leading-[1.05] mb-4 text-white"
-                style={{ fontWeight: 600, letterSpacing: '-0.02em' }}
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: 150, damping: 20, delay: 0.2 }}
-              >
-                Blaize Bazaar
-              </motion.h1>
-
-              <motion.p
-                className="text-xl md:text-2xl mb-10 md:mb-12 max-w-[650px] mx-auto leading-relaxed"
-                style={{ fontWeight: 400, color: '#a1a1a6' }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.4 }}
-              >
-                {workshopMode === 'legacy'
-                  ? 'Traditional keyword search — try searching for "something to keep my drinks cold" and see what happens.'
-                  : workshopMode === 'semantic'
-                  ? 'Semantic search powered by Aurora PostgreSQL and pgvector — search by intent, not just keywords.'
-                  : workshopMode === 'tools'
-                  ? 'AI agent with custom tools answers questions about products, trends, and pricing.'
-                  : 'Five AI agents collaborate in real-time to search, compare, and recommend.'
-                }
-              </motion.p>
-
-              <motion.div
-                className="flex gap-8 justify-center items-center mb-16"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.5 }}
-              >
-                <button
-                  ref={magneticCta.ref as React.RefObject<HTMLButtonElement>}
-                  onMouseMove={magneticCta.onMouseMove}
-                  onMouseLeave={magneticCta.onMouseLeave}
-                  className="px-7 py-3 rounded-full text-lg font-normal transition-all duration-300 hover:opacity-90"
-                  onClick={() => {
-                    if (workshopMode === 'legacy' || workshopMode === 'semantic') {
-                      setSearchOverlayVisible(true)
-                    } else {
-                      const bubble = document.querySelector('[alt="Chat"]')?.parentElement as HTMLElement
-                      if (bubble) bubble.click()
-                    }
-                  }}
-                  style={{ background: '#0071e3', color: '#ffffff' }}
-                >
-                  {workshopMode === 'legacy' || workshopMode === 'semantic' ? 'Search Products' : 'Talk to the Agents'}
-                </button>
-                <button
-                  className="px-7 py-3 rounded-full text-lg font-normal transition-all duration-300 hover:opacity-80"
-                  onClick={() => {
-                    document.getElementById('collections-section')?.scrollIntoView({ behavior: 'smooth' })
-                  }}
-                  style={{ background: 'transparent', border: '2px solid rgba(255, 255, 255, 0.3)', color: '#f5f5f7' }}
-                >
-                  Explore Collections
-                </button>
-              </motion.div>
-
-              {/* Scroll indicator */}
-              <motion.div
-                className="flex flex-col items-center gap-2"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.2, duration: 1 }}
-              >
-                <span className="text-white/20 text-xs tracking-widest uppercase">Scroll to explore</span>
+              const heroBadge = (
                 <motion.div
-                  className="w-5 h-8 rounded-full border border-white/15 flex justify-center pt-1.5"
-                  animate={{ y: [0, 5, 0] }}
-                  transition={{ duration: 2, repeat: Infinity }}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.1 }}
                 >
-                  <div className="w-1 h-2 rounded-full bg-white/30" />
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8 text-xs font-medium tracking-wide uppercase"
+                    data-tour="hero-badge"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.06)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      color: 'rgba(255, 255, 255, 0.6)',
+                      letterSpacing: '0.12em',
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                    {workshopMode === 'legacy' ? 'DAT406 — E-Commerce (Legacy)'
+                      : workshopMode === 'semantic' ? 'DAT406 — Semantic Search Enabled'
+                      : workshopMode === 'tools' ? 'DAT406 — AI Agent Tools'
+                      : 'DAT406 — Multi-Agent AI Commerce'}
+                  </div>
                 </motion.div>
-              </motion.div>
-            </div>
+              )
+
+              const heroHeading = (
+                <motion.h1
+                  className={`${isAgentMode ? 'text-[40px] md:text-[48px] xl:text-[56px]' : 'text-[48px] md:text-[64px] xl:text-[80px]'} leading-[1.05] mb-4 text-white`}
+                  style={{ fontWeight: 600, letterSpacing: '-0.02em' }}
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 150, damping: 20, delay: 0.2 }}
+                >
+                  Blaize Bazaar
+                </motion.h1>
+              )
+
+              const heroSubtitle = (
+                <motion.p
+                  className={`text-xl md:text-2xl mb-10 md:mb-12 ${isAgentMode ? '' : 'max-w-[650px] mx-auto'} leading-relaxed`}
+                  style={{ fontWeight: 400, color: '#a1a1a6' }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.4 }}
+                >
+                  {workshopMode === 'legacy'
+                    ? 'Traditional keyword search — try searching for "something to keep my drinks cold" and see what happens.'
+                    : workshopMode === 'semantic'
+                    ? 'Semantic search powered by Aurora PostgreSQL and pgvector — search by intent, not just keywords.'
+                    : workshopMode === 'tools'
+                    ? 'AI agent with custom tools answers questions about products, trends, and pricing.'
+                    : 'Five AI agents collaborate in real-time to search, compare, and recommend.'
+                  }
+                </motion.p>
+              )
+
+              const heroButtons = (
+                <motion.div
+                  className={`flex gap-8 ${isAgentMode ? 'justify-start' : 'justify-center'} items-center mb-16`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.5 }}
+                >
+                  <button
+                    ref={magneticCta.ref as React.RefObject<HTMLButtonElement>}
+                    onMouseMove={magneticCta.onMouseMove}
+                    onMouseLeave={magneticCta.onMouseLeave}
+                    className="px-7 py-3 rounded-full text-lg font-normal transition-all duration-300 hover:opacity-90"
+                    onClick={() => {
+                      if (workshopMode === 'legacy' || workshopMode === 'semantic') {
+                        setSearchOverlayVisible(true)
+                      } else {
+                        const bubble = document.querySelector('[data-tour="chat-bubble"]') as HTMLElement
+                        if (bubble) bubble.click()
+                      }
+                    }}
+                    style={{ background: '#0071e3', color: '#ffffff' }}
+                  >
+                    {workshopMode === 'legacy' || workshopMode === 'semantic' ? 'Search Products' : 'Talk to the Agents'}
+                  </button>
+                  <button
+                    className="px-7 py-3 rounded-full text-lg font-normal transition-all duration-300 hover:opacity-80"
+                    onClick={() => {
+                      document.getElementById('collections-section')?.scrollIntoView({ behavior: 'smooth' })
+                    }}
+                    style={{ background: 'transparent', border: '2px solid rgba(255, 255, 255, 0.3)', color: '#f5f5f7' }}
+                  >
+                    Explore Collections
+                  </button>
+                </motion.div>
+              )
+
+              const scrollIndicator = (
+                <motion.div
+                  className="flex flex-col items-center gap-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1.2, duration: 1 }}
+                >
+                  <span className="text-white/20 text-xs tracking-widest uppercase">Scroll to explore</span>
+                  <motion.div
+                    className="w-5 h-8 rounded-full border border-white/15 flex justify-center pt-1.5"
+                    animate={{ y: [0, 5, 0] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <div className="w-1 h-2 rounded-full bg-white/30" />
+                  </motion.div>
+                </motion.div>
+              )
+
+              if (isAgentMode) {
+                return (
+                  <div className="relative z-10 max-w-[1200px] mx-auto px-8">
+                    {/* Section heading */}
+                    <motion.div
+                      className="text-center mb-12"
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.05 }}
+                    >
+                      <h2 className="text-3xl lg:text-4xl font-extralight mb-3 tracking-tight text-white">
+                        Meet the <span style={{ color: '#0071e3' }}>agents</span>
+                      </h2>
+                      <p className="text-lg font-light" style={{ color: '#a1a1a6' }}>Five specialized AI agents collaborate to find exactly what you need</p>
+                    </motion.div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+                      {/* Left: text content */}
+                      <div className="text-center lg:text-left">
+                        {heroBadge}
+                        {heroHeading}
+                        {heroSubtitle}
+                        {heroButtons}
+                      </div>
+                      {/* Right: DemoChatCarousel */}
+                      <motion.div
+                        className="flex justify-center lg:justify-end"
+                        initial={{ opacity: 0, x: 60 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ type: 'spring', stiffness: 150, damping: 25, delay: 0.3 }}
+                      >
+                        <DemoChatCarousel
+                          compact
+                          onOpenChat={() => {
+                            const bubble = document.querySelector('[data-tour="chat-bubble"]') as HTMLElement
+                            if (bubble) bubble.click()
+                          }}
+                        />
+                      </motion.div>
+                    </div>
+                    <div className="mt-8">
+                      {scrollIndicator}
+                    </div>
+                  </div>
+                )
+              }
+
+              // Legacy / Semantic: centered single-column (original layout)
+              return (
+                <div className="relative z-10 text-center max-w-[900px] mx-auto px-8">
+                  {heroBadge}
+                  {heroHeading}
+                  {heroSubtitle}
+                  {heroButtons}
+                  {scrollIndicator}
+                </div>
+              )
+            })()}
           </section>
 
           {/* Collections — Apple-style stacked full-width blocks */}
@@ -505,13 +672,7 @@ function AppContent() {
             ))}
           </div>
 
-          {/* Agent Demo — only visible when chat is unlocked (Lab 2+) */}
-          {(workshopMode === 'tools' || workshopMode === 'full') && (
-            <DemoChatCarousel onOpenChat={() => {
-              const bubble = document.querySelector('[alt="Chat"]')?.parentElement as HTMLElement
-              if (bubble) bubble.click()
-            }} />
-          )}
+          {/* Agent Demo now embedded in hero section for Labs 2/3 */}
 
           {/* Footer */}
           <footer style={{ borderTop: '1px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
@@ -545,6 +706,7 @@ function AppContent() {
           {/* Collapsed tab */}
           <div
             className="absolute left-0 top-1/2 -translate-y-1/2 w-11 py-8 rounded-r-xl flex flex-col items-center gap-3 cursor-pointer transition-opacity duration-300"
+            data-tour="dev-tools-tab"
             style={{
               background: 'rgba(0, 0, 0, 0.95)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -588,7 +750,7 @@ function AppContent() {
                   ] as const).map((mode) => (
                     <button
                       key={mode.key}
-                      onClick={() => setWorkshopMode(mode.key)}
+                      onClick={() => handleModeSwitch(mode.key)}
                       className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-left transition-all duration-200 mb-1"
                       style={{
                         background: workshopMode === mode.key ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
@@ -614,12 +776,8 @@ function AppContent() {
                   ))}
                 </div>
 
-                {/* Tool buttons */}
-                {[
-                  { icon: <Database className="h-5 w-5" />, label: 'SQL Inspector', desc: 'Monitor pgvector queries', action: () => { setShowSQLInspector(true); setShowDevTools(false) } },
-                  { icon: <BarChart3 className="h-5 w-5" />, label: 'Index Performance', desc: 'Tune HNSW parameters', action: () => { setShowIndexPerformance(true); setShowDevTools(false) } },
-                  { icon: <Brain className="h-5 w-5" />, label: 'Agent Traces', desc: 'Multi-agent workflow', action: () => { setAgentPanelMode(agentPanelMode === 'expanded' ? 'hidden' : 'expanded'); setShowDevTools(false) } },
-                ].map((tool, idx) => (
+                {/* Tool buttons — filtered by workshop mode */}
+                {visibleButtons.map((tool, idx) => (
                   <button
                     key={idx}
                     onClick={tool.action}
@@ -637,6 +795,34 @@ function AppContent() {
                     </div>
                   </button>
                 ))}
+
+                {/* Guardrails toggle — Lab 3 only */}
+                {workshopMode === 'full' && (
+                  <div className="pt-3 mt-1" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                    <button
+                      onClick={() => setGuardrailsEnabled(!guardrailsEnabled)}
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg transition-all duration-200"
+                      style={{ background: guardrailsEnabled ? 'rgba(255, 255, 255, 0.06)' : 'transparent' }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-5 w-5" style={{ color: guardrailsEnabled ? '#34d399' : 'rgba(255, 255, 255, 0.4)' }} />
+                        <div className="text-left">
+                          <p className="text-[15px] font-medium" style={{ color: '#ffffff' }}>Guardrails</p>
+                          <p className="text-[13px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Content moderation</p>
+                        </div>
+                      </div>
+                      <div
+                        className="w-10 h-[22px] rounded-full relative transition-colors duration-200"
+                        style={{ background: guardrailsEnabled ? '#34d399' : 'rgba(255, 255, 255, 0.15)' }}
+                      >
+                        <div
+                          className="absolute top-[3px] w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
+                          style={{ transform: guardrailsEnabled ? 'translateX(21px)' : 'translateX(3px)' }}
+                        />
+                      </div>
+                    </button>
+                  </div>
+                )}
 
                 {/* Architecture */}
                 <div className="pt-3 mt-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
@@ -687,6 +873,71 @@ function AppContent() {
           onExpand={() => setAgentPanelMode('expanded')}
           onClose={() => setAgentPanelMode('hidden')}
         />
+
+        {/* Hybrid Search Comparison */}
+        <HybridSearchComparison
+          isOpen={showHybridComparison}
+          onClose={() => setShowHybridComparison(false)}
+        />
+
+        {/* Agent Activity Dashboard */}
+        <AgentActivityDashboard
+          isOpen={showAgentDashboard}
+          onClose={() => setShowAgentDashboard(false)}
+        />
+
+        {/* Context & Cost Dashboard */}
+        <ContextDashboard
+          isOpen={showContextDashboard}
+          onClose={() => setShowContextDashboard(false)}
+        />
+
+        {/* RAG Demo */}
+        <RAGDemo
+          isOpen={showRAGDemo}
+          onClose={() => setShowRAGDemo(false)}
+        />
+
+        {/* Personalization Demo */}
+        <PersonalizationDemo
+          isOpen={showPersonalization}
+          onClose={() => setShowPersonalization(false)}
+        />
+
+        {/* Guardrails Demo */}
+        <GuardrailsDemo
+          isOpen={showGuardrailsDemo}
+          onClose={() => setShowGuardrailsDemo(false)}
+        />
+
+        {/* Spotlight Walkthrough */}
+        <SpotlightWalkthrough onAction={handleTourAction} />
+
+        {/* Mode Switch Toast — enhanced with feature bullets */}
+        <AnimatePresence>
+          {modeToast && (
+            <motion.div
+              className="fixed bottom-8 left-1/2 z-[2000] px-5 py-3 rounded-2xl text-sm"
+              style={{
+                background: 'rgba(0, 0, 0, 0.92)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                transform: 'translateX(-50%)',
+                minWidth: 260,
+              }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+            >
+              <p className="font-semibold mb-1.5" style={{ color: '#ffffff' }}>{modeToast}</p>
+              <div className="space-y-0.5">
+                {(MODE_FEATURES[workshopMode] || []).map((f, i) => (
+                  <p key={i} className="text-[11px]" style={{ color: f.startsWith('+') ? 'rgba(52, 211, 153, 0.8)' : 'rgba(255, 255, 255, 0.45)' }}>{f}</p>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Proactive Suggestions */}
         {showProactiveSuggestions && (
@@ -745,6 +996,67 @@ function AppContent() {
                   alt="Architecture Diagram"
                   className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
                 />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Onboarding Modal — first visit */}
+        <AnimatePresence>
+          {showOnboarding && (
+            <motion.div
+              className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="w-[480px] rounded-[24px] p-8 text-center"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.95)',
+                  backdropFilter: 'blur(40px)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                }}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              >
+                <div className="text-3xl mb-2">&#x1F680;</div>
+                <h2 className="text-xl font-semibold mb-1" style={{ color: '#ffffff' }}>Welcome to DAT406</h2>
+                <p className="text-sm mb-6" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Build Agentic AI-Powered Search with Aurora & pgvector</p>
+
+                <div className="space-y-2 mb-8 text-left">
+                  {[
+                    { step: 'Legacy', desc: 'Start with keyword-only search', icon: '1' },
+                    { step: 'Lab 1 — Semantic', desc: 'Add vector search + hybrid comparison', icon: '2' },
+                    { step: 'Lab 2 — Tools', desc: 'Build AI agents with custom tools', icon: '3' },
+                    { step: 'Lab 3 — Full', desc: 'Multi-agent orchestration + guardrails', icon: '4' },
+                  ].map((s, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-2.5 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                      <span className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0" style={{ background: 'rgba(255, 255, 255, 0.08)', color: 'rgba(255, 255, 255, 0.6)' }}>{s.icon}</span>
+                      <div>
+                        <p className="text-[13px] font-medium" style={{ color: '#ffffff' }}>{s.step}</p>
+                        <p className="text-[11px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{s.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => {
+                    setShowOnboarding(false)
+                    localStorage.setItem('blaize-onboarding-done', '1')
+                    setWorkshopMode('legacy')
+                  }}
+                  className="w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200"
+                  style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)')}
+                >
+                  Start Workshop
+                </button>
+                <p className="text-[10px] mt-3" style={{ color: 'rgba(255, 255, 255, 0.25)' }}>Use the progress pills in the header to switch modes anytime</p>
               </motion.div>
             </motion.div>
           )}

@@ -9,7 +9,7 @@ import json
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi import FastAPI, HTTPException, Query, Depends, Request
 from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -130,6 +130,14 @@ async def lifespan(app: FastAPI):
             )
             # strands_telemetry.setup_otlp_exporter()   # Prod: CloudWatch X-Ray
             logger.info("✅ Strands OpenTelemetry tracing enabled (compact format)")
+
+            # Attach in-memory span capture for trace extraction
+            try:
+                from services.otel_trace_extractor import init_span_capture
+                init_span_capture()
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to init span capture: {e}")
+
         except ImportError:
             logger.warning("⚠️ Strands OpenTelemetry not available - install with: pip install 'strands-agents[otel]'")
         except Exception as e:
@@ -895,7 +903,8 @@ async def chat(request: ChatRequest):
             message=request.message,
             conversation_history=history,
             session_id=request.session_id,
-            workshop_mode=request.workshop_mode
+            workshop_mode=request.workshop_mode,
+            guardrails_enabled=request.guardrails_enabled
         )
         
         return ChatResponse(**response)
@@ -926,7 +935,8 @@ async def chat_stream(request: ChatRequest):
                 message=request.message,
                 conversation_history=history,
                 session_id=request.session_id,
-                workshop_mode=request.workshop_mode
+                workshop_mode=request.workshop_mode,
+                guardrails_enabled=request.guardrails_enabled
             ):
                 yield f"data: {json.dumps(event, ensure_ascii=False, default=str)}\n\n"
         except Exception as e:
@@ -1201,6 +1211,84 @@ async def list_prompts():
 
 
 # ============================================================================
+# RAG DEMO ENDPOINT
+# ============================================================================
+
+@app.post("/api/rag/compare")
+async def rag_compare(request: dict):
+    """Compare LLM responses with and without RAG context"""
+    from services.rag_demo import RAGDemoService
+    query = request.get("query", "")
+    if not query:
+        raise HTTPException(status_code=400, detail="query is required")
+    rag_service = RAGDemoService(db_service=db_service, embedding_service=embedding_service)
+    return await rag_service.rag_compare(query)
+
+
+# ============================================================================
+# QUANTIZATION COMPARISON ENDPOINT
+# ============================================================================
+
+@app.get("/api/performance/quantization")
+async def get_quantization_comparison():
+    """Compare full-precision vs quantized (SQ/BQ) index sizes"""
+    if not index_performance_service:
+        raise HTTPException(status_code=503, detail="Index performance service not initialized")
+    return await index_performance_service.get_quantization_comparison()
+
+
+# ============================================================================
+# PERSONALIZED SEARCH ENDPOINT
+# ============================================================================
+
+@app.post("/api/personalization/search")
+async def personalized_search(request: Request):
+    """Search with preference-based re-ranking"""
+    if not business_logic:
+        raise HTTPException(status_code=503, detail="Business logic service not initialized")
+    body = await request.json()
+    query = body.get("query", "")
+    preferences = body.get("preferences", {})
+    limit = body.get("limit", 5)
+    return await business_logic.personalized_search(query, preferences, limit)
+
+
+# ============================================================================
+# SEARCH EVALUATION ENDPOINT
+# ============================================================================
+
+@app.get("/api/search/eval")
+async def evaluate_search(method: str = Query("vector"), k: int = Query(5)):
+    """Evaluate search quality using Precision@k and NDCG@k against golden dataset"""
+    from services.search_eval import SearchEvalService
+    eval_service = SearchEvalService(db_service=db_service, embedding_service=embedding_service)
+    return await eval_service.evaluate_search(method=method, k=k)
+
+
+# ============================================================================
+# AGENT STATS ENDPOINT
+# ============================================================================
+
+@app.get("/api/agent/stats")
+async def get_agent_stats():
+    """Get session-level agent activity stats"""
+    if not chat_service:
+        raise HTTPException(status_code=503, detail="Chat service not initialized")
+    return chat_service.get_agent_stats()
+
+
+# ============================================================================
+# CACHE & COST ENDPOINTS
+# ============================================================================
+
+@app.get("/api/cache/stats")
+async def get_cache_stats():
+    """Get embedding cache statistics for the Context & Cost dashboard"""
+    from services.embeddings import get_cache_stats
+    return get_cache_stats()
+
+
+# ============================================================================
 # OPENTELEMETRY TRACING ENDPOINTS
 # ============================================================================
 
@@ -1223,6 +1311,16 @@ async def get_tracing_status():
         return {"enabled": False, "error": str(e)}
 
 
+@app.get("/api/traces/waterfall")
+async def get_trace_waterfall():
+    """Get waterfall timing data from captured OTEL spans"""
+    try:
+        from services.otel_trace_extractor import get_waterfall_data
+        return get_waterfall_data()
+    except Exception as e:
+        return {"waterfall": [], "span_count": 0, "error": str(e)}
+
+
 @app.get("/api/traces/info")
 async def get_tracing_info():
     """
@@ -1243,3 +1341,46 @@ async def get_tracing_info():
         ],
         "visualization": "docker run -p 16686:16686 -p 4317:4317 jaegertracing/all-in-one:latest"
     }
+
+
+# ============================================================================
+# GUARDRAILS ENDPOINT
+# ============================================================================
+
+@app.post("/api/guardrails/check")
+async def check_guardrails(request: Request):
+    """Demo endpoint to test Bedrock Guardrails on input/output text"""
+    from services.guardrails import GuardrailsService
+    body = await request.json()
+    text = body.get("text", "")
+    source = body.get("source", "INPUT")
+
+    svc = GuardrailsService()
+    if source == "OUTPUT":
+        result = svc.check_output(text)
+    else:
+        result = svc.check_input(text)
+
+    pii = svc.detect_pii(text)
+    return {**result, "pii_detection": pii, "source": source, "configured": svc.is_configured}
+
+
+# ============================================================================
+# CHAOS MODE (Error Handling & Resilience Demo)
+# ============================================================================
+
+_chaos_mode = False
+_chaos_fail_rate = 0.3  # 30% failure rate when chaos mode active
+
+@app.post("/api/dev/chaos")
+async def toggle_chaos_mode(request: Request):
+    """Toggle chaos mode for resilience testing"""
+    global _chaos_mode
+    body = await request.json()
+    _chaos_mode = body.get("enabled", not _chaos_mode)
+    return {"chaos_mode": _chaos_mode, "fail_rate": _chaos_fail_rate}
+
+@app.get("/api/dev/chaos")
+async def get_chaos_status():
+    """Get current chaos mode status"""
+    return {"chaos_mode": _chaos_mode, "fail_rate": _chaos_fail_rate}

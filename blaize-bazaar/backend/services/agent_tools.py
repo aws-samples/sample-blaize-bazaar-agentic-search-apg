@@ -143,13 +143,13 @@ def get_product_by_category(
 @tool
 def get_low_stock_products(limit: int = 3) -> str:
     """Get products with low stock (quantity < 10) prioritized by demand
-    
+
     Args:
         limit: Number of results (default: 3)
     """
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
-    
+
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
@@ -157,3 +157,23 @@ def get_low_stock_products(limit: int = 3) -> str:
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
+
+
+# === WIRE IT LIVE (Lab 2) ===
+# TODO: Implement compare_products tool
+# This tool should accept two product IDs and return a side-by-side comparison
+# including name, price, rating, and key features for each product.
+#
+# Hint: Use _db_service.fetch_one() to look up each product by productId,
+# then return a JSON object with both products' details.
+@tool
+def compare_products(product_id_1: str, product_id_2: str) -> str:
+    """Compare two products side by side by their product IDs.
+
+    Args:
+        product_id_1: First product ID to compare
+        product_id_2: Second product ID to compare
+    """
+    # Participants implement this during Lab 2
+    return json.dumps({"error": "Not implemented yet — complete Lab 2 to activate!"})
+# === END WIRE IT LIVE ===

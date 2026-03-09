@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../App'
+import { useLayout, type WorkshopMode } from '../contexts/LayoutContext'
 import ImageSearchModal from './ImageSearchModal'
-import { Camera, ShoppingCart, Sun, Moon } from 'lucide-react'
+import { Camera, ShoppingCart, Sun, Moon, Check, Compass } from 'lucide-react'
 
 interface HeaderProps {
   activeSection?: 'shop' | 'collections'
@@ -11,6 +12,14 @@ interface HeaderProps {
   onCartClick?: () => void
 }
 
+const WORKSHOP_STEPS: { key: WorkshopMode; label: string }[] = [
+  { key: 'legacy', label: 'Legacy' },
+  { key: 'semantic', label: 'Lab 1' },
+  { key: 'tools', label: 'Lab 2' },
+  { key: 'full', label: 'Lab 3' },
+]
+const MODE_ORDER: WorkshopMode[] = ['legacy', 'semantic', 'tools', 'full']
+
 const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestions, setSuggestions] = useState<Array<{text: string, category: string}>>([])
@@ -18,7 +27,9 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
   const [showImageSearch, setShowImageSearch] = useState(false)
   const { theme, toggleTheme } = useTheme()
+  const { workshopMode, setWorkshopMode, startTour, resetWorkshop } = useLayout()
   const searchRef = useRef<HTMLDivElement>(null)
+  const currentModeIdx = MODE_ORDER.indexOf(workshopMode)
 
   const placeholders = [
     'comfortable running shoes under $100',
@@ -90,21 +101,67 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
           <div className="h-full max-w-[1920px] mx-auto flex items-center justify-between gap-4">
             {/* Logo - Fixed width */}
             <div 
-              className="text-xl sm:text-2xl cursor-pointer flex-shrink-0 whitespace-nowrap"
+              className="text-xl sm:text-2xl cursor-pointer flex-shrink-0 whitespace-nowrap select-none"
               style={{ fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              onDoubleClick={() => {
+                resetWorkshop()
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+              title="Double-click to reset workshop"
             >
               Blaize Bazaar
             </div>
 
-            {/* Spacer for center alignment */}
-            <div className="hidden lg:block flex-shrink-0" />
+            {/* Workshop Progress Pills */}
+            <div className="hidden md:flex items-center gap-1 flex-shrink-0" data-tour="workshop-pills">
+              {WORKSHOP_STEPS.map((step, idx) => {
+                const isCurrent = step.key === workshopMode
+                const isCompleted = idx < currentModeIdx
+                return (
+                  <button
+                    key={step.key}
+                    onClick={() => setWorkshopMode(step.key)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all duration-200"
+                    style={{
+                      background: isCurrent ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+                      color: isCurrent ? '#ffffff' : isCompleted ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.3)',
+                      border: isCurrent ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid transparent',
+                    }}
+                    title={`Switch to ${step.label}`}
+                  >
+                    {isCompleted ? (
+                      <Check className="h-3 w-3" style={{ color: 'rgba(52, 211, 153, 0.8)' }} />
+                    ) : (
+                      <span
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: isCurrent ? '#ffffff' : 'rgba(255, 255, 255, 0.2)' }}
+                      />
+                    )}
+                    {step.label}
+                  </button>
+                )
+              })}
+              <button
+                onClick={() => startTour(workshopMode)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all duration-200 ml-1 hover:bg-white/10"
+                style={{
+                  background: 'rgba(59, 130, 246, 0.15)',
+                  border: '1px solid rgba(59, 130, 246, 0.3)',
+                  color: 'rgba(147, 197, 253, 0.9)',
+                }}
+                title="Start guided tour"
+              >
+                <Compass className="h-3 w-3" />
+                Tour
+              </button>
+            </div>
 
             {/* Right Side - Search, Cart & GitHub */}
             <div className="flex items-center gap-2 flex-shrink-0">
               {/* Search Section */}
               <div className="flex items-center gap-2">
-                <div className="relative w-[280px] sm:w-[320px] md:w-[360px] lg:w-[380px] xl:w-[420px] group" ref={searchRef}>
+                <div className="relative w-[280px] sm:w-[320px] md:w-[360px] lg:w-[380px] xl:w-[420px] group" ref={searchRef} data-tour="search-bar">
                   <input
                     type="text"
                     value={searchQuery}

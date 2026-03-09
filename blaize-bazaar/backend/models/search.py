@@ -95,6 +95,7 @@ class ChatRequest(BaseModel):
     conversation_history: List[ChatMessage] = []
     session_id: Optional[str] = None
     workshop_mode: Optional[str] = Field(default=None, description="Workshop progression mode: 'legacy', 'semantic', 'tools', 'full'")
+    guardrails_enabled: bool = Field(default=False, description="Enable content moderation guardrails")
 
 
 class ChatResponse(BaseModel):
@@ -106,3 +107,5 @@ class ChatResponse(BaseModel):
     agent_execution: Optional[Dict] = None
     model: str = ""
     success: bool = True
+    token_count: Optional[int] = None
+    estimated_cost_usd: Optional[float] = None

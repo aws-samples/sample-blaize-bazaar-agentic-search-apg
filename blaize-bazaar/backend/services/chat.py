@@ -30,6 +30,15 @@ def _safe_int(val, default=0):
         return default
 
 
+GUARDRAILS_SUFFIX = """
+
+GUARDRAILS (ACTIVE):
+- Do NOT recommend products related to weapons, alcohol, or tobacco
+- Do NOT provide medical, legal, or financial advice
+- Flag inappropriate requests politely
+- Keep all responses family-friendly"""
+
+
 def _repair_json(raw: str) -> str:
     """Best-effort repair of common LLM JSON quirks."""
     # Remove trailing commas before ] or }
@@ -73,7 +82,14 @@ class EnhancedChatService:
         self.bedrock = boto3.client('bedrock-runtime', region_name=self.region)
         self.session_storage_dir = "/tmp/blaize-sessions"
         self.db_service = db_service
-        
+        self._agent_stats: Dict[str, Any] = {
+            "query_count": 0,
+            "products_found": 0,
+            "agent_calls_by_type": {},
+            "total_response_time_ms": 0,
+            "avg_response_time_ms": 0,
+        }
+
         # Check Strands availability
         try:
             from strands import Agent
@@ -88,9 +104,22 @@ class EnhancedChatService:
     
 
     
-    def _get_system_prompt(self) -> str:
+    def _track_query(self, products_count: int = 0, duration_ms: int = 0, agent_type: str = "general"):
+        """Update per-session agent stats after a query."""
+        self._agent_stats["query_count"] += 1
+        self._agent_stats["products_found"] += products_count
+        self._agent_stats["agent_calls_by_type"][agent_type] = self._agent_stats["agent_calls_by_type"].get(agent_type, 0) + 1
+        self._agent_stats["total_response_time_ms"] += duration_ms
+        qc = self._agent_stats["query_count"]
+        self._agent_stats["avg_response_time_ms"] = round(self._agent_stats["total_response_time_ms"] / qc) if qc else 0
+
+    def get_agent_stats(self) -> Dict[str, Any]:
+        """Return current session agent stats."""
+        return dict(self._agent_stats)
+
+    def _get_system_prompt(self, guardrails_enabled: bool = False) -> str:
         """Premium concise system prompt for product recommendations"""
-        return """You are Blaize AI, the shopping assistant for Blaize Bazaar — a premium AI-powered e-commerce platform.
+        base = """You are Blaize AI, the shopping assistant for Blaize Bazaar — a premium AI-powered e-commerce platform.
 
 You have direct access to an Aurora PostgreSQL database with 21,000+ products.
 
@@ -165,13 +194,19 @@ Bad suggestions: "Show similar items" (too vague), repeating the original query.
 Base suggestions on the actual products returned — reference price ranges, categories, or features you found.
 
 STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
+
+        if guardrails_enabled:
+            base += GUARDRAILS_SUFFIX
+
+        return base
     
     async def chat(
         self,
         message: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
         session_id: Optional[str] = None,
-        workshop_mode: Optional[str] = None
+        workshop_mode: Optional[str] = None,
+        guardrails_enabled: bool = False
     ) -> Dict[str, Any]:
         """
         Enhanced chat that returns structured product data
@@ -205,9 +240,9 @@ STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
                 )
 
             if workshop_mode == "tools":
-                return await self._single_agent_chat(message, conversation_history, session_id)
+                return await self._single_agent_chat(message, conversation_history, session_id, guardrails_enabled)
 
-            return await self._strands_enhanced_chat(message, conversation_history, session_id)
+            return await self._strands_enhanced_chat(message, conversation_history, session_id, guardrails_enabled)
             
         except Exception as e:
             logger.error(f"❌ Chat failed: {e}", exc_info=True)
@@ -217,7 +252,8 @@ STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
         self,
         message: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
-        session_id: Optional[str] = None
+        session_id: Optional[str] = None,
+        guardrails_enabled: bool = False
     ) -> Dict[str, Any]:
         """Enhanced chat using Strands Orchestrator with specialized agents"""
         logger.info(f"🤖 Processing query with Strands Orchestrator")
@@ -252,7 +288,11 @@ STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
             # Create orchestrator (agents use direct asyncpg via agent_tools.py)
             logger.info(f"🎯 Creating agent orchestrator...")
             orchestrator = create_orchestrator()
-            
+
+            # Inject guardrails into orchestrator system prompt when enabled
+            if guardrails_enabled:
+                orchestrator.system_prompt = (orchestrator.system_prompt or "") + GUARDRAILS_SUFFIX
+
             # Add OpenTelemetry trace attributes
             orchestrator.trace_attributes = {
                 "session.id": session_id or "anonymous",
@@ -342,7 +382,8 @@ CURRENT REQUEST: {message}"""
         self,
         message: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
-        session_id: Optional[str] = None
+        session_id: Optional[str] = None,
+        guardrails_enabled: bool = False
     ):
         """Streaming single-agent mode for Lab 2."""
         import asyncio
@@ -361,13 +402,17 @@ CURRENT REQUEST: {message}"""
                 get_category_price_analysis,
             )
 
+            single_prompt = (
+                "You are a product search assistant for Blaize Bazaar.\n"
+                "Use the available tools to find products, trends, and pricing info.\n"
+                "Return results as JSON with product details. Be concise."
+            )
+            if guardrails_enabled:
+                single_prompt += GUARDRAILS_SUFFIX
+
             agent = Agent(
                 model=BedrockModel(model_id=self.model_id, max_tokens=8192, temperature=0.0),
-                system_prompt=(
-                    "You are a product search assistant for Blaize Bazaar.\n"
-                    "Use the available tools to find products, trends, and pricing info.\n"
-                    "Return results as JSON with product details. Be concise."
-                ),
+                system_prompt=single_prompt,
                 tools=[semantic_product_search, get_trending_products, get_category_price_analysis]
             )
 
@@ -495,6 +540,8 @@ CURRENT REQUEST: {message}"""
                 products_sent = parsed["products"]
 
             duration_ms = int((time.time() - start_time) * 1000)
+            token_count, estimated_cost, cost_breakdown = self._estimate_cost(response_text)
+            self._track_query(products_count=len(products_sent), duration_ms=duration_ms, agent_type="SearchAssistant")
             yield {
                 "type": "complete",
                 "response": {
@@ -509,7 +556,10 @@ CURRENT REQUEST: {message}"""
                         "tool_calls": [], "reasoning_steps": [],
                         "total_duration_ms": duration_ms, "success_rate": 1.0
                     },
-                    "model": self.model_id
+                    "model": self.model_id,
+                    "token_count": token_count,
+                    "estimated_cost_usd": estimated_cost,
+                    "cost_breakdown": cost_breakdown
                 }
             }
 
@@ -521,7 +571,8 @@ CURRENT REQUEST: {message}"""
         self,
         message: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
-        session_id: Optional[str] = None
+        session_id: Optional[str] = None,
+        guardrails_enabled: bool = False
     ) -> Dict[str, Any]:
         """Single-agent mode for Lab 2 — basic tools, no orchestrator routing."""
         import asyncio
@@ -542,18 +593,22 @@ CURRENT REQUEST: {message}"""
                 get_category_price_analysis,
             )
 
+            single_prompt = (
+                "You are a product search assistant for Blaize Bazaar.\n"
+                "Use the available tools to find products, trends, and pricing info.\n"
+                "Return results as JSON with product details.\n"
+                "Be concise and helpful."
+            )
+            if guardrails_enabled:
+                single_prompt += GUARDRAILS_SUFFIX
+
             agent = Agent(
                 model=BedrockModel(
                     model_id=self.model_id,
                     max_tokens=8192,
                     temperature=0.0
                 ),
-                system_prompt=(
-                    "You are a product search assistant for Blaize Bazaar.\n"
-                    "Use the available tools to find products, trends, and pricing info.\n"
-                    "Return results as JSON with product details.\n"
-                    "Be concise and helpful."
-                ),
+                system_prompt=single_prompt,
                 tools=[semantic_product_search, get_trending_products, get_category_price_analysis]
             )
 
@@ -824,6 +879,17 @@ CURRENT REQUEST: {message}"""
 
         return suggestions[:3]
     
+    @staticmethod
+    def _estimate_cost(text: str) -> tuple:
+        """Estimate token count and cost. Returns (token_count, cost_usd, breakdown)."""
+        from services.embeddings import get_cache_stats
+        token_count = int(len(text.split()) * 1.3)
+        llm_cost = round(token_count * 0.000003, 6)
+        embedding_cost = get_cache_stats().get("total_embedding_cost_usd", 0.0)
+        total_cost = round(llm_cost + embedding_cost, 6)
+        breakdown = {"llm_cost": llm_cost, "embedding_cost": embedding_cost}
+        return token_count, total_cost, breakdown
+
     def _error_response(self, error: str) -> Dict[str, Any]:
         """Error response with clear diagnostic information"""
 
@@ -879,7 +945,8 @@ CURRENT REQUEST: {message}"""
         message: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
         session_id: Optional[str] = None,
-        workshop_mode: Optional[str] = None
+        workshop_mode: Optional[str] = None,
+        guardrails_enabled: bool = False
     ):
         """
         Async generator yielding SSE events with real-time agent streaming.
@@ -899,7 +966,7 @@ CURRENT REQUEST: {message}"""
 
         # Workshop mode: single-agent for tools mode
         if workshop_mode == "tools":
-            async for event in self._single_agent_stream(message, conversation_history, session_id):
+            async for event in self._single_agent_stream(message, conversation_history, session_id, guardrails_enabled):
                 yield event
             return
 
@@ -932,6 +999,11 @@ CURRENT REQUEST: {message}"""
                 logger.warning(f"Session manager setup failed: {e}")
 
         orchestrator = create_orchestrator()
+
+        # Inject guardrails into orchestrator system prompt when enabled
+        if guardrails_enabled:
+            orchestrator.system_prompt = (orchestrator.system_prompt or "") + GUARDRAILS_SUFFIX
+
         orchestrator.trace_attributes = {
             "session.id": session_id or "anonymous",
             "user.query": message[:100],
@@ -1139,6 +1211,10 @@ CURRENT REQUEST: {message}"""
                 "success_rate": 1.0
             }
 
+        # Cost estimation
+        token_count, estimated_cost, cost_breakdown = self._estimate_cost(response_text)
+        self._track_query(products_count=len(products_sent), duration_ms=int((time.time() - start_time) * 1000), agent_type="Orchestrator")
+
         # Complete event with full response payload
         try:
             yield {
@@ -1151,7 +1227,10 @@ CURRENT REQUEST: {message}"""
                     "context_tracking": True,
                     "orchestrator_enabled": True,
                     "agent_execution": agent_execution,
-                    "model": self.model_id
+                    "model": self.model_id,
+                    "token_count": token_count,
+                    "estimated_cost_usd": estimated_cost,
+                    "cost_breakdown": cost_breakdown
                 }
             }
         except Exception as e:
