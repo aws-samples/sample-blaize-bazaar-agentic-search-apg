@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../App'
 import { useLayout, type WorkshopMode } from '../contexts/LayoutContext'
 import ImageSearchModal from './ImageSearchModal'
-import { Camera, ShoppingCart, Sun, Moon, Check, Compass } from 'lucide-react'
+import { Camera, ShoppingBag, Sun, Moon, Check, Compass } from 'lucide-react'
 
 interface HeaderProps {
   activeSection?: 'shop' | 'collections'
@@ -240,7 +240,7 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
                   aria-label="Shopping Cart"
                   title="View shopping cart"
                 >
-                  <ShoppingCart className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
+                  <ShoppingBag className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
                   {cartItemCount > 0 && (
                     <span className="absolute -top-1 -right-1 text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse"
                       style={{ background: 'var(--link-color)', color: '#fff' }}>
