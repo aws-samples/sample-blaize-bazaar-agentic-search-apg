@@ -1,6 +1,6 @@
 /**
- * LoginButton — Cognito login/logout + user avatar for Lab 4a.
- * Only visible in 'agentcore' workshop mode.
+ * LoginButton — Cognito login/logout + user avatar.
+ * Visible when Cognito is configured (any mode) or in 'agentcore' mode.
  */
 import { useAuth } from '../contexts/AuthContext'
 import { useLayout } from '../contexts/LayoutContext'
@@ -10,8 +10,10 @@ export default function LoginButton() {
   const { user, isAuthenticated, login, logout, loading } = useAuth()
   const { workshopMode } = useLayout()
 
-  // Only show in Lab 4 (agentcore mode)
-  if (workshopMode !== 'agentcore') return null
+  const cognitoConfigured = !!(import.meta.env.VITE_COGNITO_DOMAIN && import.meta.env.VITE_COGNITO_CLIENT_ID)
+
+  // Show when Cognito is configured (all modes) or in agentcore mode
+  if (!cognitoConfigured && workshopMode !== 'agentcore') return null
 
   if (loading) {
     return (

@@ -425,7 +425,9 @@ CURRENT REQUEST: {message}"""
                 "- Use semantic_product_search for ALL product search queries. It uses hybrid AI search with reranking.\n"
                 "- ONLY use get_trending_products when the user explicitly asks about trending/popular items across ALL categories.\n"
                 "- NEVER call both semantic_product_search AND get_trending_products for the same query.\n"
-                "- Call ONE tool per query, then respond.\n\n"
+                "- Call ONE tool per query, then respond.\n"
+                "- CRITICAL: When the user mentions a price limit (e.g. 'under $50', 'below $200', 'less than $100'), "
+                "ALWAYS pass the max_price parameter to semantic_product_search. Extract the number from the query.\n\n"
                 "RESPONSE RULES:\n"
                 "- Products are displayed as visual cards automatically from tool results.\n"
                 "- Your text response should ONLY be a brief 1-2 sentence conversational intro.\n"
@@ -527,6 +529,7 @@ CURRENT REQUEST: {message}"""
 
             task = asyncio.create_task(run_agent())
             products_sent = []
+            price_limit = self._extract_price_limit(message)
 
             while True:
                 try:
@@ -542,6 +545,10 @@ CURRENT REQUEST: {message}"""
                     yield {"type": "agent_step", "agent": "SearchAssistant", "action": "Searching", "status": "in_progress"}
                     yield {"type": "tool_call", "tool": event["_tool_start"], "status": "executing"}
 
+                elif "_text" in event:
+                    # Stream text tokens to the client in real time
+                    yield {"type": "content_delta", "delta": event["_text"]}
+
                 elif "_tool_done" in event:
                     result_str = event.get("_result", "")
                     if result_str:
@@ -549,6 +556,9 @@ CURRENT REQUEST: {message}"""
                         logger.info(f"📦 Extracted {len(raw_products)} raw products from tool result")
                         if raw_products:
                             formatted = await self._format_products(raw_products)
+                            # Enforce price limit from user query as safety net
+                            if price_limit:
+                                formatted = [p for p in formatted if p.get("price", 0) <= price_limit]
                             sent_ids = {p.get("id") or p.get("productId") for p in products_sent}
                             sent_names = {p.get("name") or p.get("product_description") for p in products_sent}
                             new_products = [
@@ -641,7 +651,9 @@ CURRENT REQUEST: {message}"""
                 "- Use semantic_product_search for ALL product search queries. It uses hybrid AI search with reranking.\n"
                 "- ONLY use get_trending_products when the user explicitly asks about trending/popular items across ALL categories.\n"
                 "- NEVER call both semantic_product_search AND get_trending_products for the same query.\n"
-                "- Call ONE tool per query, then respond.\n\n"
+                "- Call ONE tool per query, then respond.\n"
+                "- CRITICAL: When the user mentions a price limit (e.g. 'under $50', 'below $200', 'less than $100'), "
+                "ALWAYS pass the max_price parameter to semantic_product_search. Extract the number from the query.\n\n"
                 "RESPONSE RULES:\n"
                 "- Products are displayed as visual cards automatically from tool results.\n"
                 "- Your text response should ONLY be a brief 1-2 sentence conversational intro.\n"
@@ -738,6 +750,10 @@ CURRENT REQUEST: {message}"""
                     try:
                         products_data = json.loads(text)
                         result["products"] = await self._format_products(products_data)
+                        # Enforce price limit from user query
+                        plimit = self._extract_price_limit(query)
+                        if plimit:
+                            result["products"] = [p for p in result["products"] if p.get("price", 0) <= plimit]
                         if attempt == 1:
                             logger.info("🔧 JSON repaired successfully")
                         logger.info(f"📦 Extracted {len(result['products'])} products from JSON")
@@ -839,14 +855,14 @@ CURRENT REQUEST: {message}"""
             except (ValueError, TypeError):
                 price = 0.0
 
-            # Synthesize original price: ~40% of products show a discount (10-25%)
+            # Synthesize original price: ~80% of products show a discount (8-30%)
             original_price = None
             discount_percent = 0
-            if product_id:
+            if product_id and price > 0:
                 # Deterministic "discount" based on product ID hash
                 pid_hash = sum(ord(c) for c in str(product_id))
-                if pid_hash % 5 < 2:  # ~40% of products
-                    discount_pct = 10 + (pid_hash % 16)  # 10-25%
+                if pid_hash % 5 < 4:  # ~80% of products
+                    discount_pct = 8 + (pid_hash % 23)  # 8-30%
                     original_price = round(price / (1 - discount_pct / 100), 2)
                     discount_percent = discount_pct
 
@@ -976,6 +992,25 @@ CURRENT REQUEST: {message}"""
             "error": str(error),
             "diagnostics": diagnostics
         }
+
+    @staticmethod
+    @staticmethod
+    def _extract_price_limit(message: str) -> float | None:
+        """Extract a price ceiling from user message (e.g. 'under $50' → 50.0)."""
+        import re
+        patterns = [
+            r'under\s+\$?\s*(\d+(?:\.\d+)?)',
+            r'below\s+\$?\s*(\d+(?:\.\d+)?)',
+            r'less\s+than\s+\$?\s*(\d+(?:\.\d+)?)',
+            r'up\s+to\s+\$?\s*(\d+(?:\.\d+)?)',
+            r'max(?:imum)?\s+\$?\s*(\d+(?:\.\d+)?)',
+            r'\$\s*(\d+(?:\.\d+)?)\s+(?:or\s+)?(?:less|max|budget|limit)',
+        ]
+        for pat in patterns:
+            m = re.search(pat, message, re.IGNORECASE)
+            if m:
+                return float(m.group(1))
+        return None
 
     @staticmethod
     def _tool_to_agent_name(tool_name: str) -> str:
@@ -1212,6 +1247,7 @@ CURRENT REQUEST: {message}"""
         # --- Process events from queue in real-time ---
         products_sent = []
         current_tool = None
+        price_limit = self._extract_price_limit(message)
 
         while True:
             try:
@@ -1244,6 +1280,9 @@ CURRENT REQUEST: {message}"""
                     raw_products = self._extract_products_from_result(result_str)
                     if raw_products:
                         formatted = await self._format_products(raw_products)
+                        # Enforce price limit from user query as safety net
+                        if price_limit:
+                            formatted = [p for p in formatted if p.get("price", 0) <= price_limit]
                         # Deduplicate: skip products already sent (by id or name)
                         sent_ids = {p.get("id") or p.get("productId") for p in products_sent}
                         sent_names = {p.get("name") or p.get("product_description") for p in products_sent}
@@ -1269,8 +1308,9 @@ CURRENT REQUEST: {message}"""
                     "status": "completed"
                 }
 
-            # Text tokens — accumulated for clean text at end
-            # (Streaming raw tokens would expose JSON blocks in the chat)
+            elif "_text" in event:
+                # Stream text tokens to the client in real time
+                yield {"type": "content_delta", "delta": event["_text"]}
 
         # --- Await orchestrator completion ---
         await task

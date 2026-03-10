@@ -124,6 +124,8 @@ export async function sendChatMessageStreaming(
               // Track content updates
               if (data.type === 'content') {
                 lastContent = data.content
+              } else if (data.type === 'content_delta') {
+                lastContent += data.delta
               }
 
               if (data.type === 'complete') {

@@ -33,7 +33,8 @@ import RuntimeStatusPanel from './components/RuntimeStatusPanel'
 import PolicyDemoPanel from './components/PolicyDemoPanel'
 import GraphVisualization from './components/GraphVisualization'
 import SpotlightWalkthrough from './components/SpotlightWalkthrough'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
+import SignInPage from './components/SignInPage'
 import type { TourAction } from './data/tourSteps'
 import { Database, BarChart3, Brain, Wrench, X, Zap, Activity, DollarSign, Shield, BookOpen, User, AlertOctagon, Search, FileCode, GitBranch } from 'lucide-react'
 import './styles/premium-heading-styles.css'
@@ -1286,11 +1287,37 @@ function AppContent() {
   )
 }
 
+function AuthGate() {
+  const { isAuthenticated, loading } = useAuth()
+  const cognitoConfigured = !!(import.meta.env.VITE_COGNITO_DOMAIN && import.meta.env.VITE_COGNITO_CLIENT_ID)
+
+  // If Cognito isn't configured, skip auth gate
+  if (!cognitoConfigured) return <AppContent />
+
+  // Loading state while checking tokens
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#000' }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-white/20 border-t-white/70 rounded-full animate-spin" />
+          <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Not authenticated — show sign-in page
+  if (!isAuthenticated) return <SignInPage />
+
+  // Authenticated — show main app
+  return <AppContent />
+}
+
 function App() {
   return (
     <AuthProvider>
       <LayoutProvider>
-        <AppContent />
+        <AuthGate />
       </LayoutProvider>
     </AuthProvider>
   )

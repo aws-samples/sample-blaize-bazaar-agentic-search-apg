@@ -28,7 +28,7 @@ interface Message {
   products?: ChatProduct[]
   suggestions?: string[]
   agent?: 'search' | 'pricing' | 'recommendation' | 'orchestrator'
-  agentStatus?: 'thinking' | 'complete'
+  agentStatus?: 'thinking' | 'streaming' | 'complete'
   agentExecution?: AgentExecution
 }
 
@@ -77,13 +77,13 @@ const AIAssistant = () => {
     }
     return [{
       role: 'assistant',
-      content: 'I can help you find products, compare options, and get recommendations. What are you looking for?',
+      content: "Hey! I'm your AI shopping assistant. I can search our entire catalog, compare products side by side, analyze pricing trends, and check what's in stock — all in one conversation. What are you working with today?",
       timestamp: new Date(),
       suggestions: [
-        'Luxury fragrances under $100',
-        'Best laptops for programming',
-        'Top-rated running shoes',
-        'Trending smartwatches'
+        'Compare the top 5 laptops under $1000',
+        "What's trending in electronics right now?",
+        'Find me running shoes with the best reviews',
+        'I need a gift under $50 — surprise me'
       ]
     }]
   }
@@ -101,12 +101,13 @@ const AIAssistant = () => {
   }
 
   useEffect(() => {
-    scrollToBottom()
+    // Debounce scroll to avoid jank during rapid streaming updates
+    const scrollTimeout = setTimeout(scrollToBottom, 50)
     // Debounce localStorage writes to avoid thrashing during rapid SSE events
-    const timeout = setTimeout(() => {
+    const storageTimeout = setTimeout(() => {
       localStorage.setItem('blaize-conversation-history', JSON.stringify(messages))
     }, 500)
-    return () => clearTimeout(timeout)
+    return () => { clearTimeout(scrollTimeout); clearTimeout(storageTimeout) }
   }, [messages])
 
   useEffect(() => {
@@ -117,15 +118,16 @@ const AIAssistant = () => {
     localStorage.removeItem('blaize-conversation-history')
     localStorage.removeItem('blaize-session-id')
     responseCache.clear()
+    // Reset to the welcome message (same as first-time load)
     setMessages([{
       role: 'assistant',
-      content: 'Fresh start! What can I help you find?',
+      content: "Hey! I'm your AI shopping assistant. I can search our entire catalog, compare products side by side, analyze pricing trends, and check what's in stock — all in one conversation. What are you working with today?",
       timestamp: new Date(),
       suggestions: [
-        'Best smartphones under $500',
-        'Show me premium sunglasses',
-        'Comfortable furniture for home',
-        'Top kitchen essentials'
+        'Compare the top 5 laptops under $1000',
+        "What's trending in electronics right now?",
+        'Find me running shoes with the best reviews',
+        'I need a gift under $50 — surprise me'
       ]
     }])
   }
@@ -220,16 +222,27 @@ const AIAssistant = () => {
               }
               return updated
             })
-          } else if (data.type === 'content') {
+          } else if (data.type === 'content_delta') {
+            // Streaming: append token progressively for live typing effect
             setMessages(prev => {
               const updated = [...prev]
               const lastMsg = updated[updated.length - 1]
+              lastMsg.content = (lastMsg.content || '') + data.delta
               if (lastMsg.agentStatus === 'thinking') {
-                lastMsg.content = data.content
-                // Switch from thinking to showing content
+                lastMsg.agentStatus = 'streaming'
                 lastMsg.agentExecution = undefined
               }
-              return updated
+              return [...updated]
+            })
+          } else if (data.type === 'content') {
+            // Final clean content replaces streamed text
+            setMessages(prev => {
+              const updated = [...prev]
+              const lastMsg = updated[updated.length - 1]
+              lastMsg.content = data.content
+              lastMsg.agentStatus = 'complete'
+              lastMsg.agentExecution = undefined
+              return [...updated]
             })
           } else if (data.type === 'product') {
             // Product arrived — append to the current message's products
@@ -393,10 +406,15 @@ const AIAssistant = () => {
             <div className="px-5 py-4 rounded-t-[20px] flex justify-between items-center flex-shrink-0"
               style={{ borderBottom: theme === 'dark' ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.08)' }}>
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden"
-                  style={{ boxShadow: '0 0 20px rgba(255, 255, 255, 0.08)' }}>
+                <motion.div
+                  className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0"
+                  style={{ boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)', border: '1.5px solid var(--border-color)' }}
+                  animate={{ y: [0, -3, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                  whileHover={{ scale: 1.15 }}
+                >
                   <img src={`${import.meta.env.BASE_URL}chat-icon.jpeg`} alt="AI" className="w-full h-full object-cover" />
-                </div>
+                </motion.div>
                 <div>
                   <div className="font-medium text-sm text-text-primary">Blaize AI</div>
                   <div className="text-[11px] flex items-center gap-1">
@@ -411,9 +429,9 @@ const AIAssistant = () => {
                         Offline
                       </span>
                     ) : (
-                      <span className="text-text-secondary flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                        Ready
+                      <span className="flex items-center gap-1" style={{ color: '#22c55e' }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#22c55e' }} />
+                        {workshopMode === 'agentcore' ? '5' : workshopMode === 'full' ? '3' : '1'} agent{workshopMode !== 'tools' ? 's' : ''} online
                       </span>
                     )}
                   </div>
@@ -480,45 +498,74 @@ const AIAssistant = () => {
                   <motion.div
                     key={`${index}-${message.timestamp.getTime()}`}
                     className="flex flex-col gap-2.5"
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, x: message.role === 'user' ? 20 : -20 }}
+                    animate={{ opacity: 1, x: 0 }}
                     transition={{
                       type: 'spring',
                       stiffness: 400,
                       damping: 30,
                       delay: index === messages.length - 1 ? 0.05 : 0,
                     }}
-                    layout
                   >
                     {/* Text-only messages */}
                     {!(message.products && message.products.length > 0) && (
                       <div className={message.role === 'assistant' ? 'self-start max-w-[90%]' : 'self-end max-w-[85%]'}>
-                        {/* Agent label */}
-                        {message.role === 'assistant' && message.agent && (
-                          <div className="flex items-center gap-1.5 ml-1 mb-1.5">
-                            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                              style={{ background: AGENT_IDENTITIES[message.agent as AgentType]?.gradient || 'linear-gradient(135deg, #444, #666)' }}>
-                              {AGENT_IDENTITIES[message.agent as AgentType]?.icon || 'A'}
-                            </div>
-                            <span className="text-[10px] font-medium" style={{ color: 'var(--text-secondary)' }}>
-                              {AGENT_IDENTITIES[message.agent as AgentType]?.name || 'AI'}
-                            </span>
-                          </div>
-                        )}
-
                         <div
-                          className="px-4 py-3 text-[14px] leading-relaxed"
+                          className={`px-4 py-3 text-[14px] leading-relaxed ${
+                            message.role === 'user' ? 'rounded-2xl rounded-br-sm' : 'rounded-2xl rounded-bl-sm'
+                          }`}
                           style={{
                             background: message.role === 'user'
                               ? (theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#0071e3')
-                              : (theme === 'dark' ? 'rgba(255, 255, 255, 0.04)' : '#f5f5f7'),
+                              : (theme === 'dark' ? 'rgba(255, 255, 255, 0.06)' : '#f2f2f7'),
                             border: message.role === 'assistant'
                               ? (theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)')
                               : 'none',
                             color: message.role === 'user' && theme === 'light' ? '#ffffff' : 'var(--text-primary)',
-                            borderRadius: message.role === 'user' ? '20px 20px 6px 20px' : '20px 20px 20px 6px',
                           }}
                         >
+                          {/* Inline agent badges */}
+                          {message.role === 'assistant' && message.agent && message.agentStatus !== 'thinking' && (
+                            <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                              {message.agent === 'orchestrator' && message.agentExecution?.agent_steps ? (
+                                message.agentExecution.agent_steps
+                                  .filter(s => s.agent !== 'Orchestrator' && s.agent !== 'Aggregator')
+                                  .map((step, i) => {
+                                    const badgeColors: Record<string, { bg: string; text: string }> = {
+                                      'SearchAssistant': { bg: 'rgba(59, 130, 246, 0.2)', text: '#93c5fd' },
+                                      'Search Agent': { bg: 'rgba(59, 130, 246, 0.2)', text: '#93c5fd' },
+                                      'Pricing Agent': { bg: 'rgba(245, 158, 11, 0.2)', text: '#fcd34d' },
+                                      'Price Optimization': { bg: 'rgba(245, 158, 11, 0.2)', text: '#fcd34d' },
+                                      'Recommendation': { bg: 'rgba(234, 179, 8, 0.2)', text: '#fde047' },
+                                      'Product Recommendation': { bg: 'rgba(234, 179, 8, 0.2)', text: '#fde047' },
+                                      'Inventory': { bg: 'rgba(16, 185, 129, 0.2)', text: '#6ee7b7' },
+                                      'Inventory & Restock': { bg: 'rgba(16, 185, 129, 0.2)', text: '#6ee7b7' },
+                                    }
+                                    const colors = badgeColors[step.agent] || { bg: 'rgba(168, 85, 247, 0.2)', text: '#c084fc' }
+                                    return (
+                                      <span key={i} className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                                        style={{ background: colors.bg, color: colors.text }}>
+                                        {step.agent}
+                                      </span>
+                                    )
+                                  })
+                              ) : (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                                  style={{
+                                    background: message.agent === 'search' ? 'rgba(59, 130, 246, 0.2)'
+                                      : message.agent === 'pricing' ? 'rgba(245, 158, 11, 0.2)'
+                                      : message.agent === 'recommendation' ? 'rgba(234, 179, 8, 0.2)'
+                                      : 'rgba(168, 85, 247, 0.2)',
+                                    color: message.agent === 'search' ? '#93c5fd'
+                                      : message.agent === 'pricing' ? '#fcd34d'
+                                      : message.agent === 'recommendation' ? '#fde047'
+                                      : '#c084fc',
+                                  }}>
+                                  {AGENT_IDENTITIES[message.agent as AgentType]?.name || 'AI'}
+                                </span>
+                              )}
+                            </div>
+                          )}
                           {/* Thinking skeleton */}
                           {message.agentStatus === 'thinking' && !message.content ? (
                             <div className="flex items-center gap-2.5 py-1">
@@ -530,7 +577,17 @@ const AIAssistant = () => {
                               <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Thinking...</span>
                             </div>
                           ) : message.role === 'assistant' ? (
-                            <MarkdownMessage content={message.content} />
+                            <>
+                              <MarkdownMessage content={message.content} />
+                              {message.agentStatus === 'streaming' && (
+                                <motion.span
+                                  className="inline-block w-2 h-4 ml-0.5 align-middle rounded-sm"
+                                  style={{ background: 'var(--link-color, #6366f1)' }}
+                                  animate={{ opacity: [1, 0] }}
+                                  transition={{ duration: 0.6, repeat: Infinity, repeatType: 'reverse' }}
+                                />
+                              )}
+                            </>
                           ) : (
                             <span style={{ whiteSpace: 'pre-wrap' }}>{message.content}</span>
                           )}
@@ -542,12 +599,18 @@ const AIAssistant = () => {
                     {message.products && message.products.length > 0 && (
                       <div className="flex flex-col gap-2.5 w-full">
                         {message.agent && (
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                              style={{ background: AGENT_IDENTITIES[message.agent as AgentType]?.gradient || 'linear-gradient(135deg, #444, #666)' }}>
-                              {AGENT_IDENTITIES[message.agent as AgentType]?.icon || 'A'}
-                            </div>
-                            <span className="text-[10px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                              style={{
+                                background: message.agent === 'search' ? 'rgba(59, 130, 246, 0.2)'
+                                  : message.agent === 'pricing' ? 'rgba(245, 158, 11, 0.2)'
+                                  : message.agent === 'recommendation' ? 'rgba(234, 179, 8, 0.2)'
+                                  : 'rgba(168, 85, 247, 0.2)',
+                                color: message.agent === 'search' ? '#93c5fd'
+                                  : message.agent === 'pricing' ? '#fcd34d'
+                                  : message.agent === 'recommendation' ? '#fde047'
+                                  : '#c084fc',
+                              }}>
                               {AGENT_IDENTITIES[message.agent as AgentType]?.name || 'AI'}
                             </span>
                           </div>
@@ -754,7 +817,7 @@ const AIAssistant = () => {
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: idx * 0.06, type: 'spring', stiffness: 400, damping: 25 }}
-                            whileHover={{ scale: 1.05, borderColor: 'rgba(255, 255, 255, 0.25)' }}
+                            whileHover={{ scale: 1.05, borderColor: 'rgba(255, 255, 255, 0.25)', boxShadow: '0 0 12px rgba(99, 102, 241, 0.15)' }}
                             whileTap={{ scale: 0.95 }}
                           >
                             {suggestion}
@@ -782,7 +845,7 @@ const AIAssistant = () => {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder={isLoading ? 'Searching...' : 'Ask for products...'}
+                  placeholder={isLoading ? 'Searching...' : "Try: 'compare headphones under $200' or 'what's trending?'"}
                   disabled={isLoading}
                   className="flex-1 px-4 py-3 rounded-xl text-sm disabled:opacity-40 text-text-primary placeholder-text-secondary focus:outline-none focus:ring-1 focus:ring-white/20"
                   style={{
@@ -793,11 +856,11 @@ const AIAssistant = () => {
                 <motion.button
                   onClick={() => handleSend()}
                   disabled={!inputValue.trim() || isLoading}
-                  className="px-5 py-3 rounded-xl font-medium disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
                   style={{
                     background: inputValue.trim() && !isLoading
                       ? 'var(--link-color)'
-                      : 'rgba(255, 255, 255, 0.04)',
+                      : theme === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
                   }}
                   whileHover={inputValue.trim() && !isLoading ? { scale: 1.05 } : {}}
                   whileTap={inputValue.trim() && !isLoading ? { scale: 0.95 } : {}}
