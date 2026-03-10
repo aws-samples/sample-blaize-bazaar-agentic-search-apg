@@ -44,7 +44,29 @@
       "Bash(python -c \"import ast; ast.parse\\(open\\(''services/business_logic.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Python syntax OK''\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\(''services/guardrails.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Python syntax OK''\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\(''services/embeddings.py''\\).read\\(\\)\\); ast.parse\\(open\\(''services/guardrails.py''\\).read\\(\\)\\); ast.parse\\(open\\(''services/business_logic.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Python syntax OK''\\)\")",
-      "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Python syntax OK''\\)\")"
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Python syntax OK''\\)\")",
+      "Bash(grep -l \"Results\\\\|Grid\\\\|Card\" /Users/shayons/Desktop/Workshops/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/frontend/src/components/*.tsx)",
+      "Bash(grep -n \"ProductCardCompact\" /Users/shayons/Desktop/Workshops/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/frontend/src/components/*.tsx)",
+      "Bash(npx vite build)",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(curl -s http://localhost:8000/api/search -X POST -H \"Content-Type: application/json\" -d '{\"\"query\"\":\"\"running shoes\"\",\"\"limit\"\":5,\"\"search_mode\"\":\"\"keyword\"\"}')",
+      "Bash(ps -p 41115 -o command=)",
+      "Bash(ls /Users/shayons/Desktop/Workshops/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/frontend/vite* /Users/shayons/Desktop/Workshops/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/frontend/.env*)",
+      "Bash(curl -s http://localhost:5173/api/search -X POST -H \"Content-Type: application/json\" -d '{\"\"query\"\":\"\"running shoes\"\",\"\"limit\"\":5,\"\"search_mode\"\":\"\"keyword\"\"}')",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:aws.amazon.com)",
+      "Bash(aws bedrock list-inference-profiles --region us-west-2 --query \"inferenceProfileSummaries[?contains\\(inferenceProfileId, ''cohere''\\)]\" --output json)",
+      "Bash(aws bedrock list-foundation-models --region us-west-2 --query \"modelSummaries[?contains\\(modelId, ''cohere''\\)].{id:modelId,name:modelName,status:modelLifecycle.status}\" --output table)",
+      "Bash(lsof -ti:8001)",
+      "Bash(lsof -ti:5173)",
+      "Bash(curl -s -X POST http://localhost:8001/api/search -H 'Content-Type: application/json' -d '{\"\"query\"\":\"\"running shoes\"\",\"\"search_mode\"\":\"\"vector\"\",\"\"limit\"\":3}')",
+      "Bash(curl -s \"http://localhost:8001/api/products/category/Fragrances?limit=3\")",
+      "Bash(curl -s -X POST http://localhost:8001/api/chat -H 'Content-Type: application/json' -d '{\"\"message\"\":\"\"show me perfumes\"\",\"\"session_id\"\":\"\"test-debug\"\"}')",
+      "Bash(curl -s -X POST http://localhost:8001/api/chat -H 'Content-Type: application/json' -d '{\"\"message\"\":\"\"show me perfumes\"\",\"\"session_id\"\":\"\"test-debug-2\"\"}')",
+      "Bash(python3:*)",
+      "Bash(curl -s -X POST http://localhost:8001/api/chat/stream -H \"Content-Type: application/json\" -d '{\"\"message\"\":\"\"running shoes\"\",\"\"conversation_history\"\":[],\"\"workshop_mode\"\":\"\"tools\"\"}')",
+      "Bash(curl -s -X POST http://localhost:8001/api/chat/stream -H \"Content-Type: application/json\" -d '{\"\"message\"\":\"\"top kitchen essentials\"\",\"\"conversation_history\"\":[],\"\"workshop_mode\"\":\"\"tools\"\"}')",
+      "Bash(npm install react-markdown)"
     ]
   }
 }

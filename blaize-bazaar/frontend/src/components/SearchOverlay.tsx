@@ -74,6 +74,23 @@ const SearchOverlay = ({
   const { theme } = useTheme()
   const sortRef = useRef<HTMLDivElement>(null)
 
+  // Dual-mode state (Lab 1 / semantic comparison)
+  const [keywordResults, setKeywordResults] = useState<SearchResult[]>([])
+  const [keywordLatency, setKeywordLatency] = useState('0ms')
+  const [keywordLoading, setKeywordLoading] = useState(false)
+  const [semanticResults, setSemanticResults] = useState<SearchResult[]>([])
+  const [semanticLatency, setSemanticLatency] = useState('0ms')
+  const [semanticLoading, setSemanticLoading] = useState(false)
+  const isDualMode = workshopMode === 'semantic'
+
+  // Hybrid + Rerank state
+  const [rerankResults, setRerankResults] = useState<any[]>([])
+  const [rerankLoading, setRerankLoading] = useState(false)
+  const [rerankPipeline, setRerankPipeline] = useState<any>(null)
+  const [rerankTiming, setRerankTiming] = useState<any>(null)
+  const [rerankRevealed, setRerankRevealed] = useState(false)
+  const rerankSectionRef = useRef<HTMLDivElement>(null)
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -82,9 +99,18 @@ const SearchOverlay = ({
       setCurrentPage(1)
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
-        setResults([])
-        setAllResults([])
-        performSearch()
+        if (isDualMode) {
+          setKeywordResults([])
+          setSemanticResults([])
+          setRerankResults([])
+          setRerankPipeline(null)
+          setRerankTiming(null)
+          performDualSearch()
+        } else {
+          setResults([])
+          setAllResults([])
+          performSearch()
+        }
       }, 300)
     }
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
@@ -99,7 +125,7 @@ const SearchOverlay = ({
 
       let response
       if (isCategorySearch) {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+        const apiUrl = import.meta.env.VITE_API_URL || ''
         const res = await fetch(`${apiUrl}/api/products/category/${encodeURIComponent(searchTerm)}?limit=10`)
         response = await res.json()
         setIsSemanticSearch(false)
@@ -146,6 +172,140 @@ const SearchOverlay = ({
       setLoading(false)
     }
   }
+
+  const transformApiResults = (response: any): SearchResult[] => {
+    if (!response || !response.results || !Array.isArray(response.results)) return []
+    return response.results.map((r: any) => {
+      const product = r.product || r
+      return {
+        id: product.productId || product.id || '',
+        name: product.product_description || product.name || '',
+        category: product.category_name || product.category || 'General',
+        price: product.price || 0,
+        icon: product.imgurl || product.image_url || '',
+        similarity: product.similarity_score || r.similarity_score || 0,
+        stars: product.stars || 0,
+        reviews: product.reviews || 0,
+        productUrl: product.producturl || product.productUrl || ''
+      }
+    })
+  }
+
+  const performDualSearch = async () => {
+    setKeywordLoading(true)
+    setSemanticLoading(true)
+    setRerankLoading(true)
+    setRerankResults([])
+    setRerankPipeline(null)
+    setRerankTiming(null)
+    setRerankRevealed(false)
+
+    await Promise.allSettled([
+      (async () => {
+        const startTime = performance.now()
+        try {
+          const response = await apiClient.search({
+            query: searchTerm,
+            limit: 10,
+            min_similarity: 0.0,
+            search_mode: 'keyword'
+          })
+          setKeywordLatency(`${Math.round(performance.now() - startTime)}ms`)
+          setKeywordResults(transformApiResults(response))
+        } catch {
+          setKeywordResults([])
+        } finally {
+          setKeywordLoading(false)
+        }
+      })(),
+      (async () => {
+        const startTime = performance.now()
+        try {
+          const response = await apiClient.search({
+            query: searchTerm,
+            limit: 10,
+            min_similarity: 0.0,
+            search_mode: 'vector'
+          })
+          setSemanticLatency(`${Math.round(performance.now() - startTime)}ms`)
+          setSemanticResults(transformApiResults(response))
+        } catch {
+          setSemanticResults([])
+        } finally {
+          setSemanticLoading(false)
+        }
+      })()
+    ])
+
+    setLoading(false)
+
+    // Fire hybrid-rerank after keyword+semantic complete
+    try {
+      const res = await fetch('/api/search/hybrid-rerank', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: searchTerm, limit: 5, min_similarity: 0.0 })
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setRerankResults(data.results || [])
+        setRerankPipeline(data.pipeline || null)
+        setRerankTiming(data.timing || null)
+      }
+    } catch (err) {
+      console.error('Hybrid rerank failed:', err)
+    } finally {
+      setRerankLoading(false)
+    }
+  }
+
+  // Render comparison card inline (not as a component to avoid remount flicker)
+  const renderComparisonCard = (result: SearchResult, index: number, showSimilarity: boolean) => (
+    <motion.a
+      key={result.id}
+      href={result.productUrl || '#'}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex gap-3 p-3 rounded-xl transition-all group/card"
+      style={{
+        background: theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)',
+        border: `1px solid ${theme === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'}`,
+      }}
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      whileHover={{ scale: 1.01 }}
+    >
+      <span className="text-sm font-bold flex-shrink-0 w-6 text-center mt-1" style={{ color: 'var(--text-secondary)' }}>
+        #{index + 1}
+      </span>
+      <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0" style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}>
+        {result.icon ? (
+          <img src={result.icon} alt={result.name} className="w-full h-full object-cover"
+            onError={(e) => { e.currentTarget.style.display = 'none' }} />
+        ) : (
+          <Package className="h-6 w-6 m-auto mt-4 text-text-secondary opacity-30" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-text-primary line-clamp-2 leading-snug">{result.name}</p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-xs text-text-secondary">{result.category}</span>
+          <span className="text-sm font-semibold text-text-primary">${result.price.toFixed(2)}</span>
+        </div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <div className="flex items-center gap-0.5">{renderStars(result.stars, 'h-2.5 w-2.5')}</div>
+          <span className="text-[10px] text-text-secondary">({result.reviews.toLocaleString()})</span>
+          {showSimilarity && result.similarity > 0 && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full ml-auto"
+              style={{ background: 'rgba(59, 130, 246, 0.1)', color: 'rgba(96, 165, 250, 0.9)' }}>
+              {Math.round(result.similarity * 100)}% match
+            </span>
+          )}
+        </div>
+      </div>
+    </motion.a>
+  )
 
   // Filter + sort
   useEffect(() => {
@@ -231,7 +391,7 @@ const SearchOverlay = ({
             exit={{ opacity: 0, y: 20 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           >
-            <div className="max-w-[1200px] w-full mx-auto flex flex-col h-full px-4 md:px-6 pt-6 pb-4">
+            <div className={`${isDualMode ? 'max-w-[1400px]' : 'max-w-[1200px]'} w-full mx-auto flex flex-col h-full px-4 md:px-6 pt-6 pb-4`}>
               {/* Glass container */}
               <div className="flex flex-col flex-1 min-h-0 rounded-2xl overflow-hidden"
                 style={{
@@ -250,10 +410,10 @@ const SearchOverlay = ({
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
                         style={{ background: 'var(--input-bg)', border: '1px solid var(--border-color)' }}>
-                        <Sparkles className="h-4.5 w-4.5 text-text-secondary" />
+                        {isDualMode ? <Zap className="h-4.5 w-4.5 text-text-secondary" /> : <Sparkles className="h-4.5 w-4.5 text-text-secondary" />}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-text-secondary text-xs font-medium uppercase tracking-widest mb-0.5">Results for</div>
+                        <div className="text-text-secondary text-xs font-medium uppercase tracking-widest mb-0.5">{isDualMode ? 'Comparing results for' : 'Results for'}</div>
                         <h2 className="text-xl md:text-2xl font-light text-text-primary truncate" style={{ letterSpacing: '-0.5px' }}>
                           {searchTerm}
                         </h2>
@@ -262,17 +422,31 @@ const SearchOverlay = ({
 
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {/* Stats pills */}
-                      <div className="hidden md:flex items-center gap-2">
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
-                          style={{ background: 'var(--input-bg)', border: '1px solid var(--border-color)' }}>
-                          <Zap className="h-3 w-3 text-amber-400" />
-                          <span className="text-text-primary font-medium">{latency}</span>
+                      {isDualMode ? (
+                        <div className="hidden md:flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
+                            style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+                            <span className="text-xs font-medium" style={{ color: '#f87171' }}>Keyword</span>
+                          </div>
+                          <span className="text-text-secondary text-xs">vs</span>
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
+                            style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                            <span className="text-xs font-medium" style={{ color: '#60a5fa' }}>Semantic</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
-                          style={{ background: 'var(--input-bg)', border: '1px solid var(--border-color)' }}>
-                          <span className="text-text-primary font-medium">{displayResults.length} results</span>
+                      ) : (
+                        <div className="hidden md:flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
+                            style={{ background: 'var(--input-bg)', border: '1px solid var(--border-color)' }}>
+                            <Zap className="h-3 w-3 text-amber-400" />
+                            <span className="text-text-primary font-medium">{latency}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs"
+                            style={{ background: 'var(--input-bg)', border: '1px solid var(--border-color)' }}>
+                            <span className="text-text-primary font-medium">{displayResults.length} results</span>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Close */}
                       <button
@@ -287,8 +461,8 @@ const SearchOverlay = ({
                     </div>
                   </div>
 
-                  {/* Filters + Sort row */}
-                  <div className="flex items-center justify-between mt-4 gap-4">
+                  {/* Filters + Sort row (hidden in dual mode) */}
+                  {!isDualMode && <div className="flex items-center justify-between mt-4 gap-4">
                     <div className="flex items-center gap-2.5 flex-wrap flex-1">
                       {/* Price label */}
                       <span className="text-[10px] text-text-secondary font-semibold uppercase tracking-wider">Price</span>
@@ -411,11 +585,322 @@ const SearchOverlay = ({
                         )}
                       </AnimatePresence>
                     </div>
-                  </div>
+                  </div>}
                 </div>
 
                 {/* Results area */}
                 <div className="flex-1 overflow-y-auto p-6 md:p-8 search-scroll">
+                  {isDualMode ? (
+                    <>
+                    {/* ===== DUAL-PANEL COMPARISON MODE (Lab 1 / Semantic) ===== */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[1300px] mx-auto">
+                      {/* LEFT: Keyword Search Results */}
+                      <div className="flex flex-col">
+                        <div className="mb-4 p-4 rounded-xl"
+                          style={{
+                            background: theme === 'dark' ? 'rgba(239, 68, 68, 0.06)' : 'rgba(239, 68, 68, 0.04)',
+                            border: `1px solid ${theme === 'dark' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.12)'}`,
+                          }}>
+                          <div className="flex items-center justify-between mb-1">
+                            <h3 className="text-base font-semibold" style={{ color: theme === 'dark' ? '#f87171' : '#dc2626' }}>
+                              Keyword Search
+                            </h3>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono" style={{ color: theme === 'dark' ? 'rgba(248, 113, 113, 0.7)' : 'rgba(220, 38, 38, 0.7)' }}>
+                                {keywordLatency}
+                              </span>
+                              <span className="text-xs px-2 py-0.5 rounded-full"
+                                style={{ background: 'rgba(239, 68, 68, 0.1)', color: theme === 'dark' ? '#fca5a5' : '#ef4444' }}>
+                                {keywordResults.length} results
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            Traditional full-text pattern matching
+                          </p>
+                        </div>
+
+                        <div className="space-y-2 flex-1 overflow-y-auto search-scroll">
+                          {keywordLoading ? (
+                            Array.from({ length: 4 }).map((_, i) => (
+                              <div key={i} className="p-3 rounded-xl animate-pulse flex gap-3"
+                                style={{ background: 'var(--input-bg)', border: '1px solid var(--border-color)' }}>
+                                <div className="w-6 flex-shrink-0" />
+                                <div className="w-14 h-14 rounded-lg skeleton-shimmer flex-shrink-0" />
+                                <div className="flex-1">
+                                  <div className="h-3 skeleton-shimmer rounded w-4/5 mb-2" />
+                                  <div className="h-2.5 skeleton-shimmer rounded w-1/2" />
+                                </div>
+                              </div>
+                            ))
+                          ) : keywordResults.length === 0 ? (
+                            <div className="text-center py-12">
+                              <Search className="h-8 w-8 mx-auto mb-3 opacity-20 text-text-secondary" />
+                              <p className="text-text-secondary text-sm">No keyword matches found</p>
+                              <p className="text-text-secondary text-xs mt-1 opacity-60">
+                                Keyword search can't understand intent
+                              </p>
+                            </div>
+                          ) : (
+                            keywordResults.map((result, index) =>
+                              renderComparisonCard(result, index, false)
+                            )
+                          )}
+                        </div>
+                      </div>
+
+                      {/* RIGHT: Semantic Search Results */}
+                      <div className="flex flex-col">
+                        <div className="mb-4 p-4 rounded-xl"
+                          style={{
+                            background: theme === 'dark' ? 'rgba(59, 130, 246, 0.06)' : 'rgba(59, 130, 246, 0.04)',
+                            border: `1px solid ${theme === 'dark' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.12)'}`,
+                          }}>
+                          <div className="flex items-center justify-between mb-1">
+                            <h3 className="text-base font-semibold" style={{ color: theme === 'dark' ? '#60a5fa' : '#2563eb' }}>
+                              Semantic Search
+                            </h3>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-mono" style={{ color: theme === 'dark' ? 'rgba(96, 165, 250, 0.7)' : 'rgba(37, 99, 235, 0.7)' }}>
+                                {semanticLatency}
+                              </span>
+                              <span className="text-xs px-2 py-0.5 rounded-full"
+                                style={{ background: 'rgba(59, 130, 246, 0.1)', color: theme === 'dark' ? '#93c5fd' : '#3b82f6' }}>
+                                {semanticResults.length} results
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                            pgvector HNSW — understands meaning and intent
+                          </p>
+                        </div>
+
+                        <div className="space-y-2 flex-1 overflow-y-auto search-scroll">
+                          {semanticLoading ? (
+                            Array.from({ length: 4 }).map((_, i) => (
+                              <div key={i} className="p-3 rounded-xl animate-pulse flex gap-3"
+                                style={{ background: 'var(--input-bg)', border: '1px solid var(--border-color)' }}>
+                                <div className="w-6 flex-shrink-0" />
+                                <div className="w-14 h-14 rounded-lg skeleton-shimmer flex-shrink-0" />
+                                <div className="flex-1">
+                                  <div className="h-3 skeleton-shimmer rounded w-4/5 mb-2" />
+                                  <div className="h-2.5 skeleton-shimmer rounded w-1/2" />
+                                </div>
+                              </div>
+                            ))
+                          ) : semanticResults.length === 0 ? (
+                            <div className="text-center py-12">
+                              <Sparkles className="h-8 w-8 mx-auto mb-3 opacity-20 text-text-secondary" />
+                              <p className="text-text-secondary text-sm">Searching semantically...</p>
+                            </div>
+                          ) : (
+                            semanticResults.map((result, index) =>
+                              renderComparisonCard(result, index, true)
+                            )
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* HYBRID + RERANKED — Spotlight Reveal */}
+                    {(keywordResults.length > 0 || semanticResults.length > 0) && (
+                      <div className="max-w-[1300px] mx-auto mt-8" ref={rerankSectionRef}>
+                        {/* Divider */}
+                        <div className="flex items-center gap-4 mb-5">
+                          <div className="flex-1 h-px" style={{ background: theme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.15)' }} />
+                          <span className="text-xs font-medium tracking-wide uppercase" style={{ color: theme === 'dark' ? 'rgba(52, 211, 153, 0.5)' : 'rgba(5, 150, 105, 0.5)' }}>
+                            Next Level
+                          </span>
+                          <div className="flex-1 h-px" style={{ background: theme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.15)' }} />
+                        </div>
+
+                        {/* Spotlight CTA — shown when rerank is ready but not yet revealed */}
+                        <AnimatePresence mode="wait">
+                          {!rerankRevealed && (
+                            <motion.div
+                              key="spotlight-cta"
+                              className="relative overflow-hidden rounded-2xl cursor-pointer group"
+                              style={{
+                                background: theme === 'dark'
+                                  ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.04) 100%)'
+                                  : 'linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(5, 150, 105, 0.02) 100%)',
+                                border: `1px solid ${theme === 'dark' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.15)'}`,
+                              }}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
+                              transition={{ delay: 0.4, duration: 0.5 }}
+                              onClick={() => {
+                                setRerankRevealed(true)
+                                setTimeout(() => rerankSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+                              }}
+                            >
+                              {/* Animated glow border */}
+                              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                                style={{
+                                  background: `radial-gradient(circle at 50% 50%, ${theme === 'dark' ? 'rgba(52, 211, 153, 0.08)' : 'rgba(16, 185, 129, 0.06)'} 0%, transparent 70%)`,
+                                }} />
+
+                              <div className="relative p-5 flex items-center gap-4">
+                                <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
+                                  style={{
+                                    background: theme === 'dark' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.08)',
+                                  }}>
+                                  {rerankLoading ? (
+                                    <div className="w-5 h-5 border-2 rounded-full animate-spin"
+                                      style={{ borderColor: 'rgba(52, 211, 153, 0.2)', borderTopColor: '#34d399' }} />
+                                  ) : (
+                                    <ArrowUpDown className="w-5 h-5" style={{ color: theme === 'dark' ? '#34d399' : '#059669' }} />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <h3 className="text-sm font-semibold mb-0.5" style={{ color: theme === 'dark' ? '#34d399' : '#059669' }}>
+                                    {rerankLoading ? 'Running Hybrid + Rerank pipeline...' : 'Can we do better? Hybrid + Cohere Rerank'}
+                                  </h3>
+                                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                    {rerankLoading
+                                      ? 'Merging keyword & semantic candidates, then re-ranking with Cohere...'
+                                      : 'Combine both search approaches, then let Cohere AI re-rank by true relevance'
+                                    }
+                                  </p>
+                                </div>
+                                {!rerankLoading && rerankResults.length > 0 && (
+                                  <div className="flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all group-hover:scale-105"
+                                    style={{
+                                      background: theme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+                                      color: theme === 'dark' ? '#34d399' : '#059669',
+                                    }}>
+                                    Reveal Results
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )}
+
+                          {/* Expanded rerank results */}
+                          {rerankRevealed && (
+                            <motion.div
+                              key="rerank-results"
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.5 }}
+                            >
+                              {/* Header with pipeline + timing */}
+                              <div className="p-4 rounded-xl mb-3" style={{
+                                background: theme === 'dark' ? 'rgba(16, 185, 129, 0.06)' : 'rgba(16, 185, 129, 0.04)',
+                                border: `1px solid ${theme === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.12)'}`,
+                              }}>
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="flex items-center gap-2">
+                                    <ArrowUpDown className="w-4 h-4" style={{ color: theme === 'dark' ? '#34d399' : '#059669' }} />
+                                    <h3 className="text-base font-semibold" style={{ color: theme === 'dark' ? '#34d399' : '#059669' }}>
+                                      Hybrid + Cohere Rerank
+                                    </h3>
+                                  </div>
+                                  {rerankTiming && (
+                                    <span className="text-sm font-mono" style={{ color: 'rgba(52, 211, 153, 0.7)' }}>
+                                      {rerankTiming.total_time_ms?.toFixed(0)}ms total
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Pipeline flow visualization */}
+                                {rerankPipeline && (
+                                  <div className="flex items-center gap-2 text-xs flex-wrap mt-2" style={{ color: 'var(--text-secondary)' }}>
+                                    <span className="px-2 py-1 rounded-md font-medium" style={{ background: 'rgba(239, 68, 68, 0.08)', color: theme === 'dark' ? '#f87171' : '#dc2626' }}>
+                                      {rerankPipeline.fulltext_candidates} keyword
+                                    </span>
+                                    <span style={{ opacity: 0.4 }}>+</span>
+                                    <span className="px-2 py-1 rounded-md font-medium" style={{ background: 'rgba(59, 130, 246, 0.08)', color: theme === 'dark' ? '#60a5fa' : '#2563eb' }}>
+                                      {rerankPipeline.vector_candidates} semantic
+                                    </span>
+                                    <span style={{ opacity: 0.3 }}>&rarr;</span>
+                                    <span className="px-2 py-1 rounded-md" style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }}>
+                                      {rerankPipeline.unique_candidates} unique
+                                    </span>
+                                    <span style={{ opacity: 0.3 }}>&rarr;</span>
+                                    <span className="px-2 py-1 rounded-md font-semibold" style={{ background: 'rgba(16, 185, 129, 0.1)', color: theme === 'dark' ? '#34d399' : '#059669' }}>
+                                      Cohere Rerank &rarr; top {rerankPipeline.reranked_top_n}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Latency breakdown */}
+                                {rerankTiming && (
+                                  <div className="flex items-center gap-4 mt-2.5 text-[10px] font-mono" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
+                                    <span>Embed {rerankTiming.embed_time_ms?.toFixed(0)}ms</span>
+                                    <span>Search {rerankTiming.search_time_ms?.toFixed(0)}ms</span>
+                                    <span>Rerank {rerankTiming.rerank_time_ms?.toFixed(0)}ms</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Result cards */}
+                              <div className="space-y-2">
+                                {rerankResults.map((result: any, index: number) => (
+                                  <motion.div
+                                    key={result.product_id || index}
+                                    className="p-3 rounded-xl flex gap-3 group/rr"
+                                    style={{
+                                      background: 'var(--input-bg)',
+                                      border: `1px solid ${theme === 'dark' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.1)'}`,
+                                    }}
+                                    initial={{ opacity: 0, x: -12 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.1 + index * 0.08 }}
+                                  >
+                                    <span className="text-sm font-bold w-6 text-center mt-1 flex-shrink-0"
+                                      style={{ color: theme === 'dark' ? '#34d399' : '#059669' }}>
+                                      #{index + 1}
+                                    </span>
+                                    <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0"
+                                      style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }}>
+                                      {result.img_url ? (
+                                        <img src={result.img_url} alt="" className="w-full h-full object-cover"
+                                          onError={(e: any) => { e.currentTarget.style.display = 'none' }} />
+                                      ) : (
+                                        <Package className="h-6 w-6 m-auto mt-4 text-text-secondary opacity-30" />
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium line-clamp-1" style={{ color: 'var(--text-primary)' }}>
+                                        {result.product_description}
+                                      </p>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <span className="text-xs font-medium" style={{ color: 'var(--text-primary)' }}>
+                                          ${Number(result.price).toFixed(2)}
+                                        </span>
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
+                                          style={{ background: 'rgba(16, 185, 129, 0.1)', color: theme === 'dark' ? '#34d399' : '#059669' }}>
+                                          {(result.relevance_score * 100).toFixed(1)}% relevance
+                                        </span>
+                                        <span className="text-[10px]" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
+                                          via {result.source}
+                                        </span>
+                                      </div>
+                                      {/* Relevance score bar */}
+                                      <div className="mt-1.5 h-1 rounded-full w-full" style={{ background: 'var(--border-color)' }}>
+                                        <motion.div
+                                          className="h-full rounded-full"
+                                          style={{ background: 'linear-gradient(90deg, #34d399, #059669)' }}
+                                          initial={{ width: 0 }}
+                                          animate={{ width: `${result.relevance_score * 100}%` }}
+                                          transition={{ delay: 0.3 + index * 0.08, duration: 0.6 }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    )}
+                    </>
+                  ) : (
+                  <>
+                  {/* ===== SINGLE-PANEL MODE (Legacy, Tools, Full) ===== */}
                   {/* Loading skeleton — 3-column grid */}
                   {loading && (
                     <div className="grid grid-cols-3 gap-5 max-w-[1100px] mx-auto">
@@ -449,7 +934,7 @@ const SearchOverlay = ({
                   {!loading && displayResults.length === 0 && allResults.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20">
                       <Sparkles className="h-10 w-10 text-text-secondary opacity-40 mb-4" />
-                      <p className="text-text-secondary text-lg font-light">Searching across 21,000+ products...</p>
+                      <p className="text-text-secondary text-lg font-light">No results found. Try a different search term.</p>
                     </div>
                   )}
 
@@ -614,6 +1099,8 @@ const SearchOverlay = ({
                         </div>
                       )}
                     </>
+                  )}
+                  </>
                   )}
                 </div>
               </div>

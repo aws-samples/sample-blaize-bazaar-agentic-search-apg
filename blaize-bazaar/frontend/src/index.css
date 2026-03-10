@@ -688,3 +688,79 @@
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
   }
 }
+
+/* RAG Demo — markdown formatting */
+.rag-markdown h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0.75rem 0 0.5rem;
+  color: rgba(255, 255, 255, 0.95);
+}
+.rag-markdown h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.35rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+.rag-markdown h3 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0.5rem 0 0.25rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+.rag-markdown p {
+  margin: 0.35rem 0;
+  line-height: 1.6;
+}
+.rag-markdown ul,
+.rag-markdown ol {
+  margin: 0.35rem 0 0.35rem 1.25rem;
+}
+.rag-markdown li {
+  margin: 0.2rem 0;
+  line-height: 1.5;
+}
+.rag-markdown strong {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+}
+.rag-markdown hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 0.75rem 0;
+}
+.rag-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 0.8rem;
+}
+.rag-markdown th {
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+}
+.rag-markdown td {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.rag-markdown code {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.8em;
+}
+.rag-markdown pre {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 0.75rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+.rag-markdown pre code {
+  background: none;
+  padding: 0;
+}

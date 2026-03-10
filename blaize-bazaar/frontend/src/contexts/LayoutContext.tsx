@@ -6,7 +6,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef, ty
 import { TOUR_STEPS } from '../data/tourSteps'
 
 type ChatMode = 'floating' | 'docked'
-export type WorkshopMode = 'legacy' | 'semantic' | 'tools' | 'full'
+export type WorkshopMode = 'legacy' | 'semantic' | 'tools' | 'full' | 'agentcore'
 
 interface LayoutContextType {
   chatMode: ChatMode
@@ -42,7 +42,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [workshopMode, setWorkshopModeRaw] = useState<WorkshopMode>(() => {
     const saved = localStorage.getItem('blaize-workshop-mode')
-    if (saved && ['legacy', 'semantic', 'tools', 'full'].includes(saved)) return saved as WorkshopMode
+    if (saved && ['legacy', 'semantic', 'tools', 'full', 'agentcore'].includes(saved)) return saved as WorkshopMode
     return 'legacy'
   })
   const [guardrailsEnabled, setGuardrailsEnabled] = useState(false)
@@ -119,6 +119,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('blaize-tour-semantic-done')
     localStorage.removeItem('blaize-tour-tools-done')
     localStorage.removeItem('blaize-tour-full-done')
+    localStorage.removeItem('blaize-tour-agentcore-done')
     // Reset runtime state
     setActiveTour(null)
     setTourStep(0)

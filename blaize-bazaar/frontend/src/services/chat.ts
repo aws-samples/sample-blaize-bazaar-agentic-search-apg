@@ -3,7 +3,7 @@
  * Handles product search and AI chat functionality
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 
 /**
  * Get or create session ID for conversation persistence
@@ -16,6 +16,17 @@ function getSessionId(): string {
   }
   return sessionId
 }
+
+// === WIRE IT LIVE (Lab 4a) ===
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = localStorage.getItem('blaize-access-token')
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  return headers
+}
+// === END WIRE IT LIVE ===
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -54,6 +65,7 @@ export interface ChatResponse {
   products: ChatProduct[]
   suggestions?: string[]
   agent_execution?: AgentExecution
+  orchestrator_enabled?: boolean
   token_count?: number
   estimated_cost_usd?: number
 }
@@ -71,9 +83,7 @@ export async function sendChatMessageStreaming(
   try {
     const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         message: query,
         conversation_history: conversationHistory.map(msg => ({
@@ -152,9 +162,7 @@ export async function sendChatMessage(query: string, conversationHistory: ChatMe
   try {
     const response = await fetch(`${API_BASE_URL}/api/chat?enable_thinking=${enableThinking}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ 
         message: query,
         conversation_history: conversationHistory.map(msg => ({

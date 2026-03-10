@@ -116,7 +116,7 @@ class ContextManager:
             agent: [] for agent in AgentType
         }
         
-        logger.info(f"✅ Context Manager initialized: {max_tokens:,} token limit")
+        logger.debug(f"Context Manager initialized: {max_tokens:,} token limit")
     
     def _estimate_tokens(self, text: str) -> int:
         """
@@ -561,5 +561,5 @@ def init_context_manager(max_tokens: int = 180000) -> ContextManager:
     """Initialize the context manager (call during app startup)"""
     global _context_manager
     _context_manager = ContextManager(max_tokens=max_tokens)
-    logger.info(f"✅ Context Manager initialized (max_tokens={max_tokens:,})")
+    logger.debug(f"Context Manager initialized (max_tokens={max_tokens:,})")
     return _context_manager

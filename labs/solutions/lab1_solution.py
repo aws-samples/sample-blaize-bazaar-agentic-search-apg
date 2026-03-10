@@ -4,7 +4,7 @@
 Complete reference implementation with all TODOs filled in.
 
 Run from repo root:
-    python labs/solutions/part1_solution.py
+    python labs/solutions/lab1_solution.py
 """
 
 import json

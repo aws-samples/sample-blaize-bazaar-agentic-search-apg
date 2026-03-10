@@ -28,6 +28,7 @@ from models.search import (
 from models.image_search_models import ImageSearchResponse
 from models.product import Product, ProductWithScore, InventoryStats
 from services.database import DatabaseService
+from services.auth import get_current_user
 from services.embeddings import EmbeddingService
 from services.bedrock import BedrockService
 from services.chat import ChatService
@@ -35,6 +36,7 @@ from services.image_search import ImageSearchService, get_image_search_service
 from services.sql_query_logger import init_query_logger, get_query_logger
 from services.index_performance import get_index_performance_service
 from services.hybrid_search import HybridSearchService
+from services.rerank import RerankService
 
 # Lab 2 agents use Strands SDK function pattern (not class-based)
 # Agents are available via /api/agents/query endpoint
@@ -78,6 +80,7 @@ chat_service: ChatService = None
 image_search_service: ImageSearchService = None
 query_logger = None
 index_performance_service = None
+rerank_service: RerankService = None
 
 # Lab 2 agents use function pattern - no global instances needed
 
@@ -91,7 +94,7 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting DAT406 Workshop API...")
     
-    global db_service, embedding_service, bedrock_service, chat_service, image_search_service, query_logger, index_performance_service
+    global db_service, embedding_service, bedrock_service, chat_service, image_search_service, query_logger, index_performance_service, rerank_service
     
     try:
         # Initialize Strands OpenTelemetry tracing
@@ -128,8 +131,24 @@ async def lifespan(app: FastAPI):
                 out=sys.stdout,
                 formatter=format_trace
             )
-            # strands_telemetry.setup_otlp_exporter()   # Prod: CloudWatch X-Ray
+
             logger.info("✅ Strands OpenTelemetry tracing enabled (compact format)")
+
+            # === WIRE IT LIVE (Lab 4d) ===
+            # Export traces to CloudWatch X-Ray via OTLP (requires OTEL_EXPORTER_OTLP_ENDPOINT)
+            try:
+                import os
+                if settings.OTEL_EXPORTER_OTLP_ENDPOINT:
+                    os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", settings.OTEL_EXPORTER_OTLP_ENDPOINT)
+                    os.environ.setdefault("OTEL_SERVICE_NAME", "blaize-bazaar")
+                    os.environ.setdefault("OTEL_RESOURCE_ATTRIBUTES", "service.namespace=dat406,deployment.environment=workshop")
+                    strands_telemetry.setup_otlp_exporter()
+                    logger.info("✅ OTLP exporter enabled — traces → CloudWatch X-Ray")
+                else:
+                    logger.info("ℹ️  OTLP exporter skipped (set OTEL_EXPORTER_OTLP_ENDPOINT to enable)")
+            except Exception as e:
+                logger.warning(f"⚠️ OTLP exporter not available: {e}")
+            # === END WIRE IT LIVE ===
 
             # Attach in-memory span capture for trace extraction
             try:
@@ -149,7 +168,10 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Database service initialized")
         
         embedding_service = EmbeddingService()
-        logger.info("✅ Embedding service initialized")
+        logger.info("✅ Embedding service initialized (Cohere Embed v4)")
+
+        rerank_service = RerankService()
+        logger.info("✅ Rerank service initialized (Cohere Rerank v3.5)")
         
         bedrock_service = BedrockService()
         logger.info("✅ Bedrock service initialized")
@@ -173,10 +195,11 @@ async def lifespan(app: FastAPI):
         # Set chat service logger to INFO
         logging.getLogger('services.chat').setLevel(logging.INFO)
         
-        # Initialize agent tools with database service reference (live data)
-        from services.agent_tools import set_db_service
+        # Initialize agent tools with database + rerank services (hybrid search)
+        from services.agent_tools import set_db_service, set_rerank_service
         set_db_service(db_service)
-        logger.info("✅ Agent tools initialized with live database access")
+        set_rerank_service(rerank_service)
+        logger.info("✅ Agent tools initialized with hybrid search (vector + keyword + rerank)")
         
         # Lab 2 agents use Strands SDK function pattern
         logger.info("✅ Lab 2 agents available via /api/agents/query")
@@ -246,6 +269,13 @@ def get_image_search_service_dep():
     if not image_search_service:
         raise HTTPException(status_code=503, detail="Image search service not initialized")
     return image_search_service
+
+
+async def get_rerank_service() -> RerankService:
+    """Get rerank service instance"""
+    if not rerank_service:
+        raise HTTPException(status_code=503, detail="Rerank service not initialized")
+    return rerank_service
 
 
 # ============================================================================
@@ -485,6 +515,59 @@ async def semantic_search(
         
     except Exception as e:
         logger.error(f"❌ Search failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+
+@app.post("/api/search/hybrid-rerank")
+async def hybrid_rerank_search(
+    request: SearchRequest,
+    db: DatabaseService = Depends(get_db_service),
+    embeddings: EmbeddingService = Depends(get_embedding_service),
+    reranker: RerankService = Depends(get_rerank_service),
+):
+    """
+    LAB 1: Hybrid search with Cohere Rerank
+
+    Pipeline:
+      1. Generate query embedding (Cohere Embed v4)
+      2. Run keyword + vector search in parallel
+      3. Merge unique candidates
+      4. Re-rank with Cohere Rerank v3.5
+      5. Return top results with relevance scores
+    """
+    start_time = time.time()
+
+    try:
+        # Generate query embedding
+        embed_start = time.time()
+        query_embedding = embeddings.embed_query(request.query)
+        embed_time_ms = (time.time() - embed_start) * 1000
+
+        # Hybrid search + rerank
+        hybrid_service = HybridSearchService(db)
+        result = await hybrid_service.search_with_rerank(
+            query=request.query,
+            embedding=query_embedding,
+            rerank_service=reranker,
+            limit=request.limit,
+            candidate_pool_size=20,
+        )
+
+        total_time_ms = (time.time() - start_time) * 1000
+
+        # Add embed time to timing
+        result["timing"]["embed_time_ms"] = round(embed_time_ms, 2)
+        result["timing"]["total_time_ms"] = round(total_time_ms, 2)
+
+        logger.info(
+            f"🏆 Hybrid+Rerank: '{request.query}' → {result['total']} results "
+            f"({total_time_ms:.0f}ms total)"
+        )
+
+        return result
+
+    except Exception as e:
+        logger.error(f"❌ Hybrid rerank search failed: {e}")
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
@@ -800,17 +883,17 @@ async def general_exception_handler(request, exc):
 
 
 @app.get("/api/tools")
-async def list_custom_tools(
-    db: DatabaseService = Depends(get_db_service)
-):
+async def list_custom_tools():
     """List all custom business logic tools available"""
-    try:
-        from services.business_logic import BusinessLogic
-        logic = BusinessLogic(db)
-        return await logic.list_custom_tools()
-    except Exception as e:
-        logger.error(f"Failed to list tools: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return [
+        {"name": "search_products", "description": "Semantic product search via pgvector embeddings"},
+        {"name": "get_trending_products", "description": "Get trending products by reviews and ratings"},
+        {"name": "get_inventory_health", "description": "Check stock levels and inventory alerts"},
+        {"name": "get_price_statistics", "description": "Price analytics by category"},
+        {"name": "restock_product", "description": "Update product stock quantities"},
+        {"name": "compare_products", "description": "Side-by-side product comparison"},
+        {"name": "get_low_stock_products", "description": "Find products running low on inventory"},
+    ]
 
 
 @app.get("/api/tools/trending")
@@ -887,24 +970,25 @@ if __name__ == "__main__":
     )
 
 @app.post("/api/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+async def chat(request: ChatRequest, user=Depends(get_current_user)):
     """
     Chat endpoint with Aurora AI using Strands SDK and Custom Tools
     """
     if not chat_service:
         raise HTTPException(status_code=503, detail="Chat service not initialized")
-    
+
     try:
         # Convert conversation history to dict format
         history = [{"role": msg.role, "content": msg.content} for msg in request.conversation_history]
-        
+
         # Get chat response with session persistence
         response = await chat_service.chat(
             message=request.message,
             conversation_history=history,
             session_id=request.session_id,
             workshop_mode=request.workshop_mode,
-            guardrails_enabled=request.guardrails_enabled
+            guardrails_enabled=request.guardrails_enabled,
+            user=user
         )
         
         return ChatResponse(**response)
@@ -915,7 +999,7 @@ async def chat(request: ChatRequest):
 
 
 @app.post("/api/chat/stream")
-async def chat_stream(request: ChatRequest):
+async def chat_stream(request: ChatRequest, user=Depends(get_current_user)):
     """
     Streaming chat endpoint with real-time agent events via SSE.
 
@@ -936,7 +1020,8 @@ async def chat_stream(request: ChatRequest):
                 conversation_history=history,
                 session_id=request.session_id,
                 workshop_mode=request.workshop_mode,
-                guardrails_enabled=request.guardrails_enabled
+                guardrails_enabled=request.guardrails_enabled,
+                user=user
             ):
                 yield f"data: {json.dumps(event, ensure_ascii=False, default=str)}\n\n"
         except Exception as e:
@@ -1003,7 +1088,7 @@ async def agent_query(
         
         # Agents now handle their own tool calls - no need to pre-fetch context
         if agent_type == "orchestrator":
-            orchestrator = create_orchestrator(enable_interleaved_thinking=enable_thinking)
+            orchestrator = create_orchestrator()
             response = orchestrator(query)
         elif agent_type == "inventory":
             response = inventory_restock_agent(query)
@@ -1242,15 +1327,18 @@ async def get_quantization_comparison():
 # ============================================================================
 
 @app.post("/api/personalization/search")
-async def personalized_search(request: Request):
+async def personalized_search(
+    request: Request,
+    db: DatabaseService = Depends(get_db_service),
+):
     """Search with preference-based re-ranking"""
-    if not business_logic:
-        raise HTTPException(status_code=503, detail="Business logic service not initialized")
+    from services.business_logic import BusinessLogic
+    logic = BusinessLogic(db)
     body = await request.json()
     query = body.get("query", "")
     preferences = body.get("preferences", {})
     limit = body.get("limit", 5)
-    return await business_logic.personalized_search(query, preferences, limit)
+    return await logic.personalized_search(query, preferences, limit)
 
 
 # ============================================================================
@@ -1384,3 +1472,75 @@ async def toggle_chaos_mode(request: Request):
 async def get_chaos_status():
     """Get current chaos mode status"""
     return {"chaos_mode": _chaos_mode, "fail_rate": _chaos_fail_rate}
+
+
+# ============================================================================
+# AGENTCORE ENDPOINTS (Lab 4)
+# ============================================================================
+
+@app.get("/api/agentcore/memories")
+async def agentcore_memories(user=Depends(get_current_user)):
+    """Get stored memories for authenticated user (Lab 4b)"""
+    if not user:
+        return {"memories": [], "message": "Sign in to view memories"}
+    try:
+        from services.agentcore_memory import get_user_memories
+        memories = get_user_memories(user["sub"])
+        return {"memories": memories, "user": user["email"]}
+    except Exception as e:
+        logger.warning(f"Failed to fetch memories: {e}")
+        return {"memories": [], "error": str(e)}
+
+
+@app.get("/api/agentcore/gateway/tools")
+async def agentcore_gateway_tools():
+    """List tools registered in AgentCore Gateway MCP server (Lab 4c)"""
+    try:
+        from services.agentcore_gateway import list_gateway_tools
+        tools = list_gateway_tools()
+        return {"tools": tools, "gateway_url": settings.AGENTCORE_GATEWAY_URL or "not configured"}
+    except Exception as e:
+        logger.warning(f"Failed to list gateway tools: {e}")
+        return {"tools": [], "error": str(e)}
+
+
+@app.get("/api/agentcore/observability/status")
+async def agentcore_observability_status():
+    """Get OTEL/X-Ray observability status (Lab 4d)"""
+    import os
+    endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+    service_name = os.environ.get("OTEL_SERVICE_NAME", "blaize-bazaar")
+    return {
+        "enabled": bool(endpoint),
+        "service_name": service_name,
+        "endpoint": endpoint or "not configured",
+        "recent_traces": []  # Populated by trace collector in production
+    }
+
+
+@app.get("/api/agentcore/runtime/status")
+async def agentcore_runtime_status():
+    """Get AgentCore Runtime execution status (Lab 4e)"""
+    runtime_endpoint = settings.AGENTCORE_RUNTIME_ENDPOINT
+    if runtime_endpoint:
+        # Check health of remote runtime
+        try:
+            import requests as req
+            resp = req.get(f"{runtime_endpoint}/health", timeout=3)
+            return {
+                "mode": "agentcore",
+                "endpoint": runtime_endpoint,
+                "healthy": resp.status_code == 200,
+                "latency_ms": int(resp.elapsed.total_seconds() * 1000),
+            }
+        except Exception:
+            return {
+                "mode": "agentcore",
+                "endpoint": runtime_endpoint,
+                "healthy": False,
+            }
+    return {
+        "mode": "local",
+        "endpoint": f"http://localhost:{settings.PORT}",
+        "healthy": True,
+    }

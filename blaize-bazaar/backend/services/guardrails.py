@@ -52,36 +52,33 @@ class GuardrailsService:
         if not self.is_configured:
             return {"allowed": True, "action": "NONE", "violations": [], "mode": "pass-through"}
 
-        # --- Wire It Live: Implement guardrail check ---
-        # try:
-        #     response = self._client.apply_guardrail(
-        #         guardrailIdentifier=self.guardrail_id,
-        #         guardrailVersion=self.guardrail_version,
-        #         source="INPUT",
-        #         content=[{"text": {"text": text}}],
-        #     )
-        #     action = response.get("action", "NONE")
-        #     assessments = response.get("assessments", [])
-        #     violations = []
-        #     for assessment in assessments:
-        #         for policy in assessment.get("contentPolicy", {}).get("filters", []):
-        #             if policy.get("action") == "BLOCKED":
-        #                 violations.append({
-        #                     "type": policy.get("type", "unknown"),
-        #                     "confidence": policy.get("confidence", "NONE"),
-        #                 })
-        #     return {
-        #         "allowed": action != "GUARDRAIL_INTERVENED",
-        #         "action": action,
-        #         "violations": violations,
-        #     }
-        # except Exception as e:
-        #     logger.warning(f"Guardrail input check failed: {e}")
-        #     return {"allowed": True, "action": "ERROR", "violations": []}
-        # --- End Wire It Live ---
-
-        # Stub: pass-through until participants implement
-        return {"allowed": True, "action": "NONE", "violations": [], "mode": "stub"}
+        # === WIRE IT LIVE (Lab 3) ===
+        try:
+            response = self._client.apply_guardrail(
+                guardrailIdentifier=self.guardrail_id,
+                guardrailVersion=self.guardrail_version,
+                source="INPUT",
+                content=[{"text": {"text": text}}],
+            )
+            action = response.get("action", "NONE")
+            assessments = response.get("assessments", [])
+            violations = []
+            for assessment in assessments:
+                for policy in assessment.get("contentPolicy", {}).get("filters", []):
+                    if policy.get("action") == "BLOCKED":
+                        violations.append({
+                            "type": policy.get("type", "unknown"),
+                            "confidence": policy.get("confidence", "NONE"),
+                        })
+            return {
+                "allowed": action != "GUARDRAIL_INTERVENED",
+                "action": action,
+                "violations": violations,
+            }
+        except Exception as e:
+            logger.warning(f"Guardrail input check failed: {e}")
+            return {"allowed": True, "action": "ERROR", "violations": []}
+        # === END WIRE IT LIVE ===
 
     def check_output(self, text: str) -> Dict[str, Any]:
         """
@@ -95,11 +92,33 @@ class GuardrailsService:
         if not self.is_configured:
             return {"allowed": True, "action": "NONE", "violations": [], "mode": "pass-through"}
 
-        # --- Wire It Live: Implement output guardrail check ---
-        # Same pattern as check_input but source="OUTPUT"
-        # --- End Wire It Live ---
-
-        return {"allowed": True, "action": "NONE", "violations": [], "mode": "stub"}
+        # === WIRE IT LIVE (Lab 3) ===
+        try:
+            response = self._client.apply_guardrail(
+                guardrailIdentifier=self.guardrail_id,
+                guardrailVersion=self.guardrail_version,
+                source="OUTPUT",
+                content=[{"text": {"text": text}}],
+            )
+            action = response.get("action", "NONE")
+            assessments = response.get("assessments", [])
+            violations = []
+            for assessment in assessments:
+                for policy in assessment.get("contentPolicy", {}).get("filters", []):
+                    if policy.get("action") == "BLOCKED":
+                        violations.append({
+                            "type": policy.get("type", "unknown"),
+                            "confidence": policy.get("confidence", "NONE"),
+                        })
+            return {
+                "allowed": action != "GUARDRAIL_INTERVENED",
+                "action": action,
+                "violations": violations,
+            }
+        except Exception as e:
+            logger.warning(f"Guardrail output check failed: {e}")
+            return {"allowed": True, "action": "ERROR", "violations": []}
+        # === END WIRE IT LIVE ===
 
     def detect_pii(self, text: str) -> Dict[str, Any]:
         """Basic regex-based PII detection for demo purposes."""

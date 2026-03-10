@@ -72,10 +72,10 @@ const AIAssistant = () => {
       content: 'I can help you find products, compare options, and get recommendations. What are you looking for?',
       timestamp: new Date(),
       suggestions: [
-        'Best watches under $200',
-        'Show me trending smartphones',
-        'Comfortable running shoes',
-        'Kitchen essentials for cooking'
+        'Luxury fragrances under $100',
+        'Best laptops for programming',
+        'Top-rated running shoes',
+        'Trending smartwatches'
       ]
     }]
   }
@@ -114,10 +114,10 @@ const AIAssistant = () => {
       content: 'Fresh start! What can I help you find?',
       timestamp: new Date(),
       suggestions: [
-        'Luxury fragrances under $100',
-        'Top-rated laptops for work',
-        'Stylish sunglasses',
-        'Best furniture deals'
+        'Best smartphones under $500',
+        'Show me premium sunglasses',
+        'Comfortable furniture for home',
+        'Top kitchen essentials'
       ]
     }])
   }
@@ -152,14 +152,17 @@ const AIAssistant = () => {
       return
     }
 
-    // Add thinking placeholder
+    // Add thinking placeholder — agent name depends on workshop mode
+    const isOrchestrator = workshopMode === 'full'
+    const thinkingAgentName = isOrchestrator ? 'Orchestrator' : 'Search Agent'
     const loadingMessage: Message = {
       role: 'assistant',
       content: '',
       timestamp: new Date(),
       agentStatus: 'thinking',
+      agent: isOrchestrator ? 'orchestrator' : 'search',
       agentExecution: {
-        agent_steps: [{ agent: 'Orchestrator', action: 'Analyzing query', status: 'in_progress', timestamp: Date.now(), duration_ms: 0 }],
+        agent_steps: [{ agent: thinkingAgentName, action: 'Analyzing query', status: 'in_progress', timestamp: Date.now(), duration_ms: 0 }],
         tool_calls: [],
         reasoning_steps: [],
         total_duration_ms: 0,
@@ -266,13 +269,21 @@ const AIAssistant = () => {
         setSessionCost(prev => prev + response.estimated_cost_usd!)
       }
 
-      // Update the existing message in-place (products may already be streamed in)
-      let agentType: 'search' | 'pricing' | 'recommendation' | 'orchestrator' = 'orchestrator'
-      if (!response.agent_execution || response.agent_execution.agent_steps.length === 0) {
+      // Determine agent badge based on workshop mode
+      let agentType: 'search' | 'pricing' | 'recommendation' | 'orchestrator' = 'search'
+      if (workshopMode === 'full' || response.orchestrator_enabled) {
+        // Lab 3: Multi-agent orchestrator
+        agentType = 'orchestrator'
+      } else {
+        // Lab 2: Single agent — infer type from query keywords
         const q = messageText.toLowerCase()
-        if (q.includes('cheap') || q.includes('price') || q.includes('deal') || q.includes('cost')) agentType = 'pricing'
-        else if (q.includes('recommend') || q.includes('suggest') || q.includes('best') || q.includes('top')) agentType = 'recommendation'
-        else agentType = 'search'
+        if (q.includes('cheap') || q.includes('price') || q.includes('deal') || q.includes('cost') || q.includes('budget') || q.includes('afford')) {
+          agentType = 'pricing'
+        } else if (q.includes('recommend') || q.includes('suggest') || q.includes('best') || q.includes('top') || q.includes('popular') || q.includes('trending')) {
+          agentType = 'recommendation'
+        } else {
+          agentType = 'search'
+        }
       }
 
       setMessages(prev => {
@@ -283,7 +294,20 @@ const AIAssistant = () => {
         if (response.response) lastMsg.content = response.response
         // Always use complete event's products — they have backfilled images
         if (response.products?.length) {
-          lastMsg.products = response.products
+          lastMsg.products = response.products.map((p: any) => ({
+            id: p.id || p.productId || '',
+            name: p.name || p.product_description || '',
+            price: p.price || 0,
+            image: p.image || p.imgUrl || p.imgurl || p.image_url || '',
+            category: p.category || p.category_name || '',
+            rating: p.stars || p.rating || 0,
+            reviews: p.reviews || 0,
+            url: p.url || p.producturl || '',
+            quantity: p.quantity,
+            inStock: p.inStock,
+            originalPrice: p.originalPrice,
+            discountPercent: p.discountPercent,
+          }))
         }
         lastMsg.suggestions = response.suggestions
         lastMsg.agent = agentType
@@ -522,7 +546,7 @@ const AIAssistant = () => {
                         )}
                         {message.content && (
                           <div className="text-sm text-text-secondary font-light leading-relaxed">
-                            {message.content.substring(0, 150)}{message.content.length > 150 ? '...' : ''}
+                            <MarkdownMessage content={message.content} />
                           </div>
                         )}
 

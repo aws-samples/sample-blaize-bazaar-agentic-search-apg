@@ -55,15 +55,29 @@ class RAGDemoService:
             # Step 1: Generate embedding
             embedding = self.embedding_service.generate_embedding(query)
 
-            # Step 2: Retrieve top-5 via pgvector
-            results = await self.db_service.vector_search(embedding, limit=5)
+            # Step 2: Retrieve top-5 via pgvector cosine similarity
+            results = await self.db_service.fetch_all(
+                """
+                SELECT "productId", product_description, price, stars, reviews,
+                       category_name, "imgUrl",
+                       1 - (embedding <=> %s::vector) as similarity_score
+                FROM bedrock_integration.product_catalog
+                WHERE stars >= 3.0
+                ORDER BY embedding <=> %s::vector
+                LIMIT %s
+                """,
+                str(embedding), str(embedding), 5
+            )
             retrieved_products = [
                 {
+                    "id": r.get("productId", ""),
                     "name": r.get("product_description", ""),
-                    "price": r.get("price", 0),
-                    "rating": r.get("stars", 0),
+                    "price": float(r.get("price", 0)),
+                    "rating": float(r.get("stars", 0)),
                     "category": r.get("category_name", ""),
                     "reviews": r.get("reviews", 0),
+                    "image": r.get("imgUrl", ""),
+                    "similarity": float(r.get("similarity_score", 0)),
                 }
                 for r in results
             ]

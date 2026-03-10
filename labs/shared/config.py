@@ -54,7 +54,7 @@ def get_connection_string() -> str:
 # ============================================================
 
 AWS_REGION: str = os.getenv("AWS_REGION", "us-west-2")
-BEDROCK_EMBEDDING_MODEL: str = "amazon.titan-embed-text-v2:0"
+BEDROCK_EMBEDDING_MODEL: str = "us.cohere.embed-v4:0"
 BEDROCK_CHAT_MODEL: str = "global.anthropic.claude-sonnet-4-6"
 
 # ============================================================

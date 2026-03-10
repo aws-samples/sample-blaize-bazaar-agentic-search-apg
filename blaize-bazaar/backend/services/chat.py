@@ -206,7 +206,8 @@ STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
         conversation_history: Optional[List[Dict[str, str]]] = None,
         session_id: Optional[str] = None,
         workshop_mode: Optional[str] = None,
-        guardrails_enabled: bool = False
+        guardrails_enabled: bool = False,
+        user: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
         Enhanced chat that returns structured product data
@@ -215,6 +216,7 @@ STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
         - 'legacy'/'semantic': Chat disabled
         - 'tools': Single agent with basic tools (Lab 2)
         - 'full'/None: Full orchestrator (Lab 3)
+        - 'agentcore': Full orchestrator + AgentCore services (Lab 4)
         """
         try:
             # Workshop mode routing
@@ -230,7 +232,7 @@ STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
                     "model": self.model_id
                 }
 
-            logger.info(f"💬 Enhanced chat processing: '{message[:60]}...' (mode={workshop_mode or 'full'})")
+            logger.info(f"💬 Enhanced chat processing: '{message[:60]}...' (mode={workshop_mode or 'full'}, user={user.get('email') if user else 'anonymous'})")
 
             # Require Strands
             if not self.strands_available:
@@ -242,7 +244,7 @@ STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
             if workshop_mode == "tools":
                 return await self._single_agent_chat(message, conversation_history, session_id, guardrails_enabled)
 
-            return await self._strands_enhanced_chat(message, conversation_history, session_id, guardrails_enabled)
+            return await self._strands_enhanced_chat(message, conversation_history, session_id, guardrails_enabled, user=user)
             
         except Exception as e:
             logger.error(f"❌ Chat failed: {e}", exc_info=True)
@@ -253,7 +255,8 @@ STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
         message: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
         session_id: Optional[str] = None,
-        guardrails_enabled: bool = False
+        guardrails_enabled: bool = False,
+        user: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Enhanced chat using Strands Orchestrator with specialized agents"""
         logger.info(f"🤖 Processing query with Strands Orchestrator")
@@ -267,35 +270,48 @@ STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
         
         try:
             # Import orchestrator
-            from agents.orchestrator import create_orchestrator
-            
+            from agents.orchestrator import create_orchestrator, create_guarded_orchestrator
+
             # Create session manager if session_id provided
             session_manager = None
             if session_id:
-                from services.aurora_session_manager import AuroraSessionManager
-                from config import settings
-                
-                # Build connection string
-                conn_string = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-                
-                session_manager = AuroraSessionManager(
-                    session_id=session_id,
-                    conn_string=conn_string,
-                    agent_name="blaize_orchestrator"
-                )
-                logger.info(f"🗄️ Aurora session manager created: {session_id}")
-            
-            # Create orchestrator (agents use direct asyncpg via agent_tools.py)
-            logger.info(f"🎯 Creating agent orchestrator...")
-            orchestrator = create_orchestrator()
+                # === WIRE IT LIVE (Lab 4b) ===
+                # When in agentcore mode with authenticated user, use AgentCore Memory
+                # instead of AuroraSessionManager for persistent cross-session preferences
+                if user and settings.AGENTCORE_MEMORY_ID:
+                    from services.agentcore_memory import create_agentcore_session_manager
+                    session_manager = create_agentcore_session_manager(
+                        session_id=session_id,
+                        user_id=user.get("sub", "anonymous"),
+                    )
+                    if session_manager:
+                        logger.info(f"🧠 AgentCore Memory session created for user={user.get('email')}")
+                # === END WIRE IT LIVE ===
 
-            # Inject guardrails into orchestrator system prompt when enabled
+                # Fallback to Aurora session manager
+                if not session_manager:
+                    from services.aurora_session_manager import AuroraSessionManager
+
+                    conn_string = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+
+                    session_manager = AuroraSessionManager(
+                        session_id=session_id,
+                        conn_string=conn_string,
+                        agent_name="blaize_orchestrator"
+                    )
+                    logger.info(f"🗄️ Aurora session manager created: {session_id}")
+
+            # Create orchestrator — use guarded variant when guardrails enabled (Lab 3)
+            logger.info(f"🎯 Creating agent orchestrator (guardrails={'ON' if guardrails_enabled else 'OFF'})...")
             if guardrails_enabled:
-                orchestrator.system_prompt = (orchestrator.system_prompt or "") + GUARDRAILS_SUFFIX
+                orchestrator = create_guarded_orchestrator()
+            else:
+                orchestrator = create_orchestrator()
 
             # Add OpenTelemetry trace attributes
             orchestrator.trace_attributes = {
                 "session.id": session_id or "anonymous",
+                "session.user": user.get("email", "anonymous") if user else "anonymous",
                 "user.query": message[:100],
                 "workshop": "DAT406",
                 "service": "blaize-bazaar"
@@ -403,9 +419,22 @@ CURRENT REQUEST: {message}"""
             )
 
             single_prompt = (
-                "You are a product search assistant for Blaize Bazaar.\n"
-                "Use the available tools to find products, trends, and pricing info.\n"
-                "Return results as JSON with product details. Be concise."
+                "You are Blaize AI, the shopping assistant for Blaize Bazaar.\n"
+                "Use the available tools to find products, trends, and pricing info.\n\n"
+                "TOOL USAGE RULES:\n"
+                "- Use semantic_product_search for ALL product search queries. It uses hybrid AI search with reranking.\n"
+                "- ONLY use get_trending_products when the user explicitly asks about trending/popular items across ALL categories.\n"
+                "- NEVER call both semantic_product_search AND get_trending_products for the same query.\n"
+                "- Call ONE tool per query, then respond.\n\n"
+                "RESPONSE RULES:\n"
+                "- Products are displayed as visual cards automatically from tool results.\n"
+                "- Your text response should ONLY be a brief 1-2 sentence conversational intro.\n"
+                "- Do NOT list, repeat, or summarize individual product names, prices, ratings, or details in your text.\n"
+                "- NEVER use markdown tables, horizontal rules, numbered lists, or section headers.\n"
+                "- Be confident and concise, like a knowledgeable store associate.\n"
+                "- NEVER apologize or say 'unfortunately'.\n"
+                "- Example good response: 'Here are some great smartphones under $500!'\n"
+                "- Example bad response: '1. iPhone SE — $429.99 ⭐ 4.3 ...'"
             )
             if guardrails_enabled:
                 single_prompt += GUARDRAILS_SUFFIX
@@ -462,7 +491,18 @@ CURRENT REQUEST: {message}"""
                     tool_name = ""
                     if hasattr(event, 'tool_use') and isinstance(event.tool_use, dict):
                         tool_name = event.tool_use.get("name", "")
-                    result_str = str(event.result) if hasattr(event, 'result') and event.result else ""
+                    # Extract the actual tool result text from the Strands SDK result structure
+                    result_str = ""
+                    if hasattr(event, 'result') and event.result:
+                        raw = event.result
+                        # Strands SDK wraps results as: {'content': [{'text': '...'}], 'status': '...'}
+                        if isinstance(raw, dict) and 'content' in raw:
+                            for block in raw.get('content', []):
+                                if isinstance(block, dict) and 'text' in block:
+                                    result_str = block['text']
+                                    break
+                        if not result_str:
+                            result_str = str(raw)
                     try:
                         asyncio.run_coroutine_threadsafe(queue.put({"_tool_done": tool_name, "_result": result_str}), loop).result(timeout=10)
                     except Exception:
@@ -506,6 +546,7 @@ CURRENT REQUEST: {message}"""
                     result_str = event.get("_result", "")
                     if result_str:
                         raw_products = self._extract_products_from_result(result_str)
+                        logger.info(f"📦 Extracted {len(raw_products)} raw products from tool result")
                         if raw_products:
                             formatted = await self._format_products(raw_products)
                             sent_ids = {p.get("id") or p.get("productId") for p in products_sent}
@@ -529,7 +570,7 @@ CURRENT REQUEST: {message}"""
 
             response_text = str(agent_result[0]) if agent_result[0] else ""
             context_manager.add_message("assistant", response_text)
-            parsed = await self._parse_agent_response(response_text, message, conversation_history)
+            parsed = await self._parse_agent_response(response_text, message, conversation_history, has_tool_products=bool(products_sent))
 
             if parsed["text"]:
                 yield {"type": "content", "content": parsed["text"]}
@@ -594,10 +635,22 @@ CURRENT REQUEST: {message}"""
             )
 
             single_prompt = (
-                "You are a product search assistant for Blaize Bazaar.\n"
-                "Use the available tools to find products, trends, and pricing info.\n"
-                "Return results as JSON with product details.\n"
-                "Be concise and helpful."
+                "You are Blaize AI, the shopping assistant for Blaize Bazaar.\n"
+                "Use the available tools to find products, trends, and pricing info.\n\n"
+                "TOOL USAGE RULES:\n"
+                "- Use semantic_product_search for ALL product search queries. It uses hybrid AI search with reranking.\n"
+                "- ONLY use get_trending_products when the user explicitly asks about trending/popular items across ALL categories.\n"
+                "- NEVER call both semantic_product_search AND get_trending_products for the same query.\n"
+                "- Call ONE tool per query, then respond.\n\n"
+                "RESPONSE RULES:\n"
+                "- Products are displayed as visual cards automatically from tool results.\n"
+                "- Your text response should ONLY be a brief 1-2 sentence conversational intro.\n"
+                "- Do NOT list, repeat, or summarize individual product names, prices, ratings, or details in your text.\n"
+                "- NEVER use markdown tables, horizontal rules, numbered lists, or section headers.\n"
+                "- Be confident and concise, like a knowledgeable store associate.\n"
+                "- NEVER apologize or say 'unfortunately'.\n"
+                "- Example good response: 'Here are some great smartphones under $500!'\n"
+                "- Example bad response: '1. iPhone SE — $429.99 ⭐ 4.3 ...'"
             )
             if guardrails_enabled:
                 single_prompt += GUARDRAILS_SUFFIX
@@ -654,35 +707,33 @@ CURRENT REQUEST: {message}"""
             logger.error(f"❌ Single-agent chat failed: {e}", exc_info=True)
             raise RuntimeError(f"Single-agent execution failed: {str(e)}")
 
-    async def _parse_agent_response(self, response_text: str, query: str = "", conversation_history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
+    async def _parse_agent_response(self, response_text: str, query: str = "", conversation_history: Optional[List[Dict[str, str]]] = None, has_tool_products: bool = False) -> Dict[str, Any]:
         """
         Parse agent response to extract:
         - Text response
         - Product data (from JSON blocks or database query results)
         - Contextual suggestions based on query type
         """
-        # Initialize result
         result = {
             "text": "",
             "products": [],
             "suggestions": []
         }
-        
+
         # Aggressive JSON extraction - try multiple patterns
         json_patterns = [
-            r'```json\s*(\[[\s\S]*?\])\s*```',  # Standard markdown json block
-            r'```\s*(\[[\s\S]*?\])\s*```',       # Generic code block
-            r'(\[\s*\{[^\[]*"productId"[^\]]*\])',  # Raw JSON array with productId
-            r'(\[\s*\{[^\[]*"product_description"[^\]]*\])'  # Raw JSON with product_description
+            r'```json\s*(\[[\s\S]*?\])\s*```',
+            r'```\s*(\[[\s\S]*?\])\s*```',
+            r'(\[\s*\{[^\[]*"productId"[^\]]*\])',
+            r'(\[\s*\{[^\[]*"product_description"[^\]]*\])'
         ]
-        
+
         products_data = None
         for pattern in json_patterns:
             json_matches = re.findall(pattern, response_text, re.DOTALL)
             if json_matches:
                 raw = json_matches[0]
                 logger.info(f"🔍 Found JSON match with pattern {pattern[:50]}...")
-                # Try raw first, then repaired
                 for attempt, text in enumerate([raw, _repair_json(raw)]):
                     try:
                         products_data = json.loads(text)
@@ -696,44 +747,81 @@ CURRENT REQUEST: {message}"""
                             logger.warning(f"⚠️ Failed to parse JSON even after repair: {e}")
                 if products_data:
                     break
-        
+
         # Extract intro text before "Products:" section
         intro_match = re.search(r'^(.*?)(?=Products:|```json|$)', response_text, re.DOTALL | re.IGNORECASE)
         if intro_match and not result["text"]:
             intro_text = intro_match.group(1).strip()
             if intro_text and len(intro_text) > 10:
                 result["text"] = intro_text
-        
-        # Fallback: if products found but no text, use brief intro
+
         if result["products"]:
             if not result["text"]:
                 result["text"] = "Here are some great options for you!"
             logger.info(f"🛍️ Products extracted: {len(result['products'])} products")
-        
+
         if not products_data:
             logger.debug("No JSON product data in response (pricing/inventory queries may not return products)")
-        
-        # Extract suggestions from "Suggestions:" section only
+
+        # Extract suggestions
         suggestions_section = re.search(r'Suggestions?:\s*\n(.*?)(?:\n\n|$)', response_text, re.DOTALL | re.IGNORECASE)
         if suggestions_section:
             suggestions_text = suggestions_section.group(1)
-            # Extract lines starting with - and containing quotes
             suggestion_lines = re.findall(r'^-\s*"([^"]+)"', suggestions_text, re.MULTILINE)
-            result["suggestions"] = suggestion_lines[:3]  # Limit to 3 suggestions
-        
-        # If no suggestions found, generate contextual ones
+            result["suggestions"] = suggestion_lines[:3]
+
         if not result["suggestions"]:
             result["suggestions"] = self._generate_contextual_suggestions(query, conversation_history)
-        
-        # Clean text (remove JSON blocks and suggestions section)
+
+        # Determine if we have products (either from JSON extraction or tool hooks)
+        have_products = bool(result["products"]) or has_tool_products
+
+        # Clean text — strip everything the frontend renders separately
         clean_text = response_text
+        # Remove JSON code blocks
         for pattern in json_patterns:
             clean_text = re.sub(pattern, '', clean_text, flags=re.DOTALL)
+        clean_text = re.sub(r'```[\s\S]*?```', '', clean_text)
+        # Remove Suggestions section
         clean_text = re.sub(r'Suggestions?:.*$', '', clean_text, flags=re.DOTALL | re.IGNORECASE)
+        # Remove "Products:" label
+        clean_text = re.sub(r'^Products?:\s*$', '', clean_text, flags=re.MULTILINE | re.IGNORECASE)
+        # Remove markdown tables
+        clean_text = re.sub(r'^\|.*$', '', clean_text, flags=re.MULTILINE)
+        # Remove horizontal rules
+        clean_text = re.sub(r'^[-*_]{3,}\s*$', '', clean_text, flags=re.MULTILINE)
+        # Remove markdown headers
+        clean_text = re.sub(r'^#{1,4}\s+.*$', '', clean_text, flags=re.MULTILINE)
+        # Remove numbered list lines (1. **Product** — $xx)
+        clean_text = re.sub(r'^\d+\.\s+\*\*.*$', '', clean_text, flags=re.MULTILINE)
+
+        # Remove plain-text product listings (price patterns, star ratings, view links)
+        # Lines containing price patterns like $xx.xx or $xxx.xx
+        clean_text = re.sub(r'^.*\$\d+[\d,.]*\s*.*$', '', clean_text, flags=re.MULTILINE)
+        # Lines with star ratings (⭐, ★, or "x.x stars")
+        clean_text = re.sub(r'^.*[⭐★].*$', '', clean_text, flags=re.MULTILINE)
+        clean_text = re.sub(r'^.*\d+\.\d+\s*stars?.*$', '', clean_text, flags=re.MULTILINE | re.IGNORECASE)
+        # Lines with "View Product" or product links
+        clean_text = re.sub(r'^.*\[View Product\].*$', '', clean_text, flags=re.MULTILINE | re.IGNORECASE)
+        clean_text = re.sub(r'^.*🔗.*$', '', clean_text, flags=re.MULTILINE)
+        # Lines with "reviews)" pattern
+        clean_text = re.sub(r'^.*\d+[\d,]*\s*reviews?\).*$', '', clean_text, flags=re.MULTILINE | re.IGNORECASE)
+        # Lines that are just product names with em dash or bullet formatting
+        clean_text = re.sub(r'^[-•]\s+\*\*.*$', '', clean_text, flags=re.MULTILINE)
+
+        # Collapse blank lines
+        clean_text = re.sub(r'\n{3,}', '\n\n', clean_text)
         clean_text = clean_text.strip()
-        
-        result["text"] = clean_text if clean_text else response_text
-        
+
+        # If we have products (from JSON or tool hooks), keep only brief intro
+        if have_products and clean_text:
+            sentences = re.split(r'(?<=[.!?])\s+', clean_text)
+            intro = ' '.join(sentences[:2]).strip()
+            if intro:
+                clean_text = intro
+
+        result["text"] = clean_text if clean_text else ("Here are some great options!" if have_products else response_text)
+
         return result
     
     async def _format_products(self, products_data: List[Dict]) -> List[Dict]:
@@ -805,77 +893,55 @@ CURRENT REQUEST: {message}"""
         return formatted
     
     def _generate_contextual_suggestions(self, query: str, conversation_history: Optional[List[Dict[str, str]]] = None) -> List[str]:
-        """Generate contextual suggestions based on query, results, and conversation history."""
+        """Generate action-oriented follow-up suggestions that feel agentic."""
         query_lower = query.lower()
 
-        # Build context from recent conversation
-        mentioned_categories = set()
-        mentioned_prices = []
-        if conversation_history:
-            for msg in conversation_history[-12:]:
-                text = msg.get('content', '').lower()
-                # Extract price mentions
-                import re
-                prices = re.findall(r'\$(\d+)', text)
-                mentioned_prices.extend(int(p) for p in prices)
-                # Track categories mentioned
-                for cat in ['watch', 'laptop', 'phone', 'smartphone', 'shoe', 'sneaker', 'furniture', 'sofa', 'fragrance', 'perfume', 'sunglasses', 'kitchen', 'bag', 'dress', 'shirt', 'sports', 'tablet']:
-                    if cat in text:
-                        mentioned_categories.add(cat)
+        # Extract price context from query
+        import re
+        price_match = re.search(r'\$(\d+)', query)
+        query_price = int(price_match.group(1)) if price_match else None
 
-        # Price-aware suggestions
-        if mentioned_prices:
-            max_price = max(mentioned_prices)
-            price_suggestions = []
-            if max_price > 100:
-                price_suggestions.append(f"Budget options under ${max_price // 2}")
-            if max_price < 200:
-                price_suggestions.append(f"Premium options up to ${max_price * 3}")
-
-        # Category-specific follow-ups based on what was actually discussed
+        # Category-specific action-oriented follow-ups
         if any(w in query_lower for w in ['watch', 'rolex', 'timepiece']):
-            suggestions = ["Luxury watches under $500", "Best everyday watches", "Show all watches"]
-        elif any(w in query_lower for w in ['laptop', 'macbook', 'notebook']):
-            suggestions = ["Best for programming", "Lightweight laptops", "Show all laptops"]
+            suggestions = ["Find me a cheaper alternative", "Compare the top 3 watches", "Which one has the best reviews?"]
+        elif any(w in query_lower for w in ['laptop', 'macbook', 'notebook', 'computer']):
+            suggestions = ["Which is best for programming?", "Find me one under $800", "Compare MacBook vs Windows options"]
         elif any(w in query_lower for w in ['phone', 'smartphone', 'iphone', 'samsung']):
-            suggestions = ["Latest models under $300", "Best camera phones", "Show all smartphones"]
-        elif any(w in query_lower for w in ['shoe', 'sneaker', 'nike', 'jordan']):
-            suggestions = ["Running shoes under $100", "Best rated sneakers", "Show all shoes"]
+            suggestions = ["Which has the best camera?", "Find me the best value pick", "Compare iPhone vs Samsung"]
+        elif any(w in query_lower for w in ['shoe', 'sneaker', 'nike', 'jordan', 'running']):
+            suggestions = ["Find the most cushioned pair", "Show me options under $100", "Which brand has the best ratings?"]
         elif any(w in query_lower for w in ['fragrance', 'perfume', 'cologne']):
-            suggestions = ["Top fragrances under $80", "Best for everyday wear", "Show all fragrances"]
-        elif any(w in query_lower for w in ['furniture', 'sofa', 'bed', 'table']):
-            suggestions = ["Living room essentials", "Best rated furniture", "Under $500"]
-        elif any(w in query_lower for w in ['kitchen', 'cook', 'pan', 'knife']):
-            suggestions = ["Essential kitchen tools", "Best rated cookware", "Under $30"]
-        elif any(w in query_lower for w in ['sunglasses', 'glasses']):
-            suggestions = ["Classic styles under $50", "Best for summer", "Compare top brands"]
-        elif any(w in query_lower for w in ['bag', 'handbag', 'backpack']):
-            suggestions = ["Leather bags under $100", "Best everyday bags", "Compare styles"]
-        elif any(w in query_lower for w in ['sports', 'football', 'basketball', 'tennis']):
-            suggestions = ["Best sports gear", "Equipment under $30", "Compare top brands"]
-        elif any(w in query_lower for w in ['deal', 'cheap', 'budget', 'price', 'affordable']):
-            suggestions = ["Highest rated under $25", "Best value across all categories", "Flash deals today"]
-        elif any(w in query_lower for w in ['stock', 'inventory', 'restock']):
-            suggestions = ["Which categories are low?", "High-demand items running out", "Restock the top seller"]
+            suggestions = ["What's the best everyday scent?", "Find me a gift set under $80", "Show me the highest rated"]
+        elif any(w in query_lower for w in ['furniture', 'sofa', 'bed', 'table', 'chair']):
+            suggestions = ["What's the best rated piece?", "Find something under $200", "Show me the most popular"]
+        elif any(w in query_lower for w in ['kitchen', 'cook', 'pan', 'knife', 'spatula']):
+            suggestions = ["Build me a starter kit under $50", "What's the must-have item?", "Show me the best rated"]
+        elif any(w in query_lower for w in ['sunglasses', 'glasses', 'shades']):
+            suggestions = ["Find me polarized options", "What's trending in shades?", "Show me premium frames"]
+        elif any(w in query_lower for w in ['bag', 'handbag', 'backpack', 'purse']):
+            suggestions = ["Find me a leather option", "What's the best everyday bag?", "Show me something under $80"]
+        elif any(w in query_lower for w in ['sports', 'football', 'basketball', 'yoga']):
+            suggestions = ["Build me a workout kit", "What's the best rated gear?", "Find equipment under $30"]
+        elif any(w in query_lower for w in ['beauty', 'makeup', 'mascara', 'lipstick']):
+            suggestions = ["Build me a beauty starter kit", "What's the top rated product?", "Find me gifts under $40"]
+        elif any(w in query_lower for w in ['skin care', 'lotion', 'moisturizer']):
+            suggestions = ["What's the best for daily use?", "Find a skincare set under $50", "Show me the highest rated"]
+        elif any(w in query_lower for w in ['deal', 'cheap', 'budget', 'affordable']):
+            suggestions = ["Find the best value in electronics", "Show me hidden gems under $25", "What's on sale right now?"]
         elif any(w in query_lower for w in ['trending', 'popular', 'best seller']):
-            suggestions = ["Trending in electronics", "Most reviewed this month", "Hidden gems with 5 stars"]
+            suggestions = ["Why is this one trending?", "Find me something similar but cheaper", "What else is popular today?"]
         elif any(w in query_lower for w in ['recommend', 'suggest', 'gift']):
-            suggestions = ["Gifts under $50", "Top picks for tech lovers", "Most wishlisted items"]
+            suggestions = ["Gifts under $50 for anyone", "What would you pick for a tech lover?", "Show me bestsellers"]
         else:
-            # Smart defaults based on conversation context
-            if mentioned_categories:
-                cat = list(mentioned_categories)[-1]
-                suggestions = [
-                    f"More {cat}s with better ratings",
-                    f"Alternatives in a different price range",
-                    "What's trending right now?"
-                ]
-            else:
-                suggestions = [
-                    "What's trending right now?",
-                    "Best rated products under $50",
-                    "Show me something surprising"
-                ]
+            suggestions = [
+                "Find me the best deal in this category",
+                "What would you recommend instead?",
+                "Show me what's trending right now"
+            ]
+
+        # If there was a price in the query, swap one suggestion for a price-adjacent action
+        if query_price and query_price > 50:
+            suggestions[1] = f"Find cheaper alternatives under ${query_price // 2}"
 
         return suggestions[:3]
     
@@ -923,6 +989,17 @@ CURRENT REQUEST: {message}"""
 
     def _extract_products_from_result(self, result_str: str) -> list:
         """Extract product list from a tool result string."""
+        # First, try to parse as a JSON object with a "products" key
+        try:
+            obj = json.loads(result_str)
+            if isinstance(obj, dict) and "products" in obj and isinstance(obj["products"], list):
+                return obj["products"]
+            if isinstance(obj, list):
+                return obj
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        # Fallback: regex extraction for embedded JSON arrays
         patterns = [
             r'```json\s*(\[[\s\S]*?\])\s*```',
             r'```\s*(\[[\s\S]*?\])\s*```',
@@ -946,7 +1023,8 @@ CURRENT REQUEST: {message}"""
         conversation_history: Optional[List[Dict[str, str]]] = None,
         session_id: Optional[str] = None,
         workshop_mode: Optional[str] = None,
-        guardrails_enabled: bool = False
+        guardrails_enabled: bool = False,
+        user: Optional[Dict[str, Any]] = None
     ):
         """
         Async generator yielding SSE events with real-time agent streaming.
@@ -979,33 +1057,49 @@ CURRENT REQUEST: {message}"""
         context_manager = get_context_manager()
         context_manager.add_message("user", message)
 
-        from agents.orchestrator import create_orchestrator
+        from agents.orchestrator import create_orchestrator, create_guarded_orchestrator
 
         session_manager = None
         if session_id:
-            try:
-                from services.aurora_session_manager import AuroraSessionManager
-                from config import settings
-                conn_string = (
-                    f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}"
-                    f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-                )
-                session_manager = AuroraSessionManager(
-                    session_id=session_id,
-                    conn_string=conn_string,
-                    agent_name="blaize_orchestrator"
-                )
-            except Exception as e:
-                logger.warning(f"Session manager setup failed: {e}")
+            # === WIRE IT LIVE (Lab 4b) ===
+            if user and settings.AGENTCORE_MEMORY_ID:
+                try:
+                    from services.agentcore_memory import create_agentcore_session_manager
+                    session_manager = create_agentcore_session_manager(
+                        session_id=session_id,
+                        user_id=user.get("sub", "anonymous"),
+                    )
+                    if session_manager:
+                        logger.info(f"🧠 AgentCore Memory (stream) for user={user.get('email')}")
+                except Exception as e:
+                    logger.warning(f"AgentCore Memory setup failed: {e}")
+            # === END WIRE IT LIVE ===
 
-        orchestrator = create_orchestrator()
+            if not session_manager:
+                try:
+                    from services.aurora_session_manager import AuroraSessionManager
+                    from config import settings as _settings
+                    conn_string = (
+                        f"postgresql://{_settings.DB_USER}:{_settings.DB_PASSWORD}"
+                        f"@{_settings.DB_HOST}:{_settings.DB_PORT}/{_settings.DB_NAME}"
+                    )
+                    session_manager = AuroraSessionManager(
+                        session_id=session_id,
+                        conn_string=conn_string,
+                        agent_name="blaize_orchestrator"
+                    )
+                except Exception as e:
+                    logger.warning(f"Session manager setup failed: {e}")
 
-        # Inject guardrails into orchestrator system prompt when enabled
+        # Use guarded orchestrator when guardrails enabled (Lab 3)
         if guardrails_enabled:
-            orchestrator.system_prompt = (orchestrator.system_prompt or "") + GUARDRAILS_SUFFIX
+            orchestrator = create_guarded_orchestrator()
+        else:
+            orchestrator = create_orchestrator()
 
         orchestrator.trace_attributes = {
             "session.id": session_id or "anonymous",
+            "session.user": user.get("email", "anonymous") if user else "anonymous",
             "user.query": message[:100],
             "workshop": "DAT406",
             "service": "blaize-bazaar"
@@ -1068,9 +1162,17 @@ CURRENT REQUEST: {message}"""
                 tool_name = ""
                 if hasattr(event, 'tool_use') and isinstance(event.tool_use, dict):
                     tool_name = event.tool_use.get("name", "")
+                # Extract the actual tool result text from the Strands SDK result structure
                 result_str = ""
                 if hasattr(event, 'result') and event.result is not None:
-                    result_str = str(event.result)
+                    raw = event.result
+                    if isinstance(raw, dict) and 'content' in raw:
+                        for block in raw.get('content', []):
+                            if isinstance(block, dict) and 'text' in block:
+                                result_str = block['text']
+                                break
+                    if not result_str:
+                        result_str = str(raw)
                 try:
                     asyncio.run_coroutine_threadsafe(
                         queue.put({"_tool_done": tool_name, "_result": result_str}), loop

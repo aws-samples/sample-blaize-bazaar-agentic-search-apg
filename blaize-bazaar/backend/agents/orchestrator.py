@@ -42,12 +42,27 @@ def create_orchestrator():
 
 
 # === WIRE IT LIVE (Lab 3) ===
-# TODO: Add guardrails-aware orchestrator variant
-# When guardrails_enabled is True, the orchestrator should:
-# 1. Add content moderation rules to the system prompt
-# 2. Filter agent responses through a guardrails check before returning
-# 3. Block requests for weapons, alcohol, tobacco, or inappropriate content
-#
-# Hint: Create a create_guarded_orchestrator() that wraps the base orchestrator
-# with an additional guardrails system prompt and post-processing step.
+GUARDRAILS_PROMPT_SUFFIX = """
+
+GUARDRAILS (ACTIVE):
+- Do NOT recommend products related to weapons, alcohol, or tobacco
+- Do NOT provide medical, legal, or financial advice
+- Flag inappropriate requests politely
+- Keep all responses family-friendly
+- If a user asks for restricted content, respond: "I can't help with that, but I'd love to help you find something else!"
+"""
+
+
+def create_guarded_orchestrator():
+    """Create a guardrails-aware orchestrator that adds content moderation
+    rules to the system prompt and can filter responses through Bedrock Guardrails."""
+    return Agent(
+        model=BedrockModel(
+            model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
+            max_tokens=4096,
+            temperature=0.0
+        ),
+        system_prompt=ORCHESTRATOR_PROMPT + GUARDRAILS_PROMPT_SUFFIX,
+        tools=[product_recommendation_agent, price_optimization_agent, inventory_restock_agent]
+    )
 # === END WIRE IT LIVE ===

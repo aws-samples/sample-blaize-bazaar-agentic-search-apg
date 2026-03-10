@@ -4,6 +4,7 @@ Combines pgvector semantic search with PostgreSQL full-text search
 for optimal relevance and recall.
 """
 import logging
+import time
 from typing import List, Dict, Any, Optional
 from services.database import DatabaseService
 
@@ -195,7 +196,7 @@ class HybridSearchService:
         
         # Sort by RRF score and format results
         sorted_items = sorted(scores.items(), key=lambda x: x[1]['score'], reverse=True)
-        
+
         results = []
         for pid, item in sorted_items[:limit]:
             result = item['data'].copy()
@@ -203,5 +204,103 @@ class HybridSearchService:
             result['vector_rank'] = item['vector_rank']
             result['fulltext_rank'] = item['fulltext_rank']
             results.append(result)
-        
+
         return results
+
+    async def search_with_rerank(
+        self,
+        query: str,
+        embedding: List[float],
+        rerank_service,
+        limit: int = 5,
+        candidate_pool_size: int = 20,
+        ef_search: int = 40,
+    ) -> Dict[str, Any]:
+        """
+        Hybrid search with Cohere Rerank post-processing.
+
+        Pipeline:
+          1. Run keyword + vector search in parallel
+          2. Merge unique candidates (dedup by product_id)
+          3. Re-rank merged candidates using Cohere Rerank
+          4. Return top results with relevance scores and timing metadata
+        """
+        # Step 1: Run both searches
+        search_start = time.time()
+        vector_results = await self._vector_search(embedding, candidate_pool_size, ef_search)
+        fulltext_results = await self._fulltext_search(query, candidate_pool_size)
+        search_time_ms = (time.time() - search_start) * 1000
+
+        logger.info(f"🔵 Vector: {len(vector_results)} | 🟡 Keyword: {len(fulltext_results)}")
+
+        # Step 2: Merge unique candidates
+        seen_ids = set()
+        merged_candidates = []
+
+        for result in vector_results:
+            pid = result["product_id"]
+            if pid not in seen_ids:
+                seen_ids.add(pid)
+                result["source"] = "vector"
+                merged_candidates.append(result)
+
+        for result in fulltext_results:
+            pid = result["product_id"]
+            if pid not in seen_ids:
+                seen_ids.add(pid)
+                result["source"] = "fulltext"
+            elif any(c["product_id"] == pid for c in merged_candidates):
+                # Mark as appearing in both
+                for c in merged_candidates:
+                    if c["product_id"] == pid:
+                        c["source"] = "both"
+                        break
+                continue
+            merged_candidates.append(result)
+
+        vector_count = len(vector_results)
+        fulltext_count = len(fulltext_results)
+        unique_count = len(merged_candidates)
+
+        logger.info(f"🔀 Merged: {unique_count} unique candidates from {vector_count}+{fulltext_count}")
+
+        # Step 3: Rerank using Cohere
+        document_texts = [r["product_description"] for r in merged_candidates]
+
+        rerank_result = rerank_service.rerank(
+            query=query,
+            documents=document_texts,
+            top_n=limit,
+        )
+
+        # Step 4: Map rerank results back to product data
+        reranked_results = []
+        for rank_item in rerank_result["results"]:
+            idx = rank_item["index"]
+            candidate = merged_candidates[idx].copy()
+            candidate["relevance_score"] = rank_item["relevance_score"]
+            candidate["rerank_position"] = len(reranked_results) + 1
+            # Convert Decimal types to float for JSON serialization
+            if hasattr(candidate.get("price"), '__float__'):
+                candidate["price"] = float(candidate["price"])
+            if hasattr(candidate.get("rating"), '__float__'):
+                candidate["rating"] = float(candidate["rating"])
+            reranked_results.append(candidate)
+
+        logger.info(f"🏆 Reranked → top {len(reranked_results)} results")
+
+        return {
+            "results": reranked_results,
+            "total": len(reranked_results),
+            "method": "hybrid_rerank",
+            "pipeline": {
+                "vector_candidates": vector_count,
+                "fulltext_candidates": fulltext_count,
+                "unique_candidates": unique_count,
+                "reranked_top_n": limit,
+            },
+            "timing": {
+                "search_time_ms": round(search_time_ms, 2),
+                "rerank_time_ms": rerank_result["rerank_time_ms"],
+            },
+        }

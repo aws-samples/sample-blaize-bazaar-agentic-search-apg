@@ -1,24 +1,18 @@
 """
 Embeddings service for DAT406 Workshop
 
-Generates vector embeddings using Amazon Titan Text Embeddings v2 via Bedrock.
-Provides async embedding generation for search queries and documents.
+Generates vector embeddings using Cohere Embed v4 via Amazon Bedrock.
+Provides embedding generation for search queries and documents with
+asymmetric input types for improved retrieval quality.
 """
 
 import logging
 import time
-from functools import lru_cache
-from typing import List, Tuple
+from typing import List
 
 import boto3
 import json
 from botocore.exceptions import ClientError
-
-try:
-    from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-    HAS_TENACITY = True
-except ImportError:
-    HAS_TENACITY = False
 
 from config import settings
 
@@ -30,7 +24,7 @@ _EMBEDDING_CACHE_MAX = 200
 _CACHE_HITS = 0
 _CACHE_MISSES = 0
 _TOTAL_EMBEDDING_COST = 0.0
-_EMBEDDING_COST_PER_CALL = 0.00002  # ~$0.02 per 1K Titan v2 calls
+_EMBEDDING_COST_PER_CALL = 0.00001  # ~$0.01 per 1K Cohere Embed v4 calls
 
 
 def get_cache_stats() -> dict:
@@ -49,10 +43,10 @@ def get_cache_stats() -> dict:
 
 class EmbeddingService:
     """
-    Service for generating text embeddings using Amazon Titan v2.
+    Service for generating text embeddings using Cohere Embed v4 via Bedrock.
 
-    Titan Text Embeddings v2 generates 1024-dimensional vectors optimized
-    for semantic search and retrieval tasks.
+    Cohere Embed v4 generates 1024-dimensional vectors with asymmetric
+    input types (search_query vs search_document) for improved retrieval.
     """
 
     def __init__(self):
@@ -82,12 +76,7 @@ class EmbeddingService:
     def _call_bedrock_embedding(self, request_body: dict) -> dict:
         """
         Call Bedrock embedding API with retry logic.
-
-        Wire It Live: Participants add @tenacity.retry decorator here.
-        Hint: @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=0.5, max=5))
         """
-        # --- Wire It Live: Add retry decorator ---
-        # If tenacity is available, we retry manually to emit events
         max_attempts = 3
         last_error = None
         for attempt in range(1, max_attempts + 1):
@@ -95,7 +84,7 @@ class EmbeddingService:
                 response = self.bedrock_runtime.invoke_model(
                     modelId=self.model_id,
                     contentType="application/json",
-                    accept="application/json",
+                    accept="*/*",
                     body=json.dumps(request_body)
                 )
                 return json.loads(response['body'].read())
@@ -118,23 +107,25 @@ class EmbeddingService:
                     continue
                 raise
         raise last_error  # type: ignore
-        # --- End Wire It Live ---
 
     def generate_embedding(
         self,
         text: str,
+        input_type: str = "search_query",
         normalize: bool = True,
     ) -> List[float]:
         """
         Generate embedding vector for a single text string.
-        
+
         Args:
             text: Input text to embed
+            input_type: Cohere input type - "search_query" for queries,
+                       "search_document" for documents being indexed
             normalize: Whether to normalize the embedding vector
-            
+
         Returns:
             List of floats representing the embedding vector (1024 dimensions)
-            
+
         Raises:
             ValueError: If text is empty or invalid
             ClientError: If Bedrock API call fails
@@ -142,31 +133,43 @@ class EmbeddingService:
         if not text or not text.strip():
             raise ValueError("Text cannot be empty")
 
-        # Truncate if too long (Titan v2 has input limits)
+        # Truncate if too long
         max_length = 8192  # characters
         text = text[:max_length].strip()
 
         global _CACHE_HITS, _CACHE_MISSES, _TOTAL_EMBEDDING_COST
 
+        # Cache key includes input_type since query vs document produce different vectors
+        cache_key = f"{input_type}:{text}"
+
         # Check cache first
-        if text in _EMBEDDING_CACHE:
+        if cache_key in _EMBEDDING_CACHE:
             _CACHE_HITS += 1
             logger.debug("Embedding cache hit")
-            return _EMBEDDING_CACHE[text]
+            return _EMBEDDING_CACHE[cache_key]
 
         _CACHE_MISSES += 1
 
         try:
-            # Prepare request body for Titan
+            # Prepare request body for Cohere Embed v4
             request_body = {
-                "inputText": text
+                "texts": [text],
+                "input_type": input_type,
+                "embedding_types": ["float"],
+                "output_dimension": self.embedding_dimension,
             }
 
             # Call Bedrock API with retry logic
             response_body = self._call_bedrock_embedding(request_body)
 
-            # Extract embedding vector (Titan format)
-            embedding = response_body.get('embedding', [])
+            # Extract embedding vector (Cohere format)
+            embeddings_data = response_body.get("embeddings", {})
+            float_embeddings = embeddings_data.get("float", [])
+
+            if not float_embeddings or len(float_embeddings) == 0:
+                raise ValueError("No embeddings returned from Cohere Embed v4")
+
+            embedding = float_embeddings[0]
 
             if not embedding or len(embedding) != self.embedding_dimension:
                 raise ValueError(
@@ -180,10 +183,10 @@ class EmbeddingService:
             if len(_EMBEDDING_CACHE) >= _EMBEDDING_CACHE_MAX:
                 oldest_key = next(iter(_EMBEDDING_CACHE))
                 del _EMBEDDING_CACHE[oldest_key]
-            _EMBEDDING_CACHE[text] = embedding
+            _EMBEDDING_CACHE[cache_key] = embedding
 
             return embedding
-            
+
         except ClientError as e:
             error_code = e.response['Error']['Code']
             error_message = e.response['Error']['Message']
@@ -192,130 +195,110 @@ class EmbeddingService:
         except Exception as e:
             logger.error(f"Error generating embedding: {e}")
             raise
-    
+
     def generate_embeddings_batch(
         self,
         texts: List[str],
+        input_type: str = "search_document",
         normalize: bool = True,
     ) -> List[List[float]]:
         """
         Generate embeddings for multiple texts.
-        
-        Note: Titan v2 doesn't support native batch processing, so this
-        method calls the API sequentially. For enterprise deployments, consider
-        implementing async batch processing with rate limiting.
-        
+
         Args:
             texts: List of input texts
+            input_type: Cohere input type (defaults to "search_document" for batch indexing)
             normalize: Whether to normalize embedding vectors
-            
+
         Returns:
             List of embedding vectors, one per input text
         """
         if not texts:
             return []
-        
+
         embeddings = []
         errors = []
-        
+
         for i, text in enumerate(texts):
             try:
-                embedding = self.generate_embedding(text, normalize=normalize)
+                embedding = self.generate_embedding(text, input_type=input_type, normalize=normalize)
                 embeddings.append(embedding)
             except Exception as e:
                 logger.error(f"Error embedding text {i}: {e}")
                 errors.append((i, str(e)))
                 # Append zero vector as placeholder
                 embeddings.append([0.0] * self.embedding_dimension)
-        
+
         if errors:
             logger.warning(
                 f"Failed to generate {len(errors)} embeddings out of {len(texts)}"
             )
-        
+
         return embeddings
-    
+
     def embed_query(self, query: str) -> List[float]:
         """
         Generate embedding for a search query.
-        
-        Convenience method that applies query-specific preprocessing.
-        
+
+        Uses input_type="search_query" for Cohere's asymmetric retrieval optimization.
+
         Args:
             query: Search query text
-            
+
         Returns:
             Embedding vector for the query
         """
-        # Clean and preprocess query
         query = query.strip()
-        
+
         if not query:
             raise ValueError("Query cannot be empty")
-        
-        # Generate embedding
-        return self.generate_embedding(query, normalize=True)
-    
+
+        return self.generate_embedding(query, input_type="search_query", normalize=True)
+
     def embed_document(self, document: str) -> List[float]:
         """
         Generate embedding for a document.
-        
-        Convenience method that applies document-specific preprocessing.
-        
+
+        Uses input_type="search_document" for Cohere's asymmetric retrieval optimization.
+
         Args:
             document: Document text to embed
-            
+
         Returns:
             Embedding vector for the document
         """
-        # Clean and preprocess document
         document = document.strip()
-        
+
         if not document:
             raise ValueError("Document cannot be empty")
-        
-        # Generate embedding
-        return self.generate_embedding(document, normalize=True)
-    
+
+        return self.generate_embedding(document, input_type="search_document", normalize=True)
+
     def get_embedding_dimension(self) -> int:
-        """
-        Get the dimension of embedding vectors.
-        
-        Returns:
-            int: Embedding dimension (1024 for Titan v2)
-        """
+        """Get the dimension of embedding vectors."""
         return self.embedding_dimension
-    
+
     def get_model_id(self) -> str:
-        """
-        Get the Bedrock model ID being used.
-        
-        Returns:
-            str: Model ID
-        """
+        """Get the Bedrock model ID being used."""
         return self.model_id
-    
+
     def health_check(self) -> dict:
         """
         Check if embeddings service is healthy.
-        
+
         Performs a test embedding generation to verify Bedrock connectivity.
-        
-        Returns:
-            dict: Health check results
         """
         try:
-            # Generate test embedding
             test_text = "test"
-            embedding = self.generate_embedding(test_text)
-            
+            embedding = self.generate_embedding(test_text, input_type="search_query")
+
             return {
                 "status": "healthy",
                 "model_id": self.model_id,
                 "embedding_dimension": len(embedding),
                 "region": settings.AWS_REGION
             }
-            
+
         except Exception as e:
             logger.error(f"Embeddings health check failed: {e}")
             return {

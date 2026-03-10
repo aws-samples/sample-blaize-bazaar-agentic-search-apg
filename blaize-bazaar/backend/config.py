@@ -44,9 +44,12 @@ class Settings(BaseSettings):
     # ========================================
     # Bedrock Model Configuration
     # ========================================
-    # Embedding model for semantic search
-    BEDROCK_EMBEDDING_MODEL: str = "amazon.titan-embed-text-v2:0"
-    
+    # Embedding model for semantic search (Cohere Embed v4)
+    BEDROCK_EMBEDDING_MODEL: str = "us.cohere.embed-v4:0"
+
+    # Rerank model for hybrid search (Cohere Rerank v3.5)
+    BEDROCK_RERANK_MODEL: str = "cohere.rerank-v3-5:0"
+
     # Chat model for conversational features
     BEDROCK_CHAT_MODEL: str = "global.anthropic.claude-sonnet-4-6"
     
@@ -104,11 +107,38 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     
     # ========================================
+    # Bedrock Guardrails (Lab 3)
+    # ========================================
+    BEDROCK_GUARDRAIL_ID: Optional[str] = None
+    BEDROCK_GUARDRAIL_VERSION: str = "DRAFT"
+
+    # ========================================
+    # AgentCore Configuration (Lab 4)
+    # ========================================
+    # 4a — Identity (Cognito)
+    COGNITO_USER_POOL_ID: Optional[str] = None
+    COGNITO_CLIENT_ID: Optional[str] = None
+    COGNITO_DOMAIN: Optional[str] = None  # e.g. "blaize-bazaar.auth.us-west-2.amazoncognito.com"
+
+    # 4b — Memory
+    AGENTCORE_MEMORY_ID: Optional[str] = None
+
+    # 4c — Gateway (MCP)
+    AGENTCORE_GATEWAY_URL: Optional[str] = None
+
+    # 4d — Observability
+    CLOUDWATCH_LOG_GROUP: str = "/blaize-bazaar/agents"
+    OTEL_EXPORTER_OTLP_ENDPOINT: Optional[str] = None
+
+    # 4e — Runtime
+    AGENTCORE_RUNTIME_ENDPOINT: Optional[str] = None
+
+    # ========================================
     # Development & Debugging
     # ========================================
     DEBUG: bool = False
     DEVELOPMENT_MODE: bool = True
-    
+
     # Show SQL queries in logs
     SHOW_SQL: bool = False
     

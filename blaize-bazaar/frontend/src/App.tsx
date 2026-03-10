@@ -25,9 +25,15 @@ import ContextDashboard from './components/ContextDashboard'
 import RAGDemo from './components/RAGDemo'
 import PersonalizationDemo from './components/PersonalizationDemo'
 import GuardrailsDemo from './components/GuardrailsDemo'
+import LoginButton from './components/LoginButton'
+import MemoryDashboard from './components/MemoryDashboard'
+import GatewayToolsPanel from './components/GatewayToolsPanel'
+import ObservabilityPanel from './components/ObservabilityPanel'
+import RuntimeStatusPanel from './components/RuntimeStatusPanel'
 import SpotlightWalkthrough from './components/SpotlightWalkthrough'
+import { AuthProvider } from './contexts/AuthContext'
 import type { TourAction } from './data/tourSteps'
-import { Database, BarChart3, Brain, Wrench, X, Zap, Activity, DollarSign, Shield, BookOpen, User, AlertOctagon } from 'lucide-react'
+import { Database, BarChart3, Brain, Wrench, X, Zap, Activity, DollarSign, Shield, BookOpen, User, AlertOctagon, Search } from 'lucide-react'
 import './styles/premium-heading-styles.css'
 
 // Theme Context — dark/light toggle
@@ -64,6 +70,7 @@ function AppContent() {
   const [activeSection, setActiveSection] = useState<Section>('shop')
   const [searchOverlayVisible, setSearchOverlayVisible] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [heroSearchQuery, setHeroSearchQuery] = useState('')
   const [showSQLInspector, setShowSQLInspector] = useState(false)
   const [showIndexPerformance, setShowIndexPerformance] = useState(false)
   const [agentPanelMode, setAgentPanelMode] = useState<'hidden' | 'collapsed' | 'expanded'>('hidden')
@@ -85,6 +92,11 @@ function AppContent() {
   const [showGuardrailsDemo, setShowGuardrailsDemo] = useState(false)
   const [chaosMode, setChaosMode] = useState(false)
   const [modeToast, setModeToast] = useState<string | null>(null)
+  // Lab 4 — AgentCore panels
+  const [showMemoryDashboard, setShowMemoryDashboard] = useState(false)
+  const [showGatewayTools, setShowGatewayTools] = useState(false)
+  const [showObservability, setShowObservability] = useState(false)
+  const [showRuntimeStatus, setShowRuntimeStatus] = useState(false)
 
   // Hero background carousel
   const heroImages = [
@@ -96,10 +108,34 @@ function AppContent() {
   ]
   const [heroIdx, setHeroIdx] = useState(0)
 
+  // Hero search bar rotating placeholders (mode-specific)
+  const legacyPlaceholders = [
+    'running shoes',
+    'wireless headphones',
+    'laptop stand',
+    'water bottle',
+    'kitchen knife set'
+  ]
+  const semanticPlaceholders = [
+    'something to keep my drinks cold',
+    'comfortable shoes for long runs',
+    'a gift for someone who loves cooking',
+    'tech for working from home',
+    'gear for outdoor adventures'
+  ]
+  const heroPlaceholders = workshopMode === 'legacy' ? legacyPlaceholders : semanticPlaceholders
+  const [heroPlaceholderIndex, setHeroPlaceholderIndex] = useState(0)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHeroPlaceholderIndex((prev) => (prev + 1) % heroPlaceholders.length)
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [])
+
   // (scroll reveal now handled by framer-motion whileInView on each element)
 
   // Mode-aware dev tools — buttons filtered by current workshop mode
-  const MODE_ORDER = ['legacy', 'semantic', 'tools', 'full'] as const
+  const MODE_ORDER = ['legacy', 'semantic', 'tools', 'full', 'agentcore'] as const
   const modeIndex = MODE_ORDER.indexOf(workshopMode)
   const devToolButtons = [
     { icon: <Database className="h-5 w-5" />, label: 'SQL Inspector', desc: 'Monitor pgvector queries', action: () => { setShowSQLInspector(true); setShowDevTools(false) }, minMode: 'semantic' as const },
@@ -117,6 +153,11 @@ function AppContent() {
       fetch('/api/dev/chaos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: next }) }).catch(() => {})
       setShowDevTools(false)
     }, minMode: 'full' as const },
+    // Lab 4: AgentCore dev tools
+    { icon: <Brain className="h-5 w-5" />, label: 'Memory Dashboard', desc: 'AgentCore persistent memory', action: () => { setShowMemoryDashboard(true); setShowDevTools(false) }, minMode: 'agentcore' as const },
+    { icon: <Zap className="h-5 w-5" />, label: 'Gateway Tools', desc: 'MCP tool discovery', action: () => { setShowGatewayTools(true); setShowDevTools(false) }, minMode: 'agentcore' as const },
+    { icon: <Activity className="h-5 w-5" />, label: 'Observability', desc: 'CloudWatch X-Ray traces', action: () => { setShowObservability(true); setShowDevTools(false) }, minMode: 'agentcore' as const },
+    { icon: <Search className="h-5 w-5" />, label: 'Runtime Status', desc: 'AgentCore Lambda runtime', action: () => { setShowRuntimeStatus(true); setShowDevTools(false) }, minMode: 'agentcore' as const },
   ]
   const visibleButtons = devToolButtons.filter(b => MODE_ORDER.indexOf(b.minMode) <= modeIndex)
 
@@ -126,12 +167,14 @@ function AppContent() {
     semantic: 'Lab 1 — Semantic Search',
     tools: 'Lab 2 — Agent Tools',
     full: 'Lab 3 — Orchestration',
+    agentcore: 'Lab 4 — AgentCore',
   }
   const MODE_FEATURES: Record<string, string[]> = {
     legacy: ['Keyword-only search', 'Full-text matching'],
     semantic: ['+ Vector search (pgvector)', '+ Hybrid search comparison', '+ SQL Inspector', '+ Index Performance'],
     tools: ['+ AI Chat Assistant', '+ Agent reasoning traces', '+ Custom tool integration', '+ Cost tracking'],
     full: ['+ Multi-agent orchestration', '+ Guardrails & safety', '+ Context management', '+ Full observability'],
+    agentcore: ['+ Cognito authentication', '+ AgentCore Memory', '+ MCP Gateway', '+ CloudWatch traces', '+ Lambda Runtime'],
   }
   const handleModeSwitch = (mode: typeof workshopMode) => {
     setWorkshopMode(mode) // auto-starts tour via LayoutContext if not completed
@@ -143,8 +186,15 @@ function AppContent() {
   const handleTourAction = (actionKey: TourAction['actionKey']) => {
     switch (actionKey) {
       case 'focus-search': {
-        const input = document.querySelector('[data-tour="search-bar"] input') as HTMLInputElement
-        input?.focus()
+        // In legacy/semantic, focus the hero search bar; in tools/full, focus the header search bar
+        const selector = (workshopMode === 'legacy' || workshopMode === 'semantic')
+          ? '[data-tour="hero-search"] input'
+          : '[data-tour="search-bar"] input'
+        const input = document.querySelector(selector) as HTMLInputElement
+        if (input) {
+          input.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          setTimeout(() => input.focus(), 400)
+        }
         break
       }
       case 'open-sql-inspector':
@@ -285,6 +335,7 @@ function AppContent() {
           }}
           cartItemCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
           onCartClick={() => setShowCart(true)}
+          loginSlot={<LoginButton />}
         />
 
         {/* Search Overlay */}
@@ -426,6 +477,59 @@ function AppContent() {
                 </motion.div>
               )
 
+              const heroSearchBar = (workshopMode === 'legacy' || workshopMode === 'semantic') ? (
+                <motion.div
+                  className="w-full max-w-[600px] mx-auto mb-10"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.45 }}
+                  data-tour="hero-search"
+                >
+                  <div className="relative group">
+                    <div className="absolute -inset-1 rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-500"
+                      style={{ background: 'radial-gradient(ellipse, rgba(41, 151, 255, 0.12), transparent 70%)' }} />
+                    <div className="relative flex items-center rounded-2xl overflow-hidden"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                      }}>
+                      <Search className="h-5 w-5 ml-5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.35)' }} />
+                      <input
+                        type="text"
+                        value={heroSearchQuery}
+                        onChange={(e) => setHeroSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && heroSearchQuery.trim()) {
+                            setSearchQuery(heroSearchQuery)
+                            setSearchOverlayVisible(true)
+                          }
+                        }}
+                        placeholder={`Try: "${heroPlaceholders[heroPlaceholderIndex]}"`}
+                        className="flex-1 px-4 py-4 bg-transparent text-lg text-white placeholder-white/30 focus:outline-none"
+                        style={{ letterSpacing: '-0.01em' }}
+                      />
+                      <button
+                        onClick={() => {
+                          if (heroSearchQuery.trim()) {
+                            setSearchQuery(heroSearchQuery)
+                            setSearchOverlayVisible(true)
+                          }
+                        }}
+                        disabled={!heroSearchQuery.trim()}
+                        className="px-6 py-2.5 mr-2.5 rounded-xl text-sm font-medium transition-all duration-200 disabled:cursor-default"
+                        style={{
+                          background: heroSearchQuery.trim() ? '#0071e3' : 'rgba(255, 255, 255, 0.06)',
+                          color: heroSearchQuery.trim() ? '#ffffff' : 'rgba(255, 255, 255, 0.25)',
+                        }}
+                      >
+                        Search
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : null
+
               if (isAgentMode) {
                 return (
                   <div className="relative z-10 max-w-[1200px] mx-auto px-8">
@@ -478,6 +582,7 @@ function AppContent() {
                   {heroBadge}
                   {heroHeading}
                   {heroSubtitle}
+                  {heroSearchBar}
                   {heroButtons}
                   {scrollIndicator}
                 </div>
@@ -910,6 +1015,12 @@ function AppContent() {
           onClose={() => setShowGuardrailsDemo(false)}
         />
 
+        {/* Lab 4 — AgentCore Panels */}
+        {showMemoryDashboard && <MemoryDashboard onClose={() => setShowMemoryDashboard(false)} />}
+        {showGatewayTools && <GatewayToolsPanel onClose={() => setShowGatewayTools(false)} />}
+        {showObservability && <ObservabilityPanel onClose={() => setShowObservability(false)} />}
+        {showRuntimeStatus && <RuntimeStatusPanel onClose={() => setShowRuntimeStatus(false)} />}
+
         {/* Spotlight Walkthrough */}
         <SpotlightWalkthrough onAction={handleTourAction} />
 
@@ -1068,9 +1179,11 @@ function AppContent() {
 
 function App() {
   return (
-    <LayoutProvider>
-      <AppContent />
-    </LayoutProvider>
+    <AuthProvider>
+      <LayoutProvider>
+        <AppContent />
+      </LayoutProvider>
+    </AuthProvider>
   )
 }
 

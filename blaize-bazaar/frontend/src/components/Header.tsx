@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../App'
 import { useLayout, type WorkshopMode } from '../contexts/LayoutContext'
 import ImageSearchModal from './ImageSearchModal'
-import { Camera, ShoppingBag, Sun, Moon, Check, Compass } from 'lucide-react'
+import { Camera, Sun, Moon, Check, Compass } from 'lucide-react'
 
 interface HeaderProps {
   activeSection?: 'shop' | 'collections'
@@ -10,6 +10,7 @@ interface HeaderProps {
   onSearch?: (query: string) => void
   cartItemCount?: number
   onCartClick?: () => void
+  loginSlot?: React.ReactNode
 }
 
 const WORKSHOP_STEPS: { key: WorkshopMode; label: string }[] = [
@@ -17,10 +18,11 @@ const WORKSHOP_STEPS: { key: WorkshopMode; label: string }[] = [
   { key: 'semantic', label: 'Lab 1' },
   { key: 'tools', label: 'Lab 2' },
   { key: 'full', label: 'Lab 3' },
+  { key: 'agentcore', label: 'Lab 4' },
 ]
-const MODE_ORDER: WorkshopMode[] = ['legacy', 'semantic', 'tools', 'full']
+const MODE_ORDER: WorkshopMode[] = ['legacy', 'semantic', 'tools', 'full', 'agentcore']
 
-const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
+const Header = ({ onSearch, cartItemCount = 0, onCartClick, loginSlot }: HeaderProps) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestions, setSuggestions] = useState<Array<{text: string, category: string}>>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -122,7 +124,7 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
                   <button
                     key={step.key}
                     onClick={() => setWorkshopMode(step.key)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all duration-200"
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[13px] font-medium transition-all duration-200"
                     style={{
                       background: isCurrent ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
                       color: isCurrent ? '#ffffff' : isCompleted ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.3)',
@@ -144,7 +146,7 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
               })}
               <button
                 onClick={() => startTour(workshopMode)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all duration-200 ml-1 hover:bg-white/10"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[13px] font-medium transition-all duration-200 ml-1 hover:bg-white/10"
                 style={{
                   background: 'rgba(59, 130, 246, 0.15)',
                   border: '1px solid rgba(59, 130, 246, 0.3)',
@@ -157,9 +159,10 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
               </button>
             </div>
 
-            {/* Right Side - Search, Cart & GitHub */}
+            {/* Right Side - Search (Lab 2/3 only), Cart & GitHub */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Search Section */}
+              {/* Search Section — only visible in tools/full (Lab 2 & 3) */}
+              {(workshopMode === 'tools' || workshopMode === 'full' || workshopMode === 'agentcore') && (
               <div className="flex items-center gap-2">
                 <div className="relative w-[280px] sm:w-[320px] md:w-[360px] lg:w-[380px] xl:w-[420px] group" ref={searchRef} data-tour="search-bar">
                   <input
@@ -189,7 +192,7 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
                       ))}
                     </div>
                   )}
-                  
+
                   {/* Camera Icon for Image Search */}
                   <button
                     onClick={() => setShowImageSearch(true)}
@@ -201,12 +204,7 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
                   >
                     <Camera className="h-4 w-4 text-text-secondary group-hover/camera:text-text-primary transition-colors" />
                   </button>
-                  
-                  {/* Search capabilities hint - only on larger screens */}
-                  <div className="hidden xl:block absolute -bottom-8 left-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <span className="text-xs text-text-secondary whitespace-nowrap">Semantic Search + Visual Search</span>
-                  </div>
-                  
+
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
@@ -228,6 +226,7 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
                   Search
                 </button>
               </div>
+              )}
 
               {/* Shopping Cart Icon */}
               {onCartClick && (
@@ -240,7 +239,7 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
                   aria-label="Shopping Cart"
                   title="View shopping cart"
                 >
-                  <ShoppingBag className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
+                  <span className="text-lg leading-none">🛒</span>
                   {cartItemCount > 0 && (
                     <span className="absolute -top-1 -right-1 text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse"
                       style={{ background: 'var(--link-color)', color: '#fff' }}>
@@ -249,6 +248,9 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick }: HeaderProps) => {
                   )}
                 </button>
               )}
+
+              {/* Login (Lab 4) */}
+              {loginSlot}
 
               {/* Theme Toggle */}
               <button

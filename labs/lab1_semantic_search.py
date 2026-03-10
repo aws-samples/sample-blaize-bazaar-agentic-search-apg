@@ -11,7 +11,7 @@ Sections:
   4. TODO: Filtered Semantic Search
 
 Run from repo root:
-    python labs/part1_semantic_search.py
+    python labs/lab1_semantic_search.py
 """
 
 import json

@@ -11,7 +11,7 @@ Sections:
   4. TODO: AgentCore Gateway Registration (Phase 2 placeholder)
 
 Run from repo root:
-    python labs/part2_custom_tools.py
+    python labs/lab2_custom_tools.py
 """
 
 import json

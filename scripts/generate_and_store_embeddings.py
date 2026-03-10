@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Generate Product Embeddings and Store in Aurora PostgreSQL
-Combines embedding generation using Amazon Bedrock Titan V2 with database storage.
+Generates embeddings using Cohere Embed v4 via Amazon Bedrock and stores in pgvector.
 
 Usage:
     python generate_and_store_embeddings.py --workers 10 --batch-size 1000
@@ -39,24 +39,30 @@ bedrock_runtime = boto3.client('bedrock-runtime', region_name=os.getenv('AWS_REG
 
 def generate_embedding(text: str) -> Optional[list]:
     """
-    Generate embedding for a single text using Amazon Titan Text v2
-    
+    Generate embedding for a single text using Cohere Embed v4 via Bedrock.
+    Uses input_type="search_document" since these are product descriptions being indexed.
+
     Args:
         text: Text to embed
-        
+
     Returns:
-        Embedding vector or None if failed
+        Embedding vector (1024 dimensions) or None if failed
     """
     try:
-        payload = json.dumps({'inputText': text})
+        payload = json.dumps({
+            'texts': [text],
+            'input_type': 'search_document',
+            'embedding_types': ['float'],
+            'output_dimension': 1024,
+        })
         response = bedrock_runtime.invoke_model(
             body=payload,
-            modelId='amazon.titan-embed-text-v2:0',
-            accept="application/json",
+            modelId='us.cohere.embed-v4:0',
+            accept="*/*",
             contentType="application/json"
         )
         response_body = json.loads(response.get("body").read())
-        return response_body.get("embedding")
+        return response_body["embeddings"]["float"][0]
     except Exception as e:
         logger.error(f"Error generating embedding: {str(e)}")
         return None

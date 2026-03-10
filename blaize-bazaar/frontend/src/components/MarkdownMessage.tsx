@@ -8,7 +8,23 @@ interface Props {
 
 const MarkdownMessage = ({ content }: Props) => {
 
-  const renderContent = (text: string) => {
+  const renderContent = (raw: string) => {
+    // Pre-clean: strip artifacts the backend should have removed
+    let text = raw
+      // Remove code blocks (```json ... ``` or ``` ... ```)
+      .replace(/```[\s\S]*?```/g, '')
+      // Remove markdown table rows (| col | col |)
+      .replace(/^\|.*$/gm, '')
+      // Remove horizontal rules (---, ***, ___)
+      .replace(/^[-*_]{3,}\s*$/gm, '')
+      // Remove header-style section labels (### Highlights, ## Summary)
+      .replace(/^#{1,4}\s+.*$/gm, '')
+      // Remove "Products:" / "Suggestions:" labels
+      .replace(/^(?:Products?|Suggestions?):?\s*$/gim, '')
+      // Collapse blank lines
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+
     const lines = text.split('\n')
     const elements: JSX.Element[] = []
     let currentList: string[] = []
@@ -46,19 +62,8 @@ const MarkdownMessage = ({ content }: Props) => {
     }
 
     lines.forEach((line, idx) => {
-      // Headers (## or ###)
-      if (line.match(/^#{2,3}\s/)) {
-        flushList()
-        const text = line.replace(/^#{2,3}\s*/, '').replace(/\*\*/g, '')
-        const isH3 = line.startsWith('###')
-        elements.push(
-          <h2 key={idx} className={`font-bold text-text-primary mt-4 mb-2 ${isH3 ? 'text-base' : 'text-lg'}`}>
-            {text}
-          </h2>
-        )
-      }
       // Bold text with emoji
-      else if (line.match(/^\*\*.*\*\*/)) {
+      if (line.match(/^\*\*.*\*\*/)) {
         flushList()
         const text = line.replace(/\*\*/g, '')
         elements.push(
@@ -67,12 +72,12 @@ const MarkdownMessage = ({ content }: Props) => {
           </p>
         )
       }
-      // List items
+      // List items (- or •)
       else if (line.match(/^[-•]\s/)) {
         const text = line.replace(/^[-•]\s*/, '').replace(/\*\*/g, '')
         currentList.push(text)
       }
-      // Regular paragraphs
+      // Regular paragraphs (skip empty/whitespace-only)
       else if (line.trim()) {
         flushList()
         elements.push(

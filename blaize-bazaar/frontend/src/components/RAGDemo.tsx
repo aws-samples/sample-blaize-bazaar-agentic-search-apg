@@ -3,18 +3,25 @@
  * Shows retrieved context and highlights the difference.
  */
 import { useState } from 'react'
+import Markdown from 'react-markdown'
 import { X, Zap, BookOpen, Search, ChevronDown, ChevronUp } from 'lucide-react'
+import ProductCardCompact from './ProductCardCompact'
+
+interface RAGProduct {
+  id: string
+  name: string
+  price: number
+  rating: number
+  category: string
+  reviews: number
+  image: string
+  similarity: number
+}
 
 interface RAGResult {
   query: string
   response: string
-  retrieved_products: Array<{
-    name: string
-    price: number
-    rating: number
-    category: string
-    reviews: number
-  }>
+  retrieved_products: RAGProduct[]
   with_context: boolean
   context_tokens: number
 }
@@ -116,13 +123,13 @@ const RAGDemo = ({ isOpen, onClose }: RAGDemoProps) => {
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.35)' }}>Try:</span>
+            <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Try:</span>
             {SAMPLE_QUERIES.map(sq => (
               <button
                 key={sq}
-                onClick={() => runComparison(sq)}
-                className="text-xs px-3 py-1 rounded-full transition-colors"
-                style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)', color: 'rgba(255, 255, 255, 0.5)' }}
+                onClick={() => setQuery(sq)}
+                className="text-xs px-3 py-1 rounded-full transition-colors hover:bg-white/10"
+                style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)', color: 'rgba(255, 255, 255, 0.7)' }}
               >
                 {sq.length > 40 ? sq.slice(0, 37) + '...' : sq}
               </button>
@@ -135,37 +142,37 @@ const RAGDemo = ({ isOpen, onClose }: RAGDemoProps) => {
           {!withoutContext && !withContext ? (
             <div className="text-center py-16">
               <BookOpen className="h-16 w-16 mx-auto mb-4" style={{ color: 'rgba(255, 255, 255, 0.1)' }} />
-              <p style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Ask a product question to compare naive vs RAG responses</p>
+              <p style={{ color: 'rgba(255, 255, 255, 0.55)' }}>Ask a product question to compare naive vs RAG responses</p>
             </div>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-6">
                 {/* Without Context */}
                 <div>
-                  <div className="mb-3 p-3 rounded-xl" style={{ background: 'rgba(248, 113, 113, 0.06)', border: '1px solid rgba(248, 113, 113, 0.15)' }}>
+                  <div className="mb-3 p-3 rounded-xl" style={{ background: 'rgba(248, 113, 113, 0.08)', border: '1px solid rgba(248, 113, 113, 0.2)' }}>
                     <h3 className="text-sm font-semibold" style={{ color: '#f87171' }}>Without Context (Naive)</h3>
-                    <p className="text-[10px] mt-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>LLM responds from training data only — may hallucinate</p>
+                    <p className="text-[10px] mt-1" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>LLM responds from training data only — may hallucinate</p>
                   </div>
-                  <div className="p-4 rounded-xl text-sm leading-relaxed" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', color: 'rgba(255, 255, 255, 0.8)' }}>
-                    {withoutContext?.response || 'Loading...'}
+                  <div className="rag-markdown p-4 rounded-xl text-sm leading-relaxed" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', color: 'rgba(255, 255, 255, 0.9)' }}>
+                    <Markdown>{withoutContext?.response || 'Loading...'}</Markdown>
                   </div>
                 </div>
 
                 {/* With RAG Context */}
                 <div>
-                  <div className="mb-3 p-3 rounded-xl" style={{ background: 'rgba(52, 211, 153, 0.06)', border: '1px solid rgba(52, 211, 153, 0.15)' }}>
+                  <div className="mb-3 p-3 rounded-xl" style={{ background: 'rgba(52, 211, 153, 0.08)', border: '1px solid rgba(52, 211, 153, 0.2)' }}>
                     <div className="flex items-center justify-between">
                       <h3 className="text-sm font-semibold" style={{ color: '#34d399' }}>With RAG (Grounded)</h3>
                       {withContext && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(52, 211, 153, 0.1)', color: 'rgba(52, 211, 153, 0.7)' }}>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(52, 211, 153, 0.15)', color: '#34d399' }}>
                           {withContext.context_tokens} context tokens
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] mt-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Response grounded in actual product catalog via pgvector retrieval</p>
+                    <p className="text-[10px] mt-1" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>Response grounded in actual product catalog via pgvector retrieval</p>
                   </div>
-                  <div className="p-4 rounded-xl text-sm leading-relaxed" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', color: 'rgba(255, 255, 255, 0.8)' }}>
-                    {withContext?.response || 'Loading...'}
+                  <div className="rag-markdown p-4 rounded-xl text-sm leading-relaxed" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', color: 'rgba(255, 255, 255, 0.9)' }}>
+                    <Markdown>{withContext?.response || 'Loading...'}</Markdown>
                   </div>
                 </div>
               </div>
@@ -175,28 +182,30 @@ const RAGDemo = ({ isOpen, onClose }: RAGDemoProps) => {
                 <div className="mt-6">
                   <button
                     onClick={() => setShowContext(!showContext)}
-                    className="flex items-center gap-2 text-xs font-medium w-full p-3 rounded-xl transition-colors"
-                    style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', color: 'rgba(255, 255, 255, 0.6)' }}
+                    className="flex items-center gap-2 text-xs font-medium w-full p-3 rounded-xl transition-colors hover:bg-white/[0.06]"
+                    style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)', color: 'rgba(255, 255, 255, 0.75)' }}
                   >
                     <Zap className="h-3.5 w-3.5" />
                     Retrieved Context ({withContext.retrieved_products.length} products)
                     {showContext ? <ChevronUp className="h-3.5 w-3.5 ml-auto" /> : <ChevronDown className="h-3.5 w-3.5 ml-auto" />}
                   </button>
                   {showContext && (
-                    <div className="mt-2 space-y-2">
+                    <div className="mt-3 grid grid-cols-2 gap-3">
                       {withContext.retrieved_products.map((p, idx) => (
-                        <div key={idx} className="p-3 rounded-lg flex items-center gap-3" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
-                          <span className="text-xs font-bold w-5 text-center" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>{idx + 1}</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs truncate" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>{p.name}</p>
-                            <div className="flex items-center gap-3 text-[10px] mt-0.5" style={{ color: 'rgba(255, 255, 255, 0.35)' }}>
-                              <span>${p.price}</span>
-                              <span>{p.rating}★</span>
-                              <span>{p.reviews} reviews</span>
-                              <span>{p.category}</span>
-                            </div>
-                          </div>
-                        </div>
+                        <ProductCardCompact
+                          key={idx}
+                          product={{
+                            id: p.id,
+                            name: p.name,
+                            price: p.price,
+                            stars: p.rating,
+                            reviews: p.reviews,
+                            category: p.category,
+                            image: p.image,
+                            similarityScore: p.similarity,
+                          }}
+                          similarityScore={p.similarity}
+                        />
                       ))}
                     </div>
                   )}
@@ -208,10 +217,10 @@ const RAGDemo = ({ isOpen, onClose }: RAGDemoProps) => {
 
         {/* Footer */}
         <div className="px-6 py-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <div className="flex items-start gap-2 text-xs" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
-            <Zap className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
+          <div className="flex items-start gap-2 text-xs" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
+            <Zap className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
             <p>
-              <span className="font-medium" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>RAG Pattern</span> — Retrieve relevant products via pgvector,
+              <span className="font-medium" style={{ color: 'rgba(255, 255, 255, 0.75)' }}>RAG Pattern</span> — Retrieve relevant products via pgvector,
               augment the prompt with real catalog data, then generate a grounded response. Reduces hallucination.
             </p>
           </div>

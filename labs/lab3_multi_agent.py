@@ -12,7 +12,7 @@ Sections:
   5. TODO: Orchestrator Wiring
 
 Run from repo root:
-    python labs/part3_multi_agent.py
+    python labs/lab3_multi_agent.py
 """
 
 import json

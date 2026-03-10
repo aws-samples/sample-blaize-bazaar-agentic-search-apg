@@ -2,8 +2,9 @@
 """
 Embedding utilities for Blaize Bazaar Workshop Labs
 
-Generates vector embeddings using Amazon Titan Text Embeddings V2
-via Amazon Bedrock.
+Generates vector embeddings using Cohere Embed v4 via Amazon Bedrock.
+Uses asymmetric input types (search_query vs search_document) for
+improved retrieval quality.
 """
 
 import json
@@ -17,11 +18,12 @@ from shared.config import AWS_REGION, BEDROCK_EMBEDDING_MODEL
 _bedrock_client = boto3.client("bedrock-runtime", region_name=AWS_REGION)
 
 
-def generate_embedding(text: str) -> List[float]:
-    """Generate a 1024-dimensional embedding vector using Titan Text Embeddings V2.
+def generate_embedding(text: str, input_type: str = "search_query") -> List[float]:
+    """Generate a 1024-dimensional embedding vector using Cohere Embed v4.
 
     Args:
         text: Input text to embed (max ~8192 characters)
+        input_type: "search_query" for queries, "search_document" for indexing
 
     Returns:
         List of 1024 floats representing the semantic embedding
@@ -38,9 +40,14 @@ def generate_embedding(text: str) -> List[float]:
     response = _bedrock_client.invoke_model(
         modelId=BEDROCK_EMBEDDING_MODEL,
         contentType="application/json",
-        accept="application/json",
-        body=json.dumps({"inputText": text}),
+        accept="*/*",
+        body=json.dumps({
+            "texts": [text],
+            "input_type": input_type,
+            "embedding_types": ["float"],
+            "output_dimension": 1024,
+        }),
     )
 
     result = json.loads(response["body"].read())
-    return result["embedding"]
+    return result["embeddings"]["float"][0]
