@@ -3,8 +3,8 @@
  * Interactive dashboard for comparing HNSW vs Sequential Scan performance
  * WITH dataset size context and educational notes
  */
-import { useState } from 'react';
-import { X, Zap, TrendingUp, Database, Settings, Play, BarChart3, Info, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Zap, TrendingUp, Database, Settings, Play, BarChart3, Info, AlertCircle, Filter, FlaskConical } from 'lucide-react';
 
 interface IndexPerformanceDashboardProps {
   isOpen: boolean;
@@ -69,9 +69,22 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
   const [results, setResults] = useState<PerformanceResults | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'benchmark' | 'quantization'>('benchmark');
+  const [activeTab, setActiveTab] = useState<'benchmark' | 'quantization' | 'iterative-scan'>('benchmark');
   const [quantData, setQuantData] = useState<QuantData | null>(null);
   const [quantLoading, setQuantLoading] = useState(false);
+
+  // Iterative Scan state
+  const [categories, setCategories] = useState<string[]>([]);
+  const [isCategory, setIsCategory] = useState('');
+  const [isQuery, setIsQuery] = useState('wireless headphones');
+  const [isEfSearch, setIsEfSearch] = useState(40);
+  const [isResults, setIsResults] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Quantization Benchmark state
+  const [qbQuery, setQbQuery] = useState('luxury watch');
+  const [qbResults, setQbResults] = useState<any>(null);
+  const [qbLoading, setQbLoading] = useState(false);
 
   const fetchQuantization = async () => {
     setQuantLoading(true);
@@ -79,6 +92,47 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
       const res = await fetch('/api/performance/quantization');
       if (res.ok) setQuantData(await res.json());
     } catch { /* ignore */ } finally { setQuantLoading(false); }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/performance/categories');
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data.categories || []);
+        if (data.categories?.length > 0 && !isCategory) setIsCategory(data.categories[0]);
+      }
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => { fetchCategories(); }, []);
+
+  const runIterativeScan = async () => {
+    if (!isQuery.trim() || !isCategory) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/performance/iterative-scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: isQuery, category: isCategory, ef_search: isEfSearch, limit: 10 }),
+      });
+      if (res.ok) setIsResults(await res.json());
+    } catch (err) { console.error('Iterative scan error:', err); }
+    finally { setIsLoading(false); }
+  };
+
+  const runQuantBenchmark = async () => {
+    if (!qbQuery.trim()) return;
+    setQbLoading(true);
+    try {
+      const res = await fetch('/api/performance/quantization-benchmark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: qbQuery, limit: 10 }),
+      });
+      if (res.ok) setQbResults(await res.json());
+    } catch (err) { console.error('Quant benchmark error:', err); }
+    finally { setQbLoading(false); }
   };
 
   const runComparison = async () => {
@@ -142,11 +196,15 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {(['benchmark', 'quantization'] as const).map(tab => (
-              <button key={tab} onClick={() => { setActiveTab(tab); if (tab === 'quantization' && !quantData) fetchQuantization(); }}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all capitalize"
-                style={{ background: activeTab === tab ? 'rgba(255, 255, 255, 0.1)' : 'transparent', color: activeTab === tab ? '#ffffff' : 'rgba(255, 255, 255, 0.4)', border: activeTab === tab ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid transparent' }}>
-                {tab}
+            {([
+              { key: 'benchmark' as const, label: 'Benchmark' },
+              { key: 'quantization' as const, label: 'Quantization' },
+              { key: 'iterative-scan' as const, label: 'Iterative Scan' },
+            ]).map(tab => (
+              <button key={tab.key} onClick={() => { setActiveTab(tab.key); if (tab.key === 'quantization' && !quantData) fetchQuantization(); }}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                style={{ background: activeTab === tab.key ? 'rgba(255, 255, 255, 0.1)' : 'transparent', color: activeTab === tab.key ? '#ffffff' : 'rgba(255, 255, 255, 0.4)', border: activeTab === tab.key ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid transparent' }}>
+                {tab.label}
               </button>
             ))}
             <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 transition-colors ml-2">
@@ -157,7 +215,183 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-6 search-scroll">
-          {activeTab === 'quantization' ? (
+          {activeTab === 'iterative-scan' ? (
+            /* Iterative Scan Tab */
+            <div className="space-y-6">
+              {/* Explanation */}
+              <div className="p-4 rounded-xl flex items-start gap-3" style={{ background: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                <Info className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: '#60a5fa' }} />
+                <div>
+                  <p className="text-sm font-medium" style={{ color: '#60a5fa' }}>pgvector 0.8.0 Iterative Scan</p>
+                  <p className="text-xs mt-1" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
+                    HNSW explores a fixed candidate set, then applies WHERE filters. If the filter is selective,
+                    most candidates are discarded — returning <strong style={{ color: 'rgba(255,255,255,0.8)' }}>fewer results than requested</strong>.
+                    Iterative scan continues traversing the graph until LIMIT is satisfied.
+                  </p>
+                </div>
+              </div>
+
+              {/* Controls */}
+              <div className="p-5 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Filter className="h-4 w-4" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
+                  <h4 className="text-sm font-semibold" style={{ color: '#ffffff' }}>Filtered Search Configuration</h4>
+                </div>
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Category Filter</label>
+                    <select
+                      value={isCategory}
+                      onChange={e => setIsCategory(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg text-sm text-white focus:outline-none"
+                      style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                    >
+                      {categories.map(c => <option key={c} value={c} style={{ background: '#1a1a1a' }}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Search Query</label>
+                    <input
+                      type="text"
+                      value={isQuery}
+                      onChange={e => setIsQuery(e.target.value)}
+                      placeholder="Search query..."
+                      className="w-full px-3 py-2 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none"
+                      style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+                      ef_search: <span style={{ color: 'rgba(255,255,255,0.4)' }}>{isEfSearch}</span>
+                    </label>
+                    <input
+                      type="range" min="10" max="200" step="10"
+                      value={isEfSearch}
+                      onChange={e => setIsEfSearch(parseInt(e.target.value))}
+                      className="w-full h-2 bg-white/[0.08] rounded-lg appearance-none cursor-pointer mt-2"
+                      style={{ accentColor: '#999' }}
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={runIterativeScan}
+                  disabled={isLoading || !isQuery.trim() || !isCategory}
+                  className="w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                  style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.12)', color: '#ffffff' }}
+                >
+                  {isLoading ? (
+                    <><div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> Running Comparison...</>
+                  ) : (
+                    <><Play className="h-4 w-4" /> Run Filtered Search Comparison</>
+                  )}
+                </button>
+              </div>
+
+              {/* Results */}
+              {isResults && (
+                <>
+                  {/* pgvector 0.8.0 availability warning */}
+                  {!isResults.pgvector_080_available && (
+                    <div className="p-3 rounded-xl flex items-center gap-2" style={{ background: 'rgba(251, 191, 36, 0.08)', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
+                      <AlertCircle className="h-4 w-4" style={{ color: '#fbbf24' }} />
+                      <p className="text-xs" style={{ color: '#fbbf24' }}>pgvector 0.8.0 not detected — iterative scan is unavailable. Showing standard filtered results only.</p>
+                    </div>
+                  )}
+
+                  {/* Key Metric */}
+                  {isResults.without_iterative_scan && isResults.with_iterative_scan && (
+                    <div className="p-5 rounded-xl text-center" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                      <p className="text-xs uppercase tracking-wider mb-2" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Result Count Improvement</p>
+                      <div className="text-4xl font-bold" style={{ color: '#34d399' }}>
+                        {isResults.without_iterative_scan.result_count} → {isResults.with_iterative_scan.result_count}
+                      </div>
+                      <p className="text-xs mt-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+                        Requested {isResults.limit} results · Category: "{isResults.category_filter}"
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Side-by-side */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Without */}
+                    <div className="p-5 rounded-xl" style={{ background: 'rgba(251, 146, 60, 0.06)', border: '1px solid rgba(251, 146, 60, 0.2)' }}>
+                      <h4 className="text-sm font-semibold mb-1" style={{ color: '#fb923c' }}>Without Iterative Scan</h4>
+                      <p className="text-[10px] mb-3" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Standard HNSW — fixed candidate set, then filter</p>
+                      {isResults.without_iterative_scan ? (
+                        <div className="space-y-3">
+                          <div>
+                            <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Results Returned</div>
+                            <div className="text-3xl font-bold" style={{ color: '#fb923c' }}>{isResults.without_iterative_scan.result_count}<span className="text-sm font-normal" style={{ color: 'rgba(255, 255, 255, 0.3)' }}> / {isResults.limit}</span></div>
+                          </div>
+                          <div>
+                            <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Execution Time</div>
+                            <div className="text-lg font-semibold" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{isResults.without_iterative_scan.execution_time_ms}ms</div>
+                          </div>
+                          {isResults.without_iterative_scan.result_count < isResults.limit && (
+                            <div className="p-2 rounded-lg text-[10px]" style={{ background: 'rgba(251, 146, 60, 0.1)', color: '#fb923c' }}>
+                              Overfiltering! Only {isResults.without_iterative_scan.result_count} of {isResults.limit} results returned
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>No data</p>
+                      )}
+                    </div>
+
+                    {/* With */}
+                    <div className="p-5 rounded-xl" style={{ background: 'rgba(52, 211, 153, 0.06)', border: '1px solid rgba(52, 211, 153, 0.2)' }}>
+                      <h4 className="text-sm font-semibold mb-1" style={{ color: '#34d399' }}>With Iterative Scan</h4>
+                      <p className="text-[10px] mb-3" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>pgvector 0.8.0 — continues traversal until LIMIT met</p>
+                      {isResults.with_iterative_scan ? (
+                        <div className="space-y-3">
+                          <div>
+                            <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Results Returned</div>
+                            <div className="text-3xl font-bold" style={{ color: '#34d399' }}>{isResults.with_iterative_scan.result_count}<span className="text-sm font-normal" style={{ color: 'rgba(255, 255, 255, 0.3)' }}> / {isResults.limit}</span></div>
+                          </div>
+                          <div>
+                            <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Execution Time</div>
+                            <div className="text-lg font-semibold" style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{isResults.with_iterative_scan.execution_time_ms}ms</div>
+                          </div>
+                          {isResults.with_iterative_scan.result_count >= isResults.limit && (
+                            <div className="p-2 rounded-lg text-[10px]" style={{ background: 'rgba(52, 211, 153, 0.1)', color: '#34d399' }}>
+                              Full {isResults.limit} results returned
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>
+                          {isResults.pgvector_080_available === false ? 'Requires pgvector 0.8.0+' : 'No data'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* SQL Example */}
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Enable Iterative Scan</h4>
+                    <pre className="text-xs p-3 rounded-lg overflow-x-auto" style={{ background: 'rgba(0, 0, 0, 0.5)', color: 'rgba(52, 211, 153, 0.8)' }}>
+{`SET hnsw.iterative_scan = 'relaxed_order';
+SET hnsw.max_scan_tuples = 20000;
+
+-- Then run your filtered query as normal
+SELECT * FROM products
+WHERE category = 'Electronics'
+ORDER BY embedding <=> query_vector
+LIMIT 10;`}
+                    </pre>
+                  </div>
+                </>
+              )}
+
+              {/* Empty state */}
+              {!isResults && !isLoading && (
+                <div className="text-center py-12">
+                  <Filter className="h-12 w-12 mx-auto mb-3" style={{ color: 'rgba(255, 255, 255, 0.1)' }} />
+                  <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Select a category and run the comparison to see the overfiltering fix</p>
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'quantization' ? (
             /* Quantization Tab */
             <div className="space-y-6">
               {quantLoading ? (
@@ -231,6 +465,108 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                     <p className="text-[10px] mt-2" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>{quantData.note}</p>
                   </div>
 
+                  {/* Live Benchmark Section */}
+                  <div className="p-5 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <FlaskConical className="h-4 w-4" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
+                      <h4 className="text-sm font-semibold" style={{ color: '#ffffff' }}>Live Benchmark</h4>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full" style={{ background: 'rgba(255, 255, 255, 0.06)', color: 'rgba(255, 255, 255, 0.4)' }}>
+                        Expression casts · No DDL required
+                      </span>
+                    </div>
+                    <div className="flex gap-3 mb-4">
+                      <input
+                        type="text"
+                        value={qbQuery}
+                        onChange={e => setQbQuery(e.target.value)}
+                        onKeyPress={e => e.key === 'Enter' && runQuantBenchmark()}
+                        placeholder="Search query..."
+                        className="flex-1 px-3 py-2 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none"
+                        style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)' }}
+                      />
+                      <button
+                        onClick={runQuantBenchmark}
+                        disabled={qbLoading || !qbQuery.trim()}
+                        className="px-5 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-40 flex items-center gap-2"
+                        style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.12)', color: '#ffffff' }}
+                      >
+                        {qbLoading ? (
+                          <><div className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" /> Benchmarking...</>
+                        ) : (
+                          <><Play className="h-3.5 w-3.5" /> Run Benchmark</>
+                        )}
+                      </button>
+                    </div>
+
+                    {qbResults && (
+                      <div className="space-y-4">
+                        {/* Result cards */}
+                        <div className="grid grid-cols-3 gap-3">
+                          {/* float32 */}
+                          {qbResults.float32 && (
+                            <div className="p-4 rounded-xl" style={{ background: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                              <h5 className="text-xs font-semibold mb-2" style={{ color: '#60a5fa' }}>float32 (Baseline)</h5>
+                              <div className="text-2xl font-bold" style={{ color: '#ffffff' }}>{qbResults.float32.execution_time_ms}ms</div>
+                              <div className="text-[10px] mt-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{qbResults.float32.result_count} results · 100% recall</div>
+                            </div>
+                          )}
+                          {/* halfvec */}
+                          <div className="p-4 rounded-xl" style={{ background: 'rgba(52, 211, 153, 0.06)', border: '1px solid rgba(52, 211, 153, 0.15)' }}>
+                            <h5 className="text-xs font-semibold mb-2" style={{ color: '#34d399' }}>halfvec (SQ)</h5>
+                            {qbResults.halfvec_available && qbResults.halfvec && !qbResults.halfvec.error ? (
+                              <>
+                                <div className="text-2xl font-bold" style={{ color: '#ffffff' }}>{qbResults.halfvec.execution_time_ms}ms</div>
+                                <div className="text-[10px] mt-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{qbResults.halfvec.result_count} results · {qbResults.halfvec.recall_vs_float32}% recall</div>
+                              </>
+                            ) : (
+                              <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>
+                                {qbResults.halfvec?.error ? 'Cast not supported' : 'Unavailable'}
+                              </div>
+                            )}
+                          </div>
+                          {/* binary */}
+                          <div className="p-4 rounded-xl" style={{ background: 'rgba(168, 85, 247, 0.06)', border: '1px solid rgba(168, 85, 247, 0.15)' }}>
+                            <h5 className="text-xs font-semibold mb-2" style={{ color: '#c084fc' }}>binary (BQ)</h5>
+                            {qbResults.binary_available && qbResults.binary && !qbResults.binary.error ? (
+                              <>
+                                <div className="text-2xl font-bold" style={{ color: '#ffffff' }}>{qbResults.binary.execution_time_ms}ms</div>
+                                <div className="text-[10px] mt-1" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{qbResults.binary.result_count} results · {qbResults.binary.recall_vs_float32}% recall</div>
+                              </>
+                            ) : (
+                              <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>
+                                {qbResults.binary?.error ? 'Cast not supported' : 'Unavailable'}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Timing bar chart */}
+                        {qbResults.float32 && (
+                          <div className="p-4 rounded-lg" style={{ background: 'rgba(255, 255, 255, 0.02)' }}>
+                            <h5 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Execution Time Comparison</h5>
+                            {[
+                              { label: 'float32', time: qbResults.float32.execution_time_ms, color: 'rgba(96, 165, 250, 0.6)', available: true },
+                              { label: 'halfvec', time: qbResults.halfvec?.execution_time_ms, color: 'rgba(52, 211, 153, 0.6)', available: qbResults.halfvec_available && !qbResults.halfvec?.error },
+                              { label: 'binary', time: qbResults.binary?.execution_time_ms, color: 'rgba(192, 132, 252, 0.6)', available: qbResults.binary_available && !qbResults.binary?.error },
+                            ].filter(i => i.available && i.time != null).map(item => {
+                              const maxTime = Math.max(qbResults.float32.execution_time_ms, qbResults.halfvec?.execution_time_ms || 0, qbResults.binary?.execution_time_ms || 0);
+                              const pct = maxTime > 0 ? (item.time / maxTime) * 100 : 0;
+                              return (
+                                <div key={item.label} className="flex items-center gap-3 mb-2">
+                                  <span className="text-xs w-14 text-right" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>{item.label}</span>
+                                  <div className="flex-1 h-4 rounded" style={{ background: 'rgba(255, 255, 255, 0.03)' }}>
+                                    <div className="h-full rounded transition-all" style={{ width: `${Math.max(pct, 2)}%`, background: item.color }} />
+                                  </div>
+                                  <span className="text-xs w-16 text-right font-mono" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>{item.time}ms</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Educational note */}
                   <div className="p-3 rounded-xl flex items-start gap-2" style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
                     <Info className="h-4 w-4 mt-0.5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
@@ -238,6 +574,7 @@ const IndexPerformanceDashboard = ({ isOpen, onClose }: IndexPerformanceDashboar
                       <span className="font-medium" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>pgvector 0.8.0+</span> supports scalar (SQ) and binary (BQ) quantization.
                       SQ reduces each float32 to int8 (4x savings) with minimal recall loss.
                       BQ compresses to 1-bit (32x savings) — best for initial candidate retrieval with re-ranking.
+                      The live benchmark above uses expression casts at query time — no CREATE INDEX required.
                     </p>
                   </div>
                 </>

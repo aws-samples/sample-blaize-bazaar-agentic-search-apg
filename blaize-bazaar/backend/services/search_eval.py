@@ -104,14 +104,14 @@ class SearchEvalService:
                 embedding = self.embedding_service.generate_embedding(query)
 
                 # Run search
+                from services.hybrid_search import HybridSearchService
+                hybrid_svc = HybridSearchService(self.db_service)
                 if method == "hybrid":
-                    from services.hybrid_search import HybridSearchService
-                    hybrid_svc = HybridSearchService(self.db_service)
-                    results = await hybrid_svc.hybrid_search(query, embedding, limit=k)
-                    retrieved_ids = [r.get("product_id", r.get("productId", "")) for r in results]
+                    response = await hybrid_svc.search(query, embedding, limit=k)
+                    results = response.get("results", [])
                 else:
-                    results = await self.db_service.vector_search(embedding, limit=k)
-                    retrieved_ids = [r.get("product_id", r.get("productId", "")) for r in results]
+                    results = await hybrid_svc._vector_search(embedding, k, ef_search=40)
+                retrieved_ids = [r.get("product_id", r.get("productId", "")) for r in results]
 
                 p_at_k = self.precision_at_k(retrieved_ids, expected_ids, k)
                 n_at_k = self.ndcg_at_k(retrieved_ids, expected_ids, k)

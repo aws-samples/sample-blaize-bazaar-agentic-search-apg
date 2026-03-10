@@ -30,10 +30,12 @@ import MemoryDashboard from './components/MemoryDashboard'
 import GatewayToolsPanel from './components/GatewayToolsPanel'
 import ObservabilityPanel from './components/ObservabilityPanel'
 import RuntimeStatusPanel from './components/RuntimeStatusPanel'
+import PolicyDemoPanel from './components/PolicyDemoPanel'
+import GraphVisualization from './components/GraphVisualization'
 import SpotlightWalkthrough from './components/SpotlightWalkthrough'
 import { AuthProvider } from './contexts/AuthContext'
 import type { TourAction } from './data/tourSteps'
-import { Database, BarChart3, Brain, Wrench, X, Zap, Activity, DollarSign, Shield, BookOpen, User, AlertOctagon, Search } from 'lucide-react'
+import { Database, BarChart3, Brain, Wrench, X, Zap, Activity, DollarSign, Shield, BookOpen, User, AlertOctagon, Search, FileCode, GitBranch } from 'lucide-react'
 import './styles/premium-heading-styles.css'
 
 // Theme Context — dark/light toggle
@@ -97,6 +99,8 @@ function AppContent() {
   const [showGatewayTools, setShowGatewayTools] = useState(false)
   const [showObservability, setShowObservability] = useState(false)
   const [showRuntimeStatus, setShowRuntimeStatus] = useState(false)
+  const [showPolicyDemo, setShowPolicyDemo] = useState(false)
+  const [showGraphViz, setShowGraphViz] = useState(false)
 
   // Hero background carousel
   const heroImages = [
@@ -134,32 +138,60 @@ function AppContent() {
 
   // (scroll reveal now handled by framer-motion whileInView on each element)
 
-  // Mode-aware dev tools — buttons filtered by current workshop mode
+  // Mode-aware dev tools — buttons grouped by lab section
   const MODE_ORDER = ['legacy', 'semantic', 'tools', 'full', 'agentcore'] as const
   const modeIndex = MODE_ORDER.indexOf(workshopMode)
-  const devToolButtons = [
-    { icon: <Database className="h-5 w-5" />, label: 'SQL Inspector', desc: 'Monitor pgvector queries', action: () => { setShowSQLInspector(true); setShowDevTools(false) }, minMode: 'semantic' as const },
-    { icon: <Zap className="h-5 w-5" />, label: 'Hybrid Search', desc: 'Vector vs hybrid comparison', action: () => { setShowHybridComparison(true); setShowDevTools(false) }, minMode: 'semantic' as const },
-    { icon: <BarChart3 className="h-5 w-5" />, label: 'Index Performance', desc: 'Tune HNSW parameters', action: () => { setShowIndexPerformance(true); setShowDevTools(false) }, minMode: 'semantic' as const },
-    { icon: <BookOpen className="h-5 w-5" />, label: 'RAG Demo', desc: 'Naive vs RAG comparison', action: () => { setShowRAGDemo(true); setShowDevTools(false) }, minMode: 'semantic' as const },
-    { icon: <Brain className="h-5 w-5" />, label: 'Agent Traces', desc: 'Multi-agent workflow', action: () => { setAgentPanelMode(agentPanelMode === 'expanded' ? 'hidden' : 'expanded'); setShowDevTools(false) }, minMode: 'tools' as const },
-    { icon: <Activity className="h-5 w-5" />, label: 'Agent Dashboard', desc: 'Session agent stats', action: () => { setShowAgentDashboard(true); setShowDevTools(false) }, minMode: 'tools' as const },
-    { icon: <DollarSign className="h-5 w-5" />, label: 'Context & Cost', desc: 'Token usage & cost', action: () => { setShowContextDashboard(true); setShowDevTools(false) }, minMode: 'tools' as const },
-    { icon: <User className="h-5 w-5" />, label: 'Personalization', desc: 'Preference-based re-ranking', action: () => { setShowPersonalization(true); setShowDevTools(false) }, minMode: 'tools' as const },
-    { icon: <Shield className="h-5 w-5" />, label: 'Guardrails Demo', desc: 'Content safety & PII detection', action: () => { setShowGuardrailsDemo(true); setShowDevTools(false) }, minMode: 'full' as const },
-    { icon: <AlertOctagon className="h-5 w-5" />, label: chaosMode ? 'Chaos: ON' : 'Chaos Mode', desc: chaosMode ? 'Click to disable' : 'Test resilience & retries', action: () => {
+
+  type LabGroup = 'lab1' | 'lab2' | 'lab3' | 'lab4'
+  interface ToolButton {
+    icon: React.ReactNode
+    label: string
+    desc: string
+    tryHint?: string
+    action: () => void
+    minMode: typeof MODE_ORDER[number]
+    group: LabGroup
+  }
+
+  const devToolButtons: ToolButton[] = [
+    { icon: <Database className="h-5 w-5" />, label: 'SQL Inspector', desc: 'Watch the actual SQL queries Aurora runs — see how pgvector translates your search into vector distance calculations.', tryHint: 'Search for a product, then open this to see the <=> operator in action.', action: () => { setShowSQLInspector(true); setShowDevTools(false) }, minMode: 'semantic', group: 'lab1' },
+    { icon: <Zap className="h-5 w-5" />, label: 'Hybrid Search', desc: 'Compare keyword-only vs. vector search side by side. See how hybrid search combines the best of both.', tryHint: 'Try "something comfortable for long flights" — keyword finds nothing, semantic understands intent.', action: () => { setShowHybridComparison(true); setShowDevTools(false) }, minMode: 'semantic', group: 'lab1' },
+    { icon: <BarChart3 className="h-5 w-5" />, label: 'Index Performance', desc: 'Benchmark HNSW index tuning, test quantization (halfvec/binary), and see how iterative scan fixes filtered search recall.', tryHint: 'Compare ef_search=40 vs 200 — higher recall costs more latency.', action: () => { setShowIndexPerformance(true); setShowDevTools(false) }, minMode: 'semantic', group: 'lab1' },
+    { icon: <BookOpen className="h-5 w-5" />, label: 'RAG Demo', desc: 'Retrieval-Augmented Generation in action: the LLM answers grounded in real product data instead of hallucinating.', tryHint: 'Ask "What\'s the best laptop under $500?" and compare naive vs. RAG answers.', action: () => { setShowRAGDemo(true); setShowDevTools(false) }, minMode: 'semantic', group: 'lab1' },
+    { icon: <Brain className="h-5 w-5" />, label: 'Agent Traces', desc: 'Step-by-step visualization of the agent\'s reasoning: query analysis, tool selection, and response synthesis.', tryHint: 'Ask "compare laptops under $800" in chat, then open traces to see each tool call.', action: () => { setAgentPanelMode(agentPanelMode === 'expanded' ? 'hidden' : 'expanded'); setShowDevTools(false) }, minMode: 'tools', group: 'lab2' },
+    { icon: <Activity className="h-5 w-5" />, label: 'Agent Dashboard', desc: 'Aggregate stats for this session: which agents ran, how long they took, and success rates.', tryHint: 'Have a few conversations first, then check which agents were invoked most.', action: () => { setShowAgentDashboard(true); setShowDevTools(false) }, minMode: 'tools', group: 'lab2' },
+    { icon: <DollarSign className="h-5 w-5" />, label: 'Context & Cost', desc: 'Track token usage and estimated API cost per request. See how conversation length grows the context window.', tryHint: 'Watch how cost increases as you ask follow-up questions — more context = more tokens.', action: () => { setShowContextDashboard(true); setShowDevTools(false) }, minMode: 'tools', group: 'lab2' },
+    { icon: <User className="h-5 w-5" />, label: 'Personalization', desc: 'User preference engine that re-ranks search results based on your stated interests.', tryHint: 'Set preferences like "outdoor gear" then search — watch results re-order by relevance.', action: () => { setShowPersonalization(true); setShowDevTools(false) }, minMode: 'tools', group: 'lab2' },
+    { icon: <Shield className="h-5 w-5" />, label: 'Guardrails Demo', desc: 'Test content safety filters and PII detection. Harmful queries are blocked; personal information is redacted.', tryHint: 'Try typing a message with a fake SSN or credit card number.', action: () => { setShowGuardrailsDemo(true); setShowDevTools(false) }, minMode: 'full', group: 'lab3' },
+    { icon: <GitBranch className="h-5 w-5" />, label: 'Graph Orchestrator', desc: 'Interactive DAG showing how the orchestrator routes queries to specialized agents and merges results.', tryHint: 'Ask "find me trending shoes under $100 with good reviews" — the orchestrator fans out to 3 agents.', action: () => { setShowGraphViz(true); setShowDevTools(false) }, minMode: 'full', group: 'lab3' },
+    { icon: <AlertOctagon className="h-5 w-5" />, label: chaosMode ? 'Chaos: ON' : 'Chaos Mode', desc: chaosMode ? 'Chaos injection active — agents will randomly fail. Click to disable.' : 'Inject random failures into agent calls to test retry logic and graceful degradation.', tryHint: chaosMode ? undefined : 'Enable this, then chat — watch how the system handles and recovers from failures.', action: () => {
       const next = !chaosMode
       setChaosMode(next)
       fetch('/api/dev/chaos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: next }) }).catch(() => {})
       setShowDevTools(false)
-    }, minMode: 'full' as const },
-    // Lab 4: AgentCore dev tools
-    { icon: <Brain className="h-5 w-5" />, label: 'Memory Dashboard', desc: 'AgentCore persistent memory', action: () => { setShowMemoryDashboard(true); setShowDevTools(false) }, minMode: 'agentcore' as const },
-    { icon: <Zap className="h-5 w-5" />, label: 'Gateway Tools', desc: 'MCP tool discovery', action: () => { setShowGatewayTools(true); setShowDevTools(false) }, minMode: 'agentcore' as const },
-    { icon: <Activity className="h-5 w-5" />, label: 'Observability', desc: 'CloudWatch X-Ray traces', action: () => { setShowObservability(true); setShowDevTools(false) }, minMode: 'agentcore' as const },
-    { icon: <Search className="h-5 w-5" />, label: 'Runtime Status', desc: 'AgentCore Lambda runtime', action: () => { setShowRuntimeStatus(true); setShowDevTools(false) }, minMode: 'agentcore' as const },
+    }, minMode: 'full', group: 'lab3' },
+    { icon: <Brain className="h-5 w-5" />, label: 'Memory Dashboard', desc: 'AgentCore\'s persistent memory store. The agent remembers your preferences and past conversations across sessions.', tryHint: 'Tell the agent "I prefer Nike shoes" — it remembers next time you search.', action: () => { setShowMemoryDashboard(true); setShowDevTools(false) }, minMode: 'agentcore', group: 'lab4' },
+    { icon: <Zap className="h-5 w-5" />, label: 'Gateway Tools', desc: 'MCP (Model Context Protocol) gateway — see which tools are available, their schemas, and how the agent discovers them.', tryHint: 'See how tools are registered and what parameters each one accepts.', action: () => { setShowGatewayTools(true); setShowDevTools(false) }, minMode: 'agentcore', group: 'lab4' },
+    { icon: <Activity className="h-5 w-5" />, label: 'Observability', desc: 'CloudWatch and X-Ray integration showing distributed traces across Lambda, Aurora, and Bedrock calls.', tryHint: 'Make a chat request, then check traces to see the full call chain with latencies.', action: () => { setShowObservability(true); setShowDevTools(false) }, minMode: 'agentcore', group: 'lab4' },
+    { icon: <Search className="h-5 w-5" />, label: 'Runtime Status', desc: 'AgentCore Lambda runtime health: cold start times, memory usage, and execution metrics.', action: () => { setShowRuntimeStatus(true); setShowDevTools(false) }, minMode: 'agentcore', group: 'lab4' },
+    { icon: <FileCode className="h-5 w-5" />, label: 'Cedar Policies', desc: 'Fine-grained authorization using Cedar policy language. Define which agent actions are permitted or denied.', tryHint: 'Try restocking 1000 units — the Cedar policy blocks quantities over 500.', action: () => { setShowPolicyDemo(true); setShowDevTools(false) }, minMode: 'agentcore', group: 'lab4' },
   ]
-  const visibleButtons = devToolButtons.filter(b => MODE_ORDER.indexOf(b.minMode) <= modeIndex)
+
+  const LAB_SECTIONS: { key: LabGroup; label: string; desc: string; minMode: typeof MODE_ORDER[number]; intro: string }[] = [
+    { key: 'lab1', label: 'Lab 1', desc: 'Semantic Search', minMode: 'semantic', intro: 'Move beyond exact keyword matching. See how pgvector transforms natural language queries into vector embeddings, enabling search by meaning — not just exact words.' },
+    { key: 'lab2', label: 'Lab 2', desc: 'Agent Tools', minMode: 'tools', intro: 'Give your AI assistant superpowers with custom tools. The agent calls structured functions — search, check inventory, compare prices — instead of just generating text. Open the chat and ask a question to see tool calls in real time.' },
+    { key: 'lab3', label: 'Lab 3', desc: 'Orchestration', minMode: 'full', intro: 'One agent isn\'t enough. The Graph Orchestrator routes queries to specialized agents (Search, Pricing, Inventory) and merges their answers. Enable Guardrails to add content safety and PII detection.' },
+    { key: 'lab4', label: 'Lab 4', desc: 'AgentCore', minMode: 'agentcore', intro: 'Production-grade agent infrastructure on AWS. AgentCore adds persistent memory across sessions, MCP gateway for tool discovery, CloudWatch observability, and Cedar policy authorization.' },
+  ]
+
+  // Auto-expand the section matching current mode, collapse others
+  type SectionKey = LabGroup | 'arch'
+  const defaultExpanded: SectionKey | null = workshopMode === 'semantic' ? 'lab1' : workshopMode === 'tools' ? 'lab2' : workshopMode === 'full' ? 'lab3' : workshopMode === 'agentcore' ? 'lab4' : null
+  const [expandedSection, setExpandedSection] = useState<SectionKey | null>(defaultExpanded)
+  useEffect(() => {
+    const autoExpand: SectionKey | null = workshopMode === 'semantic' ? 'lab1' : workshopMode === 'tools' ? 'lab2' : workshopMode === 'full' ? 'lab3' : workshopMode === 'agentcore' ? 'lab4' : null
+    setExpandedSection(autoExpand)
+  }, [workshopMode])
 
   // Mode switch handler with enhanced toast
   const MODE_LABELS: Record<string, string> = {
@@ -810,7 +842,7 @@ function AppContent() {
         >
           {/* Collapsed tab */}
           <div
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-11 py-8 rounded-r-xl flex flex-col items-center gap-3 cursor-pointer transition-opacity duration-300"
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-11 py-12 rounded-r-xl flex flex-col items-center gap-3 cursor-pointer transition-opacity duration-300"
             data-tour="dev-tools-tab"
             style={{
               background: 'rgba(0, 0, 0, 0.95)',
@@ -821,12 +853,12 @@ function AppContent() {
             }}
           >
             <Wrench className="h-5 w-5" style={{ color: 'rgba(255, 255, 255, 0.7)' }} />
-            <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ writingMode: 'vertical-lr', color: 'rgba(255, 255, 255, 0.5)' }}>Tools</span>
+            <span className="text-[10px] font-semibold tracking-widest uppercase" style={{ writingMode: 'vertical-lr', color: 'rgba(255, 255, 255, 0.5)' }}>Playground</span>
           </div>
 
           {/* Expanded panel */}
           <div
-            className="h-full transition-all duration-300 ease-in-out overflow-hidden"
+            className="h-full transition-all duration-300 ease-in-out overflow-x-hidden"
             style={{
               width: showDevTools ? 300 : 0,
               background: 'rgba(0, 0, 0, 0.95)',
@@ -839,41 +871,42 @@ function AppContent() {
             <div className="w-[300px] p-5 h-full flex flex-col overflow-y-auto search-scroll" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
               {/* Header */}
               <div className="mb-5 pb-4" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                <h2 className="text-2xl font-semibold mb-1.5" style={{ letterSpacing: '-0.02em', color: '#ffffff' }}>Developer Tools</h2>
-                <p className="text-[15px]" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Workshop debugging & monitoring</p>
+                <h2 className="text-2xl font-semibold mb-1.5" style={{ letterSpacing: '-0.02em', color: '#ffffff' }}>Playground</h2>
+                <p className="text-[15px]" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Explore each lab's tools</p>
               </div>
 
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 space-y-1">
                 {/* Workshop Mode Switcher */}
                 <div className="mb-4 pb-4" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                  <p className="text-[13px] font-semibold uppercase tracking-wider mb-3" style={{ color: '#ffffff' }}>Workshop Progression</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider mb-3" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Workshop Progression</p>
                   {([
                     { key: 'legacy' as const, label: 'Legacy', desc: 'Keyword Only' },
                     { key: 'semantic' as const, label: 'Lab 1', desc: 'Semantic Search' },
                     { key: 'tools' as const, label: 'Lab 2', desc: 'Agent Tools' },
                     { key: 'full' as const, label: 'Lab 3', desc: 'Orchestration' },
+                    { key: 'agentcore' as const, label: 'Lab 4', desc: 'AgentCore' },
                   ] as const).map((mode) => (
                     <button
                       key={mode.key}
                       onClick={() => handleModeSwitch(mode.key)}
-                      className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-left transition-all duration-200 mb-1"
+                      className="w-full flex items-center gap-3 px-3.5 py-2 rounded-lg text-left transition-all duration-200 mb-0.5"
                       style={{
                         background: workshopMode === mode.key ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
                         border: workshopMode === mode.key ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
                       }}
                     >
                       <span
-                        className="w-3 h-3 rounded-full flex-shrink-0 transition-all duration-200"
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 transition-all duration-200"
                         style={{
                           background: workshopMode === mode.key ? '#ffffff' : 'transparent',
                           border: workshopMode === mode.key ? '2px solid #ffffff' : '2px solid rgba(255, 255, 255, 0.2)',
                         }}
                       />
                       <div>
-                        <span className="text-[15px] font-medium" style={{ color: workshopMode === mode.key ? '#ffffff' : 'rgba(255, 255, 255, 0.75)' }}>
+                        <span className="text-[14px] font-medium" style={{ color: workshopMode === mode.key ? '#ffffff' : 'rgba(255, 255, 255, 0.75)' }}>
                           {mode.label}
                         </span>
-                        <span className="text-[13px] ml-2" style={{ color: workshopMode === mode.key ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.45)' }}>
+                        <span className="text-[12px] ml-2" style={{ color: workshopMode === mode.key ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.4)' }}>
                           {mode.desc}
                         </span>
                       </div>
@@ -881,79 +914,153 @@ function AppContent() {
                   ))}
                 </div>
 
-                {/* Tool buttons — filtered by workshop mode */}
-                {visibleButtons.map((tool, idx) => (
-                  <button
-                    key={idx}
-                    onClick={tool.action}
-                    className="w-full p-3.5 rounded-lg text-left transition-all duration-200 hover:translate-x-0.5"
-                    style={{ background: 'transparent' }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <div className="flex items-start gap-3">
-                      <span className="mt-0.5" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{tool.icon}</span>
-                      <div>
-                        <p className="text-[16px] font-medium mb-0.5" style={{ color: '#ffffff' }}>{tool.label}</p>
-                        <p className="text-[13px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{tool.desc}</p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                {/* Collapsible Lab Sections */}
+                {LAB_SECTIONS
+                  .filter(section => MODE_ORDER.indexOf(section.minMode) <= modeIndex)
+                  .map(section => {
+                    const sectionTools = devToolButtons.filter(b => b.group === section.key && MODE_ORDER.indexOf(b.minMode) <= modeIndex)
+                    if (sectionTools.length === 0) return null
+                    const isExpanded = expandedSection === section.key
+                    return (
+                      <div key={section.key} className="mb-1">
+                        {/* Section header — clickable accordion */}
+                        <button
+                          onClick={() => setExpandedSection(isExpanded ? null : section.key)}
+                          className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200"
+                          style={{ background: isExpanded ? 'rgba(255, 255, 255, 0.04)' : 'transparent' }}
+                          onMouseEnter={(e) => { if (!isExpanded) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+                          onMouseLeave={(e) => { if (!isExpanded) e.currentTarget.style.background = 'transparent' }}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-[13px] font-semibold" style={{ color: isExpanded ? '#ffffff' : 'rgba(255, 255, 255, 0.7)' }}>
+                              {section.label}
+                            </span>
+                            <span className="text-[11px]" style={{ color: 'rgba(255, 255, 255, 0.35)' }}>
+                              {section.desc}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] tabular-nums" style={{ color: 'rgba(255, 255, 255, 0.25)' }}>{sectionTools.length}</span>
+                            <svg
+                              className="h-3.5 w-3.5 transition-transform duration-200"
+                              style={{ color: 'rgba(255, 255, 255, 0.3)', transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </div>
+                        </button>
 
-                {/* Guardrails toggle — Lab 3 only */}
-                {workshopMode === 'full' && (
-                  <div className="pt-3 mt-1" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                    <button
-                      onClick={() => setGuardrailsEnabled(!guardrailsEnabled)}
-                      className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg transition-all duration-200"
-                      style={{ background: guardrailsEnabled ? 'rgba(255, 255, 255, 0.06)' : 'transparent' }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Shield className="h-5 w-5" style={{ color: guardrailsEnabled ? '#34d399' : 'rgba(255, 255, 255, 0.4)' }} />
-                        <div className="text-left">
-                          <p className="text-[15px] font-medium" style={{ color: '#ffffff' }}>Guardrails</p>
-                          <p className="text-[13px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Content moderation</p>
+                        {/* Collapsible tool list */}
+                        <div
+                          className="overflow-hidden transition-all duration-200"
+                          style={{ maxHeight: isExpanded ? `${sectionTools.length * 130 + 150}px` : '0px', opacity: isExpanded ? 1 : 0 }}
+                        >
+                          <div className="pl-2 pt-1 pb-2">
+                            {/* Section intro */}
+                            <p className="text-[11px] leading-relaxed mb-3 px-2.5 py-2 rounded-lg" style={{ color: 'rgba(255, 255, 255, 0.45)', background: 'rgba(255, 255, 255, 0.02)' }}>
+                              {section.intro}
+                            </p>
+                            {sectionTools.map((tool, idx) => (
+                              <button
+                                key={idx}
+                                onClick={tool.action}
+                                className="w-full p-2.5 rounded-lg text-left transition-all duration-200 hover:translate-x-0.5"
+                                style={{ background: 'transparent' }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                              >
+                                <div className="flex items-start gap-2.5">
+                                  <span className="mt-0.5" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>{tool.icon}</span>
+                                  <div>
+                                    <p className="text-[14px] font-medium mb-0.5" style={{ color: '#ffffff' }}>{tool.label}</p>
+                                    <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{tool.desc}</p>
+                                    {tool.tryHint && (
+                                      <p className="text-[10px] mt-1 italic" style={{ color: 'rgba(96, 165, 250, 0.6)' }}>
+                                        Try: {tool.tryHint}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+
+                            {/* Guardrails toggle — inside Lab 3 section */}
+                            {section.key === 'lab3' && (MODE_ORDER.indexOf('full') <= modeIndex) && (
+                              <button
+                                onClick={() => setGuardrailsEnabled(!guardrailsEnabled)}
+                                className="w-full flex items-center justify-between px-2.5 py-2 rounded-lg transition-all duration-200 mt-1"
+                                style={{ background: guardrailsEnabled ? 'rgba(255, 255, 255, 0.04)' : 'transparent' }}
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <Shield className="h-5 w-5" style={{ color: guardrailsEnabled ? '#34d399' : 'rgba(255, 255, 255, 0.4)' }} />
+                                  <div className="text-left">
+                                    <p className="text-[14px] font-medium" style={{ color: '#ffffff' }}>Guardrails</p>
+                                    <p className="text-[11px]" style={{ color: 'rgba(255, 255, 255, 0.35)' }}>Content moderation</p>
+                                  </div>
+                                </div>
+                                <div
+                                  className="w-9 h-5 rounded-full relative transition-colors duration-200 flex-shrink-0"
+                                  style={{ background: guardrailsEnabled ? '#34d399' : 'rgba(255, 255, 255, 0.15)' }}
+                                >
+                                  <div
+                                    className="absolute top-[2px] w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
+                                    style={{ transform: guardrailsEnabled ? 'translateX(18px)' : 'translateX(2px)' }}
+                                  />
+                                </div>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div
-                        className="w-10 h-[22px] rounded-full relative transition-colors duration-200"
-                        style={{ background: guardrailsEnabled ? '#34d399' : 'rgba(255, 255, 255, 0.15)' }}
-                      >
-                        <div
-                          className="absolute top-[3px] w-4 h-4 rounded-full bg-white shadow transition-transform duration-200"
-                          style={{ transform: guardrailsEnabled ? 'translateX(21px)' : 'translateX(3px)' }}
-                        />
-                      </div>
-                    </button>
-                  </div>
-                )}
+                    )
+                  })}
 
-                {/* Architecture */}
-                <div className="pt-3 mt-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                  <p className="text-[13px] font-semibold uppercase tracking-wider mb-3" style={{ color: '#ffffff' }}>Architecture</p>
-                  {[
-                    { title: 'Semantic Search', img: 'part1_architecture.png' },
-                    { title: 'Custom Agent Tools', img: 'part2_architecture.png' },
-                    { title: 'Multi-Agent Orchestration', img: 'part3_architecture.png' },
-                  ].map((diagram, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => { setExpandedDiagram(diagram.img); setShowDevTools(false) }}
-                      className="w-full p-3 rounded-lg text-left transition-all duration-200 mb-1 hover:translate-x-0.5"
-                      style={{ background: 'transparent' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                {/* Architecture Diagrams — always visible */}
+                <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                  <button
+                    onClick={() => setExpandedSection(expandedSection === ('arch' as SectionKey) ? null : ('arch' as SectionKey))}
+                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200"
+                    style={{ background: expandedSection === ('arch' as SectionKey) ? 'rgba(255, 255, 255, 0.04)' : 'transparent' }}
+                  >
+                    <span className="text-[13px] font-semibold" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Architecture</span>
+                    <svg
+                      className="h-3.5 w-3.5 transition-transform duration-200"
+                      style={{ color: 'rgba(255, 255, 255, 0.3)', transform: expandedSection === ('arch' as SectionKey) ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
                     >
-                      <p className="text-[15px] font-medium" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>{diagram.title}</p>
-                    </button>
-                  ))}
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <div
+                    className="overflow-hidden transition-all duration-200"
+                    style={{ maxHeight: expandedSection === ('arch' as SectionKey) ? '200px' : '0px', opacity: expandedSection === ('arch' as SectionKey) ? 1 : 0 }}
+                  >
+                    <div className="pl-2 pt-1 pb-2">
+                      {[
+                        { title: 'Semantic Search', img: 'part1_architecture.png' },
+                        { title: 'Custom Agent Tools', img: 'part2_architecture.png' },
+                        { title: 'Multi-Agent Orchestration', img: 'part3_architecture.png' },
+                      ].map((diagram, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => { setExpandedDiagram(diagram.img); setShowDevTools(false) }}
+                          className="w-full p-2.5 rounded-lg text-left transition-all duration-200 mb-0.5 hover:translate-x-0.5"
+                          style={{ background: 'transparent' }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          <p className="text-[14px] font-medium" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>{diagram.title}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Footer */}
               <div className="mt-4 pt-3 rounded-b-lg px-2 py-3" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                <p className="text-[12px] text-center" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>Workshop Tools · DAT406</p>
+                <p className="text-[12px] text-center" style={{ color: 'rgba(255, 255, 255, 0.25)' }}>Blaize Bazaar Playground · DAT406</p>
               </div>
             </div>
           </div>
@@ -1020,6 +1127,8 @@ function AppContent() {
         {showGatewayTools && <GatewayToolsPanel onClose={() => setShowGatewayTools(false)} />}
         {showObservability && <ObservabilityPanel onClose={() => setShowObservability(false)} />}
         {showRuntimeStatus && <RuntimeStatusPanel onClose={() => setShowRuntimeStatus(false)} />}
+        <PolicyDemoPanel isOpen={showPolicyDemo} onClose={() => setShowPolicyDemo(false)} />
+        <GraphVisualization isOpen={showGraphViz} onClose={() => setShowGraphViz(false)} />
 
         {/* Spotlight Walkthrough */}
         <SpotlightWalkthrough onAction={handleTourAction} />

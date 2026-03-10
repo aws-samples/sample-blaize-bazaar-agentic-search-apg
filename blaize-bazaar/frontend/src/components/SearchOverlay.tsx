@@ -586,6 +586,39 @@ const SearchOverlay = ({
                       </AnimatePresence>
                     </div>
                   </div>}
+
+                  {/* Pipeline indicator strip */}
+                  {!isDualMode && !loading && displayResults.length > 0 && workshopMode !== 'legacy' && (
+                    <div className="flex items-center gap-2 mt-3 flex-wrap">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
+                        Pipeline
+                      </span>
+                      <span className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium"
+                        style={{
+                          background: isSemanticSearch ? 'rgba(59, 130, 246, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                          border: `1px solid ${isSemanticSearch ? 'rgba(59, 130, 246, 0.15)' : 'rgba(239, 68, 68, 0.15)'}`,
+                          color: isSemanticSearch
+                            ? (theme === 'dark' ? '#60a5fa' : '#2563eb')
+                            : (theme === 'dark' ? '#f87171' : '#dc2626'),
+                        }}>
+                        {isSemanticSearch ? (
+                          <><Sparkles className="h-3 w-3" /> Semantic (Vector)</>
+                        ) : (
+                          <><Search className="h-3 w-3" /> Keyword (Full-text)</>
+                        )}
+                      </span>
+                      <span style={{ color: 'var(--text-secondary)', opacity: 0.3 }}>&rarr;</span>
+                      <span className="px-2 py-1 rounded-md text-[11px]"
+                        style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+                        {isSemanticSearch ? 'Aurora + pgvector (HNSW)' : 'Aurora PostgreSQL (LIKE)'}
+                      </span>
+                      <span style={{ color: 'var(--text-secondary)', opacity: 0.3 }}>&rarr;</span>
+                      <span className="px-2 py-1 rounded-md text-[11px] font-mono"
+                        style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+                        {latency}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Results area */}

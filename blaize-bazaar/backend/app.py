@@ -738,6 +738,42 @@ async def image_search(
     finally:
         await file.close()
 
+@app.get("/api/search/image/nova-status")
+async def nova_status():
+    """Check if Nova Multimodal Embeddings are available"""
+    try:
+        from services.nova_embeddings import get_nova_embedding_service
+        nova = get_nova_embedding_service()
+        return {"available": nova.is_available}
+    except Exception:
+        return {"available": False}
+
+
+@app.post("/api/search/image/compare")
+async def compare_image_pipelines(
+    file: UploadFile = File(...),
+    image_search_svc: ImageSearchService = Depends(get_image_search_service_dep),
+):
+    """Compare Classic (Claude Vision) vs Nova-enhanced image search pipelines"""
+    try:
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="Must be an image file")
+
+        image_data = await file.read()
+        if len(image_data) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="Image too large (max 5MB)")
+
+        comparison = await image_search_svc.compare_pipelines(image_data, file.content_type or "image/jpeg")
+        return comparison
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Pipeline comparison failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        await file.close()
+
+
 @app.get("/api/products/category/{category_query}")
 async def browse_category(
     category_query: str,
@@ -1322,6 +1358,50 @@ async def get_quantization_comparison():
     return await index_performance_service.get_quantization_comparison()
 
 
+@app.get("/api/performance/categories")
+async def get_filter_categories():
+    """Get distinct categories for iterative scan demo dropdown"""
+    if not index_performance_service:
+        raise HTTPException(status_code=503, detail="Index performance service not initialized")
+    categories = await index_performance_service.get_distinct_categories()
+    return {"categories": categories}
+
+
+@app.post("/api/performance/iterative-scan")
+async def compare_iterative_scan(request: Request):
+    """Compare filtered HNSW with and without iterative scan (pgvector 0.8.0)"""
+    if not index_performance_service:
+        raise HTTPException(status_code=503, detail="Index performance service not initialized")
+    body = await request.json()
+    query = body.get("query", "")
+    category = body.get("category", "")
+    ef_search = body.get("ef_search", 40)
+    limit = body.get("limit", 10)
+    if not query or not category:
+        raise HTTPException(status_code=400, detail="query and category required")
+    embedding = embedding_service.generate_embedding(query)
+    return await index_performance_service.compare_filtered_search(
+        query=query, embedding=embedding,
+        category_filter=category, ef_search=ef_search, limit=limit,
+    )
+
+
+@app.post("/api/performance/quantization-benchmark")
+async def quantization_benchmark(request: Request):
+    """Benchmark float32 vs halfvec vs binary quantization with live queries"""
+    if not index_performance_service:
+        raise HTTPException(status_code=503, detail="Index performance service not initialized")
+    body = await request.json()
+    query = body.get("query", "")
+    limit = body.get("limit", 10)
+    if not query:
+        raise HTTPException(status_code=400, detail="query required")
+    embedding = embedding_service.generate_embedding(query)
+    return await index_performance_service.compare_quantization_benchmark(
+        query=query, embedding=embedding, limit=limit,
+    )
+
+
 # ============================================================================
 # PERSONALIZED SEARCH ENDPOINT
 # ============================================================================
@@ -1472,6 +1552,53 @@ async def toggle_chaos_mode(request: Request):
 async def get_chaos_status():
     """Get current chaos mode status"""
     return {"chaos_mode": _chaos_mode, "fail_rate": _chaos_fail_rate}
+
+
+# ============================================================================
+# GRAPH ORCHESTRATOR ENDPOINT
+# ============================================================================
+
+@app.get("/api/agents/graph")
+async def get_agent_graph():
+    """Get the multi-agent orchestrator graph structure for visualization"""
+    try:
+        from agents.graph_orchestrator import get_graph_structure
+        return get_graph_structure()
+    except Exception as e:
+        logger.warning(f"Failed to get graph structure: {e}")
+        return {"available": False, "graph_builder_available": False, "nodes": [], "edges": [], "description": str(e)}
+
+
+# ============================================================================
+# AGENTCORE POLICY ENDPOINTS (Cedar)
+# ============================================================================
+
+@app.get("/api/agentcore/policy/list")
+async def list_policies():
+    """List all Cedar policies"""
+    try:
+        from services.agentcore_policy import get_policy_service
+        svc = get_policy_service()
+        return {"policies": svc.list_policies()}
+    except Exception as e:
+        logger.warning(f"Failed to list policies: {e}")
+        return {"policies": [], "error": str(e)}
+
+
+@app.post("/api/agentcore/policy/check")
+async def check_policy(request: Request):
+    """Evaluate an action against Cedar policies"""
+    try:
+        from services.agentcore_policy import get_policy_service
+        body = await request.json()
+        action = body.get("action", "")
+        parameters = body.get("parameters", {})
+        svc = get_policy_service()
+        result = svc.evaluate(action, parameters)
+        return result
+    except Exception as e:
+        logger.error(f"Policy check failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================

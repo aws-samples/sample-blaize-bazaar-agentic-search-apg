@@ -10,6 +10,7 @@ Sections:
   3. TODO: Gateway — MCP Tool Discovery
   4. Observability — OTLP/X-Ray Tracing (pre-built demo)
   5. TODO: Runtime — Lambda Deployment Entrypoint
+  6. TODO: Policy — Cedar Authorization Rules
 
 Run from repo root:
     python labs/lab4_agentcore.py
@@ -228,6 +229,43 @@ def section_5_runtime():
 
 
 # ============================================================
+# Section 6: TODO — Policy — Cedar Authorization Rules
+# ============================================================
+
+def section_6_policy():
+    """
+    TODO: Implement Cedar policy evaluation for agent actions.
+
+    Cedar is a policy language used by AgentCore to authorize tool calls
+    in real-time. Write a policy that blocks restock quantities over 500.
+
+    Steps:
+        1. Define a Cedar policy string using the forbid keyword
+        2. Create an evaluate_policy() function that:
+           - Parses the action and parameters
+           - Checks against the Cedar rule
+           - Returns ALLOW or DENY with violation details
+        3. Test with qty=100 (should ALLOW) and qty=1000 (should DENY)
+
+    Hints:
+        - Cedar syntax: forbid(principal, action == Action::"restock_product", resource)
+                        when { resource.quantity > 500 };
+        - For local evaluation, check parameters against thresholds
+    """
+    print("=== Section 6: Policy — Cedar Authorization ===\n")
+
+    # TODO: Your implementation here (~15 lines)
+    # 1. Define a Cedar policy string
+    # 2. Create evaluate_policy(action, params) function
+    # 3. Test with allowed and denied scenarios
+
+    print("  ⏳ TODO: Implement Cedar policy evaluation")
+    print("  💡 Cedar uses 'forbid' and 'permit' keywords")
+    print("  💡 Test: restock_product with quantity=100 vs quantity=1000")
+    print()
+
+
+# ============================================================
 # Main — Run all sections
 # ============================================================
 
@@ -270,6 +308,11 @@ def main():
     results["runtime"] = False  # Can't verify without actual deployment
     print("-" * 50)
 
+    # Section 6: Policy (TODO)
+    section_6_policy()
+    results["policy"] = False
+    print("-" * 50)
+
     # Summary
     completed = sum(1 for v in results.values() if v)
     total = len(results)
@@ -281,7 +324,7 @@ def main():
         print(f"  {status} {section}")
 
     if completed < total:
-        print(f"\n📝 Complete the TODOs in sections 2, 3, and 5")
+        print(f"\n📝 Complete the TODOs in sections 2, 3, 5, and 6")
         print("   Then check the solution: labs/solutions/lab4_solution.py")
 
 

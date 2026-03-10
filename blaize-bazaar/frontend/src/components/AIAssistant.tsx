@@ -53,6 +53,14 @@ const AIAssistant = () => {
   const [isOpen, setIsOpenRaw] = useState(false)
   const setIsOpen = (open: boolean) => { setIsOpenRaw(open); setChatOpen(open) }
   const [sessionCost, setSessionCost] = useState(0)
+  const [expandedHoods, setExpandedHoods] = useState<Set<number>>(new Set())
+  const toggleHood = (idx: number) => {
+    setExpandedHoods(prev => {
+      const next = new Set(prev)
+      next.has(idx) ? next.delete(idx) : next.add(idx)
+      return next
+    })
+  }
 
   const loadConversationHistory = (): Message[] => {
     try {
@@ -603,11 +611,129 @@ const AIAssistant = () => {
                       </div>
                     )}
 
-                    {/* Conversation Memory Indicator */}
-                    {message.role === 'assistant' && message.agentStatus === 'complete' && index >= 4 && (
-                      <div className="flex items-center gap-1.5 text-[10px] italic ml-1" style={{ color: 'var(--text-secondary)' }}>
-                        <span className="w-1 h-1 rounded-full" style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)' }} />
-                        Using context from {Math.floor((index - 1) / 2)} previous {Math.floor((index - 1) / 2) === 1 ? 'exchange' : 'exchanges'}
+                    {/* Under the Hood — contextual feature indicator */}
+                    {message.role === 'assistant' && message.agentStatus === 'complete' &&
+                     (workshopMode === 'tools' || workshopMode === 'full' || workshopMode === 'agentcore') && (
+                      <div className="mt-1">
+                        <button
+                          onClick={() => toggleHood(index)}
+                          className="flex items-center gap-1.5 text-[10px] w-full text-left px-2 py-1 rounded-md transition-colors"
+                          style={{
+                            color: 'var(--text-secondary)',
+                            background: expandedHoods.has(index)
+                              ? (theme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)')
+                              : 'transparent',
+                          }}
+                        >
+                          <svg className="h-3 w-3 flex-shrink-0 transition-transform" style={{ transform: expandedHoods.has(index) ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                          <span className="font-medium">Under the Hood</span>
+                          {message.agent && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-medium"
+                              style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', color: AGENT_IDENTITIES[message.agent as AgentType]?.accentHex || 'var(--text-secondary)' }}>
+                              {AGENT_IDENTITIES[message.agent as AgentType]?.name || 'AI'}
+                            </span>
+                          )}
+                          {message.agentExecution?.tool_calls && message.agentExecution.tool_calls.length > 0 && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px]"
+                              style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }}>
+                              {message.agentExecution.tool_calls.length} tool{message.agentExecution.tool_calls.length !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {guardrailsEnabled && (workshopMode === 'full' || workshopMode === 'agentcore') && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px]" style={{ background: 'rgba(52, 211, 153, 0.1)', color: '#34d399' }}>
+                              Guarded
+                            </span>
+                          )}
+                        </button>
+
+                        <AnimatePresence>
+                          {expandedHoods.has(index) && (
+                            <motion.div
+                              className="px-3 py-2 mt-1 rounded-lg text-[11px] space-y-1.5"
+                              style={{
+                                background: theme === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                                border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}`,
+                              }}
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                            >
+                              {/* Agent info */}
+                              {message.agent && (
+                                <div>
+                                  <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>Agent: </span>
+                                  <span style={{ color: AGENT_IDENTITIES[message.agent as AgentType]?.accentHex || 'var(--text-primary)' }}>
+                                    {AGENT_IDENTITIES[message.agent as AgentType]?.name || 'AI'}
+                                  </span>
+                                  <span className="ml-1" style={{ color: 'var(--text-secondary)', opacity: 0.6 }}>
+                                    {message.agent === 'search' && '— finds products via semantic search and filters'}
+                                    {message.agent === 'pricing' && '— analyzes price trends, deals, and budget options'}
+                                    {message.agent === 'recommendation' && '— suggests products based on preferences'}
+                                    {message.agent === 'orchestrator' && '— coordinates multiple agents for complex queries'}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Tool calls */}
+                              {message.agentExecution?.tool_calls && message.agentExecution.tool_calls.length > 0 && (
+                                <div>
+                                  <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>Tools called: </span>
+                                  <span className="inline-flex flex-wrap gap-1 ml-1">
+                                    {message.agentExecution.tool_calls.map((tc, i) => (
+                                      <span key={i} className="px-1.5 py-0.5 rounded text-[10px]"
+                                        style={{
+                                          background: tc.status === 'success' ? 'rgba(52, 211, 153, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                                          color: tc.status === 'success' ? '#34d399' : '#f87171',
+                                        }}>
+                                        {tc.tool}{tc.duration_ms ? ` (${tc.duration_ms}ms)` : ''}
+                                      </span>
+                                    ))}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Guardrails */}
+                              {guardrailsEnabled && (workshopMode === 'full' || workshopMode === 'agentcore') && (
+                                <div>
+                                  <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>Guardrails: </span>
+                                  <span style={{ color: '#34d399' }}>Passed</span>
+                                  <span className="ml-1" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>(content safety + PII check)</span>
+                                </div>
+                              )}
+
+                              {/* Context window */}
+                              {index >= 4 && (
+                                <div>
+                                  <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>Context: </span>
+                                  <span style={{ color: 'var(--text-primary)' }}>
+                                    {Math.floor((index - 1) / 2)} prior {Math.floor((index - 1) / 2) === 1 ? 'exchange' : 'exchanges'} in window
+                                  </span>
+                                  <span className="ml-1" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>(more context = better answers, higher cost)</span>
+                                </div>
+                              )}
+
+                              {/* Response time */}
+                              {message.agentExecution?.total_duration_ms && (
+                                <div>
+                                  <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>Response time: </span>
+                                  <span style={{ color: 'var(--text-primary)' }}>{message.agentExecution.total_duration_ms}ms</span>
+                                </div>
+                              )}
+
+                              {/* Educational tip */}
+                              <div className="pt-1.5 mt-1" style={{ borderTop: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}` }}>
+                                <p className="italic" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
+                                  {workshopMode === 'tools' && 'In Lab 2, one agent handles everything using custom tools. Lab 3 adds multi-agent orchestration.'}
+                                  {workshopMode === 'full' && 'The orchestrator decided which agents to invoke based on your query. Try the Graph Orchestrator in the Playground to visualize this.'}
+                                  {workshopMode === 'agentcore' && 'AgentCore adds persistent memory, so the agent remembers your preferences across sessions.'}
+                                </p>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     )}
 

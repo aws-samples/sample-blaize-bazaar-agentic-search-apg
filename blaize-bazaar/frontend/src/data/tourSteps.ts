@@ -174,6 +174,13 @@ export const TOUR_STEPS: Record<WorkshopMode, TourStep[]> = {
       tryItAction: { label: 'Open Dev Tools', actionKey: 'open-dev-tools' },
     },
     {
+      selector: '[data-tour="dev-tools-tab"]',
+      title: 'Cedar Policy Engine',
+      description: 'AgentCore Policy uses Cedar language for real-time authorization. Try blocking a 1000-unit restock or a restricted search term — the policy engine evaluates before the agent acts.',
+      position: 'right',
+      tryItAction: { label: 'Open Dev Tools', actionKey: 'open-dev-tools' },
+    },
+    {
       selector: '[data-tour="hero-badge"]',
       title: 'Workshop Complete!',
       description: 'You built a production-grade agentic AI search system with Aurora PostgreSQL, pgvector, Amazon Bedrock, Strands SDK, and AgentCore. Deploy it with confidence!',

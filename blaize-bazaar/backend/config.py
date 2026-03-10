@@ -52,6 +52,9 @@ class Settings(BaseSettings):
 
     # Chat model for conversational features
     BEDROCK_CHAT_MODEL: str = "global.anthropic.claude-sonnet-4-6"
+
+    # Nova Multimodal Embedding model
+    BEDROCK_NOVA_EMBEDDING_MODEL: str = "amazon.nova-embed-image-v2:0"
     
     # ========================================
     # Application Configuration

@@ -454,10 +454,9 @@ class IndexPerformanceService:
                 cur.execute("""
                     SELECT pg_relation_size(indexrelid) as index_bytes,
                            pg_size_pretty(pg_relation_size(indexrelid)) as index_size
-                    FROM pg_indexes
-                    JOIN pg_class ON pg_class.relname = indexname
-                    WHERE tablename = 'product_catalog'
-                      AND indexname LIKE '%embedding%'
+                    FROM pg_stat_user_indexes
+                    WHERE relname = 'product_catalog'
+                      AND indexrelname LIKE '%embedding%'
                     LIMIT 1
                 """)
                 row = cur.fetchone()
@@ -518,6 +517,225 @@ class IndexPerformanceService:
             },
             "note": "SQ/BQ sizes are estimated — cannot create additional indexes on shared Aurora cluster.",
         }
+
+    # ================================================================
+    # Feature: pgvector 0.8.0 Iterative Scans
+    # ================================================================
+
+    async def get_distinct_categories(self) -> List[str]:
+        """Get distinct category_name values for the filter dropdown."""
+        with psycopg.connect(self.conn_string) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT DISTINCT category_name
+                    FROM bedrock_integration.product_catalog
+                    WHERE category_name IS NOT NULL
+                    ORDER BY category_name
+                """)
+                return [row[0] for row in cur.fetchall()]
+
+    async def compare_filtered_search(
+        self,
+        query: str,
+        embedding: List[float],
+        category_filter: str,
+        ef_search: int = 40,
+        limit: int = 10,
+    ) -> Dict[str, Any]:
+        """
+        Compare filtered HNSW with and without iterative scan.
+
+        Demonstrates the "overfiltering" problem: HNSW explores a fixed number
+        of candidates, then applies WHERE filters. If the filter is selective,
+        most candidates are discarded, returning fewer results than requested.
+
+        Iterative scan (pgvector 0.8.0+) continues the HNSW traversal until
+        LIMIT is satisfied or max_scan_tuples is reached.
+        """
+        results: Dict[str, Any] = {
+            "query": query,
+            "category_filter": category_filter,
+            "ef_search": ef_search,
+            "limit": limit,
+            "without_iterative_scan": None,
+            "with_iterative_scan": None,
+            "pgvector_080_available": False,
+        }
+
+        filtered_sql = """
+            SELECT
+                "productId", product_description, price, stars, category_name,
+                1 - (embedding <=> %s::vector) as similarity_score
+            FROM bedrock_integration.product_catalog
+            WHERE embedding IS NOT NULL
+              AND category_name = %s
+            ORDER BY embedding <=> %s::vector
+            LIMIT %s
+        """
+
+        with psycopg.connect(self.conn_string) as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(f"SET hnsw.ef_search = {ef_search}")
+
+                # Test 1: Without iterative scan (default)
+                try:
+                    cur.execute("SET hnsw.iterative_scan = off")
+                except Exception:
+                    pass  # older pgvector, parameter not recognised
+
+                start = time.perf_counter()
+                cur.execute(filtered_sql, (embedding, category_filter, embedding, limit))
+                rows_without = [dict(r) for r in cur.fetchall()]
+                time_without = (time.perf_counter() - start) * 1000
+
+                results["without_iterative_scan"] = {
+                    "results": rows_without,
+                    "result_count": len(rows_without),
+                    "execution_time_ms": round(time_without, 2),
+                }
+
+                # Test 2: With iterative scan
+                try:
+                    cur.execute("SET hnsw.iterative_scan = 'relaxed_order'")
+                    cur.execute("SET hnsw.max_scan_tuples = 20000")
+                    results["pgvector_080_available"] = True
+
+                    start = time.perf_counter()
+                    cur.execute(filtered_sql, (embedding, category_filter, embedding, limit))
+                    rows_with = [dict(r) for r in cur.fetchall()]
+                    time_with = (time.perf_counter() - start) * 1000
+
+                    results["with_iterative_scan"] = {
+                        "results": rows_with,
+                        "result_count": len(rows_with),
+                        "execution_time_ms": round(time_with, 2),
+                    }
+
+                    # Reset
+                    cur.execute("SET hnsw.iterative_scan = off")
+                except Exception as e:
+                    results["pgvector_080_available"] = False
+                    results["with_iterative_scan"] = {
+                        "error": f"pgvector 0.8.0 required: {e}",
+                        "results": [],
+                        "result_count": 0,
+                    }
+
+        return results
+
+    # ================================================================
+    # Feature: Actual Quantization Benchmarks
+    # ================================================================
+
+    async def compare_quantization_benchmark(
+        self,
+        query: str,
+        embedding: List[float],
+        limit: int = 10,
+        num_runs: int = 3,
+    ) -> Dict[str, Any]:
+        """
+        Benchmark actual queries using float32, halfvec, and binary_quantize.
+
+        Uses expression casts at query time (no additional indexes required).
+        halfvec (pgvector 0.7+) and binary_quantize (pgvector 0.7+).
+        """
+        results: Dict[str, Any] = {
+            "query": query,
+            "limit": limit,
+            "float32": None,
+            "halfvec": None,
+            "binary": None,
+            "halfvec_available": False,
+            "binary_available": False,
+        }
+
+        with psycopg.connect(self.conn_string) as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                # --- float32 (baseline) ---
+                times: List[float] = []
+                baseline_results: List[Dict] = []
+                for _ in range(num_runs):
+                    start = time.perf_counter()
+                    cur.execute("""
+                        SELECT "productId", product_description, price, stars,
+                               1 - (embedding <=> %s::vector) as similarity_score
+                        FROM bedrock_integration.product_catalog
+                        WHERE embedding IS NOT NULL
+                        ORDER BY embedding <=> %s::vector
+                        LIMIT %s
+                    """, (embedding, embedding, limit))
+                    rows = [dict(r) for r in cur.fetchall()]
+                    times.append((time.perf_counter() - start) * 1000)
+                    if not baseline_results:
+                        baseline_results = rows
+
+                baseline_ids = set(r["productId"] for r in baseline_results)
+                results["float32"] = {
+                    "execution_time_ms": round(statistics.median(times), 2),
+                    "result_count": len(baseline_results),
+                }
+
+                # --- halfvec (scalar quantization via expression cast) ---
+                try:
+                    times = []
+                    hv_results: List[Dict] = []
+                    for _ in range(num_runs):
+                        start = time.perf_counter()
+                        cur.execute("""
+                            SELECT "productId", product_description, price, stars,
+                                   1 - ((embedding::halfvec(1024)) <=> %s::halfvec(1024)) as similarity_score
+                            FROM bedrock_integration.product_catalog
+                            WHERE embedding IS NOT NULL
+                            ORDER BY (embedding::halfvec(1024)) <=> %s::halfvec(1024)
+                            LIMIT %s
+                        """, (embedding, embedding, limit))
+                        rows = [dict(r) for r in cur.fetchall()]
+                        times.append((time.perf_counter() - start) * 1000)
+                        if not hv_results:
+                            hv_results = rows
+
+                    hv_ids = set(r["productId"] for r in hv_results)
+                    recall = len(hv_ids & baseline_ids) / len(baseline_ids) * 100 if baseline_ids else 0
+                    results["halfvec_available"] = True
+                    results["halfvec"] = {
+                        "execution_time_ms": round(statistics.median(times), 2),
+                        "result_count": len(hv_results),
+                        "recall_vs_float32": round(recall, 1),
+                    }
+                except Exception as e:
+                    results["halfvec"] = {"error": str(e)}
+
+                # --- binary quantization ---
+                try:
+                    times = []
+                    bq_results: List[Dict] = []
+                    for _ in range(num_runs):
+                        start = time.perf_counter()
+                        cur.execute("""
+                            SELECT "productId", product_description, price, stars
+                            FROM bedrock_integration.product_catalog
+                            WHERE embedding IS NOT NULL
+                            ORDER BY (binary_quantize(embedding)::bit(1024)) <#> binary_quantize(%s::vector)::bit(1024)
+                            LIMIT %s
+                        """, (embedding, limit))
+                        rows = [dict(r) for r in cur.fetchall()]
+                        times.append((time.perf_counter() - start) * 1000)
+                        if not bq_results:
+                            bq_results = rows
+
+                    bq_ids = set(r["productId"] for r in bq_results)
+                    recall = len(bq_ids & baseline_ids) / len(baseline_ids) * 100 if baseline_ids else 0
+                    results["binary_available"] = True
+                    results["binary"] = {
+                        "execution_time_ms": round(statistics.median(times), 2),
+                        "result_count": len(bq_results),
+                        "recall_vs_float32": round(recall, 1),
+                    }
+                except Exception as e:
+                    results["binary"] = {"error": str(e)}
+
+        return results
 
     async def get_index_stats(self) -> Dict[str, Any]:
         """

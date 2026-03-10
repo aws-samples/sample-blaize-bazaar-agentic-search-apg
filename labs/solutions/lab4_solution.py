@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Part 4 SOLUTION: AgentCore — Production-Ready Agents
 
-Complete reference implementation for all 5 AgentCore sections.
+Complete reference implementation for all 6 AgentCore sections.
 Compare with labs/lab4_agentcore.py to see the solutions.
 """
 
@@ -211,6 +211,70 @@ def section_5_runtime():
 
 
 # ============================================================
+# Section 6 SOLUTION: Policy — Cedar Authorization Rules
+# ============================================================
+
+CEDAR_POLICY = """
+forbid (
+  principal,
+  action == Action::"restock_product",
+  resource
+)
+when { resource.quantity > 500 };
+"""
+
+RESTRICTED_TERMS = {"weapon", "weapons", "gun", "guns", "ammunition", "tobacco", "alcohol"}
+
+
+def evaluate_policy(action: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    """Evaluate an action against Cedar policies (local engine)."""
+    if action == "restock_product":
+        qty = params.get("quantity", 0)
+        if isinstance(qty, (int, float)) and qty > 500:
+            return {
+                "decision": "DENY",
+                "reason": f"Restock quantity {qty} exceeds maximum of 500",
+                "cedar_condition": "resource.quantity > 500",
+            }
+
+    if action == "semantic_product_search":
+        import re
+        query = str(params.get("query", "")).lower()
+        found = RESTRICTED_TERMS & set(re.findall(r'\w+', query))
+        if found:
+            return {
+                "decision": "DENY",
+                "reason": f"Query contains restricted terms: {', '.join(sorted(found))}",
+                "cedar_condition": 'resource.query like "*<term>*"',
+            }
+
+    return {"decision": "ALLOW", "reason": "No policy violations"}
+
+
+def section_6_policy():
+    """SOLUTION: Cedar policy evaluation for agent actions."""
+    print("=== Section 6: Policy — Cedar Authorization ===\n")
+
+    print(f"  Cedar Policy:\n{CEDAR_POLICY}")
+
+    # Test cases
+    test_cases = [
+        ("restock_product", {"quantity": 100}),
+        ("restock_product", {"quantity": 1000}),
+        ("semantic_product_search", {"query": "wireless headphones"}),
+        ("semantic_product_search", {"query": "best weapons for hunting"}),
+    ]
+
+    for action, params in test_cases:
+        result = evaluate_policy(action, params)
+        icon = "✅" if result["decision"] == "ALLOW" else "🚫"
+        print(f"  {icon} {action}({params}) → {result['decision']}")
+        if result["decision"] == "DENY":
+            print(f"     Reason: {result['reason']}")
+    print()
+
+
+# ============================================================
 # Main
 # ============================================================
 
@@ -228,6 +292,8 @@ def main():
     section_4_observability()
     print("-" * 50)
     section_5_runtime()
+    print("-" * 50)
+    section_6_policy()
 
     print("=" * 70)
     print("✅ All sections complete!")
