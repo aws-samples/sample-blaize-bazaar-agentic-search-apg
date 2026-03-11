@@ -9,7 +9,7 @@
 ### Platform & Infrastructure
 [![AWS Aurora](https://img.shields.io/badge/Aurora_PostgreSQL-17.5-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/rds/aurora/)
 [![pgvector](https://img.shields.io/badge/pgvector-0.8.0_HNSW-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
-[![Bedrock](https://img.shields.io/badge/Amazon_Bedrock-Titan_v2_|_Claude_Sonnet_4-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/bedrock/)
+[![Bedrock](https://img.shields.io/badge/Amazon_Bedrock-Cohere_Embed_v4_|_Claude_Sonnet_4-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/bedrock/)
 
 ### Languages & Frameworks
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
@@ -38,7 +38,7 @@
 
 **Workshop Duration**: 2 hours | **Hands-on**: Parts 1, 2 & 3 (80 min) | **Optional**: Part 4 (Self-paced)
 
-Build enterprise-grade agentic AI applications with semantic search, multi-agent orchestration, and Model Context Protocol integration. Leverage Amazon Aurora PostgreSQL 17.5 with pgvector 0.8.0, Amazon Bedrock (Claude Sonnet 4 + Titan Text Embeddings v2), and modern full-stack technologies.
+Build enterprise-grade agentic AI applications with semantic search, multi-agent orchestration, and Model Context Protocol integration. Leverage Amazon Aurora PostgreSQL 17.5 with pgvector 0.8.0, Amazon Bedrock (Claude Sonnet 4 + Cohere Embed v4), and modern full-stack technologies.
 
 ### Pre-configured Workshop Environment
 
@@ -102,35 +102,40 @@ Want to see what you're about to build? Watch this video walkthrough of the Blai
 ### Part 1: Semantic Search Foundations (30 min) - Hands-on Exercises
 **Building semantic search with pgvector 0.8.0 and Aurora PostgreSQL**
 
-- Vector embeddings with Amazon Titan Text Embeddings v2 (1024 dimensions)
-- HNSW indexing for production-scale similarity search
-- Enterprise-tuned indexes (M=16, ef_construction=64)
-- Automatic iterative scanning for guaranteed recall
-- Session state management with Aurora PostgreSQL
+- Generate embeddings with Cohere Embed v4 via Amazon Bedrock (1024 dimensions)
+- HNSW indexing for production-scale similarity search (M=16, ef_construction=128)
+- Compare keyword-only vs. vector vs. hybrid retrieval side-by-side
+- Tune HNSW indexes (ef_search, quantization: halfvec/binary) and benchmark recall vs. latency
+- Automatic iterative scanning for guaranteed recall (pgvector 0.8.0)
+- RAG: ground LLM answers in real product data instead of hallucinating
 
 ### Part 2: Context Management & Custom Agent Tools (25 min) - Hands-on Exercises
-**Building custom tools for Aurora PostgreSQL data access with MCP**
+**Building a Strands Agents SDK agent with structured tool calls**
 
-- Custom tool creation with `@tool` decorator patterns
-- Trending products, inventory analytics, pricing insights
-- Intelligent token counting and context optimization
-- Model Context Protocol integration with Strands SDK
+- Custom tool creation with `@tool` decorator patterns (search, inventory, pricing)
+- Step-by-step agent reasoning traces: query analysis, tool selection, response synthesis
+- Token usage and estimated API cost tracking per request
+- Preference-based result re-ranking and personalization
+- Streaming chat with SSE (Server-Sent Events) for real-time token delivery
 
 ### Part 3: Multi-Agent Orchestration (25 min) - Hands-on Exercises
-**Agents as Tools pattern with Strands SDK**
+**Agents as Tools pattern with Graph Orchestrator**
 
-- Orchestrator + specialist agents (Inventory, Pricing, Recommendation)
+- Orchestrator + specialist agents (Search, Pricing, Recommendation)
 - Claude Sonnet 4 for intelligent query routing and agent coordination
-- Agent routing, coordination, and tool selection
-- OpenTelemetry distributed tracing
+- Bedrock Guardrails: content safety filters, PII detection/redaction, profanity blocking
+- Chaos engineering: inject random agent failures to test resilience and graceful degradation
+- Interactive DAG visualization of agent routing and result merging
 
 ### Part 4: Advanced Topics & Enterprise Patterns (Optional) - Self-paced
-**Production deployment patterns and optimization**
+**Production-grade agent infrastructure on AWS**
 
-- Session management at enterprise scale
-- Vector quantization strategies (binary, scalar)
-- Resilience patterns and error handling
-- Cost optimization and performance tuning
+- Amazon Cognito authentication and user sign-in
+- Persistent cross-session memory (AgentCore)
+- MCP gateway for dynamic tool discovery and registration
+- CloudWatch + X-Ray distributed tracing across Lambda, Aurora, and Bedrock
+- Cedar policy authorization for fine-grained access control
+- Vector quantization strategies and cost optimization
 
 ---
 
@@ -220,13 +225,15 @@ React Frontend (TypeScript + Tailwind CSS)
 
 ### Features
 - ✨ **Semantic Search**: Vector similarity with pgvector 0.8.0 HNSW indexes for natural language queries
-- 💬 **Conversational AI**: Claude Sonnet 4 for intelligent query understanding and agent routing
+- 💬 **Streaming Conversational AI**: Claude Sonnet 4 with token-by-token SSE streaming and real-time typing indicators
 - 🔧 **MCP Context Manager**: Custom tools for Aurora PostgreSQL data access
-- 🤖 **Multi-Agent System**: Orchestrator + 3 specialist agents (Agents as Tools)
-- 🔍 **Smart Filters**: Category, price, rating with real-time filtering
-- ⚡ **Real-time**: Autocomplete and quick search results
+- 🤖 **Multi-Agent System**: Orchestrator + 3 specialist agents (Agents as Tools) with inline agent badges
+- 🛡️ **Bedrock Guardrails**: Content safety filters, PII detection/redaction, and profanity blocking
+- 🔍 **Smart Filters**: Category, price, rating with server-side price limit enforcement
+- ⚡ **Real-time**: Autocomplete, quick search, and sale price detection with strikethrough display
 - 📊 **Agent Traces**: OpenTelemetry observability for multi-agent workflows
-- 🎯 **Enterprise-Ready**: Cost analysis, security patterns, and monitoring
+- 🎮 **Interactive Playground**: Full-screen overlay with lab progression, tool demos, and architecture diagrams
+- 🎯 **Enterprise-Ready**: Cost analysis, security patterns, chaos engineering, and monitoring
 
 ---
 
@@ -248,7 +255,7 @@ React Frontend (TypeScript + Tailwind CSS)
 | `boughtInLastMonth` | INTEGER | — | Recent purchase count |
 | `category_name` | VARCHAR(50) | B-tree | Product category |
 | `quantity` | SMALLINT | — | Available stock (0-1000) |
-| `embedding` | VECTOR(1024) | HNSW | Titan v2 semantic vector embedding |
+| `embedding` | VECTOR(1024) | HNSW | Cohere Embed v4 semantic vector embedding |
 
 ### Performance-Optimized Indexes
 
@@ -383,7 +390,7 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 | Service | Usage | Estimated Cost |
 |---------|-------|------|
 | **Amazon Bedrock** | | |
-| Titan Text Embeddings v2 | ~10K tokens (initial load) | $0.10 |
+| Cohere Embed v4 | ~10K tokens (initial load) | $0.10 |
 | Claude Sonnet 4 | ~50K tokens (agent queries) | $1.50 |
 | **Aurora PostgreSQL** | | |
 | Storage (10K vectors) | 100 MB | $0.00* |
@@ -396,7 +403,7 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 | Component | Monthly Cost Range | Notes |
 |-----------|-------------------|-------|
 | Aurora PostgreSQL | $150-600 | Depends on instance family, size, and I/O configuration |
-| Bedrock Embeddings | $100 | 100M tokens @ $0.001/1K tokens |
+| Bedrock Embeddings (Cohere Embed v4) | $100 | 100M tokens @ $0.001/1K tokens |
 | Bedrock Claude Sonnet 4 | $300 | 100M tokens @ $0.003/1K tokens |
 | Data Transfer | $50 | 500 GB outbound from AWS |
 | **Total** | **$600-1,050** | Varies based on Aurora configuration |
@@ -545,7 +552,7 @@ logger.info(
 | Layer | Technologies |
 |-------|-------------|
 | **Database** | Aurora PostgreSQL 17.5 • pgvector 0.8.0 (HNSW) |
-| **AI/ML** | Amazon Bedrock (Titan Text Embeddings v2, Claude Sonnet 4) |
+| **AI/ML** | Amazon Bedrock (Cohere Embed v4, Claude Sonnet 4) |
 | **Backend** | FastAPI • Python 3.13 • psycopg3 • boto3 • Pydantic v2 |
 | **Frontend** | React 18 • TypeScript 5 • Tailwind CSS • Vite • Lucide Icons |
 | **Search** | HNSW vector indexes • Trigram text indexes • Cosine similarity |
@@ -555,18 +562,6 @@ logger.info(
 ---
 
 ## 🚀 Production Deployment Guide
-
-### Horizontal Scaling Strategy
-
-**Database Layer:**
-- Aurora read replicas for search queries (up to 15 replicas)
-- Multi-AZ deployment for high availability
-- Cross-region read replicas for global applications
-
-**Application Layer:**
-- Application Load Balancer (ALB) for FastAPI instances
-- Auto Scaling Groups (ASG) based on CPU/memory
-- CloudFront CDN for React frontend static assets
 
 ### Horizontal Scaling Strategy
 

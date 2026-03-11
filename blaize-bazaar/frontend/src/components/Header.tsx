@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../App'
 import { useLayout, type WorkshopMode } from '../contexts/LayoutContext'
 import ImageSearchModal from './ImageSearchModal'
-import { Camera, Sun, Moon, Check, Compass } from 'lucide-react'
+import { Camera, Sun, Moon, Check, Compass, Wrench } from 'lucide-react'
 
 interface HeaderProps {
   activeSection?: 'shop' | 'collections'
@@ -10,6 +10,7 @@ interface HeaderProps {
   onSearch?: (query: string) => void
   cartItemCount?: number
   onCartClick?: () => void
+  onPlaygroundClick?: () => void
   loginSlot?: React.ReactNode
 }
 
@@ -22,7 +23,7 @@ const WORKSHOP_STEPS: { key: WorkshopMode; label: string }[] = [
 ]
 const MODE_ORDER: WorkshopMode[] = ['legacy', 'semantic', 'tools', 'full', 'agentcore']
 
-const Header = ({ onSearch, cartItemCount = 0, onCartClick, loginSlot }: HeaderProps) => {
+const Header = ({ onSearch, cartItemCount = 0, onCartClick, onPlaygroundClick, loginSlot }: HeaderProps) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestions, setSuggestions] = useState<Array<{text: string, category: string}>>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -100,22 +101,39 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick, loginSlot }: HeaderP
         }}
       >
         <nav className="h-[72px] px-4 md:px-6 lg:px-8 xl:px-12">
-          <div className="h-full max-w-[1920px] mx-auto flex items-center justify-between gap-4">
-            {/* Logo - Fixed width */}
-            <div 
-              className="text-xl sm:text-2xl cursor-pointer flex-shrink-0 whitespace-nowrap select-none"
-              style={{ fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              onDoubleClick={() => {
-                resetWorkshop()
-                window.scrollTo({ top: 0, behavior: 'smooth' })
-              }}
-              title="Double-click to reset workshop"
-            >
-              Blaize Bazaar
+          <div className="h-full max-w-[1920px] mx-auto flex items-center justify-between gap-3">
+            {/* Left: Logo + Playground */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <div 
+                className="text-xl sm:text-2xl cursor-pointer whitespace-nowrap select-none"
+                style={{ fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                onDoubleClick={() => {
+                  resetWorkshop()
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+                title="Double-click to reset workshop"
+              >
+                Blaize Bazaar
+              </div>
+
+              {/* Playground Button */}
+              <button
+                onClick={onPlaygroundClick}
+                className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 hover:opacity-90"
+                data-tour="dev-tools-tab"
+                style={{
+                  background: '#0071e3',
+                  color: '#ffffff',
+                }}
+                title="Open Playground (⌘⇧D)"
+              >
+                <Wrench className="h-3.5 w-3.5" />
+                Playground
+              </button>
             </div>
 
-            {/* Workshop Progress Pills */}
+            {/* Center: Workshop Progress Pills */}
             <div className="hidden md:flex items-center gap-1 flex-shrink-0" data-tour="workshop-pills">
               {WORKSHOP_STEPS.map((step, idx) => {
                 const isCurrent = step.key === workshopMode
@@ -124,33 +142,26 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick, loginSlot }: HeaderP
                   <button
                     key={step.key}
                     onClick={() => setWorkshopMode(step.key)}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[13px] font-medium transition-all duration-200"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 hover:opacity-90"
                     style={{
-                      background: isCurrent ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
-                      color: isCurrent ? '#ffffff' : isCompleted ? 'rgba(255, 255, 255, 0.6)' : 'rgba(255, 255, 255, 0.3)',
-                      border: isCurrent ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid transparent',
+                      background: isCurrent ? '#0071e3' : 'rgba(255, 255, 255, 0.08)',
+                      color: isCurrent ? '#ffffff' : isCompleted ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.4)',
                     }}
                     title={`Switch to ${step.label}`}
                   >
-                    {isCompleted ? (
-                      <Check className="h-3 w-3" style={{ color: 'rgba(52, 211, 153, 0.8)' }} />
-                    ) : (
-                      <span
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ background: isCurrent ? '#ffffff' : 'rgba(255, 255, 255, 0.2)' }}
-                      />
-                    )}
+                    {isCompleted && !isCurrent ? (
+                      <Check className="h-3 w-3" style={{ color: 'rgba(52, 211, 153, 0.9)' }} />
+                    ) : null}
                     {step.label}
                   </button>
                 )
               })}
               <button
                 onClick={() => startTour(workshopMode)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[13px] font-medium transition-all duration-200 ml-1 hover:bg-white/10"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 ml-1 hover:opacity-90"
                 style={{
-                  background: 'rgba(59, 130, 246, 0.15)',
-                  border: '1px solid rgba(59, 130, 246, 0.3)',
-                  color: 'rgba(147, 197, 253, 0.9)',
+                  background: 'rgba(59, 130, 246, 0.2)',
+                  color: 'rgba(147, 197, 253, 1)',
                 }}
                 title="Start guided tour"
               >
