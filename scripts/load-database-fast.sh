@@ -17,8 +17,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Find or download CSV file
 CSV_FILE=""
-for path in "$PROJECT_ROOT/data/amazon-products-sample-with-embeddings.csv" \
-            "/workshop/sample-dat406-build-agentic-ai-powered-search-apg/data/amazon-products-sample-with-embeddings.csv"; do
+for path in "$PROJECT_ROOT/data/premium-products-with-embeddings.csv" \
+            "/workshop/sample-dat406-build-agentic-ai-powered-search-apg/data/premium-products-with-embeddings.csv"; do
     if [ -f "$path" ]; then
         CSV_FILE="$path"
         break
@@ -29,14 +29,14 @@ done
 if [ -z "$CSV_FILE" ]; then
     log "CSV not found locally, downloading from S3..."
     mkdir -p "$PROJECT_ROOT/data"
-    CSV_FILE="$PROJECT_ROOT/data/amazon-products-sample-with-embeddings.csv"
+    CSV_FILE="$PROJECT_ROOT/data/premium-products-with-embeddings.csv"
     
     # Use Workshop Studio assets bucket (variables set by CloudFormation)
     if [ -n "${ASSETS_BUCKET_NAME:-}" ] && [ -n "${ASSETS_BUCKET_PREFIX:-}" ]; then
-        S3_URL="s3://${ASSETS_BUCKET_NAME}/${ASSETS_BUCKET_PREFIX}amazon-products-sample-with-embeddings.csv"
+        S3_URL="s3://${ASSETS_BUCKET_NAME}/${ASSETS_BUCKET_PREFIX}premium-products-with-embeddings.csv"
     else
         # Fallback for local development
-        S3_URL="s3://ws-assets-prod-iad-r-pdx-f3b3f9f1a7d6a3d0/YOUR-EVENT-ID/amazon-products-sample-with-embeddings.csv"
+        S3_URL="s3://ws-assets-prod-iad-r-pdx-f3b3f9f1a7d6a3d0/YOUR-EVENT-ID/premium-products-with-embeddings.csv"
     fi
     
     if command -v aws &> /dev/null; then
@@ -124,7 +124,7 @@ DROP TABLE temp_products;
 
 \echo 'Creating indexes...'
 
--- Vector similarity index (HNSW) - optimized for 21,704 products
+-- Vector similarity index (HNSW) - optimized for ~1,000 products
 CREATE INDEX idx_product_embedding_hnsw 
 ON bedrock_integration.product_catalog 
 USING hnsw (embedding vector_cosine_ops)

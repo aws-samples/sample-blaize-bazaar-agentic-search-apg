@@ -128,6 +128,7 @@ class Settings(BaseSettings):
 
     # 4c — Gateway (MCP)
     AGENTCORE_GATEWAY_URL: Optional[str] = None
+    AGENTCORE_GATEWAY_API_KEY: str = "workshop"
 
     # 4d — Observability
     CLOUDWATCH_LOG_GROUP: str = "/blaize-bazaar/agents"

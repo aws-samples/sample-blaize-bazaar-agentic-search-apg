@@ -46,34 +46,17 @@ def get_inventory_health() -> str:
 
 @tool
 def get_trending_products(limit: int = 10) -> str:
-    """
-    TODO (Module 3a): Build a tool that returns trending products.
-
-    Trending = high ratings + proven popularity + in stock.
-    This is your first @tool function — when implemented, the AI chat
-    will be able to answer "what's trending?" with real data.
-
-    Steps:
-        1. Check _db_service is available (return error JSON if not)
-        2. Import BusinessLogic from services.business_logic
-        3. Create a BusinessLogic instance with _db_service
-        4. Call _run_async(logic.get_trending_products(limit))
-        5. Return json.dumps(result, indent=2)
-        6. Wrap in try/except, return error JSON on failure
-
-    Pattern — follow get_inventory_health() above as your template.
-
-    Args:
-        limit: Maximum number of products to return (default: 10)
-
-    Returns:
-        JSON string with trending products
-
-    ⏩ SHORT ON TIME? Run:
-       cp solutions/module3a/services/agent_tools.py blaize-bazaar/backend/services/agent_tools.py
-    """
-    # TODO: Your implementation here (~8 lines)
-    return json.dumps({"error": "Not implemented yet — complete Module 3a TODO"})
+    """Get trending products with live data from database"""
+    if not _db_service:
+        return json.dumps({"error": "Database service not initialized"})
+    
+    try:
+        from services.business_logic import BusinessLogic
+        logic = BusinessLogic(_db_service)
+        result = _run_async(logic.get_trending_products(limit))
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
 
 @tool
 def get_category_price_analysis(category: str = None) -> str:

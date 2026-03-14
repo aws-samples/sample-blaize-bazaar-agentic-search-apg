@@ -7,17 +7,20 @@
 [![Duration](https://img.shields.io/badge/Duration-2_Hours-blue?style=for-the-badge)](https://github.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg)
 
 ### Platform & Infrastructure
+
 [![AWS Aurora](https://img.shields.io/badge/Aurora_PostgreSQL-17.5-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/rds/aurora/)
 [![pgvector](https://img.shields.io/badge/pgvector-0.8.0_HNSW-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
 [![Bedrock](https://img.shields.io/badge/Amazon_Bedrock-Cohere_Embed_v4_|_Claude_Sonnet_4-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://aws.amazon.com/bedrock/)
 
 ### Languages & Frameworks
+
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 
 ### Architecture & Capabilities
+
 [![Architecture](https://img.shields.io/badge/Architecture-Multi--Agent-7b1fa2?style=flat-square&labelColor=4a148c)](README.md)
 [![Search](https://img.shields.io/badge/Search-Vector_Semantic-ab47bc?style=flat-square&labelColor=6a1b9a)](README.md)
 [![AI](https://img.shields.io/badge/AI-Agentic_Orchestration-9c27b0?style=flat-square&labelColor=4a148c)](README.md)
@@ -48,6 +51,7 @@ start-frontend  # Terminal 2: React frontend (port 5173)
 ```
 
 **Access Points:**
+
 - 🌐 Frontend: `<CloudFront-URL>/ports/5173/`
 - 🔌 API Docs: `<CloudFront-URL>/ports/8000/docs`
 - 📊 Health: `<CloudFront-URL>/ports/8000/api/health`
@@ -88,7 +92,7 @@ Want to see what you're about to build? Watch this video walkthrough of the Blai
 │   ├── start-backend.sh
 │   └── start-frontend.sh
 ├── data/                           # Product catalog datasets
-│   └── amazon-products-sample.csv
+│   └── premium-products-with-embeddings.csv
 └── scripts/                        # Setup & bootstrap scripts
     ├── bootstrap-environment.sh
     ├── bootstrap-labs.sh
@@ -100,6 +104,7 @@ Want to see what you're about to build? Watch this video walkthrough of the Blai
 ## 🎯 Workshop Structure
 
 ### Part 1: Semantic Search Foundations (30 min) - Hands-on Exercises
+
 **Building semantic search with pgvector 0.8.0 and Aurora PostgreSQL**
 
 - Generate embeddings with Cohere Embed v4 via Amazon Bedrock (1024 dimensions)
@@ -110,6 +115,7 @@ Want to see what you're about to build? Watch this video walkthrough of the Blai
 - RAG: ground LLM answers in real product data instead of hallucinating
 
 ### Part 2: Context Management & Custom Agent Tools (25 min) - Hands-on Exercises
+
 **Building a Strands Agents SDK agent with structured tool calls**
 
 - Custom tool creation with `@tool` decorator patterns (search, inventory, pricing)
@@ -119,6 +125,7 @@ Want to see what you're about to build? Watch this video walkthrough of the Blai
 - Streaming chat with SSE (Server-Sent Events) for real-time token delivery
 
 ### Part 3: Multi-Agent Orchestration (25 min) - Hands-on Exercises
+
 **Agents as Tools pattern with Graph Orchestrator**
 
 - Orchestrator + specialist agents (Search, Pricing, Recommendation)
@@ -128,6 +135,7 @@ Want to see what you're about to build? Watch this video walkthrough of the Blai
 - Interactive DAG visualization of agent routing and result merging
 
 ### Part 4: Advanced Topics & Enterprise Patterns (Optional) - Self-paced
+
 **Production-grade agent infrastructure on AWS**
 
 - Amazon Cognito authentication and user sign-in
@@ -146,6 +154,7 @@ Want to see what you're about to build? Watch this video walkthrough of the Blai
 **Automatic Iterative Scanning** eliminates manual tuning and guarantees complete results:
 
 **Before (pgvector 0.7.x):**
+
 ```sql
 SET hnsw.ef_search = 40;  -- Manual tuning required for each query
 -- Risk: May miss relevant results with strict filters
@@ -153,6 +162,7 @@ SET hnsw.ef_search = 40;  -- Manual tuning required for each query
 ```
 
 **After (pgvector 0.8.0):**
+
 ```sql
 SET hnsw.iterative_scan = 'relaxed_order';
 -- Automatically finds all matching results with minimal latency
@@ -162,15 +172,16 @@ SET hnsw.iterative_scan = 'relaxed_order';
 
 ### Why Agents as Tools Pattern?
 
-| Traditional Monolithic Approach | Agents as Tools Pattern |
-|--------------------------------|-------------------------|
-| Single agent handles all tasks | Orchestrator + specialized agents |
+| Traditional Monolithic Approach  | Agents as Tools Pattern            |
+| -------------------------------- | ---------------------------------- |
+| Single agent handles all tasks   | Orchestrator + specialized agents  |
 | All capabilities in one codebase | Focused expertise per agent domain |
-| Hard to maintain and debug | Independent testing and updates |
-| Sequential execution only | Parallel execution possible |
-| Difficult to scale | Horizontal scaling per agent type |
+| Hard to maintain and debug       | Independent testing and updates    |
+| Sequential execution only        | Parallel execution possible        |
+| Difficult to scale               | Horizontal scaling per agent type  |
 
-**Benefits:** 
+**Benefits:**
+
 - 🎯 **Domain expertise** - Each agent masters specific capabilities
 - 🔄 **Easy maintenance** - Update agents independently
 - ⚡ **Better performance** - Optimized per agent type
@@ -188,11 +199,13 @@ SET hnsw.iterative_scan = 'relaxed_order';
 **Step 1: Split terminal into two panes (side-by-side)**
 
 **Step 2: Navigate to blaize-bazaar directory in both panes**
+
 ```bash
 blaize-bazaar
 ```
 
 **Step 3: Start backend (Left Pane)**
+
 ```bash
 start-backend
 # FastAPI server starts on port 8000
@@ -200,6 +213,7 @@ start-backend
 ```
 
 **Step 4: Start frontend (Right Pane)**
+
 ```bash
 start-frontend
 # React dev server starts on port 5173
@@ -224,6 +238,7 @@ React Frontend (TypeScript + Tailwind CSS)
 ### Platform Features
 
 ### Features
+
 - ✨ **Semantic Search**: Vector similarity with pgvector 0.8.0 HNSW indexes for natural language queries
 - 💬 **Streaming Conversational AI**: Claude Sonnet 4 with token-by-token SSE streaming and real-time typing indicators
 - 🔧 **MCP Context Manager**: Custom tools for Aurora PostgreSQL data access
@@ -241,32 +256,32 @@ React Frontend (TypeScript + Tailwind CSS)
 
 **Table**: `bedrock_integration.product_catalog`
 
-| Column | Type | Index | Description |
-|--------|------|-------|-------------|
-| `productId` | CHAR(10) | PRIMARY KEY | Unique product identifier |
-| `product_description` | VARCHAR(500) | GIN | Full product details for text search |
-| `imgUrl` | VARCHAR(70) | — | Product image URL |
-| `productURL` | VARCHAR(40) | — | Product page URL |
-| `stars` | NUMERIC(2,1) | Partial | Rating (1.0-5.0) |
-| `reviews` | INTEGER | — | Customer review count |
-| `price` | NUMERIC(8,2) | Partial | Price in USD |
-| `category_id` | SMALLINT | — | Category identifier |
-| `isBestSeller` | BOOLEAN | Partial | Bestseller flag |
-| `boughtInLastMonth` | INTEGER | — | Recent purchase count |
-| `category_name` | VARCHAR(50) | B-tree | Product category |
-| `quantity` | SMALLINT | — | Available stock (0-1000) |
-| `embedding` | VECTOR(1024) | HNSW | Cohere Embed v4 semantic vector embedding |
+| Column                | Type         | Index       | Description                               |
+| --------------------- | ------------ | ----------- | ----------------------------------------- |
+| `productId`           | CHAR(10)     | PRIMARY KEY | Unique product identifier                 |
+| `product_description` | VARCHAR(500) | GIN         | Full product details for text search      |
+| `imgUrl`              | VARCHAR(70)  | —           | Product image URL                         |
+| `productURL`          | VARCHAR(40)  | —           | Product page URL                          |
+| `stars`               | NUMERIC(2,1) | Partial     | Rating (1.0-5.0)                          |
+| `reviews`             | INTEGER      | —           | Customer review count                     |
+| `price`               | NUMERIC(8,2) | Partial     | Price in USD                              |
+| `category_id`         | SMALLINT     | —           | Category identifier                       |
+| `isBestSeller`        | BOOLEAN      | Partial     | Bestseller flag                           |
+| `boughtInLastMonth`   | INTEGER      | —           | Recent purchase count                     |
+| `category_name`       | VARCHAR(50)  | B-tree      | Product category                          |
+| `quantity`            | SMALLINT     | —           | Available stock (0-1000)                  |
+| `embedding`           | VECTOR(1024) | HNSW        | Cohere Embed v4 semantic vector embedding |
 
 ### Performance-Optimized Indexes
 
 ```sql
--- Vector similarity search (HNSW optimized for 21,704 products)
-CREATE INDEX idx_product_embedding_hnsw 
+-- Vector similarity search (HNSW optimized for ~1,000 products)
+CREATE INDEX idx_product_embedding_hnsw
 ON product_catalog USING hnsw (embedding vector_cosine_ops)
 WITH (m = 16, ef_construction = 128);
 
 -- Full-text search (GIN for keyword matching)
-CREATE INDEX idx_product_fts 
+CREATE INDEX idx_product_fts
 ON product_catalog USING GIN (to_tsvector('english', product_description));
 
 -- Category and price filters
@@ -278,7 +293,7 @@ CREATE INDEX idx_product_stars ON product_catalog(stars) WHERE stars >= 4.0;
 CREATE INDEX idx_product_bestseller ON product_catalog("isBestSeller") WHERE "isBestSeller" = TRUE;
 
 -- Composite index for category + price queries
-CREATE INDEX idx_product_category_price 
+CREATE INDEX idx_product_category_price
 ON product_catalog(category_name, price) WHERE price > 0 AND quantity > 0;
 ```
 
@@ -306,6 +321,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "results": [
@@ -330,12 +346,14 @@ Content-Type: application/json
 Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, enabling intelligent database access and business logic execution.
 
 **Custom Tools Implemented:**
+
 - `get_trending_products` - Top products by popularity metrics
 - `check_inventory` - Real-time stock availability queries
 - `analyze_pricing` - Price trend analysis and insights
 - `get_recommendations` - Semantic similarity-based suggestions
 
 **Architecture Benefits:**
+
 - 🔌 Standardized tool interface via MCP specification
 - 🔄 Reusable across multiple agents
 - 📊 Built-in token counting and context management
@@ -350,6 +368,7 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 ### Orchestrator Agent (Claude Sonnet 4)
 
 **Capabilities:**
+
 - 🧠 Intelligent query routing and agent coordination (supports [extended thinking with interleaved mode](https://github.com/strands-agents/samples/blob/main/01-tutorials/02-multi-agent-systems/01-agent-as-tool/agents-as-tools-interleaved.ipynb) for complex multi-step analysis)
 - 🔄 Adaptive task routing based on tool responses and context
 - 📊 Context-aware agent selection and coordination
@@ -358,6 +377,7 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 ### Specialized Agents (Agents as Tools Pattern)
 
 **1. Inventory Agent**
+
 ```python
 ✓ Real-time stock monitoring across catalog
 ✓ Low inventory alerts (threshold: <10 units)
@@ -366,6 +386,7 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 ```
 
 **2. Recommendation Agent**
+
 ```python
 ✓ Personalized product suggestions via semantic search
 ✓ Feature-based matching and similarity analysis
@@ -374,6 +395,7 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 ```
 
 **3. Pricing Agent**
+
 ```python
 ✓ Price trend analysis and historical patterns
 ✓ Deal identification (discount threshold: >20% off)
@@ -387,40 +409,43 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 
 ### Workshop Environment Costs
 
-| Service | Usage | Estimated Cost |
-|---------|-------|------|
-| **Amazon Bedrock** | | |
-| Cohere Embed v4 | ~10K tokens (initial load) | $0.10 |
-| Claude Sonnet 4 | ~50K tokens (agent queries) | $1.50 |
-| **Aurora PostgreSQL** | | |
-| Storage (10K vectors) | 100 MB | $0.00* |
-| I/O Operations | ~1K reads | $0.00* |
+| Service               | Usage                       | Estimated Cost |
+| --------------------- | --------------------------- | -------------- |
+| **Amazon Bedrock**    |                             |                |
+| Cohere Embed v4       | ~10K tokens (initial load)  | $0.10          |
+| Claude Sonnet 4       | ~50K tokens (agent queries) | $1.50          |
+| **Aurora PostgreSQL** |                             |                |
+| Storage (10K vectors) | 100 MB                      | $0.00\*        |
+| I/O Operations        | ~1K reads                   | $0.00\*        |
 
-*Included in pre-provisioned workshop environment
+\*Included in pre-provisioned workshop environment
 
 ### Production Estimates (1M queries/month)
 
-| Component | Monthly Cost Range | Notes |
-|-----------|-------------------|-------|
-| Aurora PostgreSQL | $150-600 | Depends on instance family, size, and I/O configuration |
-| Bedrock Embeddings (Cohere Embed v4) | $100 | 100M tokens @ $0.001/1K tokens |
-| Bedrock Claude Sonnet 4 | $300 | 100M tokens @ $0.003/1K tokens |
-| Data Transfer | $50 | 500 GB outbound from AWS |
-| **Total** | **$600-1,050** | Varies based on Aurora configuration |
+| Component                            | Monthly Cost Range | Notes                                                   |
+| ------------------------------------ | ------------------ | ------------------------------------------------------- |
+| Aurora PostgreSQL                    | $150-600           | Depends on instance family, size, and I/O configuration |
+| Bedrock Embeddings (Cohere Embed v4) | $100               | 100M tokens @ $0.001/1K tokens                          |
+| Bedrock Claude Sonnet 4              | $300               | 100M tokens @ $0.003/1K tokens                          |
+| Data Transfer                        | $50                | 500 GB outbound from AWS                                |
+| **Total**                            | **$600-1,050**     | Varies based on Aurora configuration                    |
 
 ### Aurora Configuration Best Practices
 
 **For Read-Heavy Workloads (Recommended):**
+
 - **Aurora I/O-Optimized** - Zero I/O charges, predictable monthly costs
 - **Optimized Reads (NVMe-SSD)** - Faster query performance with local caching
 - **Read Replicas** - Distribute read load across multiple instances (up to 15)
 
 **Cost Optimization Benefits:**
+
 - I/O-Optimized eliminates per-request I/O charges (typical savings: 20-40%)
 - Optimized Reads reduce network I/O by caching frequently accessed data locally
 - Combined approach ideal for vector search workloads with high read volume
 
 **Scaling Guidance:**
+
 - Start with smaller instances and scale based on actual metrics
 - Monitor `ReadLatency`, `CPUUtilization`, and `DatabaseConnections`
 - Use Aurora Serverless v2 for variable or unpredictable workloads
@@ -439,6 +464,7 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 ## 🔒 Security Best Practices
 
 ### Database Security
+
 ```bash
 ✓ Enable encryption at rest (AES-256 for all data)
 ✓ Use IAM database authentication (no password rotation needed)
@@ -449,6 +475,7 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 ```
 
 ### Application Security
+
 ```bash
 ✓ Input validation on all user queries and API endpoints
 ✓ SQL injection prevention (parameterized queries only)
@@ -459,6 +486,7 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 ```
 
 ### AI/ML Security
+
 ```bash
 ✓ Bedrock Guardrails for content filtering and safety
 ✓ PII detection and redaction in user queries
@@ -482,12 +510,12 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
    Duration: 245ms
    Tokens: 215 (input: 150, output: 65)
    Status: Success
-   
+
 🤖 LLM Call: claude-sonnet-4
    Duration: 180ms
    Model: anthropic.claude-sonnet-4-20250514-v1:0
    Temperature: 0.7
-   
+
 🔧 Tool: get_trending_products
    Duration: 45ms
    Result: 10 products
@@ -497,6 +525,7 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 ### CloudWatch Metrics
 
 **Database Metrics:**
+
 - `DatabaseConnections` - Active connection count
 - `ReadLatency` / `WriteLatency` - Query performance (milliseconds)
 - `CPUUtilization` - Compute resource usage (%)
@@ -504,6 +533,7 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 - `VolumeReadIOPs` / `VolumeWriteIOPs` - Disk operations
 
 **Application Metrics:**
+
 - `SearchLatency` - End-to-end query processing time
 - `AgentInvocations` - Agent usage patterns and frequency
 - `BedrockTokens` - Token consumption and costs
@@ -511,6 +541,7 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 - `CacheHitRate` - Embedding cache effectiveness
 
 **Custom Dashboards:**
+
 ```bash
 # Key Performance Indicators (KPIs)
 - P50/P95/P99 search latency percentiles
@@ -521,13 +552,13 @@ Custom tools built with Strands SDK for Aurora PostgreSQL agent integration, ena
 
 ### Alerting Strategy
 
-| Alert | Threshold | Action |
-|-------|-----------|--------|
-| High Latency | P95 > 2s | Scale Aurora read replicas |
-| Error Rate | > 5% | Page on-call engineer immediately |
-| Token Spike | > 2x baseline | Investigate potential abuse or bugs |
-| DB Connections | > 80% max | Check for connection leaks |
-| Cost Anomaly | > 150% daily budget | Review usage patterns |
+| Alert          | Threshold           | Action                              |
+| -------------- | ------------------- | ----------------------------------- |
+| High Latency   | P95 > 2s            | Scale Aurora read replicas          |
+| Error Rate     | > 5%                | Page on-call engineer immediately   |
+| Token Spike    | > 2x baseline       | Investigate potential abuse or bugs |
+| DB Connections | > 80% max           | Check for connection leaks          |
+| Cost Anomaly   | > 150% daily budget | Review usage patterns               |
 
 ### Structured Logging
 
@@ -549,15 +580,15 @@ logger.info(
 
 ## 🛠️ Technology Stack
 
-| Layer | Technologies |
-|-------|-------------|
-| **Database** | Aurora PostgreSQL 17.5 • pgvector 0.8.0 (HNSW) |
-| **AI/ML** | Amazon Bedrock (Cohere Embed v4, Claude Sonnet 4) |
-| **Backend** | FastAPI • Python 3.13 • psycopg3 • boto3 • Pydantic v2 |
-| **Frontend** | React 18 • TypeScript 5 • Tailwind CSS • Vite • Lucide Icons |
-| **Search** | HNSW vector indexes • Trigram text indexes • Cosine similarity |
-| **Agent Framework** | Strands SDK • Agents as Tools pattern • MCP integration |
-| **Observability** | OpenTelemetry • CloudWatch • Structured logging |
+| Layer               | Technologies                                                   |
+| ------------------- | -------------------------------------------------------------- |
+| **Database**        | Aurora PostgreSQL 17.5 • pgvector 0.8.0 (HNSW)                 |
+| **AI/ML**           | Amazon Bedrock (Cohere Embed v4, Claude Sonnet 4)              |
+| **Backend**         | FastAPI • Python 3.13 • psycopg3 • boto3 • Pydantic v2         |
+| **Frontend**        | React 18 • TypeScript 5 • Tailwind CSS • Vite • Lucide Icons   |
+| **Search**          | HNSW vector indexes • Trigram text indexes • Cosine similarity |
+| **Agent Framework** | Strands SDK • Agents as Tools pattern • MCP integration        |
+| **Observability**   | OpenTelemetry • CloudWatch • Structured logging                |
 
 ---
 
@@ -566,11 +597,13 @@ logger.info(
 ### Horizontal Scaling Strategy
 
 **Database Layer:**
+
 - Aurora read replicas for search queries (up to 15 replicas)
 - Multi-AZ deployment for high availability
 - Cross-region read replicas for global applications
 
 **Application Layer:**
+
 - Application Load Balancer (ALB) for FastAPI instances
 - Auto Scaling Groups (ASG) based on CPU/memory metrics
 - CloudFront CDN for React frontend static assets
@@ -578,12 +611,14 @@ logger.info(
 ### Vertical Scaling Approach
 
 **General Guidance:**
+
 - Start with smaller instance sizes and scale based on actual performance metrics
 - Monitor key metrics: `ReadLatency`, `CPUUtilization`, `DatabaseConnections`, `FreeableMemory`
 - Scale vertically when consistently hitting >70% CPU or memory utilization
 - Consider Aurora Serverless v2 for workloads with variable or unpredictable patterns
 
 **Performance Indicators:**
+
 - **ReadLatency** consistently >50ms → Consider larger instance or read replicas
 - **CPUUtilization** sustained >70% → Scale to larger instance size
 - **DatabaseConnections** approaching max → Review connection pooling or scale up
@@ -600,6 +635,7 @@ ScaleIncrement: 0.5 ACU per scaling step
 ```
 
 **Benefits:**
+
 - Pay only for resources used (per-second billing)
 - Automatic scaling based on workload
 - Zero infrastructure management overhead
@@ -609,22 +645,26 @@ ScaleIncrement: 0.5 ACU per scaling step
 ## 📚 Resources & References
 
 ### AWS Documentation
+
 - [Aurora PostgreSQL User Guide](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/) - Complete reference for Aurora configuration
 - [Amazon Bedrock Documentation](https://docs.aws.amazon.com/bedrock/) - Foundation models and API reference
 - [pgvector 0.8.0 Performance Blog](https://aws.amazon.com/blogs/database/supercharging-vector-search-performance-and-relevance-with-pgvector-0-8-0-on-amazon-aurora-postgresql/) - Deep dive into 0.8.0 features
 
 ### Open Source & Standards
+
 - [pgvector GitHub](https://github.com/pgvector/pgvector) - Open-source vector similarity search extension
 - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) - Protocol specification and documentation
 - [AWS Labs MCP Servers](https://awslabs.github.io/mcp/) - AWS-maintained MCP server implementations
 - [Strands SDK Documentation](https://strandsagents.com/) - Agent framework and patterns
 
 ### Related AWS re:Invent 2025 Workshops
+
 - **DAT409**: Implement hybrid search with Aurora PostgreSQL for MCP retrieval [REPEAT]
 - **DAT428**: Build a cost-effective RAG-based gen AI application with Amazon Aurora [REPEAT]
 - **DAT403**: Build a multi-agent AI solution with Amazon Aurora & Bedrock AgentCore
 
 ### Research Papers & Technical References
+
 - [HNSW Algorithm Paper](https://arxiv.org/abs/1603.09320) - Efficient and robust approximate nearest neighbor search
 - [Agents as Tools Pattern](https://strandsagents.com/latest/documentation/docs/user-guide/concepts/multi-agent/agents-as-tools/) - Multi-agent architecture best practices
 
@@ -635,6 +675,7 @@ ScaleIncrement: 0.5 ACU per scaling step
 ### Like This Workshop?
 
 If you find this helpful:
+
 - ⭐ **Star this repository** to show support and help others discover it
 - 🔱 **Fork it** to customize for your specific use cases
 - 🐛 **Report issues** to help improve the workshop
@@ -658,10 +699,12 @@ This library is licensed under the MIT-0 License. See the [LICENSE](./LICENSE) f
 ## 🙏 Acknowledgments
 
 **Workshop Developed and Tested By:**
+
 - **Shayon Sanyal** - Principal Solutions Architect, AWS | Email: shayons@amazon.com
 - **AWS Database Specialists** - Workshop support team
 
 **Special Thanks:**
+
 - pgvector community for the amazing open-source extension
 - Anthropic for Claude Sonnet 4 capabilities
 - AWS Workshop Studio team for platform support

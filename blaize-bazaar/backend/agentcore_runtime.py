@@ -39,6 +39,8 @@ try:
         session_id = payload.get("session_id", "runtime-session")
 
         orchestrator = create_orchestrator()
+        if orchestrator is None:
+            return {"response": "Orchestrator not implemented yet — complete Module 3b", "products": []}
         orchestrator.trace_attributes = {
             "session.id": session_id,
             "runtime": "agentcore-lambda",

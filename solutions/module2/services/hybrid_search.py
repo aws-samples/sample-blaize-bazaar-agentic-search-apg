@@ -84,51 +84,33 @@ class HybridSearchService:
         limit: int,
         ef_search: int
     ) -> List[Dict[str, Any]]:
-        """
-        TODO (Module 2): Implement vector similarity search using pgvector.
-
-        This is the core of semantic search — it finds products whose meaning
-        is similar to the query, even when exact keywords don't match.
-
-        Steps:
-            1. Get a connection from self.db.get_connection() (async context manager)
-            2. Create a cursor (async context manager)
-            3. Set the HNSW ef_search parameter: SET LOCAL hnsw.ef_search = {ef_search}
-            4. Execute a SELECT query that:
-               - Selects: "productId" as product_id, product_description,
-                 "imgUrl" as img_url, "productURL" as product_url,
-                 category_name, price, reviews, stars as rating,
-                 "isBestSeller" as isbestseller, "boughtInLastMonth" as boughtinlastmonth,
-                 quantity, and similarity score
-               - Computes similarity as: 1 - (embedding <=> %s::vector)
-               - Filters: stars >= 3.5, reviews >= 10, "imgUrl" IS NOT NULL
-               - Orders by: embedding <=> %s::vector (ascending = most similar first)
-               - Limits to: %s results
-               - Uses parameters: (embedding, embedding, limit)
-            5. Fetch all results and return as list of dicts
-
-        Hints:
-            - The <=> operator computes cosine distance (lower = more similar)
-            - Similarity = 1 - distance (higher = more similar)
-            - Use %s::vector to cast the embedding parameter to a vector type
-            - The embedding parameter appears twice: once for similarity score,
-              once for ORDER BY
-
-        Args:
-            embedding: Query embedding vector (1024 floats from Cohere Embed v4)
-            ef_search: HNSW search parameter (higher = better accuracy, slower)
-            limit: Maximum number of results
-
-        Returns:
-            List of product dicts with similarity scores
-
-        ⏩ SHORT ON TIME? Run:
-           cp solutions/module2/services/hybrid_search.py blaize-bazaar/backend/services/hybrid_search.py
-        """
-        # TODO: Your implementation here (~12 lines)
-        # Return empty list as fallback — fulltext search still works
-        logger.warning("⏳ _vector_search not implemented — returning empty (Module 2 TODO)")
-        return []
+        """Vector similarity search using pgvector with quality filters"""
+        async with self.db.get_connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(f"SET LOCAL hnsw.ef_search = {ef_search}")
+                await cur.execute("""
+                    SELECT 
+                        "productId" as product_id,
+                        product_description,
+                        "imgUrl" as img_url,
+                        "productURL" as product_url,
+                        category_name,
+                        price,
+                        reviews,
+                        stars as rating,
+                        "isBestSeller" as isbestseller,
+                        "boughtInLastMonth" as boughtinlastmonth,
+                        quantity,
+                        1 - (embedding <=> %s::vector) as similarity
+                    FROM bedrock_integration.product_catalog
+                    WHERE stars >= 3.5
+                      AND reviews >= 10
+                      AND "imgUrl" IS NOT NULL
+                    ORDER BY embedding <=> %s::vector
+                    LIMIT %s
+                """, (embedding, embedding, limit))
+                results = await cur.fetchall()
+                return [dict(r) for r in results]
     
     async def _fulltext_search(
         self,

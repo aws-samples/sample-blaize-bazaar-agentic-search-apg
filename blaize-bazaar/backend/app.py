@@ -1125,6 +1125,12 @@ async def agent_query(
         # Agents now handle their own tool calls - no need to pre-fetch context
         if agent_type == "orchestrator":
             orchestrator = create_orchestrator()
+            if orchestrator is None:
+                return {
+                    "response": "🔧 The orchestrator isn't wired up yet. Complete Module 3b to enable it.",
+                    "agent_type": agent_type,
+                    "status": "not_implemented"
+                }
             response = orchestrator(query)
         elif agent_type == "inventory":
             response = inventory_restock_agent(query)

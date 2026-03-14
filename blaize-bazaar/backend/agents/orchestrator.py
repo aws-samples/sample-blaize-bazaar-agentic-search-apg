@@ -8,38 +8,49 @@ from .recommendation_agent import product_recommendation_agent
 from .pricing_agent import price_optimization_agent
 
 
-ORCHESTRATOR_PROMPT = """You are the Blaize Bazaar shopping assistant. You have specialist agents to help find products.
-
-AGENTS:
-- price_optimization_agent: Best deals, pricing queries
-- inventory_restock_agent: Stock levels, restocking
-- product_recommendation_agent: General product search
-
-RULES:
-1. Call the right agent, then return its output directly.
-2. Write 1 short sentence before the products — answer the user's question, don't describe what you did.
-3. NEVER say "Based on your interest in..." or "I routed your query to..." or mention agent names.
-4. NEVER apologize. If results are limited, show what's available.
-5. If the agent returns a ```json block, include it UNCHANGED in your response.
-6. When the user mentions a price limit (e.g. 'under $50', 'below $200'), ALWAYS pass max_price to the agent tool.
-
-GOOD: "Here are the best workout headphones:"
-BAD: "Based on your interest in headphones, here are personalized recommendations!"
-BAD: "I've routed your query to the recommendation agent."
-"""
+ORCHESTRATOR_PROMPT = ""
+# TODO (Module 3b): Write the orchestrator system prompt.
+#
+# The prompt should include:
+# 1. Role: "You are the Blaize Bazaar shopping assistant"
+# 2. List of available agents and when to route to each:
+#    - price_optimization_agent: Best deals, pricing queries
+#    - inventory_restock_agent: Stock levels, restocking
+#    - product_recommendation_agent: General product search
+# 3. Rules:
+#    - Call the right agent, then return its output directly
+#    - Write 1 short sentence before the products
+#    - NEVER mention agent names to the user
+#    - When user mentions a price limit, pass max_price to the agent
+#
+# See inventory_agent.py and pricing_agent.py for examples of agent prompts.
+#
+# ⏩ SHORT ON TIME? Run:
+#    cp solutions/module3b/agents/orchestrator.py blaize-bazaar/backend/agents/orchestrator.py
 
 
 def create_orchestrator():
-    """Create the orchestrator agent with all specialized agents as tools"""
-    return Agent(
-        model=BedrockModel(
-            model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
-            max_tokens=4096,
-            temperature=0.0
-        ),
-        system_prompt=ORCHESTRATOR_PROMPT,
-        tools=[product_recommendation_agent, price_optimization_agent, inventory_restock_agent]
-    )
+    """
+    TODO (Module 3b): Create the orchestrator agent that routes to specialists.
+
+    Steps:
+        1. Create an Agent() with:
+           - model: BedrockModel(model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
+                                 max_tokens=4096, temperature=0.0)
+           - system_prompt: ORCHESTRATOR_PROMPT (fill it in above)
+           - tools: [product_recommendation_agent, price_optimization_agent,
+                      inventory_restock_agent]
+        2. Return the agent
+
+    The orchestrator's "tools" are the specialist agents themselves (wrapped
+    with @tool in their respective files). It decides which specialist to
+    invoke based on the user's query.
+
+    Returns:
+        Strands Agent instance
+    """
+    # TODO: Your implementation here (~8 lines)
+    return None
 
 
 # === WIRE IT LIVE (Lab 3) ===

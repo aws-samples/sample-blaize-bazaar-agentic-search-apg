@@ -308,6 +308,13 @@ STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
             else:
                 orchestrator = create_orchestrator()
 
+            # Graceful fallback if orchestrator not implemented yet (Module 3b TODO)
+            if orchestrator is None:
+                return self._error_response(
+                    "🔧 The AI agent orchestrator isn't wired up yet. "
+                    "Complete Module 3b to enable the chat assistant."
+                )
+
             # Add OpenTelemetry trace attributes
             orchestrator.trace_attributes = {
                 "session.id": session_id or "anonymous",
@@ -1131,6 +1138,15 @@ CURRENT REQUEST: {message}"""
             orchestrator = create_guarded_orchestrator()
         else:
             orchestrator = create_orchestrator()
+
+        # Graceful fallback if orchestrator not implemented yet (Module 3b TODO)
+        if orchestrator is None:
+            yield {
+                "type": "error",
+                "error": "🔧 The AI agent orchestrator isn't wired up yet. "
+                         "Complete Module 3b to enable the chat assistant."
+            }
+            return
 
         orchestrator.trace_attributes = {
             "session.id": session_id or "anonymous",

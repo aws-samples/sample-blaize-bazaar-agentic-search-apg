@@ -13,34 +13,17 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
-# === TODO (Module 4) ===
+# === WIRE IT LIVE (Lab 4b) ===
 def create_agentcore_session_manager(
     session_id: str,
     user_id: str = "anonymous"
 ):
     """
-    TODO (Module 4): Create an AgentCore Memory session manager.
+    Create an AgentCore Memory session manager for Strands SDK.
 
-    AgentCore Memory replaces the local AuroraSessionManager with a managed
-    service that automatically extracts user preferences, maintains conversation
-    summaries, and persists context across sessions.
-
-    Steps:
-        1. Check if settings.AGENTCORE_MEMORY_ID is set (return None if not)
-        2. Import AgentCoreMemoryConfig and AgentCoreMemorySessionManager:
-           - from bedrock_agentcore.memory.integrations.strands.config import AgentCoreMemoryConfig
-           - from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
-        3. Create config = AgentCoreMemoryConfig(
-               memory_id=settings.AGENTCORE_MEMORY_ID,
-               session_id=session_id,
-               actor_id=user_id,
-               batch_size=5,
-           )
-        4. Create session_manager = AgentCoreMemorySessionManager(
-               config, region_name=settings.AWS_REGION
-           )
-        5. Return session_manager
-        6. Handle ImportError (package not installed) and general exceptions
+    This replaces the local AuroraSessionManager with Bedrock AgentCore's
+    managed memory service, which persists user preferences, conversation
+    summaries, and extracted facts across sessions.
 
     Args:
         session_id: Unique session identifier
@@ -48,14 +31,37 @@ def create_agentcore_session_manager(
 
     Returns:
         AgentCoreMemorySessionManager instance, or None if not configured
-
-    ⏩ SHORT ON TIME? Run:
-       cp solutions/module4/services/agentcore_memory.py blaize-bazaar/backend/services/agentcore_memory.py
     """
-    # TODO: Your implementation here (~15 lines)
-    logger.info("⏳ AgentCore Memory not implemented — using local sessions (Module 4 TODO)")
-    return None
-# === END TODO ===
+    if not settings.AGENTCORE_MEMORY_ID:
+        logger.info("AGENTCORE_MEMORY_ID not set — memory disabled")
+        return None
+
+    try:
+        from bedrock_agentcore.memory.integrations.strands.config import AgentCoreMemoryConfig
+        from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
+
+        config = AgentCoreMemoryConfig(
+            memory_id=settings.AGENTCORE_MEMORY_ID,
+            session_id=session_id,
+            actor_id=user_id,
+            batch_size=5,
+        )
+
+        session_manager = AgentCoreMemorySessionManager(
+            config,
+            region_name=settings.AWS_REGION,
+        )
+
+        logger.info(f"✅ AgentCore Memory session created (memory_id={settings.AGENTCORE_MEMORY_ID}, user={user_id})")
+        return session_manager
+
+    except ImportError:
+        logger.warning("bedrock-agentcore package not installed — pip install bedrock-agentcore")
+        return None
+    except Exception as e:
+        logger.warning(f"AgentCore Memory setup failed: {e}")
+        return None
+# === END WIRE IT LIVE ===
 
 
 def get_user_memories(user_id: str) -> List[Dict[str, Any]]:

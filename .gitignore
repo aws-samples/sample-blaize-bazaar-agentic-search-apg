@@ -58,7 +58,15 @@ lab1/**/*.ipynb
 
 # Large data files (hosted on S3)
 data/amazon-products-sample-with-embeddings.csv
+data/amazon-products-sample.csv
 
 # Test environment
 tmp/
 .env
+
+# Archived files from previous workshop structure
+archive/
+
+# Embedded git repos (separate content repos)
+lab-content/
+reference/

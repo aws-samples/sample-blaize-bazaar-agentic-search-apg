@@ -13,48 +13,64 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
-# === TODO (Module 4) ===
+# === WIRE IT LIVE (Lab 4c) ===
 def create_gateway_orchestrator():
     """
-    TODO (Module 4): Create an orchestrator that discovers tools via MCP Gateway.
+    Create an orchestrator that discovers tools via MCP Gateway.
 
     Instead of importing tool functions directly, this connects to an
     AgentCore Gateway MCP server which exposes tools as MCP resources.
     The agent dynamically discovers available tools at runtime.
 
-    Steps:
-        1. Check if settings.AGENTCORE_GATEWAY_URL is set (return None if not)
-        2. Import required modules:
-           - from strands import Agent
-           - from strands.models import BedrockModel
-           - from strands.tools.mcp.mcp_client import MCPClient
-           - from mcp.client.streamable_http import streamablehttp_client
-        3. Create a transport function:
-           def _create_transport():
-               return streamablehttp_client(settings.AGENTCORE_GATEWAY_URL,
-                                            headers={"x-api-key": settings.AGENTCORE_GATEWAY_API_KEY})
-        4. Create mcp_client = MCPClient(_create_transport)
-        5. Create orchestrator = Agent(
-               model=BedrockModel(model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
-                                  max_tokens=4096, temperature=0.0),
-               system_prompt="You are the Blaize Bazaar shopping assistant. "
-                   "Use the available tools to help users find products, "
-                   "check prices, and get recommendations.",
-               tools=[mcp_client],
-           )
-        6. Return orchestrator
-        7. Handle ImportError and general exceptions
-
     Returns:
         Strands Agent with MCP-discovered tools, or None if not configured
-
-    ⏩ SHORT ON TIME? Run:
-       cp solutions/module4/services/agentcore_gateway.py blaize-bazaar/backend/services/agentcore_gateway.py
     """
-    # TODO: Your implementation here (~20 lines)
-    logger.info("⏳ Gateway orchestrator not implemented — using direct tools (Module 4 TODO)")
-    return None
-# === END TODO ===
+    if not settings.AGENTCORE_GATEWAY_URL:
+        logger.info("AGENTCORE_GATEWAY_URL not set — gateway disabled")
+        return None
+
+    try:
+        from strands import Agent
+        from strands.models import BedrockModel
+        from strands.tools.mcp.mcp_client import MCPClient
+        from mcp.client.streamable_http import streamablehttp_client
+
+        # Create MCP transport to AgentCore Gateway
+        def _create_transport():
+            return streamablehttp_client(
+                settings.AGENTCORE_GATEWAY_URL,
+                headers={"x-api-key": settings.AGENTCORE_GATEWAY_API_KEY},
+            )
+
+        # Create MCP client and discover tools
+        mcp_client = MCPClient(_create_transport)
+
+        # Create orchestrator with discovered tools
+        orchestrator = Agent(
+            model=BedrockModel(
+                model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
+                max_tokens=4096,
+                temperature=0.0,
+            ),
+            system_prompt=(
+                "You are the Blaize Bazaar shopping assistant. "
+                "Use the available tools to help users find products, "
+                "check prices, and get recommendations. "
+                "Always be helpful and concise."
+            ),
+            tools=[mcp_client],
+        )
+
+        logger.info(f"✅ Gateway orchestrator created (url={settings.AGENTCORE_GATEWAY_URL})")
+        return orchestrator
+
+    except ImportError as e:
+        logger.warning(f"MCP dependencies not installed: {e}")
+        return None
+    except Exception as e:
+        logger.warning(f"Gateway orchestrator setup failed: {e}")
+        return None
+# === END WIRE IT LIVE ===
 
 
 def list_gateway_tools() -> List[Dict[str, Any]]:

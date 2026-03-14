@@ -246,61 +246,108 @@ class BusinessLogic:
         limit: int = 5
     ) -> Dict[str, Any]:
         """
-        TODO (Module 2): Implement filtered semantic search with pgvector.
-
-        Combine vector similarity with business filters (price, rating, category)
-        in a single SQL query. This is the function that powers the storefront's
-        "smart search" — when you implement it, natural language queries like
-        "budget laptop for college" will return relevant results.
-
-        Steps:
-            1. Import EmbeddingService from services.embeddings
-            2. Generate the query embedding:
-               - Create/reuse an EmbeddingService instance
-               - Call embed_query(query) to get a 1024-dim vector
-            3. Build dynamic WHERE clauses:
-               - Always include: quantity > 0
-               - If max_price: add "price <= %s"
-               - If min_rating: add "stars >= %s"
-               - If category: add "category_name ILIKE %s" with f"%{category}%"
-            4. Build the SQL query using a CTE for the embedding:
-               - WITH query_embedding AS (SELECT %s::vector as emb)
-               - SELECT productId, product_description, price, stars, reviews,
-                 category_name, quantity, imgUrl, productURL, similarity
-               - Similarity = 1 - (embedding <=> (SELECT emb FROM query_embedding))
-               - ORDER BY embedding <=> (SELECT emb FROM query_embedding)
-               - LIMIT %s
-            5. Execute with self.db.fetch_all(query, *params)
-            6. Convert results with convert_decimals()
-            7. Filter out results below min_similarity
-            8. Return dict with status, query, count, products, filters
-
-        Hints:
-            - First param in params list is str(query_embedding) for the CTE
-            - Use f-string for the WHERE clause: f"WHERE {where_clause}"
-            - The embedding appears once (in the CTE), referenced twice in the query
-            - params order: [embedding, ...filters..., limit]
+        Search products using semantic embeddings and pgvector similarity.
 
         Args:
             query: Natural language search query
-            max_price: Optional maximum price filter
-            min_rating: Minimum star rating (default: 0.0)
-            category: Optional category filter (partial match)
-            min_similarity: Minimum similarity threshold (default: 0.1)
-            limit: Number of results (default: 5)
-
-        Returns:
-            Dict with products list and metadata
-
-        ⏩ SHORT ON TIME? Run:
-           cp solutions/module2/services/business_logic.py blaize-bazaar/backend/services/business_logic.py
+            max_price: Maximum price filter
+            min_rating: Minimum star rating
+            category: Category filter
+            min_similarity: Minimum similarity score (0-1) to filter out irrelevant results
+            limit: Number of results
         """
-        # TODO: Your implementation here (~30 lines)
+        from services.embeddings import EmbeddingService
+        import time
+
+        # Generate query embedding with timing (reuse cached singleton)
+        start_time = time.time()
+        if not hasattr(self, '_embedding_service'):
+            self._embedding_service = EmbeddingService()
+        query_embedding = self._embedding_service.embed_query(query)
+        embedding_time_ms = (time.time() - start_time) * 1000
+        
+        # Auto-detect category from query if not explicitly provided
+        if not category:
+            query_lower = query.lower()
+            category_map = {
+                'fragrance': 'Fragrances', 'perfume': 'Fragrances', 'cologne': 'Fragrances',
+                'laptop': 'Laptops', 'macbook': 'Laptops', 'notebook': 'Laptops',
+                'phone': 'Smartphones', 'smartphone': 'Smartphones', 'iphone': 'Smartphones', 'samsung galaxy': 'Smartphones',
+                'watch': 'Watches', 'rolex': 'Watches', 'timepiece': 'Watches',
+                'shoe': 'Shoes', 'sneaker': 'Shoes', 'nike': 'Shoes', 'jordan': 'Shoes',
+                'furniture': 'Furniture', 'sofa': 'Furniture', 'bed': 'Furniture', 'table': 'Furniture',
+                'kitchen': 'Kitchen Accessories', 'pan': 'Kitchen Accessories', 'knife': 'Kitchen Accessories',
+                'sunglasses': 'Sunglasses', 'shades': 'Sunglasses',
+                'bag': 'Bags', 'handbag': 'Bags', 'backpack': 'Bags',
+                'dress': 'Dresses', 'gown': 'Dresses',
+                'shirt': 'Shirts', 'tshirt': 'Shirts',
+                'sports': 'Sports Accessories', 'football': 'Sports Accessories', 'basketball': 'Sports Accessories',
+                'tablet': 'Tablets', 'ipad': 'Tablets',
+                'beauty': 'Beauty', 'mascara': 'Beauty', 'lipstick': 'Beauty',
+                'skin care': 'Skin Care', 'lotion': 'Skin Care',
+                'motorcycle': 'Motorcycle',
+                'jewel': 'Jewellery', 'earring': 'Jewellery',
+            }
+            for keyword, cat_name in category_map.items():
+                if keyword in query_lower:
+                    category = cat_name
+                    break
+
+        # Build SQL with filters - embedding first, then filters, then limit
+        conditions = ["quantity > 0"]
+        params = [str(query_embedding)]  # Embedding as first param
+        
+        if max_price:
+            conditions.append("price <= %s")
+            params.append(max_price)
+        
+        if min_rating:
+            conditions.append("stars >= %s")
+            params.append(min_rating)
+        
+        if category:
+            conditions.append("category_name ILIKE %s")
+            params.append(f"%{category}%")
+        
+        params.append(limit)  # Limit as last param
+        where_clause = " AND ".join(conditions)
+        
+        # Use CTE to define embedding once and reuse it
+        search_query = f"""
+            WITH query_embedding AS (SELECT %s::vector as emb)
+            SELECT 
+                "productId",
+                product_description,
+                price,
+                stars,
+                reviews,
+                category_name,
+                quantity,
+                "imgUrl",
+                "productURL" as product_url,
+                1 - (embedding <=> (SELECT emb FROM query_embedding)) as similarity
+            FROM bedrock_integration.product_catalog
+            WHERE {where_clause}
+            ORDER BY embedding <=> (SELECT emb FROM query_embedding)
+            LIMIT %s
+        """
+        
+        # Execute query with timing
+        db_start = time.time()
+        results = await self.db.fetch_all(search_query, *params)
+        db_time_ms = (time.time() - db_start) * 1000
+        
+        products = [convert_decimals(dict(row)) for row in results]
+
+        # Filter out low-relevance results
+        if min_similarity > 0:
+            products = [p for p in products if p.get("similarity", 0) >= min_similarity]
+
         return {
-            "status": "not_implemented",
+            "status": "success",
             "query": query,
-            "count": 0,
-            "products": [],
+            "count": len(products),
+            "products": products,
             "filters": {
                 "max_price": max_price,
                 "min_rating": min_rating,
@@ -308,9 +355,9 @@ class BusinessLogic:
                 "min_similarity": min_similarity
             },
             "performance": {
-                "bedrock_embedding_ms": 0,
-                "database_query_ms": 0,
-                "total_ms": 0
+                "bedrock_embedding_ms": round(embedding_time_ms, 2),
+                "database_query_ms": round(db_time_ms, 2),
+                "total_ms": round(embedding_time_ms + db_time_ms, 2)
             },
             "sql_query": search_query.replace("%s", "?"),
             "note": "⚠️ This is a DAT406 workshop tool for educational purposes"

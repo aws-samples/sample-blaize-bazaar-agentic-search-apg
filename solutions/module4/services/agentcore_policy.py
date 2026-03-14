@@ -111,38 +111,40 @@ class PolicyService:
     def _check_policy(
         self, policy: Dict[str, Any], action: str, params: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
-        """
-        TODO (Module 4): Implement Cedar policy evaluation for a single policy.
+        """Check a single policy against parameters."""
+        pid = policy["id"]
 
-        Check if the given action + parameters violate the policy.
-        Return a violation dict if denied, or None if allowed.
+        if pid == "max-restock-quantity":
+            qty = params.get("quantity", 0)
+            if isinstance(qty, (int, float)) and qty > 500:
+                return {
+                    "policy_id": pid,
+                    "policy_name": policy["name"],
+                    "reason": f"Restock quantity {qty} exceeds maximum of 500 units",
+                    "cedar_condition": "resource.quantity > 500",
+                }
 
-        Steps:
-            1. Get the policy ID: pid = policy["id"]
-            2. For "max-restock-quantity":
-               - Get qty from params.get("quantity", 0)
-               - If qty > 500, return a violation dict:
-                 {"policy_id": pid, "policy_name": policy["name"],
-                  "reason": f"Restock quantity {qty} exceeds maximum of 500 units",
-                  "cedar_condition": "resource.quantity > 500"}
-            3. For "restrict-categories":
-               - Get query from params, lowercase it
-               - Check if any RESTRICTED_WORDS appear in the query
-               - If found, return violation with the matched terms
-            4. For "price-ceiling":
-               - Get price from params
-               - If price > 10000, return violation
-            5. Return None if no violation
+        elif pid == "restrict-categories":
+            query = str(params.get("query", "")).lower()
+            found = RESTRICTED_WORDS & set(re.findall(r'\w+', query))
+            if found:
+                return {
+                    "policy_id": pid,
+                    "policy_name": policy["name"],
+                    "reason": f"Query contains restricted terms: {', '.join(sorted(found))}",
+                    "cedar_condition": 'resource.query like "*<term>*"',
+                }
 
-        Hints:
-            - Use RESTRICTED_WORDS set for category checking
-            - re.findall(r'\\w+', query) splits query into words for set intersection
-            - Each violation dict needs: policy_id, policy_name, reason, cedar_condition
+        elif pid == "price-ceiling":
+            price = params.get("price", 0)
+            if isinstance(price, (int, float)) and price > 10000:
+                return {
+                    "policy_id": pid,
+                    "policy_name": policy["name"],
+                    "reason": f"Price ${price:,.2f} exceeds ceiling of $10,000",
+                    "cedar_condition": "resource.price > 10000",
+                }
 
-        ⏩ SHORT ON TIME? Run:
-           cp solutions/module4/services/agentcore_policy.py blaize-bazaar/backend/services/agentcore_policy.py
-        """
-        # TODO: Your implementation here (~20 lines)
         return None
 
 

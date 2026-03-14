@@ -179,26 +179,26 @@ function AppContent() {
   ]
 
   const LAB_SECTIONS: { key: LabGroup; label: string; desc: string; minMode: typeof MODE_ORDER[number]; intro: string }[] = [
-    { key: 'lab1', label: 'Lab 1', desc: 'Semantic Search', minMode: 'semantic', intro: 'Generate embeddings with Cohere Embed v4 via Amazon Bedrock and store them in Aurora PostgreSQL with pgvector. Compare keyword vs. vector vs. hybrid retrieval, tune HNSW indexes (ef_search, quantization), and ground LLM answers in real product data with RAG.' },
-    { key: 'lab2', label: 'Lab 2', desc: 'Agent Tools', minMode: 'tools', intro: 'Build a Strands Agents SDK agent that calls structured tools — semantic search, price analysis, inventory checks — instead of just generating text. Trace each reasoning step, tool call, and token cost in real time.' },
-    { key: 'lab3', label: 'Lab 3', desc: 'Orchestration', minMode: 'full', intro: 'Wire up a Graph Orchestrator that routes queries to specialized agents (Search, Pricing, Recommendation) and merges their answers. Add Bedrock Guardrails for content safety, PII redaction, and profanity filtering. Test resilience with chaos injection.' },
-    { key: 'lab4', label: 'Lab 4', desc: 'AgentCore', minMode: 'agentcore', intro: 'Deploy production-grade agent infrastructure: persistent memory across sessions, MCP gateway for dynamic tool discovery, CloudWatch + X-Ray distributed tracing, Lambda runtime metrics, and Cedar policy authorization for fine-grained access control.' },
+    { key: 'lab1', label: 'Teaching Your Database to Understand Language', desc: 'Semantic Search', minMode: 'semantic', intro: 'Move beyond keyword matching. Generate embeddings with Amazon Titan v2, store them in Aurora PostgreSQL with pgvector 0.8.0, and compare keyword vs. vector vs. hybrid retrieval. Tune HNSW indexes and ground LLM answers in real product data with RAG.' },
+    { key: 'lab2', label: 'Building Your First Agent', desc: 'Custom Tools', minMode: 'tools', intro: 'Give your AI structured tool-calling capabilities. Build a Strands SDK agent that calls search, inventory, and pricing tools instead of just generating text. Trace each reasoning step, tool call, and token cost in real time.' },
+    { key: 'lab3', label: 'The Agent Team', desc: 'Orchestration', minMode: 'full', intro: 'One agent isn\'t enough. Wire up a Graph Orchestrator that routes queries to specialist agents (Search, Pricing, Recommendation) and merges their answers. Add Bedrock Guardrails for safety and test resilience with chaos injection.' },
+    { key: 'lab4', label: 'Ship It', desc: 'AgentCore', minMode: 'agentcore', intro: 'Take your agents to production. Deploy Lambda MCP servers behind AgentCore Gateway, launch the orchestrator on AgentCore Runtime with persistent memory, and verify with end-to-end smoke tests.' },
   ]
 
   // Mode switch handler with enhanced toast
   const MODE_LABELS: Record<string, string> = {
-    legacy: 'Legacy — Keyword Only',
-    semantic: 'Lab 1 — Semantic Search',
-    tools: 'Lab 2 — Agent Tools',
-    full: 'Lab 3 — Orchestration',
-    agentcore: 'Lab 4 — AgentCore',
+    legacy: 'Meet Blaize Bazaar — Keyword Only',
+    semantic: 'Teaching Your Database to Understand Language',
+    tools: 'Building Your First Agent',
+    full: 'The Agent Team',
+    agentcore: 'Ship It — Deploy to AgentCore',
   }
   const MODE_FEATURES: Record<string, string[]> = {
     legacy: ['Full-text keyword search', 'Exact match only — no semantic understanding'],
-    semantic: ['+ Cohere Embed v4 → pgvector', '+ Hybrid search (keyword + vector)', '+ HNSW index tuning & quantization', '+ RAG-grounded LLM answers'],
-    tools: ['+ Strands agent with structured tool calls', '+ Step-by-step reasoning traces', '+ Token usage & cost per request', '+ Preference-based re-ranking'],
+    semantic: ['+ Titan v2 embeddings → pgvector', '+ Hybrid search (keyword + vector)', '+ HNSW index tuning & iterative scan', '+ RAG-grounded LLM answers'],
+    tools: ['+ Strands agent with structured tool calls', '+ Step-by-step reasoning traces', '+ Token usage & cost tracking', '+ Preference-based re-ranking'],
     full: ['+ Graph Orchestrator → multi-agent routing', '+ Bedrock Guardrails (safety + PII)', '+ Chaos injection for resilience testing'],
-    agentcore: ['+ Cognito user authentication', '+ Persistent cross-session memory', '+ MCP gateway for tool discovery', '+ CloudWatch + X-Ray tracing', '+ Cedar policy authorization'],
+    agentcore: ['+ Lambda MCP servers on AgentCore Gateway', '+ Orchestrator on AgentCore Runtime', '+ Persistent cross-session memory', '+ End-to-end deploy_all.sh'],
   }
   const handleModeSwitch = (mode: typeof workshopMode) => {
     setWorkshopMode(mode) // auto-starts tour via LayoutContext if not completed

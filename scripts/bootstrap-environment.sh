@@ -433,18 +433,18 @@ cat << 'EOF'
 
 📁 Workshop Structure:
    /workshop/sample-dat406-build-agentic-ai-powered-search-apg/
-   ├── notebooks/     - Semantic Search with Jupyter
-   ├── blaize-bazaar/ - Blaize Bazaar Demo Application
-   │   ├── backend/   - FastAPI + Strands SDK
-   │   └── frontend/  - React + TypeScript
+   ├── blaize-bazaar/ - The App (edit backend/ files)
+   │   ├── backend/   - FastAPI + Strands SDK (TODOs here)
+   │   └── frontend/  - React + TypeScript (pre-built)
+   ├── solutions/     - Drop-in replacements if short on time
    └── data/          - Sample product catalog
 
 ═══════════════════════════════════════════════════════════════════
 
 EOF
 
-# Auto-open Part 1 notebook
-code /workshop/sample-dat406-build-agentic-ai-powered-search-apg/notebooks/Part_1_Semantic_Search_Foundations_Exercises.ipynb 2>/dev/null || true
+# Auto-open the main backend services file participants will edit first
+code /workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/backend/services/hybrid_search.py 2>/dev/null || true
 
 # Exit cleanly so task completes
 exit 0
@@ -511,10 +511,10 @@ log "Upgrading pip and installing workshop dependencies..."
 # Upgrade pip
 sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user --upgrade pip -q
 
-# Install notebook dependencies from requirements.txt
-if [ -f "$HOME_FOLDER/$REPO_NAME/notebooks/requirements.txt" ]; then
-    log "Installing notebook dependencies from requirements.txt..."
-    sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user -r "$HOME_FOLDER/$REPO_NAME/notebooks/requirements.txt" -q
+# Install backend dependencies from requirements.txt
+if [ -f "$HOME_FOLDER/$REPO_NAME/blaize-bazaar/backend/requirements.txt" ]; then
+    log "Installing backend dependencies from requirements.txt..."
+    sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user -r "$HOME_FOLDER/$REPO_NAME/blaize-bazaar/backend/requirements.txt" -q
 else
     # Fallback to individual packages
     sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user ipywidgets>=8.1.0 -q

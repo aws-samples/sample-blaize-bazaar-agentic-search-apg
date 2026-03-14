@@ -112,14 +112,8 @@ chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH"
 log "Installing Python dependencies (parallel)..."
 
 install_notebooks() {
-    if [ -f "$REPO_PATH/notebooks/requirements.txt" ]; then
-        sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user -r "$REPO_PATH/notebooks/requirements.txt" 2>&1 | tee /var/log/notebooks-pip-install.log >/dev/null
-        return ${PIPESTATUS[0]}
-    fi
-    # Register Jupyter kernel
-    sudo -u "$CODE_EDITOR_USER" python3.13 -m ipykernel install --user --name python3 --display-name "Python 3.13" &>/dev/null || \
-    (sudo -u "$CODE_EDITOR_USER" python3.13 -m pip install --user ipykernel &>/dev/null && \
-     sudo -u "$CODE_EDITOR_USER" python3.13 -m ipykernel install --user --name python3 --display-name "Python 3.13" &>/dev/null)
+    # Notebooks archived — skip notebook dependencies
+    log "Notebooks archived — skipping notebook dependencies"
     return 0
 }
 
@@ -255,7 +249,7 @@ setup_frontend & PID_FE=$!
 setup_database & PID_DB=$!
 wait $PID_FE && log "✅ Frontend dependencies installed" || warn "Frontend install issues"
 if wait $PID_DB; then
-    log "✅ Database setup complete (21,704 products with indexes)"
+    log "✅ Database setup complete (~1,000 products with indexes)"
 else
     warn "Database setup had issues - check /var/log/database-setup.log"
 fi
@@ -392,7 +386,7 @@ echo ""
 echo "✅ Notebooks (Jupyter) dependencies installed"
 echo "✅ Blaize Bazaar Backend (FastAPI + Strands) installed"
 echo "✅ Blaize Bazaar Frontend (React) dependencies installed"
-echo "✅ Database setup complete (21,704 products with indexes)"
+echo "✅ Database setup complete (~1,000 products with indexes)"
 echo "✅ MCP server configured for Amazon Q"
 echo "✅ Bash environment configured (psql ready)"
 echo ""

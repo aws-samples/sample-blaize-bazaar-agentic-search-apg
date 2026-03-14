@@ -15,11 +15,11 @@ interface HeaderProps {
 }
 
 const WORKSHOP_STEPS: { key: WorkshopMode; label: string }[] = [
-  { key: 'legacy', label: 'Legacy' },
-  { key: 'semantic', label: 'Lab 1' },
-  { key: 'tools', label: 'Lab 2' },
-  { key: 'full', label: 'Lab 3' },
-  { key: 'agentcore', label: 'Lab 4' },
+  { key: 'legacy', label: 'Meet Bazaar' },
+  { key: 'semantic', label: 'Search' },
+  { key: 'tools', label: 'First Agent' },
+  { key: 'full', label: 'Agent Team' },
+  { key: 'agentcore', label: 'Ship It' },
 ]
 const MODE_ORDER: WorkshopMode[] = ['legacy', 'semantic', 'tools', 'full', 'agentcore']
 
@@ -160,8 +160,8 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick, onPlaygroundClick, l
                 onClick={() => startTour(workshopMode)}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 ml-1 hover:opacity-90"
                 style={{
-                  background: 'rgba(59, 130, 246, 0.2)',
-                  color: 'rgba(147, 197, 253, 1)',
+                  background: '#0071e3',
+                  color: '#ffffff',
                 }}
                 title="Start guided tour"
               >
