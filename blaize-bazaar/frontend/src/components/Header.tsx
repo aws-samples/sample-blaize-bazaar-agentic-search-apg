@@ -15,11 +15,11 @@ interface HeaderProps {
 }
 
 const WORKSHOP_STEPS: { key: WorkshopMode; label: string }[] = [
-  { key: 'legacy', label: 'Meet Bazaar' },
-  { key: 'semantic', label: 'Search' },
-  { key: 'tools', label: 'First Agent' },
-  { key: 'full', label: 'Agent Team' },
-  { key: 'agentcore', label: 'Ship It' },
+  { key: 'legacy', label: 'Legacy App' },
+  { key: 'semantic', label: 'Semantic Search' },
+  { key: 'tools', label: 'Agent Tools' },
+  { key: 'full', label: 'Multi-Agent' },
+  { key: 'agentcore', label: 'Production' },
 ]
 const MODE_ORDER: WorkshopMode[] = ['legacy', 'semantic', 'tools', 'full', 'agentcore']
 
@@ -35,11 +35,11 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick, onPlaygroundClick, l
   const currentModeIdx = MODE_ORDER.indexOf(workshopMode)
 
   const placeholders = [
-    'comfortable running shoes under $100',
+    'Chanel perfume',
+    'comfortable shoes for standing all day',
     'luxury watch for a gift',
-    'best laptop for programming',
-    'something to keep drinks cold',
-    'kitchen accessories for cooking'
+    'best laptop for college',
+    'something to keep my skin glowing'
   ]
 
   useEffect(() => {

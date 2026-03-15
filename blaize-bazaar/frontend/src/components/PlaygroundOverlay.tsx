@@ -43,11 +43,11 @@ interface PlaygroundOverlayProps {
 }
 
 const MODE_LABELS: Record<string, { label: string; desc: string }> = {
-  legacy: { label: 'Meet Bazaar', desc: 'Keyword Only' },
-  semantic: { label: 'Search', desc: 'Semantic + Hybrid' },
-  tools: { label: 'First Agent', desc: 'Custom Tools' },
-  full: { label: 'Agent Team', desc: 'Orchestration' },
-  agentcore: { label: 'Ship It', desc: 'AgentCore' },
+  legacy: { label: 'Legacy App', desc: 'Keyword Search Only' },
+  semantic: { label: 'Semantic Search', desc: 'Teaching Your Database to Think' },
+  tools: { label: 'Agent Tools', desc: 'Structured Capabilities' },
+  full: { label: 'Multi-Agent', desc: 'Specialists & Routing' },
+  agentcore: { label: 'Production', desc: 'Policies, Memory & Runtime' },
 }
 
 export default function PlaygroundOverlay({

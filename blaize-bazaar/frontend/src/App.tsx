@@ -116,18 +116,18 @@ function AppContent() {
 
   // Hero search bar rotating placeholders (mode-specific)
   const legacyPlaceholders = [
-    'running shoes',
-    'wireless headphones',
-    'laptop stand',
-    'water bottle',
-    'kitchen knife set'
+    'MacBook Air',
+    'Samsung Galaxy',
+    'Rolex watch',
+    'Nike headband',
+    'Ray-Ban sunglasses'
   ]
   const semanticPlaceholders = [
-    'something to keep my drinks cold',
-    'comfortable shoes for long runs',
-    'a gift for someone who loves cooking',
-    'tech for working from home',
-    'gear for outdoor adventures'
+    'something to keep my skin glowing',
+    'gift for someone who loves cooking',
+    'comfortable shoes for standing all day',
+    'gear for outdoor adventures',
+    'budget laptop for college'
   ]
   const heroPlaceholders = workshopMode === 'legacy' ? legacyPlaceholders : semanticPlaceholders
   const [heroPlaceholderIndex, setHeroPlaceholderIndex] = useState(0)
@@ -179,19 +179,19 @@ function AppContent() {
   ]
 
   const LAB_SECTIONS: { key: LabGroup; label: string; desc: string; minMode: typeof MODE_ORDER[number]; intro: string }[] = [
-    { key: 'lab1', label: 'Teaching Your Database to Understand Language', desc: 'Semantic Search', minMode: 'semantic', intro: 'Move beyond keyword matching. Generate embeddings with Amazon Titan v2, store them in Aurora PostgreSQL with pgvector 0.8.0, and compare keyword vs. vector vs. hybrid retrieval. Tune HNSW indexes and ground LLM answers in real product data with RAG.' },
-    { key: 'lab2', label: 'Building Your First Agent', desc: 'Custom Tools', minMode: 'tools', intro: 'Give your AI structured tool-calling capabilities. Build a Strands SDK agent that calls search, inventory, and pricing tools instead of just generating text. Trace each reasoning step, tool call, and token cost in real time.' },
-    { key: 'lab3', label: 'The Agent Team', desc: 'Orchestration', minMode: 'full', intro: 'One agent isn\'t enough. Wire up a Graph Orchestrator that routes queries to specialist agents (Search, Pricing, Recommendation) and merges their answers. Add Bedrock Guardrails for safety and test resilience with chaos injection.' },
-    { key: 'lab4', label: 'Ship It', desc: 'AgentCore', minMode: 'agentcore', intro: 'Take your agents to production. Deploy Lambda MCP servers behind AgentCore Gateway, launch the orchestrator on AgentCore Runtime with persistent memory, and verify with end-to-end smoke tests.' },
+    { key: 'lab1', label: 'Semantic Search', desc: 'Teaching Your Database to Think', minMode: 'semantic', intro: 'Move beyond keyword matching. Implement vector similarity search with pgvector, combine it with business filters, and watch the storefront understand natural language queries like "something to keep my drinks cold."' },
+    { key: 'lab2', label: 'Agent Tools', desc: 'Structured Capabilities', minMode: 'tools', intro: 'Give your AI structured tool-calling capabilities. Build @tool functions that query Aurora PostgreSQL and return structured JSON, so agents can answer "what\'s trending?" with real product data.' },
+    { key: 'lab3', label: 'Multi-Agent Orchestration', desc: 'Specialists & Routing', minMode: 'full', intro: 'One agent isn\'t enough. Build specialist agents for recommendations, pricing, and inventory, then wire them together with an orchestrator that routes queries to the right expert.' },
+    { key: 'lab4', label: 'Production Deployment', desc: 'Policies, Memory & Runtime', minMode: 'agentcore', intro: 'Take your agents to production with AgentCore. Add managed memory, secure tool discovery via MCP Gateway, Cedar policy evaluation, and deploy to serverless Lambda microVMs.' },
   ]
 
   // Mode switch handler with enhanced toast
   const MODE_LABELS: Record<string, string> = {
-    legacy: 'Meet Blaize Bazaar — Keyword Only',
-    semantic: 'Teaching Your Database to Understand Language',
-    tools: 'Building Your First Agent',
-    full: 'The Agent Team',
-    agentcore: 'Ship It — Deploy to AgentCore',
+    legacy: 'Legacy App — Keyword Search Only',
+    semantic: 'Semantic Search — Teaching Your Database to Think',
+    tools: 'Agent Tools — From SQL to Structured Capabilities',
+    full: 'Multi-Agent Orchestration — Specialists and Routing',
+    agentcore: 'Production Deployment — Policies, Memory, and Runtime',
   }
   const MODE_FEATURES: Record<string, string[]> = {
     legacy: ['Full-text keyword search', 'Exact match only — no semantic understanding'],
