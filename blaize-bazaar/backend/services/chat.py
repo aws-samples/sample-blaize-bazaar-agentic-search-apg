@@ -422,7 +422,7 @@ CURRENT REQUEST: {message}"""
             from services.agent_tools import (
                 semantic_product_search,
                 get_trending_products,
-                get_category_price_analysis,
+                get_price_analysis,
             )
 
             single_prompt = (
@@ -451,7 +451,7 @@ CURRENT REQUEST: {message}"""
             agent = Agent(
                 model=BedrockModel(model_id=self.model_id, max_tokens=8192, temperature=0.0),
                 system_prompt=single_prompt,
-                tools=[semantic_product_search, get_trending_products, get_category_price_analysis]
+                tools=[semantic_product_search, get_trending_products, get_price_analysis]
             )
 
             # Build conversation context
@@ -648,7 +648,7 @@ CURRENT REQUEST: {message}"""
             from services.agent_tools import (
                 semantic_product_search,
                 get_trending_products,
-                get_category_price_analysis,
+                get_price_analysis,
             )
 
             single_prompt = (
@@ -681,7 +681,7 @@ CURRENT REQUEST: {message}"""
                     temperature=0.0
                 ),
                 system_prompt=single_prompt,
-                tools=[semantic_product_search, get_trending_products, get_category_price_analysis]
+                tools=[semantic_product_search, get_trending_products, get_price_analysis]
             )
 
             # Build conversation context

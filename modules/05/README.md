@@ -5,9 +5,9 @@ Deploy Blaize Bazaar's multi-agent system to production using Amazon Bedrock Age
 ## What Gets Deployed
 
 1. **3 Lambda MCP Servers** — Specialist tools packaged as Lambda functions:
-   - `bazaar-search-server` — Semantic search + inventory tools
-   - `bazaar-pricing-server` — Price analysis + deal finding
-   - `bazaar-recommendation-server` — Personalized product recommendations
+   - `blaize-search-server` — Semantic search + inventory tools
+   - `blaize-pricing-server` — Price analysis + deal finding
+   - `blaize-recommend-server` — Personalized product recommendations
 
 2. **AgentCore Gateway** — MCP Gateway that registers all 3 Lambda targets with:
    - Cognito JWT authentication
@@ -29,13 +29,13 @@ source deploy_all.sh
 
 ```bash
 # 1. Deploy Lambda MCP servers
-uv run deploy_lambda.py --server-name bazaar-search-server \
-  --mcp-server-path bazaar_search_server.py \
-  --handler bazaar_search_server.lambda_handler \
+uv run deploy_lambda.py --server-name blaize-search-server \
+  --mcp-server-path blaize_search_server.py \
+  --handler blaize_search_server.lambda_handler \
   --db-cluster-arn $PGHOSTARN --secret-arn $PGSECRET --database $PGDATABASE
 
 # 2. Deploy Gateway
-uv run deploy_gateway.py --gateway-name bazaar-gateway \
+uv run deploy_gateway.py --gateway-name blaize-gateway \
   --search-lambda-arn $SEARCH_LAMBDA_ARN \
   --pricing-lambda-arn $PRICING_LAMBDA_ARN \
   --recommendation-lambda-arn $RECOMMENDATION_LAMBDA_ARN \
@@ -43,8 +43,8 @@ uv run deploy_gateway.py --gateway-name bazaar-gateway \
   --cognito-client-id $COGNITO_CLIENT
 
 # 3. Configure + launch AgentCore Runtime
-uv run agentcore configure --name bazaar_orchestrator ...
-uv run agentcore launch --agent bazaar_orchestrator ...
+uv run agentcore configure --name blaize_orchestrator ...
+uv run agentcore launch --agent blaize_orchestrator ...
 
 # 4. Test
 uv run test_runtime.py --prompt "Find me running shoes under $50"
@@ -54,9 +54,9 @@ uv run test_runtime.py --prompt "Find me running shoes under $50"
 
 | File                              | Purpose                                        |
 | --------------------------------- | ---------------------------------------------- |
-| `bazaar_search_server.py`         | Lambda MCP server for search + inventory       |
-| `bazaar_pricing_server.py`        | Lambda MCP server for pricing                  |
-| `bazaar_recommendation_server.py` | Lambda MCP server for recommendations          |
+| `blaize_search_server.py`         | Lambda MCP server for search + inventory       |
+| `blaize_pricing_server.py`        | Lambda MCP server for pricing                  |
+| `blaize_recommend_server.py` | Lambda MCP server for recommendations          |
 | `deploy_lambda.py`                | Lambda deployment script (adapted from DAT403) |
 | `deploy_gateway.py`               | AgentCore Gateway deployment                   |
 | `agentcore_runtime_adapter.py`    | Runtime entrypoint for AgentCore               |

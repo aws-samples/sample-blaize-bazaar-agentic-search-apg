@@ -5,8 +5,8 @@ Runs inside an AgentCore Lambda microVM. Discovers tools via MCP Gateway
 and routes queries through the orchestrator agent.
 
 Deploy with:
-    agentcore configure --name bazaar_orchestrator ...
-    agentcore launch --agent bazaar_orchestrator ...
+    agentcore configure --name blaize_orchestrator ...
+    agentcore launch --agent blaize_orchestrator ...
 """
 import json
 import logging
@@ -30,7 +30,7 @@ try:
 
 You have access to tools discovered via MCP Gateway:
 - Search tools: semantic_search, get_inventory_health, get_low_stock_products, restock_product
-- Pricing tools: find_deals, get_category_price_analysis, compare_products
+- Pricing tools: find_deals, get_price_analysis, compare_products
 - Recommendation tools: get_recommendations, get_trending_products
 
 RULES:

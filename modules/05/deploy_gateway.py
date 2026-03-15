@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # Tool schemas for Blaize Bazaar MCP servers
 TOOL_SCHEMAS = {
     "search": {
-        "target_name": "bazaar-search-server-function",
+        "target_name": "blaize-search-server-function",
         "description": "Blaize Bazaar search and inventory MCP server",
         "tools": [
             {
@@ -68,7 +68,7 @@ TOOL_SCHEMAS = {
         ],
     },
     "pricing": {
-        "target_name": "bazaar-pricing-server-function",
+        "target_name": "blaize-pricing-server-function",
         "description": "Blaize Bazaar pricing analysis MCP server",
         "tools": [
             {
@@ -85,7 +85,7 @@ TOOL_SCHEMAS = {
                 },
             },
             {
-                "name": "get_category_price_analysis",
+                "name": "get_price_analysis",
                 "description": "Price statistics by category.",
                 "inputSchema": {
                     "type": "object",
@@ -108,7 +108,7 @@ TOOL_SCHEMAS = {
         ],
     },
     "recommendation": {
-        "target_name": "bazaar-recommendation-server-function",
+        "target_name": "blaize-recommend-server-function",
         "description": "Blaize Bazaar product recommendation MCP server",
         "tools": [
             {
@@ -151,7 +151,7 @@ class MCPTarget:
 @dataclass
 class GatewayConfig:
     region: str = "us-east-1"
-    gateway_name: str = "bazaar-gateway"
+    gateway_name: str = "blaize-gateway"
     targets: List[MCPTarget] = field(default_factory=list)
     cognito_user_pool_id: str = None
     cognito_client_id: str = None
@@ -305,7 +305,7 @@ class BazaarGatewayDeployer:
 def main():
     parser = argparse.ArgumentParser(description="Deploy Blaize Bazaar MCP servers to AgentCore Gateway")
     parser.add_argument("--region", default=os.getenv("AWS_REGION", "us-east-1"))
-    parser.add_argument("--gateway-name", default="bazaar-gateway")
+    parser.add_argument("--gateway-name", default="blaize-gateway")
     parser.add_argument("--search-lambda-arn", required=True)
     parser.add_argument("--pricing-lambda-arn", required=True)
     parser.add_argument("--recommendation-lambda-arn", required=True)

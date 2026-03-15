@@ -59,7 +59,7 @@ def get_trending_products(limit: int = 10) -> str:
         return json.dumps({"error": str(e)})
 
 @tool
-def get_category_price_analysis(category: str = None) -> str:
+def get_price_analysis(category: str = None) -> str:
     """Get category price analysis with live data from database (matches Part 2 notebook)"""
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
@@ -67,7 +67,7 @@ def get_category_price_analysis(category: str = None) -> str:
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
-        result = _run_async(logic.get_price_statistics(category))
+        result = _run_async(logic.get_price_analysis(category))
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})

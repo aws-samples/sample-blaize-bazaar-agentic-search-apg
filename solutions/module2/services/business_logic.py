@@ -122,7 +122,7 @@ class BusinessLogic:
             "alerts": self._generate_inventory_alerts(stats_dict)
         }
     
-    async def get_price_statistics(self, category: str = None) -> Dict[str, Any]:
+    async def get_price_analysis(self, category: str = None) -> Dict[str, Any]:
         """
         Get price statistics by category or overall.
         

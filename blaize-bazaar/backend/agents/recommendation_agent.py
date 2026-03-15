@@ -17,7 +17,7 @@ def product_recommendation_agent(query: str) -> str:
 
     Follow the pattern from inventory_agent.py and pricing_agent.py:
         1. Create an Agent() with:
-           - model: BedrockModel with "global.anthropic.claude-haiku-4-5-20251001-v1:0"
+           - model: BedrockModel with "global.anthropic.claude-sonnet-4-6"
            - system_prompt: Describe a recommendation specialist who helps
              users discover products using semantic search and trending data
            - tools: [semantic_product_search, get_trending_products, get_product_by_category]

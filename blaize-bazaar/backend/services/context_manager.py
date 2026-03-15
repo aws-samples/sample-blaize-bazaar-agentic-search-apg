@@ -494,7 +494,7 @@ Use the get_inventory_health() tool to access live data. Always provide specific
 
 Your specialization: Price analysis, value assessment, market comparisons, and deal identification.
 
-Use the get_category_price_analysis() tool for statistical insights.""",
+Use the get_price_analysis() tool for statistical insights.""",
             "performance_metrics": {
                 "avg_response_time_ms": 720,
                 "success_rate": 0.92

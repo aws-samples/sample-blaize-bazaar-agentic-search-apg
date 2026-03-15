@@ -925,7 +925,7 @@ async def list_custom_tools():
         {"name": "search_products", "description": "Semantic product search via pgvector embeddings"},
         {"name": "get_trending_products", "description": "Get trending products by reviews and ratings"},
         {"name": "get_inventory_health", "description": "Check stock levels and inventory alerts"},
-        {"name": "get_price_statistics", "description": "Price analytics by category"},
+        {"name": "get_price_analysis", "description": "Price analytics by category"},
         {"name": "restock_product", "description": "Update product stock quantities"},
         {"name": "compare_products", "description": "Side-by-side product comparison"},
         {"name": "get_low_stock_products", "description": "Find products running low on inventory"},
@@ -970,7 +970,7 @@ async def get_price_stats(
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(db)
-        return await logic.get_price_statistics(category)
+        return await logic.get_price_analysis(category)
     except Exception as e:
         logger.error(f"Failed to get price statistics: {e}")
         raise HTTPException(status_code=500, detail=str(e))

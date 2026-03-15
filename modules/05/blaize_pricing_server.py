@@ -3,7 +3,7 @@ Bazaar Pricing MCP Server — Lambda-hosted MCP server for price analysis.
 
 Exposes tools:
   - find_deals: Find products with best value (high ratings, competitive prices)
-  - get_category_price_analysis: Price statistics by category
+  - get_price_analysis: Price statistics by category
   - compare_products: Side-by-side comparison of two products
 
 Deployed as a Lambda function behind AgentCore Gateway.
@@ -91,7 +91,7 @@ def find_deals(query: str, max_price: float = None, limit: int = 5) -> dict:
     return {"products": rows, "query": query, "count": len(rows)}
 
 
-def get_category_price_analysis(category: str = None) -> dict:
+def get_price_analysis(category: str = None) -> dict:
     """Get price statistics (min, max, avg, median) by category."""
     where = f"WHERE category_name = '{category}'" if category else ""
     sql = f"""
@@ -141,8 +141,8 @@ TOOLS = {
             "required": ["query"],
         },
     },
-    "get_category_price_analysis": {
-        "fn": get_category_price_analysis,
+    "get_price_analysis": {
+        "fn": get_price_analysis,
         "description": "Get price statistics (min, max, avg, median) across product categories.",
         "inputSchema": {
             "type": "object",
