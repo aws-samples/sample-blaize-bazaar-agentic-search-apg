@@ -349,7 +349,7 @@ async def semantic_search(
     LAB 1: Semantic search endpoint using vector similarity
     
     Performs pure vector similarity search using pgvector HNSW index
-    and Amazon Titan embeddings. Optionally uses hybrid search (vector + full-text).
+    and Cohere Embed v4 embeddings. Optionally uses hybrid search (vector + full-text).
     """
     start_time = time.time()
     use_hybrid = request.query.startswith("hybrid:") or use_hybrid

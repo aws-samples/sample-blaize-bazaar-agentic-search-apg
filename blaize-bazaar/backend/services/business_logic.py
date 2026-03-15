@@ -266,7 +266,7 @@ class BusinessLogic:
             4. Build the SQL query using a CTE for the embedding:
                - WITH query_embedding AS (SELECT %s::vector as emb)
                - SELECT productId, product_description, price, stars, reviews,
-                 category_name, quantity, imgUrl, productURL, similarity
+                 category_name, quantity, "imgUrl", "productURL" as product_url, similarity
                - Similarity = 1 - (embedding <=> (SELECT emb FROM query_embedding))
                - ORDER BY embedding <=> (SELECT emb FROM query_embedding)
                - LIMIT %s
