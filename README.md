@@ -2,14 +2,16 @@
 
 <div align="center">
 
-[![AWS re:Invent 2026](https://img.shields.io/badge/AWS_re%3AInvent-2026-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://reinvent.awsevents.com/)
+[![AWS Workshop](https://img.shields.io/badge/AWS-Workshop-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://github.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg)
 [![Level 400](https://img.shields.io/badge/Level-400%20Expert-red?style=for-the-badge)](https://github.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg)
 [![Duration](https://img.shields.io/badge/Duration-2_Hours-blue?style=for-the-badge)](https://github.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg)
 [![License](https://img.shields.io/badge/License-MIT-00b300?style=for-the-badge)](LICENSE)
 
 </div>
 
-> ⚠️ **Educational Workshop**: Demonstration code for AWS re:Invent 2026. Not intended for production deployment without proper security hardening.
+> 🚧 **UNDER CONSTRUCTION** — This workshop is being actively developed. Code, content, and infrastructure may change without notice.
+>
+> ⚠️ **Educational Workshop**: Demonstration code. Not intended for production deployment without proper security hardening.
 
 ---
 
