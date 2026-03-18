@@ -62,34 +62,31 @@ blaize-bazaar/                      # The App
 │   │   └── pricing_agent.py        Pre-built (study as pattern)
 │   └── app.py                      Pre-built FastAPI server
 ├── frontend/                       Pre-built React storefront
-```
-
 │
-solutions/ # Drop-in replacements (cp and restart)
-├── module2/services/ hybrid_search.py, business_logic.py
-├── module3a/services/ agent_tools.py
-├── module3b/agents/ recommendation_agent.py, orchestrator.py
-└── module4/services/ agentcore_memory.py, agentcore_gateway.py, agentcore_policy.py
+solutions/                          # Drop-in replacements (cp and restart)
+├── module2/services/               hybrid_search.py, business_logic.py
+├── module3a/services/              agent_tools.py
+├── module3b/agents/                recommendation_agent.py, orchestrator.py
+└── module4/services/               agentcore_memory.py, agentcore_gateway.py, agentcore_policy.py
 
-modules/05/ # AgentCore deployment scripts
-scripts/ # Bootstrap & setup
-data/ # Product catalog (~1,000 products with embeddings)
-sample-images/ # Visual search test images
-
-````
+modules/05/                         # AgentCore deployment scripts
+scripts/                            # Bootstrap & setup
+data/                               # Product catalog (~1,000 products with embeddings)
+sample-images/                      # Visual search test images
+```
 
 ---
 
 ## Technology Stack
 
-| Layer | Technologies |
-|-------|-------------|
-| Database | Aurora PostgreSQL 17.5, pgvector 0.8.0 (HNSW) |
-| AI/ML | Amazon Bedrock — Claude Sonnet 4, Cohere Embed v4 |
-| Agent Infra | Amazon Bedrock AgentCore — Gateway, Memory, Observability, Runtime |
-| Agent Framework | Strands Agents SDK |
-| Backend | FastAPI, Python 3.13, psycopg3, boto3 |
-| Frontend | React 18, TypeScript 5, Tailwind CSS, Vite |
+| Layer           | Technologies                                                       |
+| --------------- | ------------------------------------------------------------------ |
+| Database        | Aurora PostgreSQL 17.5, pgvector 0.8.0 (HNSW)                      |
+| AI/ML           | Amazon Bedrock — Claude Sonnet 4, Cohere Embed v4                  |
+| Agent Infra     | Amazon Bedrock AgentCore — Gateway, Memory, Observability, Runtime |
+| Agent Framework | Strands Agents SDK                                                 |
+| Backend         | FastAPI, Python 3.13, psycopg3, boto3                              |
+| Frontend        | React 18, TypeScript 5, Tailwind CSS, Vite                         |
 
 ---
 
@@ -100,7 +97,7 @@ Every challenge has a solution file. Copy it over and restart:
 ```bash
 cp solutions/module2/services/hybrid_search.py blaize-bazaar/backend/services/hybrid_search.py
 source blaize-bazaar/START_BACKEND.sh
-````
+```
 
 See `solutions/README.md` for all copy commands.
 
