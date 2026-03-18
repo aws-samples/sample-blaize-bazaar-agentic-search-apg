@@ -1,4 +1,4 @@
-# DAT4XX — Build Agentic AI-Powered Search with Amazon Aurora and Amazon Bedrock AgentCore
+# Build Agentic AI-Powered Search with Amazon Aurora and Amazon Bedrock AgentCore
 
 <div align="center">
 
