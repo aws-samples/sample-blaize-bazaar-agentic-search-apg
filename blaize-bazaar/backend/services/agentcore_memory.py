@@ -93,3 +93,76 @@ def get_user_memories(user_id: str) -> List[Dict[str, Any]]:
     except Exception as e:
         logger.warning(f"Failed to retrieve memories: {e}")
         return []
+
+
+def search_episodic_memories(
+    user_id: str,
+    query: str,
+    session_id: str = None,
+    top_k: int = 5,
+) -> List[Dict[str, Any]]:
+    """
+    Search episodic memories for relevant past experiences.
+
+    Episodic memory captures structured experiences:
+    - Goal: what the agent was trying to accomplish
+    - Reasoning: the steps it took
+    - Actions: which tools were called
+    - Outcome: what happened
+    - Reflection: what was learned
+
+    This enables agents to learn from past interactions and improve
+    decision-making over time — e.g., "last time this user asked about
+    running shoes, they preferred Nike under $80."
+
+    Args:
+        user_id: User ID (Cognito sub claim)
+        query: Natural language query to search memories
+        session_id: Optional session scope
+        top_k: Maximum memories to return
+
+    Returns:
+        List of episodic memory records
+    """
+    if not settings.AGENTCORE_MEMORY_ID:
+        return []
+
+    try:
+        from bedrock_agentcore.memory import MemorySessionManager
+
+        actor_id = user_id.replace("@", "-").replace(".", "-")
+        mgr = MemorySessionManager(
+            memory_id=settings.AGENTCORE_MEMORY_ID,
+            region_name=settings.AWS_REGION,
+        )
+        memory_session = mgr.create_memory_session(
+            actor_id=actor_id,
+            session_id=session_id or "search",
+        )
+
+        # Search long-term memories (includes episodic if configured)
+        records = memory_session.search_long_term_memories(
+            query=query,
+            namespace_prefix="/",
+            top_k=top_k,
+        )
+
+        episodes = []
+        for record in records:
+            content = record.get("content", {})
+            episodes.append({
+                "text": content.get("text", ""),
+                "type": record.get("memoryType", "unknown"),
+                "score": record.get("score", 0),
+                "created_at": str(record.get("createdAt", "")),
+            })
+
+        logger.info(f"Found {len(episodes)} episodic memories for query: {query[:50]}")
+        return episodes
+
+    except ImportError:
+        logger.warning("bedrock-agentcore not installed — episodic memory unavailable")
+        return []
+    except Exception as e:
+        logger.warning(f"Episodic memory search failed: {e}")
+        return []

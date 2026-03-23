@@ -1,9 +1,8 @@
 """
 AgentCore Gateway — MCP Tool Discovery via Bedrock AgentCore Gateway.
 
-Wire It Live: Participants implement create_gateway_orchestrator() using
-Strands SDK's MCPClient with streamable HTTP transport to discover tools
-dynamically from an MCP server instead of hard-coding tool imports.
+Solution: create_gateway_orchestrator() implemented with MCPClient
+and streamable HTTP transport for dynamic tool discovery.
 """
 import logging
 from typing import Optional, List, Dict, Any
@@ -13,17 +12,9 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
-# === WIRE IT LIVE (Lab 4c) ===
 def create_gateway_orchestrator():
     """
     Create an orchestrator that discovers tools via MCP Gateway.
-
-    Instead of importing tool functions directly, this connects to an
-    AgentCore Gateway MCP server which exposes tools as MCP resources.
-    The agent dynamically discovers available tools at runtime.
-
-    Returns:
-        Strands Agent with MCP-discovered tools, or None if not configured
     """
     if not settings.AGENTCORE_GATEWAY_URL:
         logger.info("AGENTCORE_GATEWAY_URL not set — gateway disabled")
@@ -35,17 +26,14 @@ def create_gateway_orchestrator():
         from strands.tools.mcp.mcp_client import MCPClient
         from mcp.client.streamable_http import streamablehttp_client
 
-        # Create MCP transport to AgentCore Gateway
         def _create_transport():
             return streamablehttp_client(
                 settings.AGENTCORE_GATEWAY_URL,
                 headers={"x-api-key": settings.AGENTCORE_GATEWAY_API_KEY},
             )
 
-        # Create MCP client and discover tools
         mcp_client = MCPClient(_create_transport)
 
-        # Create orchestrator with discovered tools
         orchestrator = Agent(
             model=BedrockModel(
                 model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
@@ -70,15 +58,60 @@ def create_gateway_orchestrator():
     except Exception as e:
         logger.warning(f"Gateway orchestrator setup failed: {e}")
         return None
-# === END WIRE IT LIVE ===
+
+
+def create_gateway_orchestrator_with_semantic_search():
+    """
+    Create an orchestrator that discovers tools via Gateway semantic search.
+    """
+    if not settings.AGENTCORE_GATEWAY_URL:
+        logger.info("AGENTCORE_GATEWAY_URL not set — semantic search disabled")
+        return None
+
+    try:
+        from strands import Agent
+        from strands.models import BedrockModel
+        from strands.tools.mcp.mcp_client import MCPClient
+        from mcp.client.streamable_http import streamablehttp_client
+
+        def _create_transport():
+            return streamablehttp_client(
+                settings.AGENTCORE_GATEWAY_URL,
+                headers={"x-api-key": settings.AGENTCORE_GATEWAY_API_KEY},
+            )
+
+        mcp_client = MCPClient(_create_transport)
+
+        orchestrator = Agent(
+            model=BedrockModel(
+                model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
+                max_tokens=4096,
+                temperature=0.0,
+            ),
+            system_prompt=(
+                "You are the Blaize Bazaar shopping assistant. "
+                "Use the x_amz_bedrock_agentcore_search tool to find "
+                "relevant tools for the user's query, then invoke them. "
+                "For product searches, search for 'product search' tools. "
+                "For inventory questions, search for 'inventory' tools. "
+                "For pricing, search for 'pricing' tools."
+            ),
+            tools=[mcp_client],
+        )
+
+        logger.info(f"✅ Gateway orchestrator with semantic search created")
+        return orchestrator
+
+    except ImportError as e:
+        logger.warning(f"MCP dependencies not installed: {e}")
+        return None
+    except Exception as e:
+        logger.warning(f"Gateway semantic search setup failed: {e}")
+        return None
 
 
 def list_gateway_tools() -> List[Dict[str, Any]]:
-    """
-    List all tools registered in the AgentCore Gateway MCP server.
-
-    Returns a list of tool descriptors with name, description, and input schema.
-    """
+    """List all tools registered in the AgentCore Gateway MCP server."""
     if not settings.AGENTCORE_GATEWAY_URL:
         return []
 

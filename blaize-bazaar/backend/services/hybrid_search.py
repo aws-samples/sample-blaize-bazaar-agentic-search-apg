@@ -82,7 +82,8 @@ class HybridSearchService:
         self,
         embedding: List[float],
         limit: int,
-        ef_search: int
+        ef_search: int,
+        iterative_scan: bool = True
     ) -> List[Dict[str, Any]]:
         """
         TODO (Module 2): Implement vector similarity search using pgvector.
@@ -94,7 +95,11 @@ class HybridSearchService:
             1. Get a connection from self.db.get_connection() (async context manager)
             2. Create a cursor (async context manager)
             3. Set the HNSW ef_search parameter: SET LOCAL hnsw.ef_search = {ef_search}
-            4. Execute a SELECT query that:
+            4. Enable iterative scan (pgvector 0.8.0):
+               SET LOCAL hnsw.iterative_scan = 'relaxed_order'
+               This ensures filtered queries always return enough results by
+               continuing to scan the HNSW index if initial results are filtered out.
+            5. Execute a SELECT query that:
                - Selects: "productId" as product_id, product_description,
                  "imgUrl" as img_url, "productURL" as product_url,
                  category_name, price, reviews, stars as rating,
@@ -105,7 +110,7 @@ class HybridSearchService:
                - Orders by: embedding <=> %s::vector (ascending = most similar first)
                - Limits to: %s results
                - Uses parameters: (embedding, embedding, limit)
-            5. Fetch all results and return as list of dicts
+            6. Fetch all results and return as list of dicts
 
         Hints:
             - The <=> operator computes cosine distance (lower = more similar)
@@ -113,11 +118,14 @@ class HybridSearchService:
             - Use %s::vector to cast the embedding parameter to a vector type
             - The embedding parameter appears twice: once for similarity score,
               once for ORDER BY
+            - iterative_scan prevents "overfiltering" — without it, HNSW may
+              return fewer results than requested when WHERE filters are strict
 
         Args:
             embedding: Query embedding vector (1024 floats from Cohere Embed v4)
             ef_search: HNSW search parameter (higher = better accuracy, slower)
             limit: Maximum number of results
+            iterative_scan: Enable pgvector 0.8.0 iterative scanning (default: True)
 
         Returns:
             List of product dicts with similarity scores
@@ -125,7 +133,7 @@ class HybridSearchService:
         ⏩ SHORT ON TIME? Run:
            cp solutions/module2/services/hybrid_search.py blaize-bazaar/backend/services/hybrid_search.py
         """
-        # TODO: Your implementation here (~12 lines)
+        # TODO: Your implementation here (~14 lines)
         # Return empty list as fallback — fulltext search still works
         logger.warning("⏳ _vector_search not implemented — returning empty (Module 2 TODO)")
         return []

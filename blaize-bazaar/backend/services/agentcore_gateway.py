@@ -57,6 +57,67 @@ def create_gateway_orchestrator():
 # === END TODO ===
 
 
+def create_gateway_orchestrator_with_semantic_search():
+    """
+    Create an orchestrator that discovers tools via Gateway semantic search.
+
+    Instead of loading all tools into the agent's context (list_tools),
+    this uses the x_amz_bedrock_agentcore_search tool to find relevant
+    tools by natural language description at query time. This scales to
+    hundreds or thousands of tools without bloating the agent's prompt.
+
+    Returns:
+        Strands Agent with semantic tool discovery, or None if not configured
+    """
+    if not settings.AGENTCORE_GATEWAY_URL:
+        logger.info("AGENTCORE_GATEWAY_URL not set — semantic search disabled")
+        return None
+
+    try:
+        from strands import Agent
+        from strands.models import BedrockModel
+        from strands.tools.mcp.mcp_client import MCPClient
+        from mcp.client.streamable_http import streamablehttp_client
+
+        def _create_transport():
+            return streamablehttp_client(
+                settings.AGENTCORE_GATEWAY_URL,
+                headers={"x-api-key": settings.AGENTCORE_GATEWAY_API_KEY},
+            )
+
+        mcp_client = MCPClient(_create_transport)
+
+        # The agent uses x_amz_bedrock_agentcore_search to find tools
+        # by description rather than loading all tools into its prompt.
+        # This is the production pattern for large tool catalogs.
+        orchestrator = Agent(
+            model=BedrockModel(
+                model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
+                max_tokens=4096,
+                temperature=0.0,
+            ),
+            system_prompt=(
+                "You are the Blaize Bazaar shopping assistant. "
+                "Use the x_amz_bedrock_agentcore_search tool to find "
+                "relevant tools for the user's query, then invoke them. "
+                "For product searches, search for 'product search' tools. "
+                "For inventory questions, search for 'inventory' tools. "
+                "For pricing, search for 'pricing' tools."
+            ),
+            tools=[mcp_client],
+        )
+
+        logger.info(f"✅ Gateway orchestrator with semantic search created")
+        return orchestrator
+
+    except ImportError as e:
+        logger.warning(f"MCP dependencies not installed: {e}")
+        return None
+    except Exception as e:
+        logger.warning(f"Gateway semantic search setup failed: {e}")
+        return None
+
+
 def list_gateway_tools() -> List[Dict[str, Any]]:
     """
     List all tools registered in the AgentCore Gateway MCP server.

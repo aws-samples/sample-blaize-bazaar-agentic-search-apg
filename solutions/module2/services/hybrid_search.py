@@ -82,12 +82,15 @@ class HybridSearchService:
         self,
         embedding: List[float],
         limit: int,
-        ef_search: int
+        ef_search: int,
+        iterative_scan: bool = True
     ) -> List[Dict[str, Any]]:
-        """Vector similarity search using pgvector with quality filters"""
+        """Vector similarity search using pgvector with quality filters and iterative scan"""
         async with self.db.get_connection() as conn:
             async with conn.cursor() as cur:
                 await cur.execute(f"SET LOCAL hnsw.ef_search = {ef_search}")
+                if iterative_scan:
+                    await cur.execute("SET LOCAL hnsw.iterative_scan = 'relaxed_order'")
                 await cur.execute("""
                     SELECT 
                         "productId" as product_id,

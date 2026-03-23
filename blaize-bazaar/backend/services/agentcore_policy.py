@@ -155,3 +155,102 @@ def get_policy_service() -> PolicyService:
     if _policy_service is None:
         _policy_service = PolicyService()
     return _policy_service
+
+
+# ============================================================================
+# AgentCore Policy API — Natural Language Policy Creation
+# ============================================================================
+
+def create_policy_from_natural_language(
+    gateway_id: str,
+    policy_name: str,
+    natural_language_rule: str,
+    region: str = None,
+) -> Dict[str, Any]:
+    """
+    Create an AgentCore Policy from a natural language description.
+
+    AgentCore Policy automatically compiles natural language rules into
+    Cedar policies and attaches them to the Gateway for real-time enforcement.
+    This replaces the need to write Cedar syntax manually.
+
+    Example natural language rules:
+        - "Forbid restocking more than 500 units in a single operation"
+        - "Allow all agents to search products but block weapons and tobacco"
+        - "Only allow the inventory agent to call restock_product"
+
+    Args:
+        gateway_id: AgentCore Gateway ID to attach the policy to
+        policy_name: Human-readable policy name
+        natural_language_rule: Plain English description of the policy rule
+        region: AWS region (defaults to settings.AWS_REGION)
+
+    Returns:
+        Dict with policy_id, cedar_statement, and status
+    """
+    import boto3
+    from config import settings
+
+    region = region or settings.AWS_REGION
+
+    try:
+        client = boto3.client("bedrock-agentcore-control", region_name=region)
+
+        # Step 1: Create or get the policy engine for this gateway
+        policy_engine_id = _get_or_create_policy_engine(client, gateway_id)
+
+        # Step 2: Create the policy using natural language
+        # AgentCore auto-compiles to Cedar
+        response = client.create_policy(
+            policyEngineId=policy_engine_id,
+            name=policy_name,
+            description=natural_language_rule,
+            validationMode="FAIL_ON_ANY_FINDINGS",
+            definition={
+                "naturalLanguage": {
+                    "statement": natural_language_rule,
+                }
+            },
+        )
+
+        policy_id = response.get("policyId", "")
+        logger.info(f"✅ Policy created from natural language: {policy_id}")
+
+        return {
+            "policy_id": policy_id,
+            "name": policy_name,
+            "natural_language": natural_language_rule,
+            "status": response.get("status", "CREATING"),
+            "policy_engine_id": policy_engine_id,
+        }
+
+    except ImportError:
+        logger.warning("boto3 not available for AgentCore Policy API")
+        return {"error": "boto3 not available"}
+    except Exception as e:
+        logger.error(f"Failed to create NL policy: {e}")
+        return {"error": str(e)}
+
+
+def _get_or_create_policy_engine(client, gateway_id: str) -> str:
+    """Get existing policy engine for a gateway, or create one."""
+    try:
+        # List existing policy engines
+        response = client.list_policy_engines()
+        for engine in response.get("policyEngines", []):
+            if engine.get("gatewayId") == gateway_id:
+                return engine["policyEngineId"]
+
+        # Create new policy engine attached to the gateway
+        response = client.create_policy_engine(
+            name=f"blaize-bazaar-policy-engine",
+            description="Policy engine for Blaize Bazaar agent actions",
+            gatewayIdentifier=gateway_id,
+        )
+        engine_id = response["policyEngineId"]
+        logger.info(f"✅ Policy engine created: {engine_id}")
+        return engine_id
+
+    except Exception as e:
+        logger.error(f"Failed to get/create policy engine: {e}")
+        raise
