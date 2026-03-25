@@ -29,9 +29,6 @@ const SAMPLE_QUERIES = [
   'something to make my skin glow',
   'budget laptop for college',
 ]
-  'premium fragrance',
-  'stylish sunglasses',
-]
 
 const CATEGORY_OPTIONS = [
   'Shoes', 'Watches', 'Laptops', 'Fragrances', 'Sunglasses',
