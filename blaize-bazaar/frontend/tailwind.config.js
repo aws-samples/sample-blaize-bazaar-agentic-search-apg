@@ -1,3 +1,5 @@
+import tailwindcssAnimate from 'tailwindcss-animate'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -13,6 +15,7 @@ export default {
         'bg-secondary': 'var(--bg-secondary)',
         'text-primary': 'var(--text-primary, #f5f5f7)',
         'text-secondary': 'var(--text-secondary, #a1a1a6)',
+        'text-tertiary': 'var(--text-tertiary, #636366)',
         'border-subtle': 'var(--border-color, rgba(255, 255, 255, 0.08))',
 
         // Apple blue links
@@ -61,5 +64,5 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [tailwindcssAnimate],
 }

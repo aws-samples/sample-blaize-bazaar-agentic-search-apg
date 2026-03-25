@@ -180,7 +180,7 @@ const ProductCardCompact = ({ product, onAddToCart, similarityScore, recommendat
             {product.originalPrice && product.originalPrice > product.price ? (
               <>
                 <span className="text-text-secondary text-[13px] line-through opacity-60">${product.originalPrice.toFixed(2)}</span>
-                <span className="font-extrabold text-[19px] tracking-tight text-green-400">${product.price.toFixed(2)}</span>
+                <span className="font-bold text-base tracking-tight text-green-400">${product.price.toFixed(2)}</span>
                 {product.discountPercent && product.discountPercent > 0 && (
                   <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(34, 197, 94, 0.15)', color: '#4ade80' }}>
                     -{product.discountPercent}%
@@ -188,7 +188,7 @@ const ProductCardCompact = ({ product, onAddToCart, similarityScore, recommendat
                 )}
               </>
             ) : (
-              <span className="font-extrabold text-[19px] tracking-tight" style={{ color: 'var(--link-color)' }}>${product.price.toFixed(2)}</span>
+              <span className="font-bold text-base tracking-tight" style={{ color: 'var(--link-color)' }}>${product.price.toFixed(2)}</span>
             )}
           </div>
           <div className="flex items-center gap-1.5">

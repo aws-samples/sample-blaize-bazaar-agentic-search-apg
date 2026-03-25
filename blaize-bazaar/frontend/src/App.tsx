@@ -33,6 +33,7 @@ import RuntimeStatusPanel from './components/RuntimeStatusPanel'
 import PolicyDemoPanel from './components/PolicyDemoPanel'
 import GraphVisualization from './components/GraphVisualization'
 import PlaygroundOverlay from './components/PlaygroundOverlay'
+import CacheMetricsPanel from './components/CacheMetricsPanel'
 import SpotlightWalkthrough from './components/SpotlightWalkthrough'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import SignInPage from './components/SignInPage'
@@ -102,6 +103,7 @@ function AppContent() {
   const [showRuntimeStatus, setShowRuntimeStatus] = useState(false)
   const [showPolicyDemo, setShowPolicyDemo] = useState(false)
   const [showGraphViz, setShowGraphViz] = useState(false)
+  const [showCacheMetrics, setShowCacheMetrics] = useState(false)
   const [playgroundVisible, setPlaygroundVisible] = useState(false)
 
   // Hero background carousel
@@ -176,6 +178,7 @@ function AppContent() {
     { icon: <Activity className="h-5 w-5" />, label: 'Observability', desc: 'CloudWatch and X-Ray integration showing distributed traces across Lambda, Aurora, and Bedrock calls.', tryHint: 'Make a chat request, then check traces to see the full call chain with latencies.', action: () => { setShowObservability(true); setPlaygroundVisible(false) }, minMode: 'agentcore', group: 'lab4' },
     { icon: <Search className="h-5 w-5" />, label: 'Runtime Status', desc: 'AgentCore Lambda runtime health: cold start times, memory usage, and execution metrics.', action: () => { setShowRuntimeStatus(true); setPlaygroundVisible(false) }, minMode: 'agentcore', group: 'lab4' },
     { icon: <FileCode className="h-5 w-5" />, label: 'Cedar Policies', desc: 'Fine-grained authorization using Cedar policy language. Define which agent actions are permitted or denied.', tryHint: 'Try restocking 1000 units — the Cedar policy blocks quantities over 500.', action: () => { setShowPolicyDemo(true); setPlaygroundVisible(false) }, minMode: 'agentcore', group: 'lab4' },
+    { icon: <Zap className="h-5 w-5" />, label: 'Cache Metrics', desc: 'Valkey/ElastiCache performance dashboard showing hit rates, key counts, and embedding cost savings.', tryHint: 'Search for the same query twice — watch the cache hit rate climb.', action: () => { setShowCacheMetrics(true); setPlaygroundVisible(false) }, minMode: 'agentcore', group: 'lab4' },
   ]
 
   const LAB_SECTIONS: { key: LabGroup; label: string; desc: string; minMode: typeof MODE_ORDER[number]; intro: string }[] = [
@@ -391,7 +394,7 @@ function AppContent() {
 
             {/* Hero content — split layout for agent modes, centered for legacy/semantic */}
             {(() => {
-              const isAgentMode = workshopMode === 'tools' || workshopMode === 'full'
+              const isAgentMode = workshopMode === 'tools' || workshopMode === 'full' || workshopMode === 'agentcore'
 
               const heroBadge = (
                 <motion.div
@@ -412,6 +415,7 @@ function AppContent() {
                     {workshopMode === 'legacy' ? 'DAT406 — E-Commerce (Legacy)'
                       : workshopMode === 'semantic' ? 'DAT406 — Semantic Search Enabled'
                       : workshopMode === 'tools' ? 'DAT406 — AI Agent Tools'
+                      : workshopMode === 'agentcore' ? 'DAT406 — Production Infrastructure'
                       : 'DAT406 — Multi-Agent AI Commerce'}
                   </div>
                 </motion.div>
@@ -443,6 +447,8 @@ function AppContent() {
                     ? 'Semantic search powered by Aurora PostgreSQL and pgvector — search by intent, not just keywords.'
                     : workshopMode === 'tools'
                     ? 'AI agent with custom tools answers questions about products, trends, and pricing.'
+                    : workshopMode === 'agentcore'
+                    ? 'Production-grade AI with AgentCore runtime, Valkey caching, Cedar policies, and managed memory.'
                     : 'Five AI agents collaborate in real-time to search, compare, and recommend.'
                   }
                 </motion.p>
@@ -813,6 +819,7 @@ function AppContent() {
                   {workshopMode === 'legacy' ? 'Aurora PostgreSQL • Keyword Search'
                     : workshopMode === 'semantic' ? 'Aurora PostgreSQL • Amazon Bedrock • pgvector'
                     : workshopMode === 'tools' ? 'Aurora PostgreSQL • Amazon Bedrock • pgvector • Strands Agents SDK'
+                    : workshopMode === 'agentcore' ? 'Aurora PostgreSQL • Amazon Bedrock • pgvector • Strands Agents SDK • AgentCore • ElastiCache/Valkey'
                     : 'Aurora PostgreSQL • Amazon Bedrock • pgvector • Strands Agents SDK • Multi-Agent Orchestration'}
                 </p>
               </div>
@@ -905,6 +912,7 @@ function AppContent() {
         {showRuntimeStatus && <RuntimeStatusPanel onClose={() => setShowRuntimeStatus(false)} />}
         <PolicyDemoPanel isOpen={showPolicyDemo} onClose={() => setShowPolicyDemo(false)} />
         <GraphVisualization isOpen={showGraphViz} onClose={() => setShowGraphViz(false)} />
+        {showCacheMetrics && <CacheMetricsPanel onClose={() => setShowCacheMetrics(false)} />}
 
         {/* Spotlight Walkthrough */}
         <SpotlightWalkthrough onAction={handleTourAction} />

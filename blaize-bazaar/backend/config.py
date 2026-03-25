@@ -102,6 +102,9 @@ class Settings(BaseSettings):
     # Enable query result caching (future feature)
     ENABLE_CACHE: bool = False
     CACHE_TTL: int = 300  # seconds
+    # Valkey / ElastiCache URL (optional — in-memory fallback if not set)
+    # Format: redis://host:6379 or redis://:password@host:6379
+    VALKEY_URL: Optional[str] = None
     
     # ========================================
     # Logging Configuration

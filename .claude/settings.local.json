@@ -68,7 +68,8 @@
       "Bash(curl -s -X POST http://localhost:8001/api/chat/stream -H \"Content-Type: application/json\" -d '{\"\"message\"\":\"\"top kitchen essentials\"\",\"\"conversation_history\"\":[],\"\"workshop_mode\"\":\"\"tools\"\"}')",
       "Bash(npm install react-markdown)",
       "Bash(ls -la /Users/shayons/Desktop/Workshops/sample-dat406-build-agentic-ai-powered-search-apg/labs/*.py)",
-      "Bash(ls -la /Users/shayons/Desktop/Workshops/sample-dat406-build-agentic-ai-powered-search-apg/labs/solutions/*.py)"
+      "Bash(ls -la /Users/shayons/Desktop/Workshops/sample-dat406-build-agentic-ai-powered-search-apg/labs/solutions/*.py)",
+      "Bash(npm install tailwindcss-animate --save-dev)"
     ]
   }
 }

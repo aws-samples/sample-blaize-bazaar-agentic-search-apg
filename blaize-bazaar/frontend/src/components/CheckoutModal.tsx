@@ -2,7 +2,7 @@
  * Checkout Modal - Mockup payment flow with AI agent
  */
 import { useState } from 'react'
-import { X, CreditCard, CheckCircle } from 'lucide-react'
+import { X, CreditCard, CheckCircle, Loader2 } from 'lucide-react'
 import { ChatProduct } from '../services/chat'
 
 interface CheckoutModalProps {
@@ -37,14 +37,14 @@ const CheckoutModal = ({ isOpen, onClose, cart, onComplete }: CheckoutModalProps
     <div className="fixed inset-0 z-[1001] flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="w-[450px] glass-strong rounded-[20px] flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-accent-light/20 flex justify-between items-center">
+        <div className="px-6 py-4 flex justify-between items-center" style={{ borderBottom: '1px solid var(--border-color)' }}>
           <h2 className="text-xl font-semibold text-text-primary">
             {step === 'payment' && 'Checkout'}
             {step === 'processing' && 'Processing...'}
             {step === 'success' && 'Order Complete!'}
           </h2>
           {step === 'payment' && (
-            <button onClick={onClose} className="hover:text-accent-light transition-colors">
+            <button onClick={onClose} className="hover:opacity-70 transition-colors text-text-secondary">
               <X className="h-5 w-5" />
             </button>
           )}
@@ -74,16 +74,16 @@ const CheckoutModal = ({ isOpen, onClose, cart, onComplete }: CheckoutModalProps
                   <input type="text" placeholder="123" maxLength={3} className="w-full px-4 py-3 rounded-lg input-field" />
                 </div>
               </div>
-              <div className="pt-4 border-t border-accent-light/20">
+              <div className="pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-text-secondary">Total Amount:</span>
-                  <span className="text-2xl font-bold text-accent-light">${total.toFixed(2)}</span>
+                  <span className="text-2xl font-bold" style={{ color: 'var(--link-color)' }}>${total.toFixed(2)}</span>
                 </div>
                 <button
                   onClick={handlePayment}
                   disabled={cardNumber.length < 16}
-                  className="w-full py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  style={{ background: 'linear-gradient(135deg, #6a1b9a 0%, #ba68c8 100%)', color: 'white' }}
+                  className="w-full py-3 rounded-xl font-semibold transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-white"
+                  style={{ background: 'var(--link-color)' }}
                 >
                   <CreditCard className="h-5 w-5" />
                   Pay ${total.toFixed(2)}
@@ -94,7 +94,7 @@ const CheckoutModal = ({ isOpen, onClose, cart, onComplete }: CheckoutModalProps
 
           {step === 'processing' && (
             <div className="text-center py-12">
-              <div className="animate-spin text-6xl mb-4">⏳</div>
+              <Loader2 className="h-16 w-16 animate-spin mx-auto mb-4" style={{ color: 'var(--link-color)' }} />
               <p className="text-text-primary font-medium">Processing your payment...</p>
               <p className="text-text-secondary text-sm mt-2">AI Agent validating inventory & payment</p>
             </div>

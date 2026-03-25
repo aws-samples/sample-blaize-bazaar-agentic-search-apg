@@ -19,26 +19,17 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
-_EMBEDDING_CACHE: dict[str, List[float]] = {}
-_EMBEDDING_CACHE_MAX = 200
-_CACHE_HITS = 0
-_CACHE_MISSES = 0
 _TOTAL_EMBEDDING_COST = 0.0
 _EMBEDDING_COST_PER_CALL = 0.00001  # ~$0.01 per 1K Cohere Embed v4 calls
 
 
 def get_cache_stats() -> dict:
-    """Return embedding cache statistics for the Context & Cost dashboard."""
-    total = _CACHE_HITS + _CACHE_MISSES
-    return {
-        "cache_size": len(_EMBEDDING_CACHE),
-        "cache_max": _EMBEDDING_CACHE_MAX,
-        "hits": _CACHE_HITS,
-        "misses": _CACHE_MISSES,
-        "hit_rate": round(_CACHE_HITS / total, 4) if total > 0 else 0.0,
-        "total_requests": total,
-        "total_embedding_cost_usd": round(_TOTAL_EMBEDDING_COST, 6),
-    }
+    """Return embedding cost statistics for the Context & Cost dashboard."""
+    from services.cache import get_cache
+    cache = get_cache()
+    stats = cache.stats() if cache else {"hits": 0, "misses": 0, "hit_rate": 0.0, "total_requests": 0}
+    stats["total_embedding_cost_usd"] = round(_TOTAL_EMBEDDING_COST, 6)
+    return stats
 
 
 class EmbeddingService:
@@ -137,18 +128,20 @@ class EmbeddingService:
         max_length = 8192  # characters
         text = text[:max_length].strip()
 
-        global _CACHE_HITS, _CACHE_MISSES, _TOTAL_EMBEDDING_COST
+        global _TOTAL_EMBEDDING_COST
+
+        from services.cache import get_cache
+        cache = get_cache()
 
         # Cache key includes input_type since query vs document produce different vectors
         cache_key = f"{input_type}:{text}"
 
         # Check cache first
-        if cache_key in _EMBEDDING_CACHE:
-            _CACHE_HITS += 1
-            logger.debug("Embedding cache hit")
-            return _EMBEDDING_CACHE[cache_key]
-
-        _CACHE_MISSES += 1
+        if cache:
+            cached = cache.get("emb", cache_key)
+            if cached is not None:
+                logger.debug("Embedding cache hit")
+                return cached
 
         try:
             # Prepare request body for Cohere Embed v4
@@ -179,11 +172,9 @@ class EmbeddingService:
 
             _TOTAL_EMBEDDING_COST += _EMBEDDING_COST_PER_CALL
 
-            # Store in cache (evict oldest if full)
-            if len(_EMBEDDING_CACHE) >= _EMBEDDING_CACHE_MAX:
-                oldest_key = next(iter(_EMBEDDING_CACHE))
-                del _EMBEDDING_CACHE[oldest_key]
-            _EMBEDDING_CACHE[cache_key] = embedding
+            # Store in cache (1 hour TTL for embeddings)
+            if cache:
+                cache.set("emb", cache_key, embedding, ttl=3600)
 
             return embedding
 

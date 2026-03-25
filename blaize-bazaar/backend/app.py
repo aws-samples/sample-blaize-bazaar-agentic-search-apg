@@ -37,6 +37,7 @@ from services.sql_query_logger import init_query_logger, get_query_logger
 from services.index_performance import get_index_performance_service
 from services.hybrid_search import HybridSearchService
 from services.rerank import RerankService
+from services.cache import init_cache, get_cache
 
 # Lab 2 agents use Strands SDK function pattern (not class-based)
 # Agents are available via /api/agents/query endpoint
@@ -172,6 +173,13 @@ async def lifespan(app: FastAPI):
 
         rerank_service = RerankService()
         logger.info("✅ Rerank service initialized (Cohere Rerank v3.5)")
+
+        # Initialize Valkey cache (graceful fallback to in-memory)
+        cache_svc = init_cache(
+            valkey_url=settings.VALKEY_URL,
+            default_ttl=settings.CACHE_TTL,
+        )
+        logger.info(f"✅ Cache service initialized (mode={cache_svc.mode})")
         
         bedrock_service = BedrockService()
         logger.info("✅ Bedrock service initialized")
@@ -994,17 +1002,6 @@ async def restock_product_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-if __name__ == "__main__":
-    import uvicorn
-    
-    uvicorn.run(
-        "app:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
-    )
-
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest, user=Depends(get_current_user)):
     """
@@ -1457,9 +1454,12 @@ async def get_agent_stats():
 
 @app.get("/api/cache/stats")
 async def get_cache_stats():
-    """Get embedding cache statistics for the Context & Cost dashboard"""
-    from services.embeddings import get_cache_stats
-    return get_cache_stats()
+    """Get cache statistics — Valkey/in-memory + embedding cost data."""
+    from services.embeddings import get_cache_stats as get_embedding_stats
+    cache = get_cache()
+    result = cache.stats() if cache else {"mode": "unavailable"}
+    result["embedding"] = get_embedding_stats()
+    return result
 
 
 # ============================================================================
@@ -1677,3 +1677,78 @@ async def agentcore_runtime_status():
         "endpoint": f"http://localhost:{settings.PORT}",
         "healthy": True,
     }
+
+
+# ============================================================================
+# AGENTCORE GOING FURTHER ENDPOINTS
+# ============================================================================
+
+@app.get("/api/agentcore/memories/episodes")
+async def get_episodic_memories(query: str, user=Depends(get_current_user)):
+    """Search episodic memories for relevant past experiences"""
+    if not user:
+        return {"episodes": [], "message": "Sign in to search episodic memories"}
+    try:
+        from services.agentcore_memory import search_episodic_memories
+        episodes = search_episodic_memories(user["sub"], query)
+        return {"episodes": episodes, "query": query, "user": user["email"]}
+    except Exception as e:
+        logger.warning(f"Failed to search episodic memories: {e}")
+        return {"episodes": [], "error": str(e)}
+
+
+@app.post("/api/agentcore/policy/create")
+async def create_nl_policy(request: Request):
+    """Create a Cedar policy from natural language description"""
+    try:
+        from services.agentcore_policy import create_policy_from_natural_language
+        body = await request.json()
+        result = create_policy_from_natural_language(
+            gateway_id=body.get("gateway_id", ""),
+            policy_name=body.get("policy_name", ""),
+            natural_language_rule=body.get("rule", ""),
+        )
+        return result
+    except Exception as e:
+        logger.error(f"NL policy creation failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/agentcore/analytics")
+async def analytics_query(request: Request):
+    """Run a data analytics query using Code Interpreter agent"""
+    try:
+        from services.code_interpreter import create_analytics_agent
+        body = await request.json()
+        prompt = body.get("prompt", "")
+        if not prompt:
+            raise HTTPException(status_code=400, detail="prompt is required")
+        agent = create_analytics_agent()
+        if agent is None:
+            return {
+                "response": "Code Interpreter is not available. Ensure AGENTCORE_RUNTIME_ENDPOINT is configured and strands-agents-tools is installed.",
+                "available": False,
+            }
+        result = str(agent(prompt))
+        return {"response": result, "available": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Analytics query failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# MAIN ENTRYPOINT
+# ============================================================================
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run(
+        "app:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level="info"
+    )

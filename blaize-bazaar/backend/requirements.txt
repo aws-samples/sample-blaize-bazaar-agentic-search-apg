@@ -35,3 +35,6 @@ PyJWT>=2.8.0
 cryptography>=41.0.0
 requests>=2.31.0
 bedrock-agentcore>=1.4.3
+
+# Caching — Valkey (ElastiCache)
+valkey>=6.0.0

@@ -10,7 +10,7 @@ const SkeletonLoader = () => {
 
 export const ProductCardSkeleton = () => {
   return (
-    <div className="bg-white/5 rounded-xl p-4 border border-purple-500/20">
+    <div className="rounded-xl p-4" style={{ background: 'var(--input-bg)', border: '1px solid var(--border-color)' }}>
       <div className="flex gap-4">
         <div className="w-20 h-20 skeleton-shimmer rounded-lg"></div>
         <div className="flex-1 space-y-3">
