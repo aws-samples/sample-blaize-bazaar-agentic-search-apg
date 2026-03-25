@@ -77,7 +77,7 @@ DROP TABLE IF EXISTS bedrock_integration.product_catalog CASCADE;
 CREATE TABLE bedrock_integration.product_catalog (
     "productId" CHAR(10) PRIMARY KEY,
     product_description VARCHAR(500) NOT NULL,
-    "imgUrl" VARCHAR(70),
+    "imgUrl" VARCHAR(200),
     "productURL" VARCHAR(40),
     stars NUMERIC(2,1) CHECK (stars >= 1.0 AND stars <= 5.0),
     reviews INTEGER CHECK (reviews >= 0),
