@@ -39,7 +39,7 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick, onPlaygroundClick, l
     'comfortable shoes for standing all day',
     'luxury watch for a gift',
     'best laptop for college',
-    'something to keep my skin glowing'
+    'something to make my skin glow'
   ]
 
   useEffect(() => {

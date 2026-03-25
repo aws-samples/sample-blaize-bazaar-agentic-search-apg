@@ -120,9 +120,9 @@ function AppContent() {
   const legacyPlaceholders = [
     'MacBook Air',
     'Samsung Galaxy',
-    'Rolex watch',
-    'Nike headband',
-    'Ray-Ban sunglasses'
+    'iPhone 15',
+    'Chanel perfume',
+    'Cuisinart kitchen'
   ]
   const semanticPlaceholders = [
     'something to keep my skin glowing',
