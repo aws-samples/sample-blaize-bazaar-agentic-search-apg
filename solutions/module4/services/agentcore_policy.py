@@ -6,6 +6,7 @@ plus natural language policy creation via AgentCore Policy API.
 """
 import logging
 import re
+import threading
 from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -85,8 +86,11 @@ class PolicyService:
         pid = policy["id"]
 
         if pid == "max-restock-quantity":
-            qty = params.get("quantity", 0)
-            if isinstance(qty, (int, float)) and qty > 500:
+            try:
+                qty = float(params.get("quantity", 0))
+            except (TypeError, ValueError):
+                qty = 0
+            if qty > 500:
                 return {
                     "policy_id": pid,
                     "policy_name": policy["name"],
@@ -106,8 +110,11 @@ class PolicyService:
                 }
 
         elif pid == "price-ceiling":
-            price = params.get("price", 0)
-            if isinstance(price, (int, float)) and price > 10000:
+            try:
+                price = float(params.get("price", 0))
+            except (TypeError, ValueError):
+                price = 0
+            if price > 10000:
                 return {
                     "policy_id": pid,
                     "policy_name": policy["name"],
@@ -119,12 +126,15 @@ class PolicyService:
 
 
 _policy_service: Optional[PolicyService] = None
+_policy_lock = threading.Lock()
 
 
 def get_policy_service() -> PolicyService:
     global _policy_service
     if _policy_service is None:
-        _policy_service = PolicyService()
+        with _policy_lock:
+            if _policy_service is None:
+                _policy_service = PolicyService()
     return _policy_service
 
 

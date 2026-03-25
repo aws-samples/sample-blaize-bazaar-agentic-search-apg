@@ -3,6 +3,7 @@ Hybrid Search Service - Vector + Full-Text Search
 Combines pgvector semantic search with PostgreSQL full-text search
 for optimal relevance and recall.
 """
+import asyncio
 import logging
 import time
 from typing import List, Dict, Any, Optional
@@ -47,15 +48,19 @@ class HybridSearchService:
         # Try adjusting these weights to see how they affect search results!
         # Default: vector=0.6, fulltext=0.4 — try 0.8/0.2 for more semantic results
         total = vector_weight + fulltext_weight
-        vector_weight /= total
-        fulltext_weight /= total
+        if total == 0:
+            vector_weight, fulltext_weight = 0.5, 0.5
+        else:
+            vector_weight /= total
+            fulltext_weight /= total
         # === END WIRE IT LIVE ===
         
-        # Run both searches in parallel
-        vector_results = await self._vector_search(embedding, limit * 2, ef_search)
+        # Run both searches concurrently
+        vector_results, fulltext_results = await asyncio.gather(
+            self._vector_search(embedding, limit * 2, ef_search),
+            self._fulltext_search(query, limit * 2),
+        )
         logger.info(f"🔵 Vector search: {len(vector_results)} results")
-        
-        fulltext_results = await self._fulltext_search(query, limit * 2)
         logger.info(f"🟡 Full-text search: {len(fulltext_results)} results")
         
         # Apply RRF (Reciprocal Rank Fusion)
@@ -88,7 +93,7 @@ class HybridSearchService:
         """Vector similarity search using pgvector with quality filters and iterative scan"""
         async with self.db.get_connection() as conn:
             async with conn.cursor() as cur:
-                await cur.execute(f"SET LOCAL hnsw.ef_search = {ef_search}")
+                await cur.execute("SET LOCAL hnsw.ef_search = %s", (ef_search,))
                 if iterative_scan:
                     await cur.execute("SET LOCAL hnsw.iterative_scan = 'relaxed_order'")
                 await cur.execute("""
@@ -267,10 +272,11 @@ class HybridSearchService:
 
         logger.info(f"🔀 Merged: {unique_count} unique candidates from {vector_count}+{fulltext_count}")
 
-        # Step 3: Rerank using Cohere
+        # Step 3: Rerank using Cohere (run in thread to avoid blocking event loop)
         document_texts = [r["product_description"] for r in merged_candidates]
 
-        rerank_result = rerank_service.rerank(
+        rerank_result = await asyncio.to_thread(
+            rerank_service.rerank,
             query=query,
             documents=document_texts,
             top_n=limit,

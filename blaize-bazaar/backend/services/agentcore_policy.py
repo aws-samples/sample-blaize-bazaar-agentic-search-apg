@@ -6,6 +6,7 @@ for restricted categories, price ceilings, and restock limits.
 """
 import logging
 import re
+import threading
 from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -146,14 +147,17 @@ class PolicyService:
         return None
 
 
-# Singleton
+# Singleton (thread-safe)
 _policy_service: Optional[PolicyService] = None
+_policy_lock = threading.Lock()
 
 
 def get_policy_service() -> PolicyService:
     global _policy_service
     if _policy_service is None:
-        _policy_service = PolicyService()
+        with _policy_lock:
+            if _policy_service is None:
+                _policy_service = PolicyService()
     return _policy_service
 
 

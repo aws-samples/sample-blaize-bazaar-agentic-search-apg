@@ -35,6 +35,10 @@ def create_analytics_agent():
     Returns:
         Strands Agent with Code Interpreter, or None if not available
     """
+    if not getattr(settings, 'AGENTCORE_RUNTIME_ENDPOINT', None):
+        logger.info("AGENTCORE_RUNTIME_ENDPOINT not set — Code Interpreter unavailable")
+        return None
+
     try:
         from strands import Agent
         from strands.models import BedrockModel
@@ -48,7 +52,7 @@ def create_analytics_agent():
 
         # Initialize Code Interpreter with sandboxed execution
         code_interpreter = AgentCoreCodeInterpreter(
-            region=settings.AWS_REGION,
+            region_name=settings.AWS_REGION,
         )
 
         agent = Agent(

@@ -140,16 +140,17 @@ def list_gateway_tools() -> List[Dict[str, Any]]:
         mcp_client = MCPClient(_create_transport)
         mcp_client.start()
 
-        tools = []
-        for tool in mcp_client.list_tools_sync():
-            tools.append({
-                "name": tool.name,
-                "description": tool.description or "",
-                "input_schema": tool.inputSchema if hasattr(tool, "inputSchema") else {},
-            })
-
-        mcp_client.stop()
-        return tools
+        try:
+            tools = []
+            for tool in mcp_client.list_tools_sync():
+                tools.append({
+                    "name": tool.name,
+                    "description": tool.description or "",
+                    "input_schema": tool.inputSchema if hasattr(tool, "inputSchema") else {},
+                })
+            return tools
+        finally:
+            mcp_client.stop()
 
     except ImportError:
         logger.warning("MCP dependencies not installed")

@@ -98,7 +98,7 @@ def get_user_memories(user_id: str) -> List[Dict[str, Any]]:
 def search_episodic_memories(
     user_id: str,
     query: str,
-    session_id: str = None,
+    session_id: Optional[str] = None,
     top_k: int = 5,
 ) -> List[Dict[str, Any]]:
     """
@@ -130,13 +130,13 @@ def search_episodic_memories(
     try:
         from bedrock_agentcore.memory import MemorySessionManager
 
-        actor_id = user_id.replace("@", "-").replace(".", "-")
+        # Use raw user_id as actor_id (consistent with get_user_memories)
         mgr = MemorySessionManager(
             memory_id=settings.AGENTCORE_MEMORY_ID,
             region_name=settings.AWS_REGION,
         )
         memory_session = mgr.create_memory_session(
-            actor_id=actor_id,
+            actor_id=user_id,
             session_id=session_id or "search",
         )
 
