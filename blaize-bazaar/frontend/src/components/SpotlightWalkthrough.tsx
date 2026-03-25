@@ -333,10 +333,10 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
           </div>
 
           {/* Content */}
-          <h3 className="text-[15px] font-semibold mb-2" style={{ color: '#ffffff', letterSpacing: '-0.01em' }}>
+          <h3 className="text-[16px] font-semibold mb-2" style={{ color: '#ffffff', letterSpacing: '-0.01em' }}>
             {currentStep.title}
           </h3>
-          <p className="text-[13px] leading-relaxed mb-4" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+          <p className="text-[14px] leading-relaxed mb-4" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
             {currentStep.description}
           </p>
 

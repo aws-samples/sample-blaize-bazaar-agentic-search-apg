@@ -20,170 +20,177 @@ export interface TourStep {
 }
 
 export const TOUR_STEPS: Record<WorkshopMode, TourStep[]> = {
+  // ─────────────────────────────────────────────────────────────
+  // LEGACY — Emphasize limitations. This is the "before" state.
+  // ─────────────────────────────────────────────────────────────
   legacy: [
     {
       selector: '[data-tour="hero-badge"]',
-      title: 'Welcome to Legacy Mode',
-      description: 'You\'re starting with a traditional keyword-only search engine. This is how most e-commerce search works today — simple SQL pattern matching.',
+      title: 'The Legacy App',
+      description: 'This is Blaize Bazaar before any AI. The search engine uses basic SQL keyword matching — it can only find products when you type the exact words in the product name. No intelligence, no understanding of intent.',
       position: 'bottom',
     },
     {
       selector: '[data-tour="hero-search"]',
-      title: 'Try a Keyword Search',
-      description: 'Type a product name like "running shoes" or "wireless headphones" and press Enter. Keyword search works great for exact terms, but struggles with natural language.',
+      title: 'Keyword Search Only',
+      description: 'Try searching "MacBook Air" — it works because those exact words exist in a product name. Now try "something to keep my drinks cold" — zero results. Keyword search has no concept of meaning or intent.',
       position: 'bottom',
-      tryItAction: { label: 'Focus Search', actionKey: 'focus-search' },
+      tryItAction: { label: 'Try Search', actionKey: 'focus-search' },
       spotlightPadding: 12,
     },
     {
       selector: '[data-tour="workshop-pills"]',
-      title: 'Ready for Lab 1?',
-      description: 'Now try searching "something to keep my drinks cold" — keyword search can\'t find anything useful. Click "Lab 1" to unlock semantic search and see the difference!',
+      title: 'What\'s Missing',
+      description: 'No semantic search. No AI chat. No product recommendations. No agent tools. This is where most e-commerce platforms start — and where you\'ll begin building. Click "Semantic Search" to add intelligence.',
       position: 'bottom',
     },
   ],
 
+  // ─────────────────────────────────────────────────────────────
+  // SEMANTIC SEARCH — The first upgrade. Search understands meaning.
+  // ─────────────────────────────────────────────────────────────
   semantic: [
     {
       selector: '[data-tour="hero-badge"]',
-      title: 'Semantic Search Unlocked!',
-      description: 'Lab 1 upgrades your search with pgvector embeddings from Amazon Bedrock. The search bar now runs BOTH keyword and semantic searches side-by-side so you can compare.',
+      title: 'Semantic Search Active',
+      description: 'The database now understands meaning, not just keywords. Every product has a 1024-dimensional vector embedding from Cohere Embed v4, and pgvector finds the closest matches using cosine similarity.',
       position: 'bottom',
     },
     {
       selector: '[data-tour="hero-search"]',
-      title: 'Compare Keyword vs Semantic',
-      description: 'Search for "something to keep my drinks cold" — you\'ll see keyword results (left) vs semantic results (right). Semantic search understands intent and finds coolers, bottles, and thermoses!',
+      title: 'Search by Intent',
+      description: 'Try "something to keep my drinks cold" again — this time you\'ll get insulated bottles and tumblers. The search understands what you mean, even when you don\'t use product names.',
       position: 'bottom',
       tryItAction: { label: 'Try Search', actionKey: 'focus-search' },
       spotlightPadding: 12,
     },
     {
       selector: '[data-tour="dev-tools-tab"]',
-      title: 'Developer Tools Unlocked',
-      description: 'Lab 1 also unlocks 4 developer tools: SQL Inspector (see the pgvector query), Hybrid Search, Index Performance, and RAG Demo.',
+      title: 'See the SQL',
+      description: 'Open the Developer Tools to inspect the actual pgvector query — you\'ll see the <=> cosine distance operator, HNSW index usage, and how business filters combine with vector similarity.',
       position: 'right',
       tryItAction: { label: 'Open Dev Tools', actionKey: 'open-dev-tools' },
       spotlightPadding: 10,
     },
     {
       selector: '[data-tour="workshop-pills"]',
-      title: 'Ready for Lab 2?',
-      description: 'You\'ve seen the power of semantic search! Click "Lab 2" to add an AI chat assistant powered by the Strands Agents SDK with custom tool calling.',
+      title: 'Search Works — Now Add Tools',
+      description: 'Semantic search is live. Next step: wrap these search queries as agent tools so an AI assistant can call them autonomously. Click "Agent Tools" to continue.',
       position: 'bottom',
     },
   ],
 
+  // ─────────────────────────────────────────────────────────────
+  // AGENT TOOLS — Search becomes a callable capability.
+  // ─────────────────────────────────────────────────────────────
   tools: [
     {
       selector: '[data-tour="chat-bubble"]',
       title: 'AI Chat Assistant',
-      description: 'Lab 2 adds an AI assistant powered by Amazon Bedrock and the Strands Agents SDK. Click the chat bubble to open it and ask a shopping question.',
+      description: 'The search functions are now wrapped as @tool functions that an AI agent can discover and call. Open the chat to talk to the agent — it decides which tools to invoke based on your question.',
       position: 'top',
       tryItAction: { label: 'Open Chat', actionKey: 'open-chat' },
       spotlightPadding: 16,
     },
     {
       selector: '[data-tour="chat-bubble"]',
-      title: 'Try a Question',
-      description: 'Ask: "Find waterproof running shoes under $120 with high ratings." Watch the agent call search tools and synthesize personalized results in real time.',
+      title: 'Ask a Question',
+      description: 'Try: "What\'s trending right now?" The agent calls get_trending_products, which queries Aurora PostgreSQL and returns structured JSON. The agent then formats it into a natural response.',
       position: 'top',
       tryItAction: { label: 'Open Chat', actionKey: 'open-chat' },
       spotlightPadding: 16,
     },
     {
       selector: '[data-tour="search-bar"]',
-      title: 'Search & Visual Search',
-      description: 'The search bar has moved to the header. You can also click the camera icon for AI-powered visual search — upload an image to find similar products.',
+      title: 'Search Moves to Header',
+      description: 'With the chat assistant active, the search bar moves to the header for quick access. You can also use the camera icon for visual search — upload a product image to find similar items.',
       position: 'bottom',
       spotlightPadding: 12,
     },
     {
       selector: '[data-tour="dev-tools-tab"]',
-      title: 'Agent Reasoning Traces',
-      description: 'After chatting, open Agent Traces to inspect every tool call — inputs, outputs, latency, and the orchestrator\'s decision chain.',
+      title: 'Inspect Tool Calls',
+      description: 'Open Agent Traces to see every tool call the agent made — inputs, outputs, latency, and token cost. This is how you debug and optimize agent behavior.',
       position: 'right',
       tryItAction: { label: 'Open Traces', actionKey: 'open-agent-traces' },
     },
     {
       selector: '[data-tour="workshop-pills"]',
-      title: 'Ready for Lab 3?',
-      description: 'Experiment with the AI assistant, then click "Lab 3" for multi-agent orchestration, guardrails, and chaos testing.',
+      title: 'One Agent Isn\'t Enough',
+      description: 'The agent works, but it handles everything alone. Click "Multi-Agent" to add specialist agents for inventory, pricing, and recommendations — each with their own tools and expertise.',
       position: 'bottom',
     },
   ],
 
+  // ─────────────────────────────────────────────────────────────
+  // MULTI-AGENT — Specialists collaborate through an orchestrator.
+  // ─────────────────────────────────────────────────────────────
   full: [
+    {
+      selector: '[data-tour="chat-bubble"]',
+      title: 'Multi-Agent Orchestration',
+      description: 'Three specialist agents now collaborate: Recommendation, Pricing, and Inventory. The orchestrator analyzes your query and routes it to the right expert. Try a complex question that spans multiple domains.',
+      position: 'top',
+      tryItAction: { label: 'Open Chat', actionKey: 'open-chat' },
+      spotlightPadding: 16,
+    },
     {
       selector: '[data-tour="dev-tools-tab"]',
       title: 'Guardrails & Safety',
-      description: 'Lab 3 adds Amazon Bedrock Guardrails. Open the Guardrails Demo to test content filtering and PII detection in real time.',
+      description: 'Amazon Bedrock Guardrails are now active. Open the Guardrails Demo to test content filtering and PII detection — try sending a fake credit card number or an off-topic question.',
       position: 'right',
       tryItAction: { label: 'Open Guardrails', actionKey: 'open-guardrails' },
     },
     {
       selector: '[data-tour="dev-tools-tab"]',
-      title: 'Chaos Mode',
-      description: 'Toggle Chaos Mode to inject random backend failures. Watch Agent Traces for exponential backoff and retry patterns.',
+      title: 'Chaos Engineering',
+      description: 'Toggle Chaos Mode to inject random backend failures. Watch Agent Traces to see how the system handles errors with exponential backoff and retry patterns.',
       position: 'right',
       tryItAction: { label: 'Toggle Chaos', actionKey: 'toggle-chaos' },
     },
     {
-      selector: '[data-tour="chat-bubble"]',
-      title: 'Multi-Agent Orchestration',
-      description: 'The orchestrator now delegates to specialized sub-agents: Search, Pricing, and Recommendation. Ask a complex question and watch them collaborate.',
-      position: 'top',
-      tryItAction: { label: 'Open Chat', actionKey: 'open-chat' },
-      spotlightPadding: 16,
-    },
-    {
       selector: '[data-tour="workshop-pills"]',
-      title: 'Ready for Lab 4?',
-      description: 'You\'ve mastered semantic search, agent tools, and multi-agent orchestration. Click "Lab 4" to productionize with Amazon Bedrock AgentCore!',
+      title: 'Local Dev Complete',
+      description: 'You have semantic search, agent tools, and multi-agent orchestration running locally. Click "Production" to deploy with AgentCore — managed memory, secure gateway, Cedar policies, and serverless runtime.',
       position: 'bottom',
     },
   ],
 
+  // ─────────────────────────────────────────────────────────────
+  // PRODUCTION — AgentCore infrastructure for enterprise deployment.
+  // ─────────────────────────────────────────────────────────────
   agentcore: [
     {
       selector: '[data-tour="hero-badge"]',
-      title: 'AgentCore — Production Ready',
-      description: 'Lab 4 adds Amazon Bedrock AgentCore: Cognito login, persistent memory, MCP tool discovery, CloudWatch traces, and Lambda runtime. Let\'s productionize your agent!',
+      title: 'Production with AgentCore',
+      description: 'The same agents now run on production infrastructure: Cognito authentication, AgentCore Memory for persistent preferences, MCP Gateway for secure tool discovery, and Cedar policies for authorization.',
       position: 'bottom',
     },
     {
       selector: '[data-tour="dev-tools-tab"]',
-      title: 'AgentCore Memory',
-      description: 'Your agent now remembers user preferences across sessions. Open the Memory Dashboard to see extracted preferences and conversation summaries.',
-      position: 'right',
-      tryItAction: { label: 'Open Dev Tools', actionKey: 'open-dev-tools' },
-    },
-    {
-      selector: '[data-tour="chat-bubble"]',
-      title: 'Persistent Conversations',
-      description: 'Chat with the agent, close the browser, come back — it remembers! Try: "I love running shoes under $100" then return and ask "what do you recommend?"',
-      position: 'top',
-      tryItAction: { label: 'Open Chat', actionKey: 'open-chat' },
-      spotlightPadding: 16,
-    },
-    {
-      selector: '[data-tour="dev-tools-tab"]',
-      title: 'CloudWatch Observability',
-      description: 'Every agent interaction is traced in CloudWatch X-Ray. Open the Observability panel to see the full request waterfall: Orchestrator → Agent → Tool → Bedrock LLM.',
+      title: 'Persistent Memory',
+      description: 'AgentCore Memory replaces local PostgreSQL sessions. The agent remembers user preferences across sessions — tell it "I prefer Nike shoes" and it remembers next time you visit.',
       position: 'right',
       tryItAction: { label: 'Open Dev Tools', actionKey: 'open-dev-tools' },
     },
     {
       selector: '[data-tour="dev-tools-tab"]',
-      title: 'Cedar Policy Engine',
-      description: 'AgentCore Policy uses Cedar language for real-time authorization. Try blocking a 1000-unit restock or a restricted search term — the policy engine evaluates before the agent acts.',
+      title: 'Observability & Traces',
+      description: 'Every agent interaction is traced via OpenTelemetry. Open the Observability panel to see the full request waterfall: Orchestrator → Specialist → Tool → Aurora PostgreSQL, with latency and cost at each hop.',
+      position: 'right',
+      tryItAction: { label: 'Open Dev Tools', actionKey: 'open-dev-tools' },
+    },
+    {
+      selector: '[data-tour="dev-tools-tab"]',
+      title: 'Cedar Policy Enforcement',
+      description: 'AgentCore Policy evaluates Cedar rules before every tool call. Try restocking 1000 units — the policy engine blocks it before the agent can act. Policies can also be authored in natural language.',
       position: 'right',
       tryItAction: { label: 'Open Dev Tools', actionKey: 'open-dev-tools' },
     },
     {
       selector: '[data-tour="hero-badge"]',
       title: 'Workshop Complete!',
-      description: 'You built a production-grade agentic AI search system with Aurora PostgreSQL, pgvector, Amazon Bedrock, Strands SDK, and AgentCore. Deploy it with confidence!',
+      description: 'You built a production-grade agentic AI search system: pgvector semantic search, Strands SDK agent tools, multi-agent orchestration, and AgentCore production infrastructure — all on Aurora PostgreSQL.',
       position: 'bottom',
       celebration: true,
     },
