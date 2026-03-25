@@ -126,13 +126,13 @@ const SearchOverlay = ({
       let response
       if (isCategorySearch) {
         const apiUrl = import.meta.env.VITE_API_URL || ''
-        const res = await fetch(`${apiUrl}/api/products/category/${encodeURIComponent(searchTerm)}?limit=10`)
+        const res = await fetch(`${apiUrl}/api/products/category/${encodeURIComponent(searchTerm)}?limit=5`)
         response = await res.json()
         setIsSemanticSearch(false)
       } else {
         response = await apiClient.search({
           query: searchTerm,
-          limit: 10,
+          limit: 5,
           min_similarity: 0.0,
           search_mode: workshopMode === 'legacy' ? 'keyword' : 'vector'
         })
@@ -206,7 +206,7 @@ const SearchOverlay = ({
         try {
           const response = await apiClient.search({
             query: searchTerm,
-            limit: 10,
+            limit: 5,
             min_similarity: 0.0,
             search_mode: 'keyword'
           })
@@ -223,7 +223,7 @@ const SearchOverlay = ({
         try {
           const response = await apiClient.search({
             query: searchTerm,
-            limit: 10,
+            limit: 5,
             min_similarity: 0.0,
             search_mode: 'vector'
           })

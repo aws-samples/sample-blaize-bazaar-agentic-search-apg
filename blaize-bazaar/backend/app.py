@@ -785,7 +785,7 @@ async def compare_image_pipelines(
 @app.get("/api/products/category/{category_query}")
 async def browse_category(
     category_query: str,
-    limit: int = Query(default=10, ge=1, le=50),
+    limit: int = Query(default=5, ge=1, le=50),
     db: DatabaseService = Depends(get_db_service),
 ):
     """Fast category browsing without embeddings"""
@@ -942,7 +942,7 @@ async def list_custom_tools():
 
 @app.get("/api/tools/trending")
 async def get_trending(
-    limit: int = Query(default=10, ge=1, le=50),
+    limit: int = Query(default=5, ge=1, le=50),
     db: DatabaseService = Depends(get_db_service)
 ):
     """Get trending products using business logic"""

@@ -31,7 +31,7 @@ class HybridSearchService:
         self,
         query: str,
         embedding: List[float],
-        limit: int = 10,
+        limit: int = 5,
         vector_weight: float = 0.6,
         fulltext_weight: float = 0.4,
         ef_search: int = 40

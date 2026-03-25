@@ -24,7 +24,7 @@ class BusinessLogic:
     def __init__(self, db_service):
         self.db = db_service
     
-    async def get_trending_products(self, limit: int = 10) -> Dict[str, Any]:
+    async def get_trending_products(self, limit: int = 5) -> Dict[str, Any]:
         """
         Get trending products based on reviews, ratings, and popularity.
         
@@ -321,7 +321,7 @@ class BusinessLogic:
         category: str,
         min_rating: float = 4.0,
         max_price: float = None,
-        limit: int = 10
+        limit: int = 5
     ) -> Dict[str, Any]:
         """
         Get products by category with filters.

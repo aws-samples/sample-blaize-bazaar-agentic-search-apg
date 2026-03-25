@@ -45,7 +45,7 @@ def get_inventory_health() -> str:
         return json.dumps({"error": str(e)})
 
 @tool
-def get_trending_products(limit: int = 10) -> str:
+def get_trending_products(limit: int = 5) -> str:
     """Get trending products with live data from database"""
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
@@ -209,7 +209,7 @@ def get_product_by_category(
     category: str,
     min_rating: float = 0.0,
     max_price: float = None,
-    limit: int = 10
+    limit: int = 5
 ) -> str:
     """Get products by category with filters
     

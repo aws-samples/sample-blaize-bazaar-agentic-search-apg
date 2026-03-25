@@ -83,7 +83,7 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
       const vectorRes = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, limit: 10, min_similarity: 0 })
+        body: JSON.stringify({ query, limit: 5, min_similarity: 0 })
       });
       const vectorData = await vectorRes.json();
       setVectorTime(performance.now() - vectorStart);
@@ -107,7 +107,7 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
       const hybridRes = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: `hybrid:${query}`, limit: 10, min_similarity: 0 })
+        body: JSON.stringify({ query: `hybrid:${query}`, limit: 5, min_similarity: 0 })
       });
       const hybridData = await hybridRes.json();
       setHybridTime(performance.now() - hybridStart);
