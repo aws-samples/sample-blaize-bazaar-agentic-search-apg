@@ -37,10 +37,6 @@ const SAMPLE_QUERIES = [
   'Gift ideas for someone who loves cooking',
   'Comfortable shoes for standing all day',
 ]
-  'Which laptop is best for programming?',
-  'Find me a stainless steel water bottle',
-  'What skincare products help with dry skin?',
-]
 
 const RAGDemo = ({ isOpen, onClose }: RAGDemoProps) => {
   const [query, setQuery] = useState('')
