@@ -24,7 +24,7 @@ interface GuardrailResult {
 }
 
 const SAMPLE_INPUTS = [
-  { label: 'Safe query', text: 'What are the best running shoes under $100?' },
+  { label: 'Safe query', text: 'What are the best skincare products for dry skin?' },
   { label: 'With email PII', text: 'Ship it to john.doe@example.com please' },
   { label: 'With phone PII', text: 'Call me at 555-123-4567 for the delivery' },
   { label: 'Off-topic', text: 'Tell me a joke about politics and religion' },

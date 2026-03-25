@@ -23,9 +23,12 @@ interface Product {
 }
 
 const SAMPLE_QUERIES = [
-  'comfortable running shoes',
-  'luxury watch for gift',
-  'budget laptop for students',
+  'gift for someone who loves cooking',
+  'luxury watch for a special occasion',
+  'comfortable shoes for standing all day',
+  'something to make my skin glow',
+  'budget laptop for college',
+]
   'premium fragrance',
   'stylish sunglasses',
 ]

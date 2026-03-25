@@ -32,8 +32,11 @@ interface RAGDemoProps {
 }
 
 const SAMPLE_QUERIES = [
-  'What are the best wireless headphones under $100?',
-  'Recommend a good yoga mat for beginners',
+  'What are the best skincare products for dry skin?',
+  'Recommend a good laptop for programming',
+  'Gift ideas for someone who loves cooking',
+  'Comfortable shoes for standing all day',
+]
   'Which laptop is best for programming?',
   'Find me a stainless steel water bottle',
   'What skincare products help with dry skin?',

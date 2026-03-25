@@ -381,9 +381,10 @@ function AppContent() {
             {heroImages.map((img, i) => (
               <div
                 key={i}
-                className="absolute inset-0 w-full h-full bg-cover bg-center transition-opacity duration-[2000ms] ease-in-out"
+                className="absolute inset-0 w-full h-full bg-cover bg-center transition-opacity ease-in-out"
                 style={{
                   backgroundImage: `url(${img})`,
+                  transitionDuration: '2000ms',
                   opacity: i === heroIdx ? 0.35 : 0,
                 }}
               />
