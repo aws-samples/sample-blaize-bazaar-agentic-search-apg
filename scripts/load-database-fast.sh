@@ -18,7 +18,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Find or download CSV file
 CSV_FILE=""
 for path in "$PROJECT_ROOT/data/premium-products-with-embeddings.csv" \
-            "/workshop/sample-dat406-build-agentic-ai-powered-search-apg/data/premium-products-with-embeddings.csv"; do
+            "/workshop/sample-blaize-bazaar-agentic-search-apg/data/premium-products-with-embeddings.csv"; do
     if [ -f "$path" ]; then
         CSV_FILE="$path"
         break
@@ -50,7 +50,7 @@ fi
 log "Using CSV: $CSV_FILE"
 
 # Load environment
-for env_path in "$PROJECT_ROOT/.env" "/workshop/sample-dat406-build-agentic-ai-powered-search-apg/.env"; do
+for env_path in "$PROJECT_ROOT/.env" "/workshop/sample-blaize-bazaar-agentic-search-apg/.env"; do
     if [ -f "$env_path" ]; then
         source "$env_path"
         break

@@ -33,7 +33,8 @@ from services.embeddings import EmbeddingService
 from services.bedrock import BedrockService
 from services.chat import ChatService
 from services.image_search import ImageSearchService, get_image_search_service
-from services.sql_query_logger import init_query_logger, get_query_logger
+from datetime import datetime
+from services.sql_query_logger import init_query_logger, get_query_logger, QueryLog
 from services.index_performance import get_index_performance_service
 from services.hybrid_search import HybridSearchService
 from services.rerank import RerankService
@@ -455,34 +456,34 @@ async def semantic_search(
                 LIMIT %s
             """
             
-            # Get connection for logging
-            import psycopg
-            conn_string = f"host={settings.DB_HOST} port={settings.DB_PORT} dbname={settings.DB_NAME} user={settings.DB_USER} password={settings.DB_PASSWORD}"
-            
-            # Force index usage with multiple settings (batched for performance)
-            await db.execute_query("SET LOCAL enable_seqscan = off; SET LOCAL random_page_cost = 1; SET LOCAL cpu_tuple_cost = 0.01")
-            
-            # Execute query with index forced
-            results = await db.fetch_all(
-                query_sql,
-                query_embedding,
-                query_embedding,
-                request.limit
-            )
-            
-            # Log the query
+            # Use a single connection for SET LOCAL + query (SET LOCAL is transaction-scoped)
+            async with db.get_connection() as conn:
+                async with conn.cursor() as cur:
+                    # Force index usage with planner hints
+                    await cur.execute("SET LOCAL enable_seqscan = off")
+                    await cur.execute("SET LOCAL random_page_cost = 1")
+                    await cur.execute("SET LOCAL cpu_tuple_cost = 0.01")
+
+                    # Execute query with index forced
+                    await cur.execute(
+                        query_sql,
+                        (query_embedding, query_embedding, request.limit)
+                    )
+                    results = await cur.fetchall()
+
+            # Log the query for SQLInspector (non-blocking, no EXPLAIN)
             query_logger_instance = get_query_logger()
-            with psycopg.connect(conn_string) as conn:
-                conn.execute("SET LOCAL enable_seqscan = off; SET LOCAL random_page_cost = 1; SET LOCAL cpu_tuple_cost = 0.01")
-                
-                with query_logger_instance.log_query(
+            query_logger_instance.queries.append(
+                QueryLog(
                     query_type="semantic_search",
                     sql=query_sql,
                     params=[query_embedding, query_embedding, request.limit],
-                    connection=conn,
-                    search_query=request.query
-                ) as query_metadata:
-                    query_metadata["rows_returned"] = len(results)
+                    execution_time_ms=0,
+                    timestamp=datetime.now(),
+                    rows_returned=len(results),
+                    search_query=request.query,
+                )
+            )
         
         # Filter by similarity threshold in application (after HNSW index optimization)
         if request.min_similarity > 0:
@@ -1434,6 +1435,143 @@ async def evaluate_search(method: str = Query("vector"), k: int = Query(5)):
     from services.search_eval import SearchEvalService
     eval_service = SearchEvalService(db_service=db_service, embedding_service=embedding_service)
     return await eval_service.evaluate_search(method=method, k=k)
+
+
+# In-memory leaderboard for search eval tuning competition — resets on restart
+_leaderboard: list[dict] = []
+
+
+@app.post("/api/search/eval/tune")
+async def tune_search_weights(request: Request):
+    """Run NDCG/Precision evaluation with custom RRF weights and record score."""
+    body = await request.json()
+    vector_weight = max(0.0, min(1.0, float(body.get("vector_weight", 0.6))))
+    fulltext_weight = max(0.0, min(1.0, float(body.get("fulltext_weight", 0.4))))
+    k = int(body.get("k", 10))
+    name = str(body.get("participant_name", "Anonymous"))[:20].strip() or "Anonymous"
+
+    # Normalize so they sum to 1.0
+    total = vector_weight + fulltext_weight
+    if total == 0:
+        vector_weight, fulltext_weight = 0.5, 0.5
+    else:
+        vector_weight = round(vector_weight / total, 4)
+        fulltext_weight = round(fulltext_weight / total, 4)
+
+    from services.search_eval import SearchEvalService, EVAL_QUERIES
+    from services.hybrid_search import HybridSearchService
+
+    eval_svc = SearchEvalService(db_service=db_service, embedding_service=embedding_service)
+    golden = await eval_svc._build_golden_dataset(k)
+    hybrid_svc = HybridSearchService(db_service)
+
+    total_ndcg = 0.0
+    total_precision = 0.0
+    evaluated = 0
+
+    for item in EVAL_QUERIES:
+        query_text = item["query"]
+        expected_ids = golden.get(query_text, [])
+        if not expected_ids:
+            continue
+        try:
+            embedding = embedding_service.generate_embedding(query_text)
+            response = await hybrid_svc.search(
+                query_text, embedding, limit=k,
+                vector_weight=vector_weight,
+                fulltext_weight=fulltext_weight,
+            )
+            results = response.get("results", [])
+            retrieved_ids = [r.get("product_id", r.get("productId", "")) for r in results]
+            total_ndcg += eval_svc.ndcg_at_k(retrieved_ids, expected_ids, k)
+            total_precision += eval_svc.precision_at_k(retrieved_ids, expected_ids, k)
+            evaluated += 1
+        except Exception as e:
+            logger.warning(f"Tune eval failed for '{query_text}': {e}")
+
+    avg_ndcg = round(total_ndcg / evaluated, 4) if evaluated else 0.0
+    avg_precision = round(total_precision / evaluated, 4) if evaluated else 0.0
+
+    entry = {
+        "name": name, "ndcg": avg_ndcg, "precision": avg_precision,
+        "vector_w": vector_weight, "fulltext_w": fulltext_weight,
+        "k": k, "ts": time.strftime("%H:%M:%S"), "evaluated": evaluated,
+    }
+    _leaderboard.append(entry)
+    _leaderboard.sort(key=lambda x: x["ndcg"], reverse=True)
+    while len(_leaderboard) > 50:
+        _leaderboard.pop()
+
+    rank = next(
+        (i + 1 for i, e in enumerate(_leaderboard) if e["ts"] == entry["ts"] and e["ndcg"] == avg_ndcg),
+        len(_leaderboard),
+    )
+
+    return {
+        "ndcg_at_k": avg_ndcg, "precision_at_k": avg_precision, "k": k,
+        "vector_weight": vector_weight, "fulltext_weight": fulltext_weight,
+        "evaluated_queries": evaluated, "rank": rank,
+        "leaderboard": _leaderboard[:10],
+    }
+
+
+@app.get("/api/search/eval/leaderboard")
+async def get_leaderboard():
+    """Get current search-tuning leaderboard (top 10 by NDCG)."""
+    return {"leaderboard": _leaderboard[:10], "total_submissions": len(_leaderboard)}
+
+
+# ============================================================================
+# WORKSHOP MODULE STATUS ENDPOINT
+# ============================================================================
+
+@app.get("/api/workshop/status")
+async def get_workshop_status():
+    """Detect which workshop modules have been completed by inspecting stub source code."""
+    import inspect
+
+    def is_stub(func, sentinel: str) -> bool:
+        try:
+            return sentinel.lower() in inspect.getsource(func).lower()
+        except Exception:
+            return True
+
+    # Module 2
+    from services.hybrid_search import HybridSearchService
+    from services.business_logic import BusinessLogic
+    m2a = is_stub(HybridSearchService._vector_search, "# TODO: Your implementation here")
+    m2b = is_stub(BusinessLogic.semantic_product_search, "# TODO: Your implementation here")
+
+    # Module 3a
+    from services.agent_tools import get_trending_products
+    m3a = is_stub(get_trending_products, "# TODO: Your implementation here")
+
+    # Module 3b
+    from agents.recommendation_agent import product_recommendation_agent
+    from agents.orchestrator import create_orchestrator
+    m3b_rec = is_stub(product_recommendation_agent, "# TODO: Your implementation here")
+    m3b_orch = is_stub(create_orchestrator, "# TODO: Your implementation here")
+
+    # Module 4
+    from services.agentcore_memory import create_agentcore_session_manager
+    from services.agentcore_gateway import create_gateway_orchestrator
+    from services.agentcore_policy import PolicyService
+    m4_mem = is_stub(create_agentcore_session_manager, "not implemented")
+    m4_gw = is_stub(create_gateway_orchestrator, "not implemented")
+    m4_pol = is_stub(PolicyService._check_policy, "return none")
+
+    return {
+        "modules": {
+            "module2": {"complete": not m2a and not m2b, "label": "Semantic Search",
+                        "stubs": {"vector_search": not m2a, "semantic_product_search": not m2b}},
+            "module3a": {"complete": not m3a, "label": "Agent Tools",
+                         "stubs": {"get_trending_products": not m3a}},
+            "module3b": {"complete": not m3b_rec and not m3b_orch, "label": "Multi-Agent",
+                         "stubs": {"recommendation_agent": not m3b_rec, "orchestrator": not m3b_orch}},
+            "module4": {"complete": not m4_mem and not m4_gw and not m4_pol, "label": "AgentCore",
+                        "stubs": {"memory": not m4_mem, "gateway": not m4_gw, "policy": not m4_pol}},
+        }
+    }
 
 
 # ============================================================================

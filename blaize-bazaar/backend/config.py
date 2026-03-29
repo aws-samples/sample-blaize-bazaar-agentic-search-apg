@@ -178,16 +178,6 @@ class Settings(BaseSettings):
         )
     
     @property
-    def async_database_url(self) -> str:
-        """
-        Construct async PostgreSQL connection URL.
-        
-        Returns:
-            str: Async database connection URL for psycopg 3
-        """
-        return self.database_url.replace("postgresql://", "postgresql://")
-    
-    @property
     def aws_region_resolved(self) -> str:
         """
         Get AWS region, preferring AWS_REGION over AWS_DEFAULT_REGION.

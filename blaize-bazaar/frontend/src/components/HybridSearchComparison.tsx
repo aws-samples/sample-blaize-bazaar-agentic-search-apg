@@ -3,7 +3,7 @@
  * Compare vector-only vs hybrid search results
  */
 import { useState } from 'react';
-import { X, Search, Zap, TrendingUp, BarChart3, CheckCircle, XCircle } from 'lucide-react';
+import { X, Search, Zap, TrendingUp, BarChart3, CheckCircle, XCircle, Trophy } from 'lucide-react';
 
 interface SearchResult {
   product_id: string;
@@ -44,6 +44,27 @@ interface EvalData {
   results: EvalResult[];
 }
 
+interface LeaderboardEntry {
+  name: string;
+  ndcg: number;
+  precision: number;
+  vector_w: number;
+  fulltext_w: number;
+  k: number;
+  ts: string;
+}
+
+interface TuneResult {
+  ndcg_at_k: number;
+  precision_at_k: number;
+  k: number;
+  vector_weight: number;
+  fulltext_weight: number;
+  rank: number;
+  leaderboard: LeaderboardEntry[];
+  evaluated_queries: number;
+}
+
 const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps) => {
   const [query, setQuery] = useState('');
   const [vectorResults, setVectorResults] = useState<SearchResult[]>([]);
@@ -51,10 +72,17 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
   const [isLoading, setIsLoading] = useState(false);
   const [vectorTime, setVectorTime] = useState(0);
   const [hybridTime, setHybridTime] = useState(0);
-  const [activeTab, setActiveTab] = useState<'compare' | 'eval'>('compare');
+  const [activeTab, setActiveTab] = useState<'compare' | 'eval' | 'tune'>('compare');
   const [vectorEval, setVectorEval] = useState<EvalData | null>(null);
   const [hybridEval, setHybridEval] = useState<EvalData | null>(null);
   const [evalLoading, setEvalLoading] = useState(false);
+  // Tune tab state
+  const [tuneVectorWeight, setTuneVectorWeight] = useState(60);
+  const [tuneFulltextWeight, setTuneFulltextWeight] = useState(40);
+  const [participantName, setParticipantName] = useState('');
+  const [tuneResult, setTuneResult] = useState<TuneResult | null>(null);
+  const [tuneLoading, setTuneLoading] = useState(false);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   const runEvaluation = async () => {
     setEvalLoading(true);
@@ -69,6 +97,34 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
       console.error('Evaluation failed:', error);
     } finally {
       setEvalLoading(false);
+    }
+  };
+
+  const runTuning = async () => {
+    setTuneLoading(true);
+    try {
+      const total = tuneVectorWeight + tuneFulltextWeight;
+      const vw = total > 0 ? tuneVectorWeight / total : 0.5;
+      const fw = total > 0 ? tuneFulltextWeight / total : 0.5;
+      const res = await fetch('/api/search/eval/tune', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vector_weight: vw,
+          fulltext_weight: fw,
+          k: 10,
+          participant_name: participantName || 'Anonymous',
+        }),
+      });
+      if (res.ok) {
+        const data: TuneResult = await res.json();
+        setTuneResult(data);
+        setLeaderboard(data.leaderboard);
+      }
+    } catch (err) {
+      console.error('Tune failed:', err);
+    } finally {
+      setTuneLoading(false);
     }
   };
 
@@ -160,7 +216,7 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {(['compare', 'eval'] as const).map(tab => (
+            {(['compare', 'eval', 'tune'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -171,7 +227,7 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
                   border: activeTab === tab ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid transparent',
                 }}
               >
-                {tab === 'eval' ? 'Eval' : 'Compare'}
+                {tab === 'eval' ? 'Eval' : tab === 'tune' ? 'Tune' : 'Compare'}
               </button>
             ))}
             <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/10 transition-colors ml-2">
@@ -180,7 +236,159 @@ const HybridSearchComparison = ({ isOpen, onClose }: HybridSearchComparisonProps
           </div>
         </div>
 
-        {activeTab === 'eval' ? (
+        {activeTab === 'tune' ? (
+          /* Tune Tab — RRF Weight Tuning Competition */
+          <div className="flex-1 overflow-y-auto px-6 py-6 search-scroll">
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold mb-1" style={{ color: '#ffffff' }}>RRF Weight Tuning Competition</h3>
+              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Adjust the balance between vector (semantic) and full-text (keyword) search. Submit to see your NDCG@10 score and rank.
+              </p>
+            </div>
+
+            {/* Weight sliders */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <label className="text-xs font-medium" style={{ color: 'rgba(96,165,250,0.9)' }}>
+                    Vector weight — {tuneVectorWeight}%
+                  </label>
+                  <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>semantic understanding</span>
+                </div>
+                <input
+                  type="range" min={0} max={100} value={tuneVectorWeight}
+                  onChange={(e) => { const v = Number(e.target.value); setTuneVectorWeight(v); setTuneFulltextWeight(100 - v); }}
+                  className="w-full"
+                  style={{ accentColor: '#60a5fa' }}
+                />
+              </div>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <label className="text-xs font-medium" style={{ color: 'rgba(192,132,252,0.9)' }}>
+                    Full-text weight — {tuneFulltextWeight}%
+                  </label>
+                  <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>keyword matching</span>
+                </div>
+                <input
+                  type="range" min={0} max={100} value={tuneFulltextWeight}
+                  onChange={(e) => { const v = Number(e.target.value); setTuneFulltextWeight(v); setTuneVectorWeight(100 - v); }}
+                  className="w-full"
+                  style={{ accentColor: '#c084fc' }}
+                />
+              </div>
+            </div>
+
+            {/* Preset buttons */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+              {[
+                { label: 'Vector-heavy', v: 80, f: 20 },
+                { label: 'Balanced', v: 60, f: 40 },
+                { label: 'Keyword-heavy', v: 30, f: 70 },
+                { label: 'Vector-only', v: 100, f: 0 },
+              ].map((preset) => (
+                <button
+                  key={preset.label}
+                  onClick={() => { setTuneVectorWeight(preset.v); setTuneFulltextWeight(preset.f); }}
+                  className="px-3 py-1.5 rounded-lg text-xs transition-colors"
+                  style={{
+                    background: tuneVectorWeight === preset.v ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)',
+                    color: tuneVectorWeight === preset.v ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                    border: tuneVectorWeight === preset.v ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  {preset.label} ({preset.v}/{preset.f})
+                </button>
+              ))}
+            </div>
+
+            {/* Name + Submit */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+              <input
+                type="text"
+                value={participantName}
+                maxLength={20}
+                onChange={(e) => setParticipantName(e.target.value)}
+                placeholder="Your name (optional)"
+                className="flex-1 px-3 py-2 rounded-xl text-sm"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+              />
+              <button
+                onClick={runTuning}
+                disabled={tuneLoading}
+                className="px-5 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 flex items-center gap-2"
+                style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.12)', color: '#ffffff' }}
+              >
+                <BarChart3 className="h-4 w-4" />
+                {tuneLoading ? 'Evaluating (~15s)...' : 'Submit Score'}
+              </button>
+            </div>
+
+            {/* Result card */}
+            {tuneResult && (
+              <div className="p-4 rounded-xl mb-6" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span className="text-xs font-semibold" style={{ color: 'rgba(255,255,255,0.6)' }}>Your Result</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}>
+                    Rank #{tuneResult.rank}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <div className="text-2xl font-bold" style={{ color: '#ffffff' }}>{(tuneResult.ndcg_at_k * 100).toFixed(1)}%</div>
+                    <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>NDCG@{tuneResult.k}</div>
+                  </div>
+                  <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <div className="text-2xl font-bold" style={{ color: '#ffffff' }}>{(tuneResult.precision_at_k * 100).toFixed(1)}%</div>
+                    <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>Precision@{tuneResult.k}</div>
+                  </div>
+                  <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <div className="text-lg font-bold" style={{ color: '#ffffff' }}>{Math.round(tuneResult.vector_weight * 100)}/{Math.round(tuneResult.fulltext_weight * 100)}</div>
+                    <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>V/FT weights</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Leaderboard */}
+            {leaderboard.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  <Trophy className="h-3 w-3 inline-block mr-1" style={{ color: '#fcd34d' }} />
+                  Top Scores
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {leaderboard.map((entry, idx) => (
+                    <div
+                      key={`${entry.name}-${entry.ts}`}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg"
+                      style={{
+                        background: idx === 0 ? 'rgba(252,211,77,0.06)' : 'rgba(255,255,255,0.02)',
+                        border: idx === 0 ? '1px solid rgba(252,211,77,0.15)' : '1px solid transparent',
+                      }}
+                    >
+                      <span className="text-xs font-bold w-5 text-center flex-shrink-0" style={{ color: idx === 0 ? '#fcd34d' : idx === 1 ? '#94a3b8' : idx === 2 ? '#d97706' : 'rgba(255,255,255,0.3)' }}>
+                        {idx + 1}
+                      </span>
+                      <span className="flex-1 text-xs truncate" style={{ color: 'rgba(255,255,255,0.7)' }}>{entry.name}</span>
+                      <span className="text-xs font-mono" style={{ color: 'rgba(96,165,250,0.8)' }}>{(entry.ndcg * 100).toFixed(1)}%</span>
+                      <span className="text-[10px]" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                        {Math.round(entry.vector_w * 100)}v/{Math.round(entry.fulltext_w * 100)}k
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!tuneResult && leaderboard.length === 0 && (
+              <div className="text-center py-12">
+                <Trophy className="h-12 w-12 mx-auto mb-4" style={{ color: 'rgba(255,255,255,0.1)' }} />
+                <p className="text-sm mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>No scores yet</p>
+                <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>Adjust weights and click Submit to start the competition</p>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'eval' ? (
           /* Evaluation Tab */
           <div className="flex-1 overflow-y-auto px-6 py-6 search-scroll">
             <div className="flex items-center justify-between mb-6">

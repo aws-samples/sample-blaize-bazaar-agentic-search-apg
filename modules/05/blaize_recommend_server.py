@@ -12,6 +12,8 @@ import logging
 import os
 from typing import Any
 
+import boto3
+
 logger = logging.getLogger(__name__)
 
 REGION = os.environ.get("REGION", "us-east-1")
@@ -20,11 +22,13 @@ SECRET_ARN = os.environ.get("SECRET_ARN", "")
 DATABASE = os.environ.get("DATABASE", "postgres")
 SCHEMA = "bedrock_integration"
 
+# Module-level clients for Lambda warm start reuse
+rds_client = boto3.client("rds-data", region_name=REGION)
+bedrock_client = boto3.client("bedrock-runtime", region_name=REGION)
+
 
 def _execute_sql(sql: str, parameters: list = None) -> list[dict]:
     """Execute SQL via RDS Data API and return rows as dicts."""
-    import boto3
-    client = boto3.client("rds-data", region_name=REGION)
     params = {
         "resourceArn": DB_CLUSTER_ARN,
         "secretArn": SECRET_ARN,
@@ -33,7 +37,7 @@ def _execute_sql(sql: str, parameters: list = None) -> list[dict]:
     }
     if parameters:
         params["parameters"] = parameters
-    response = client.execute_statement(**params)
+    response = rds_client.execute_statement(**params)
     columns = [col["name"] for col in response.get("columnMetadata", [])]
     rows = []
     for record in response.get("records", []):
@@ -57,9 +61,7 @@ def _execute_sql(sql: str, parameters: list = None) -> list[dict]:
 
 def _get_embedding(text: str) -> list[float]:
     """Generate embedding via Bedrock Titan v2."""
-    import boto3
-    client = boto3.client("bedrock-runtime", region_name=REGION)
-    response = client.invoke_model(
+    response = bedrock_client.invoke_model(
         modelId="amazon.titan-embed-text-v2:0",
         body=json.dumps({"inputText": text, "dimensions": 1024}),
     )
@@ -74,38 +76,48 @@ def get_recommendations(query: str, category: str = None, max_price: float = Non
     embedding_str = "[" + ",".join(str(x) for x in embedding) + "]"
 
     where_clauses = ["quantity > 0"]
+    parameters = [
+        {"name": "embedding", "value": {"stringValue": embedding_str}},
+        {"name": "lim", "value": {"longValue": int(limit)}},
+    ]
     if category:
-        where_clauses.append(f"category_name = '{category}'")
+        where_clauses.append("category_name = :cat")
+        parameters.append({"name": "cat", "value": {"stringValue": str(category)}})
     if max_price:
-        where_clauses.append(f"price <= {max_price}")
+        where_clauses.append("price <= :max_price")
+        parameters.append({"name": "max_price", "value": {"doubleValue": float(max_price)}})
     where_sql = " AND ".join(where_clauses)
 
     sql = f"""
         SET hnsw.iterative_scan = 'relaxed_order';
         SELECT "productId", product_description, price, stars, reviews,
                category_name, quantity, "imgUrl", "isBestSeller",
-               1 - (product_description_embeddings <=> '{embedding_str}'::vector) AS similarity
+               1 - (product_description_embeddings <=> :embedding::vector) AS similarity
         FROM {SCHEMA}.product_catalog
         WHERE {where_sql}
-        ORDER BY product_description_embeddings <=> '{embedding_str}'::vector
-        LIMIT {limit};
+        ORDER BY product_description_embeddings <=> :embedding::vector
+        LIMIT :lim;
     """
-    rows = _execute_sql(sql)
+    rows = _execute_sql(sql, parameters)
     return {"products": rows, "query": query, "count": len(rows)}
 
 
 def get_trending_products(limit: int = 10, category: str = None) -> dict:
     """Get trending products by recent purchase volume."""
-    where = f'WHERE category_name = \'{category}\'' if category else ""
+    where = "WHERE category_name = :cat" if category else ""
+    parameters = [{"name": "lim", "value": {"longValue": int(limit)}}]
+    if category:
+        parameters.append({"name": "cat", "value": {"stringValue": str(category)}})
+
     sql = f"""
         SELECT "productId", product_description, price, stars, reviews,
                category_name, quantity, "imgUrl", "boughtInLastMonth"
         FROM {SCHEMA}.product_catalog
         {where}
         ORDER BY "boughtInLastMonth" DESC NULLS LAST
-        LIMIT {limit};
+        LIMIT :lim;
     """
-    rows = _execute_sql(sql)
+    rows = _execute_sql(sql, parameters)
     return {"products": rows, "count": len(rows)}
 
 

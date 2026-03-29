@@ -312,7 +312,7 @@ class BusinessLogic:
                 "database_query_ms": 0,
                 "total_ms": 0
             },
-            "sql_query": search_query.replace("%s", "?"),
+            "sql_query": "not implemented — complete Module 2 Challenge 2",
             "note": "⚠️ This is a DAT406 workshop tool for educational purposes"
         }
     

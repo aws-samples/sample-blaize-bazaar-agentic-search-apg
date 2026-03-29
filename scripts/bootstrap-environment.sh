@@ -11,7 +11,7 @@ set -euo pipefail
 CODE_EDITOR_PASSWORD="${CODE_EDITOR_PASSWORD:-defaultPassword}"
 CODE_EDITOR_USER="${CODE_EDITOR_USER:-participant}"
 HOME_FOLDER="${HOME_FOLDER:-/workshop}"
-REPO_NAME="${REPO_NAME:-sample-dat406-build-agentic-ai-powered-search-apg}"
+REPO_NAME="${REPO_NAME:-sample-blaize-bazaar-agentic-search-apg}"
 CFN_WAIT_HANDLE="${CFN_WAIT_HANDLE:-}"
 STAGE2_SCRIPT_URL="${STAGE2_SCRIPT_URL:-}"
 ASSETS_BUCKET_NAME="${ASSETS_BUCKET_NAME:-}"
@@ -417,7 +417,7 @@ cat << 'EOF'
 ╔═══════════════════════════════════════════════════════════════════╗
 ║                    DAT406 Workshop                                ║
 ║     🚀 Build Agentic AI-Powered Search with Aurora PostgreSQL     ║
-║                    AWS re:Invent 2025                             ║
+║                    AWS re:Invent 2026                             ║
 ╚═══════════════════════════════════════════════════════════════════╝
 
 ✅ Welcome! Your environment is ready.
@@ -432,7 +432,7 @@ cat << 'EOF'
    psql           - Connect to PostgreSQL database
 
 📁 Workshop Structure:
-   /workshop/sample-dat406-build-agentic-ai-powered-search-apg/
+   /workshop/sample-blaize-bazaar-agentic-search-apg/
    ├── blaize-bazaar/ - The App (edit backend/ files)
    │   ├── backend/   - FastAPI + Strands SDK (TODOs here)
    │   └── frontend/  - React + TypeScript (pre-built)
@@ -444,7 +444,7 @@ cat << 'EOF'
 EOF
 
 # Auto-open the main backend services file participants will edit first
-code /workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/backend/services/hybrid_search.py 2>/dev/null || true
+code /workshop/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/backend/services/hybrid_search.py 2>/dev/null || true
 
 # Exit cleanly so task completes
 exit 0
@@ -530,8 +530,8 @@ export AWS_DEFAULT_REGION="$AWS_REGION"
 
 # Workshop shortcuts
 alias workshop='cd /workshop'
-alias notebooks='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/notebooks'
-alias blaize-bazaar='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar'
+alias notebooks='cd /workshop/sample-blaize-bazaar-agentic-search-apg/notebooks'
+alias blaize-bazaar='cd /workshop/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar'
 
 # Load .env file if it exists
 if [ -f /workshop/.env ]; then
@@ -638,13 +638,13 @@ if [ ! -z "${STAGE2_SCRIPT_URL}" ]; then
     # Run Stage 2 in background with proper environment variables
     sudo bash -c "export CODE_EDITOR_USER='$CODE_EDITOR_USER' && \
         export HOME_FOLDER='$HOME_FOLDER' && \
-        export REPO_URL='${REPO_URL:-https://github.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg.git}' && \
+        export REPO_URL='${REPO_URL:-https://github.com/aws-samples/sample-blaize-bazaar-agentic-search-apg.git}' && \
         export DB_SECRET_ARN='${DB_SECRET_ARN:-}' && \
         export DB_CLUSTER_ENDPOINT='${DB_CLUSTER_ENDPOINT:-}' && \
         export DB_NAME='${DB_NAME:-postgres}' && \
         export AWS_REGION='$AWS_REGION' && \
         export BEDROCK_EMBEDDING_MODEL='${BEDROCK_EMBEDDING_MODEL:-amazon.titan-embed-text-v2:0}' && \
-        export BEDROCK_CHAT_MODEL='${BEDROCK_CHAT_MODEL:-global.anthropic.claude-sonnet-4-20250514-v1:0}' && \
+        export BEDROCK_CHAT_MODEL='${BEDROCK_CHAT_MODEL:-global.anthropic.claude-sonnet-4-6}' && \
         export ASSETS_BUCKET_NAME='${ASSETS_BUCKET_NAME:-}' && \
         export ASSETS_BUCKET_PREFIX='${ASSETS_BUCKET_PREFIX:-}' && \
         nohup /tmp/bootstrap-labs.sh > /var/log/bootstrap-labs.log 2>&1 &"

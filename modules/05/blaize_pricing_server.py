@@ -13,6 +13,8 @@ import logging
 import os
 from typing import Any
 
+import boto3
+
 logger = logging.getLogger(__name__)
 
 REGION = os.environ.get("REGION", "us-east-1")
@@ -21,11 +23,13 @@ SECRET_ARN = os.environ.get("SECRET_ARN", "")
 DATABASE = os.environ.get("DATABASE", "postgres")
 SCHEMA = "bedrock_integration"
 
+# Module-level clients for Lambda warm start reuse
+rds_client = boto3.client("rds-data", region_name=REGION)
+bedrock_client = boto3.client("bedrock-runtime", region_name=REGION)
+
 
 def _execute_sql(sql: str, parameters: list = None) -> list[dict]:
     """Execute SQL via RDS Data API and return rows as dicts."""
-    import boto3
-    client = boto3.client("rds-data", region_name=REGION)
     params = {
         "resourceArn": DB_CLUSTER_ARN,
         "secretArn": SECRET_ARN,
@@ -34,7 +38,7 @@ def _execute_sql(sql: str, parameters: list = None) -> list[dict]:
     }
     if parameters:
         params["parameters"] = parameters
-    response = client.execute_statement(**params)
+    response = rds_client.execute_statement(**params)
     columns = [col["name"] for col in response.get("columnMetadata", [])]
     rows = []
     for record in response.get("records", []):
@@ -58,9 +62,7 @@ def _execute_sql(sql: str, parameters: list = None) -> list[dict]:
 
 def _get_embedding(text: str) -> list[float]:
     """Generate embedding via Bedrock Titan v2."""
-    import boto3
-    client = boto3.client("bedrock-runtime", region_name=REGION)
-    response = client.invoke_model(
+    response = bedrock_client.invoke_model(
         modelId="amazon.titan-embed-text-v2:0",
         body=json.dumps({"inputText": text, "dimensions": 1024}),
     )
@@ -74,26 +76,36 @@ def find_deals(query: str, max_price: float = None, limit: int = 5) -> dict:
     embedding = _get_embedding(query)
     embedding_str = "[" + ",".join(str(x) for x in embedding) + "]"
 
-    price_filter = f"AND price <= {max_price}" if max_price else ""
+    price_filter = "AND price <= :max_price" if max_price else ""
+    parameters = [
+        {"name": "embedding", "value": {"stringValue": embedding_str}},
+        {"name": "lim", "value": {"longValue": int(limit)}},
+    ]
+    if max_price:
+        parameters.append({"name": "max_price", "value": {"doubleValue": float(max_price)}})
 
     sql = f"""
         SET hnsw.iterative_scan = 'relaxed_order';
         SELECT "productId", product_description, price, stars, reviews,
                category_name, quantity, "imgUrl",
-               1 - (product_description_embeddings <=> '{embedding_str}'::vector) AS similarity,
+               1 - (product_description_embeddings <=> :embedding::vector) AS similarity,
                CASE WHEN price > 0 THEN stars / price * 100 ELSE 0 END AS value_score
         FROM {SCHEMA}.product_catalog
         WHERE quantity > 0 AND stars >= 3.5 {price_filter}
-        ORDER BY product_description_embeddings <=> '{embedding_str}'::vector
-        LIMIT {limit};
+        ORDER BY product_description_embeddings <=> :embedding::vector
+        LIMIT :lim;
     """
-    rows = _execute_sql(sql)
+    rows = _execute_sql(sql, parameters)
     return {"products": rows, "query": query, "count": len(rows)}
 
 
 def get_price_analysis(category: str = None) -> dict:
     """Get price statistics (min, max, avg, median) by category."""
-    where = f"WHERE category_name = '{category}'" if category else ""
+    where = "WHERE category_name = :cat" if category else ""
+    parameters = []
+    if category:
+        parameters.append({"name": "cat", "value": {"stringValue": str(category)}})
+
     sql = f"""
         SELECT category_name,
                COUNT(*) AS product_count,
@@ -107,7 +119,7 @@ def get_price_analysis(category: str = None) -> dict:
         ORDER BY avg_price DESC
         LIMIT 15;
     """
-    rows = _execute_sql(sql)
+    rows = _execute_sql(sql, parameters if parameters else None)
     return {"categories": rows}
 
 
@@ -117,9 +129,13 @@ def compare_products(product_id_1: str, product_id_2: str) -> dict:
         SELECT "productId", product_description, price, stars, reviews,
                category_name, quantity, "isBestSeller"
         FROM {SCHEMA}.product_catalog
-        WHERE "productId" IN ('{product_id_1}', '{product_id_2}');
+        WHERE "productId" IN (:pid1, :pid2);
     """
-    rows = _execute_sql(sql)
+    parameters = [
+        {"name": "pid1", "value": {"stringValue": str(product_id_1)}},
+        {"name": "pid2", "value": {"stringValue": str(product_id_2)}},
+    ]
+    rows = _execute_sql(sql, parameters)
     if len(rows) < 2:
         return {"error": "One or both products not found", "found": rows}
     return {"product_1": rows[0], "product_2": rows[1]}

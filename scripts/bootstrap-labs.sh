@@ -10,7 +10,7 @@ set -uo pipefail  # Removed -e to allow graceful failures
 # ============================================================================
 CODE_EDITOR_USER="${CODE_EDITOR_USER:-participant}"
 HOME_FOLDER="${HOME_FOLDER:-/workshop}"
-REPO_NAME="sample-dat406-build-agentic-ai-powered-search-apg"
+REPO_NAME="sample-blaize-bazaar-agentic-search-apg"
 REPO_PATH="$HOME_FOLDER/$REPO_NAME"
 AWS_REGION="${AWS_REGION:-us-west-2}"
 
@@ -27,7 +27,7 @@ log "=========================================="
 # ============================================================================
 log "Cloning repository..."
 if [ ! -d "$REPO_PATH" ]; then
-    sudo -u "$CODE_EDITOR_USER" git clone "${REPO_URL:-https://github.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg.git}" "$REPO_PATH" 2>/dev/null && \
+    sudo -u "$CODE_EDITOR_USER" git clone "${REPO_URL:-https://github.com/aws-samples/sample-blaize-bazaar-agentic-search-apg.git}" "$REPO_PATH" 2>/dev/null && \
     rm -rf "$REPO_PATH/.git" && log "✅ Repository cloned" || warn "Clone failed"
 else
     log "✅ Repository exists"
@@ -84,7 +84,7 @@ PGDATABASE=$DB_NAME
 AWS_REGION=$AWS_REGION
 AWS_DEFAULT_REGION=$AWS_REGION
 BEDROCK_EMBEDDING_MODEL=${BEDROCK_EMBEDDING_MODEL:-amazon.titan-embed-text-v2:0}
-BEDROCK_CHAT_MODEL=${BEDROCK_CHAT_MODEL:-global.anthropic.claude-sonnet-4-20250514-v1:0}
+BEDROCK_CHAT_MODEL=${BEDROCK_CHAT_MODEL:-global.anthropic.claude-sonnet-4-6}
 EOF
     
     chmod 600 "$REPO_PATH/.env"
@@ -293,9 +293,9 @@ cat >> "/home/$CODE_EDITOR_USER/.bashrc" << 'EOF'
 # DAT406 Workshop Environment
 # ============================================================================
 
-if [ -f /workshop/sample-dat406-build-agentic-ai-powered-search-apg/.env ]; then
+if [ -f /workshop/sample-blaize-bazaar-agentic-search-apg/.env ]; then
     set -a
-    source /workshop/sample-dat406-build-agentic-ai-powered-search-apg/.env
+    source /workshop/sample-blaize-bazaar-agentic-search-apg/.env
     set +a
     
     # Explicitly export PostgreSQL variables for psql
@@ -307,15 +307,15 @@ if [ -f /workshop/sample-dat406-build-agentic-ai-powered-search-apg/.env ]; then
 fi
 
 # Workshop Navigation Aliases
-alias workshop='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg'
-alias notebooks='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/notebooks'
-alias blaize-bazaar='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar'
-alias backend='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/backend'
-alias frontend='cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/frontend'
+alias workshop='cd /workshop/sample-blaize-bazaar-agentic-search-apg'
+alias notebooks='cd /workshop/sample-blaize-bazaar-agentic-search-apg/notebooks'
+alias blaize-bazaar='cd /workshop/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar'
+alias backend='cd /workshop/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/backend'
+alias frontend='cd /workshop/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/frontend'
 
 # Blaize Bazaar Service Shortcuts
-alias start-backend='/workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/start-backend.sh'
-alias start-frontend='/workshop/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/start-frontend.sh'
+alias start-backend='/workshop/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/start-backend.sh'
+alias start-frontend='/workshop/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/start-frontend.sh'
 
 # Database Shortcut (psql uses PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE from .env)
 alias psql='psql'
@@ -328,7 +328,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 # Auto-navigate to workshop directory on terminal open
 if [ "$PWD" = "$HOME" ] || [ "$PWD" = "/workshop" ]; then
-    cd /workshop/sample-dat406-build-agentic-ai-powered-search-apg 2>/dev/null || true
+    cd /workshop/sample-blaize-bazaar-agentic-search-apg 2>/dev/null || true
 fi
 EOF
 

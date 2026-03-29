@@ -184,7 +184,7 @@ def main():
         print("💡 Troubleshooting:")
         print("   1. Check CloudFormation stack outputs for DB_SECRET_ARN")
         print("   2. Verify bootstrap-labs.sh is sourcing .env file correctly")
-        print("   3. Check /workshop/sample-dat406-build-agentic-ai-powered-search-apg/.env")
+        print("   3. Check /workshop/sample-blaize-bazaar-agentic-search-apg/.env")
         print()
         return 1
     

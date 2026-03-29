@@ -205,7 +205,7 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
           {/* Actions */}
           <div className="flex items-center justify-center gap-3">
             <a
-              href="https://github.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg"
+              href="https://github.com/aws-samples/sample-blaize-bazaar-agentic-search-apg"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all hover:bg-white/10"

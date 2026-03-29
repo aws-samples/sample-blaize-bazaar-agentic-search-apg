@@ -14,6 +14,8 @@ import logging
 import os
 from typing import Any
 
+import boto3
+
 logger = logging.getLogger(__name__)
 
 # --- Database helpers (RDS Data API) ---
@@ -24,12 +26,13 @@ SECRET_ARN = os.environ.get("SECRET_ARN", "")
 DATABASE = os.environ.get("DATABASE", "postgres")
 SCHEMA = "bedrock_integration"
 
+# Module-level clients for Lambda warm start reuse
+rds_client = boto3.client("rds-data", region_name=REGION)
+bedrock_client = boto3.client("bedrock-runtime", region_name=REGION)
+
 
 def _execute_sql(sql: str, parameters: list = None) -> list[dict]:
     """Execute SQL via RDS Data API and return rows as dicts."""
-    import boto3
-
-    client = boto3.client("rds-data", region_name=REGION)
     params = {
         "resourceArn": DB_CLUSTER_ARN,
         "secretArn": SECRET_ARN,
@@ -39,7 +42,7 @@ def _execute_sql(sql: str, parameters: list = None) -> list[dict]:
     if parameters:
         params["parameters"] = parameters
 
-    response = client.execute_statement(**params)
+    response = rds_client.execute_statement(**params)
     columns = [col["name"] for col in response.get("columnMetadata", [])]
     rows = []
     for record in response.get("records", []):
@@ -63,10 +66,7 @@ def _execute_sql(sql: str, parameters: list = None) -> list[dict]:
 
 def _get_embedding(text: str) -> list[float]:
     """Generate embedding via Bedrock Titan v2."""
-    import boto3
-
-    client = boto3.client("bedrock-runtime", region_name=REGION)
-    response = client.invoke_model(
+    response = bedrock_client.invoke_model(
         modelId="amazon.titan-embed-text-v2:0",
         body=json.dumps({"inputText": text, "dimensions": 1024}),
     )
@@ -83,23 +83,29 @@ def semantic_search(query: str, limit: int = 5, max_price: float = None, min_rat
     embedding_str = "[" + ",".join(str(x) for x in embedding) + "]"
 
     where_clauses = ["quantity > 0"]
+    parameters = [
+        {"name": "embedding", "value": {"stringValue": embedding_str}},
+        {"name": "lim", "value": {"longValue": int(limit)}},
+    ]
     if max_price:
-        where_clauses.append(f"price <= {max_price}")
+        where_clauses.append("price <= :max_price")
+        parameters.append({"name": "max_price", "value": {"doubleValue": float(max_price)}})
     if min_rating:
-        where_clauses.append(f"stars >= {min_rating}")
+        where_clauses.append("stars >= :min_rating")
+        parameters.append({"name": "min_rating", "value": {"doubleValue": float(min_rating)}})
     where_sql = " AND ".join(where_clauses)
 
     sql = f"""
         SET hnsw.iterative_scan = 'relaxed_order';
         SELECT "productId", product_description, price, stars, reviews,
                category_name, quantity, "imgUrl",
-               1 - (product_description_embeddings <=> '{embedding_str}'::vector) AS similarity
+               1 - (product_description_embeddings <=> :embedding::vector) AS similarity
         FROM {SCHEMA}.product_catalog
         WHERE {where_sql}
-        ORDER BY product_description_embeddings <=> '{embedding_str}'::vector
-        LIMIT {limit};
+        ORDER BY product_description_embeddings <=> :embedding::vector
+        LIMIT :lim;
     """
-    rows = _execute_sql(sql)
+    rows = _execute_sql(sql, parameters)
     return {"products": rows, "query": query, "count": len(rows)}
 
 
@@ -126,9 +132,10 @@ def get_low_stock_products(limit: int = 5) -> dict:
         FROM {SCHEMA}.product_catalog
         WHERE quantity > 0 AND quantity < 10
         ORDER BY quantity ASC
-        LIMIT {limit};
+        LIMIT :lim;
     """
-    rows = _execute_sql(sql)
+    parameters = [{"name": "lim", "value": {"longValue": int(limit)}}]
+    rows = _execute_sql(sql, parameters)
     return {"products": rows, "count": len(rows)}
 
 
@@ -139,11 +146,15 @@ def restock_product(product_id: str, quantity: int) -> dict:
 
     sql = f"""
         UPDATE {SCHEMA}.product_catalog
-        SET quantity = quantity + {quantity}
-        WHERE "productId" = '{product_id}'
+        SET quantity = quantity + :qty
+        WHERE "productId" = :pid
         RETURNING "productId", product_description, quantity;
     """
-    rows = _execute_sql(sql)
+    parameters = [
+        {"name": "pid", "value": {"stringValue": str(product_id)}},
+        {"name": "qty", "value": {"longValue": int(quantity)}},
+    ]
+    rows = _execute_sql(sql, parameters)
     if rows:
         return {"success": True, "product": rows[0]}
     return {"error": f"Product {product_id} not found"}

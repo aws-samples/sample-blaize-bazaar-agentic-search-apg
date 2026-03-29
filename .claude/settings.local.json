@@ -45,13 +45,13 @@
       "Bash(python -c \"import ast; ast.parse\\(open\\(''services/guardrails.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Python syntax OK''\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\(''services/embeddings.py''\\).read\\(\\)\\); ast.parse\\(open\\(''services/guardrails.py''\\).read\\(\\)\\); ast.parse\\(open\\(''services/business_logic.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Python syntax OK''\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Python syntax OK''\\)\")",
-      "Bash(grep -l \"Results\\\\|Grid\\\\|Card\" /Users/shayons/Desktop/Workshops/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/frontend/src/components/*.tsx)",
-      "Bash(grep -n \"ProductCardCompact\" /Users/shayons/Desktop/Workshops/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/frontend/src/components/*.tsx)",
+      "Bash(grep -l \"Results\\\\|Grid\\\\|Card\" /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/frontend/src/components/*.tsx)",
+      "Bash(grep -n \"ProductCardCompact\" /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/frontend/src/components/*.tsx)",
       "Bash(npx vite build)",
       "Bash(curl -s http://localhost:8000/health)",
       "Bash(curl -s http://localhost:8000/api/search -X POST -H \"Content-Type: application/json\" -d '{\"\"query\"\":\"\"running shoes\"\",\"\"limit\"\":5,\"\"search_mode\"\":\"\"keyword\"\"}')",
       "Bash(ps -p 41115 -o command=)",
-      "Bash(ls /Users/shayons/Desktop/Workshops/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/frontend/vite* /Users/shayons/Desktop/Workshops/sample-dat406-build-agentic-ai-powered-search-apg/blaize-bazaar/frontend/.env*)",
+      "Bash(ls /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/frontend/vite* /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/frontend/.env*)",
       "Bash(curl -s http://localhost:5173/api/search -X POST -H \"Content-Type: application/json\" -d '{\"\"query\"\":\"\"running shoes\"\",\"\"limit\"\":5,\"\"search_mode\"\":\"\"keyword\"\"}')",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:aws.amazon.com)",
@@ -67,9 +67,10 @@
       "Bash(curl -s -X POST http://localhost:8001/api/chat/stream -H \"Content-Type: application/json\" -d '{\"\"message\"\":\"\"running shoes\"\",\"\"conversation_history\"\":[],\"\"workshop_mode\"\":\"\"tools\"\"}')",
       "Bash(curl -s -X POST http://localhost:8001/api/chat/stream -H \"Content-Type: application/json\" -d '{\"\"message\"\":\"\"top kitchen essentials\"\",\"\"conversation_history\"\":[],\"\"workshop_mode\"\":\"\"tools\"\"}')",
       "Bash(npm install react-markdown)",
-      "Bash(ls -la /Users/shayons/Desktop/Workshops/sample-dat406-build-agentic-ai-powered-search-apg/labs/*.py)",
-      "Bash(ls -la /Users/shayons/Desktop/Workshops/sample-dat406-build-agentic-ai-powered-search-apg/labs/solutions/*.py)",
-      "Bash(npm install tailwindcss-animate --save-dev)"
+      "Bash(ls -la /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/labs/*.py)",
+      "Bash(ls -la /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/labs/solutions/*.py)",
+      "Bash(npm install tailwindcss-animate --save-dev)",
+      "Bash(chmod +x /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/modules/05/test_gateway_auth.py /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/modules/05/test_gateway_tools.py /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/modules/05/check_traces.py)"
     ]
   }
 }

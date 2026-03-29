@@ -862,17 +862,6 @@ CURRENT REQUEST: {message}"""
             except (ValueError, TypeError):
                 price = 0.0
 
-            # Synthesize original price: ~80% of products show a discount (8-30%)
-            original_price = None
-            discount_percent = 0
-            if product_id and price > 0:
-                # Deterministic "discount" based on product ID hash
-                pid_hash = sum(ord(c) for c in str(product_id))
-                if pid_hash % 5 < 4:  # ~80% of products
-                    discount_pct = 8 + (pid_hash % 23)  # 8-30%
-                    original_price = round(price / (1 - discount_pct / 100), 2)
-                    discount_percent = discount_pct
-
             formatted.append({
                 "id": product_id,
                 "name": (product.get("name", product.get("product_description", "")).split(" — ")[0].split(" - ")[0])[:80],
@@ -884,8 +873,8 @@ CURRENT REQUEST: {message}"""
                 "inStock": _safe_int(product.get("quantity", 0)) > 0 if "quantity" in product else product.get("inStock", True),
                 "image": product.get("image_url", product.get("image", product.get("imgUrl", product.get("imgurl", product.get("thumbnail", ""))))),
                 "url": product_url,
-                "originalPrice": original_price,
-                "discountPercent": discount_percent,
+                "originalPrice": None,
+                "discountPercent": 0,
             })
 
         # Always backfill images from database — LLM often drops image URLs
@@ -1000,7 +989,6 @@ CURRENT REQUEST: {message}"""
             "diagnostics": diagnostics
         }
 
-    @staticmethod
     @staticmethod
     def _extract_price_limit(message: str) -> float | None:
         """Extract a price ceiling from user message (e.g. 'under $50' → 50.0)."""

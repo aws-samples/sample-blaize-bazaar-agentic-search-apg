@@ -4,10 +4,13 @@ Combines pgvector semantic search with PostgreSQL full-text search
 for optimal relevance and recall.
 """
 import asyncio
+import hashlib
+import json
 import logging
 import time
 from typing import List, Dict, Any, Optional
 from services.database import DatabaseService
+from services.cache import get_cache
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +47,16 @@ class HybridSearchService:
             fulltext_weight: Weight for full-text search (0-1)
             ef_search: HNSW ef_search parameter
         """
+        # Check search cache (keyed on query + weights + limit)
+        cache = get_cache()
+        cache_key = f"{query}|{vector_weight:.2f}|{fulltext_weight:.2f}|{limit}"
+        if cache:
+            cached = cache.get("search", cache_key)
+            if cached is not None:
+                logger.info("⚡ Search cache hit")
+                cached["cache_hit"] = True
+                return cached
+
         # === WIRE IT LIVE (Lab 1) — RRF Weight Normalization ===
         # Try adjusting these weights to see how they affect search results!
         # Default: vector=0.6, fulltext=0.4 — try 0.8/0.2 for more semantic results
@@ -73,15 +86,22 @@ class HybridSearchService:
         )
         logger.info(f"🔀 Hybrid search returned {len(fused_results)} results with RRF scores")
         
-        return {
+        result = {
             "results": fused_results,
             "total": len(fused_results),
             "method": "hybrid_rrf",
             "weights": {
                 "vector": vector_weight,
                 "fulltext": fulltext_weight
-            }
+            },
+            "cache_hit": False,
         }
+
+        # Store in cache (5 min TTL for search results)
+        if cache:
+            cache.set("search", cache_key, result, ttl=300)
+
+        return result
     
     async def _vector_search(
         self,

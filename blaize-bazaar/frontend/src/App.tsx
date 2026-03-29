@@ -35,6 +35,8 @@ import GraphVisualization from './components/GraphVisualization'
 import PlaygroundOverlay from './components/PlaygroundOverlay'
 import CacheMetricsPanel from './components/CacheMetricsPanel'
 import SpotlightWalkthrough from './components/SpotlightWalkthrough'
+import ModuleCompletionModal from './components/ModuleCompletionModal'
+import { useWorkshopStatus } from './hooks/useWorkshopStatus'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import SignInPage from './components/SignInPage'
 import type { TourAction } from './data/tourSteps'
@@ -105,6 +107,17 @@ function AppContent() {
   const [showGraphViz, setShowGraphViz] = useState(false)
   const [showCacheMetrics, setShowCacheMetrics] = useState(false)
   const [playgroundVisible, setPlaygroundVisible] = useState(false)
+
+  // Workshop module completion detection
+  const { newlyCompleted, dismissNewlyCompleted, completedSteps, fetchStatus: refreshWorkshopStatus } = useWorkshopStatus()
+
+  // Onboarding spotlight — cycles through steps 0-4
+  const [onboardHighlight, setOnboardHighlight] = useState(0)
+  useEffect(() => {
+    if (!showOnboarding) return
+    const t = setInterval(() => setOnboardHighlight(p => (p + 1) % 5), 2000)
+    return () => clearInterval(t)
+  }, [showOnboarding])
 
   // Hero background carousel
   const heroImages = [
@@ -364,6 +377,8 @@ function AppContent() {
           onCartClick={() => setShowCart(true)}
           onPlaygroundClick={() => setPlaygroundVisible(true)}
           loginSlot={<LoginButton />}
+          completedModules={completedSteps}
+          onModeSwitch={refreshWorkshopStatus}
         />
 
         {/* Search Overlay */}
@@ -391,7 +406,13 @@ function AppContent() {
             ))}
             {/* Gradient overlay for text readability + subtle blue AI glow */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/55" />
-            <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(41, 151, 255, 0.06) 0%, transparent 60%)' }} />
+            <div className="absolute inset-0" style={{ background: workshopMode === 'agentcore'
+              ? 'radial-gradient(ellipse at 50% 40%, rgba(16, 185, 129, 0.10) 0%, transparent 60%)'
+              : workshopMode === 'full'
+              ? 'radial-gradient(ellipse at 50% 40%, rgba(245, 158, 11, 0.08) 0%, transparent 60%)'
+              : 'radial-gradient(ellipse at 50% 40%, rgba(41, 151, 255, 0.06) 0%, transparent 60%)',
+              transition: 'background 1s ease',
+            }} />
 
             {/* Hero content — split layout for agent modes, centered for legacy/semantic */}
             {(() => {
@@ -475,9 +496,15 @@ function AppContent() {
                         if (bubble) bubble.click()
                       }
                     }}
-                    style={{ background: '#0071e3', color: '#ffffff' }}
+                    style={{
+                      background: workshopMode === 'agentcore' ? '#10b981' : workshopMode === 'full' ? '#f59e0b' : '#0071e3',
+                      color: '#ffffff',
+                    }}
                   >
-                    {workshopMode === 'legacy' || workshopMode === 'semantic' ? 'Search Products' : 'Talk to the Agents'}
+                    {workshopMode === 'legacy' || workshopMode === 'semantic' ? 'Search Products'
+                      : workshopMode === 'tools' ? 'Talk to the Agent'
+                      : workshopMode === 'full' ? 'Talk to the Team'
+                      : 'Try the Full Stack'}
                   </button>
                   <button
                     className="px-7 py-3 rounded-full text-lg font-normal transition-all duration-300 hover:opacity-80"
@@ -573,9 +600,21 @@ function AppContent() {
                       transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.05 }}
                     >
                       <h2 className="text-3xl lg:text-4xl font-extralight mb-3 tracking-tight text-white">
-                        Meet the <span style={{ color: '#0071e3' }}>agents</span>
+                        {workshopMode === 'tools'
+                          ? <>Meet the <span style={{ color: '#0071e3' }}>agent</span></>
+                          : workshopMode === 'full'
+                          ? <>Watch them <span style={{ color: '#f59e0b' }}>collaborate</span></>
+                          : <>Ready for <span style={{ color: '#10b981' }}>production</span></>
+                        }
                       </h2>
-                      <p className="text-lg font-light" style={{ color: '#a1a1a6' }}>Five specialized AI agents collaborate to find exactly what you need</p>
+                      <p className="text-lg font-light" style={{ color: '#a1a1a6' }}>
+                        {workshopMode === 'tools'
+                          ? 'Your AI assistant can now query live data through the tools you built'
+                          : workshopMode === 'full'
+                          ? 'Three specialist agents work together, routed by an orchestrator in real-time'
+                          : 'Enterprise memory, Cedar policies, and MCP Gateway — all live'
+                        }
+                      </p>
                     </motion.div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
                       {/* Left: text content */}
@@ -594,6 +633,7 @@ function AppContent() {
                       >
                         <DemoChatCarousel
                           compact
+                          workshopMode={workshopMode}
                           onOpenChat={() => {
                             const bubble = document.querySelector('[data-tour="chat-bubble"]') as HTMLElement
                             if (bubble) bubble.click()
@@ -973,6 +1013,14 @@ function AppContent() {
           onClose={() => setShowToast(false)}
         />
 
+        {/* Module Completion Celebration */}
+        {newlyCompleted.length > 0 && (
+          <ModuleCompletionModal
+            moduleKeys={newlyCompleted}
+            onClose={dismissNewlyCompleted}
+          />
+        )}
+
         {/* Expanded Diagram Modal */}
         <AnimatePresence>
           {expandedDiagram && (
@@ -1006,62 +1054,136 @@ function AppContent() {
           )}
         </AnimatePresence>
 
-        {/* Onboarding Modal — first visit */}
         <AnimatePresence>
           {showOnboarding && (
             <motion.div
-              className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+              className="fixed inset-0 z-[3000] flex items-center justify-center"
+              style={{ background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
               <motion.div
-                className="w-[480px] rounded-[24px] p-8 text-center"
                 style={{
-                  background: 'rgba(0, 0, 0, 0.95)',
-                  backdropFilter: 'blur(40px)',
+                  width: 540,
+                  maxWidth: '92vw',
+                  borderRadius: 24,
+                  overflow: 'hidden',
+                  background: 'rgba(8, 8, 12, 0.97)',
                   border: '1px solid rgba(255, 255, 255, 0.08)',
+                  boxShadow: '0 32px 64px -16px rgba(0, 0, 0, 0.6)',
                 }}
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
+                initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                transition={{ type: 'spring', stiffness: 280, damping: 26 }}
               >
-                <div className="text-3xl mb-2">&#x1F680;</div>
-                <h2 className="text-xl font-semibold mb-1" style={{ color: '#ffffff' }}>Welcome to DAT406</h2>
-                <p className="text-sm mb-6" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Build Agentic AI-Powered Search with Aurora & pgvector</p>
-
-                <div className="space-y-2 mb-8 text-left">
-                  {[
-                    { step: 'Legacy', desc: 'Start with keyword-only search', icon: '1' },
-                    { step: 'Lab 1 — Semantic', desc: 'Add vector search + hybrid comparison', icon: '2' },
-                    { step: 'Lab 2 — Tools', desc: 'Build AI agents with custom tools', icon: '3' },
-                    { step: 'Lab 3 — Full', desc: 'Multi-agent orchestration + guardrails', icon: '4' },
-                  ].map((s, i) => (
-                    <div key={i} className="flex items-center gap-3 px-4 py-2.5 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                      <span className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0" style={{ background: 'rgba(255, 255, 255, 0.08)', color: 'rgba(255, 255, 255, 0.6)' }}>{s.icon}</span>
-                      <div>
-                        <p className="text-[13px] font-medium" style={{ color: '#ffffff' }}>{s.step}</p>
-                        <p className="text-[11px]" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{s.desc}</p>
-                      </div>
-                    </div>
-                  ))}
+                {/* Header with gradient accent */}
+                <div style={{
+                  padding: '32px 32px 20px',
+                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.06) 50%, rgba(236, 72, 153, 0.04) 100%)',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(139, 92, 246, 0.9)', marginBottom: 8 }}>
+                    AWS re:Invent 2026
+                  </div>
+                  <h2 style={{ fontSize: 22, fontWeight: 700, color: '#ffffff', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
+                    DAT406 — Agentic AI-Powered Search
+                  </h2>
+                  <p style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.7)', margin: 0 }}>
+                    Aurora PostgreSQL + pgvector + Bedrock AgentCore
+                  </p>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setShowOnboarding(false)
-                    localStorage.setItem('blaize-onboarding-done', '1')
-                    setWorkshopMode('legacy')
-                  }}
-                  className="w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200"
-                  style={{ background: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.15)', color: '#ffffff' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)')}
-                >
-                  Start Workshop
-                </button>
-                <p className="text-[10px] mt-3" style={{ color: 'rgba(255, 255, 255, 0.25)' }}>Use the progress pills in the header to switch modes anytime</p>
+                {/* Module roadmap — shown as a connected journey */}
+                <div style={{ padding: '20px 24px 8px', position: 'relative' }}>
+                  {[
+                    { label: 'Explore the Storefront', desc: 'Start here — browse the store with keyword-only search and see what breaks', color: '#ffffff', icon: <Search className="h-4 w-4" /> },
+                    { label: 'Teach It to Understand', desc: 'Implement pgvector semantic search so "budget laptop for college" actually works', color: '#60a5fa', icon: <Database className="h-4 w-4" />, code: 'vector_search() + hybrid_fusion()' },
+                    { label: 'Give It Superpowers', desc: 'Build @tool functions so the AI can query live inventory and trending data', color: '#a78bfa', icon: <Zap className="h-4 w-4" />, code: 'get_trending_products()' },
+                    { label: 'Make Agents Collaborate', desc: 'Wire up specialist agents with an orchestrator that routes to the right expert', color: '#fbbf24', icon: <GitBranch className="h-4 w-4" />, code: 'recommendation_agent + orchestrator' },
+                    { label: 'Ship It to Production', desc: 'Add session memory, MCP Gateway, and Cedar policies via Bedrock AgentCore', color: '#34d399', icon: <Shield className="h-4 w-4" />, code: 'memory + gateway + policy' },
+                  ].map((s, i) => {
+                    const isLit = onboardHighlight === i
+                    return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{
+                        opacity: 1, x: 0,
+                        scale: isLit ? 1.015 : 1,
+                        backgroundColor: isLit ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.03)',
+                      }}
+                      transition={i < 5 ? { delay: 0.15 + i * 0.08, duration: 0.35, scale: { duration: 0.4 }, backgroundColor: { duration: 0.4 } } : { duration: 0.35 }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: 14,
+                        padding: '12px 14px',
+                        marginBottom: 6,
+                        borderRadius: 14,
+                        border: `1px solid ${isLit ? s.color + '55' : s.color + '22'}`,
+                        boxShadow: isLit ? `0 0 20px ${s.color}18, inset 0 0 12px ${s.color}08` : 'none',
+                        position: 'relative',
+                      }}
+                    >
+                      <motion.div
+                        animate={{
+                          scale: isLit ? 1.1 : 1,
+                          boxShadow: isLit ? `0 0 12px ${s.color}40` : `0 0 0px ${s.color}00`,
+                        }}
+                        transition={{ duration: 0.4 }}
+                        style={{
+                          width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: s.color + '20', color: s.color,
+                          zIndex: 1,
+                        }}
+                      >
+                        {s.icon}
+                      </motion.div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#ffffff' }}>{s.label}</span>
+                        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', margin: '3px 0 0', lineHeight: 1.45 }}>{s.desc}</p>
+                        {s.code && (
+                          <p style={{ fontSize: 12, color: s.color, margin: '4px 0 0', fontFamily: 'monospace' }}>You build: {s.code}</p>
+                        )}
+                      </div>
+                    </motion.div>
+                    )
+                  })}
+                </div>
+
+                {/* Footer */}
+                <div style={{ padding: '12px 24px 24px' }}>
+                  <motion.button
+                    onClick={() => {
+                      setShowOnboarding(false)
+                      localStorage.setItem('blaize-onboarding-done', '1')
+                      setWorkshopMode('legacy')
+                    }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 0',
+                      borderRadius: 14,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      cursor: 'pointer',
+                      letterSpacing: '0.01em',
+                    }}
+                  >
+                    Start Building
+                  </motion.button>
+                  <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: 10 }}>
+                    Switch between modules anytime using the header pills or the Playground
+                  </p>
+                </div>
               </motion.div>
             </motion.div>
           )}

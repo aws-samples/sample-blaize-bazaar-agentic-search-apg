@@ -2,9 +2,9 @@
 
 <div align="center">
 
-[![AWS Workshop](https://img.shields.io/badge/AWS-Workshop-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://github.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg)
-[![Level 400](https://img.shields.io/badge/Level-400%20Expert-red?style=for-the-badge)](https://github.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg)
-[![Duration](https://img.shields.io/badge/Duration-2_Hours-blue?style=for-the-badge)](https://github.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg)
+[![AWS Workshop](https://img.shields.io/badge/AWS-Workshop-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white)](https://github.com/aws-samples/sample-blaize-bazaar-agentic-search-apg)
+[![Level 400](https://img.shields.io/badge/Level-400%20Expert-red?style=for-the-badge)](https://github.com/aws-samples/sample-blaize-bazaar-agentic-search-apg)
+[![Duration](https://img.shields.io/badge/Duration-2_Hours-blue?style=for-the-badge)](https://github.com/aws-samples/sample-blaize-bazaar-agentic-search-apg)
 [![License](https://img.shields.io/badge/License-MIT-00b300?style=for-the-badge)](LICENSE)
 
 </div>

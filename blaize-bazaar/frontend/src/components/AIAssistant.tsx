@@ -62,6 +62,52 @@ const AIAssistant = () => {
     })
   }
 
+  // Mode-specific welcome messages and suggestions
+  const getWelcomeMessage = (mode: string): { content: string; suggestions: string[] } => {
+    switch (mode) {
+      case 'tools':
+        return {
+          content: "Hey! I'm your AI shopping assistant — powered by custom tools that query live data from Aurora PostgreSQL. Ask me about products, trends, or inventory and watch the tools fire in real-time.",
+          suggestions: [
+            "What's trending in electronics right now?",
+            'Find noise-canceling headphones under $200',
+            'Is the Compact Travel Camera in stock?',
+            'Compare the top 3 running shoes',
+          ],
+        }
+      case 'full':
+        return {
+          content: "Hey! I'm backed by a team of specialist agents — search, pricing, inventory, and recommendation — all coordinated by an orchestrator. Ask something complex and watch them collaborate.",
+          suggestions: [
+            'Compare laptops under $1000 — which has the best value?',
+            "What's low on stock that I should grab before it's gone?",
+            'I need a birthday gift — something unique under $75',
+            'Find premium headphones, check stock, and compare prices',
+          ],
+        }
+      case 'agentcore':
+        return {
+          content: "Hey! I'm running on Bedrock AgentCore — with persistent memory across sessions, Cedar authorization policies, and MCP Gateway for dynamic tool discovery. Try testing the guardrails.",
+          suggestions: [
+            'Remember that I prefer premium brands',
+            'Can you restock 1000 units of the Travel Camera?',
+            'What preferences do you remember about me?',
+            'Find me something similar to what I looked at before',
+          ],
+        }
+      default:
+        return {
+          content: "Hey! I'm your AI shopping assistant. I can search our entire catalog, compare products side by side, analyze pricing trends, and check what's in stock — all in one conversation. What are you working with today?",
+          suggestions: [
+            'Compare the top 5 laptops under $1000',
+            "What's trending in electronics right now?",
+            'Find me running shoes with the best reviews',
+            'I need a gift under $50 — surprise me',
+          ],
+        }
+    }
+  }
+
   const loadConversationHistory = (): Message[] => {
     try {
       const saved = localStorage.getItem('blaize-conversation-history')
@@ -75,16 +121,12 @@ const AIAssistant = () => {
     } catch {
       // ignore
     }
+    const welcome = getWelcomeMessage(workshopMode)
     return [{
       role: 'assistant',
-      content: "Hey! I'm your AI shopping assistant. I can search our entire catalog, compare products side by side, analyze pricing trends, and check what's in stock — all in one conversation. What are you working with today?",
+      content: welcome.content,
       timestamp: new Date(),
-      suggestions: [
-        'Compare the top 5 laptops under $1000',
-        "What's trending in electronics right now?",
-        'Find me running shoes with the best reviews',
-        'I need a gift under $50 — surprise me'
-      ]
+      suggestions: welcome.suggestions,
     }]
   }
 
@@ -114,21 +156,29 @@ const AIAssistant = () => {
     checkBackendHealth().then(setBackendOnline)
   }, [])
 
+  // Reset chat with mode-appropriate welcome when workshop mode changes
+  useEffect(() => {
+    const welcome = getWelcomeMessage(workshopMode)
+    localStorage.removeItem('blaize-conversation-history')
+    setMessages([{
+      role: 'assistant',
+      content: welcome.content,
+      timestamp: new Date(),
+      suggestions: welcome.suggestions,
+    }])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workshopMode])
+
   const handleClearChat = () => {
     localStorage.removeItem('blaize-conversation-history')
     localStorage.removeItem('blaize-session-id')
     responseCache.clear()
-    // Reset to the welcome message (same as first-time load)
+    const welcome = getWelcomeMessage(workshopMode)
     setMessages([{
       role: 'assistant',
-      content: "Hey! I'm your AI shopping assistant. I can search our entire catalog, compare products side by side, analyze pricing trends, and check what's in stock — all in one conversation. What are you working with today?",
+      content: welcome.content,
       timestamp: new Date(),
-      suggestions: [
-        'Compare the top 5 laptops under $1000',
-        "What's trending in electronics right now?",
-        'Find me running shoes with the best reviews',
-        'I need a gift under $50 — surprise me'
-      ]
+      suggestions: welcome.suggestions,
     }])
   }
 
@@ -163,14 +213,15 @@ const AIAssistant = () => {
     }
 
     // Add thinking placeholder — agent name depends on workshop mode
-    const isOrchestrator = workshopMode === 'full'
-    const thinkingAgentName = isOrchestrator ? 'Orchestrator' : 'Search Agent'
+    const thinkingAgentName = workshopMode === 'full' ? 'Orchestrator'
+      : workshopMode === 'agentcore' ? 'AgentCore'
+      : 'Search Agent'
     const loadingMessage: Message = {
       role: 'assistant',
       content: '',
       timestamp: new Date(),
       agentStatus: 'thinking',
-      agent: isOrchestrator ? 'orchestrator' : 'search',
+      agent: (workshopMode === 'full' || workshopMode === 'agentcore') ? 'orchestrator' : 'search',
       agentExecution: {
         agent_steps: [{ agent: thinkingAgentName, action: 'Analyzing query', status: 'in_progress', timestamp: Date.now(), duration_ms: 0 }],
         tool_calls: [],
@@ -392,9 +443,11 @@ const AIAssistant = () => {
               background: theme === 'dark' ? 'rgba(0, 0, 0, 0.95)' : '#ffffff',
               backdropFilter: 'blur(40px)',
               WebkitBackdropFilter: 'blur(40px)',
-              border: theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.1)',
+              border: theme === 'dark'
+                ? `1px solid ${workshopMode === 'agentcore' ? 'rgba(16, 185, 129, 0.2)' : workshopMode === 'full' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255,255,255,0.08)'}`
+                : '1px solid rgba(0,0,0,0.1)',
               boxShadow: theme === 'dark'
-                ? '0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04)'
+                ? `0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04)${workshopMode === 'agentcore' ? ', 0 0 40px rgba(16, 185, 129, 0.08)' : workshopMode === 'full' ? ', 0 0 40px rgba(245, 158, 11, 0.08)' : ''}`
                 : '0 25px 60px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.08)',
             }}
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
@@ -404,7 +457,16 @@ const AIAssistant = () => {
           >
             {/* Header */}
             <div className="px-5 py-4 rounded-t-[20px] flex justify-between items-center flex-shrink-0"
-              style={{ borderBottom: theme === 'dark' ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.08)' }}>
+              style={{
+                borderBottom: theme === 'dark'
+                  ? `1px solid ${workshopMode === 'agentcore' ? 'rgba(16, 185, 129, 0.15)' : workshopMode === 'full' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255,255,255,0.06)'}`
+                  : '1px solid rgba(0,0,0,0.08)',
+                background: workshopMode === 'agentcore'
+                  ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.04) 0%, transparent 100%)'
+                  : workshopMode === 'full'
+                  ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.04) 0%, transparent 100%)'
+                  : 'transparent',
+              }}>
               <div className="flex items-center gap-3">
                 <motion.div
                   className="w-9 h-9 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0"
@@ -429,9 +491,17 @@ const AIAssistant = () => {
                         Offline
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1" style={{ color: '#22c55e' }}>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#22c55e' }} />
-                        {workshopMode === 'agentcore' ? '5' : workshopMode === 'full' ? '3' : '1'} agent{workshopMode !== 'tools' ? 's' : ''} online
+                      <span className="flex items-center gap-1" style={{
+                        color: workshopMode === 'agentcore' ? '#34d399' : workshopMode === 'full' ? '#fbbf24' : '#22c55e',
+                      }}>
+                        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{
+                          background: workshopMode === 'agentcore' ? '#34d399' : workshopMode === 'full' ? '#fbbf24' : '#22c55e',
+                        }} />
+                        {workshopMode === 'agentcore'
+                          ? 'AgentCore Runtime · 5 services'
+                          : workshopMode === 'full'
+                          ? 'Orchestrator → 3 specialists'
+                          : '1 agent online'}
                       </span>
                     )}
                   </div>
@@ -448,14 +518,24 @@ const AIAssistant = () => {
                     ${sessionCost.toFixed(4)}
                   </span>
                 )}
-                {/* Guardrails indicator */}
+                {/* Mode-specific status pills */}
                 {workshopMode === 'full' && guardrailsEnabled && (
                   <span
                     className="text-[11px] px-2 py-0.5 rounded-full mr-1"
-                    style={{ background: 'rgba(52, 211, 153, 0.1)', color: '#34d399' }}
+                    style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#fbbf24' }}
                     title="Guardrails active"
                   >
                     Guarded
+                  </span>
+                )}
+                {workshopMode === 'agentcore' && (
+                  <span
+                    className="text-[11px] px-2 py-0.5 rounded-full mr-1 flex items-center gap-1"
+                    style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34d399' }}
+                    title="AgentCore production services"
+                  >
+                    <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                    Cedar + MCP
                   </span>
                 )}
                 <button
@@ -845,7 +925,11 @@ const AIAssistant = () => {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder={isLoading ? 'Searching...' : "Try: 'compare headphones under $200' or 'what's trending?'"}
+                  placeholder={isLoading ? 'Searching...'
+                    : workshopMode === 'agentcore' ? "Try: 'remember I like premium brands' or 'restock 1000 cameras'"
+                    : workshopMode === 'full' ? "Try: 'find headphones, check stock, and compare prices'"
+                    : workshopMode === 'tools' ? "Try: 'what's trending?' or 'is the travel camera in stock?'"
+                    : "Try: 'compare headphones under $200' or 'what's trending?'"}
                   disabled={isLoading}
                   className="flex-1 px-4 py-3 rounded-xl text-sm disabled:opacity-40 text-text-primary placeholder-text-secondary focus:outline-none focus:ring-1 focus:ring-white/20"
                   style={{
@@ -859,7 +943,7 @@ const AIAssistant = () => {
                   className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
                   style={{
                     background: inputValue.trim() && !isLoading
-                      ? 'var(--link-color)'
+                      ? (workshopMode === 'agentcore' ? '#10b981' : workshopMode === 'full' ? '#f59e0b' : 'var(--link-color)')
                       : theme === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
                   }}
                   whileHover={inputValue.trim() && !isLoading ? { scale: 1.05 } : {}}
@@ -906,8 +990,16 @@ const AIAssistant = () => {
             <motion.div
               className="w-[76px] h-[76px] rounded-full flex-shrink-0 overflow-hidden"
               style={{
-                boxShadow: '0 6px 28px rgba(0, 0, 0, 0.5)',
-                border: '2px solid var(--border-color)',
+                boxShadow: workshopMode === 'agentcore'
+                  ? '0 6px 28px rgba(0, 0, 0, 0.5), 0 0 20px rgba(16, 185, 129, 0.25)'
+                  : workshopMode === 'full'
+                  ? '0 6px 28px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.25)'
+                  : '0 6px 28px rgba(0, 0, 0, 0.5)',
+                border: workshopMode === 'agentcore'
+                  ? '2px solid rgba(16, 185, 129, 0.5)'
+                  : workshopMode === 'full'
+                  ? '2px solid rgba(245, 158, 11, 0.5)'
+                  : '2px solid var(--border-color)',
               }}
               whileHover={{ scale: 1.1 }}
               animate={{ y: [0, -4, 0] }}

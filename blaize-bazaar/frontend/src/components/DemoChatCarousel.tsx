@@ -5,8 +5,9 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Search, Target, DollarSign, Database, Send } from 'lucide-react'
+import { Brain, Search, Target, DollarSign, Database, Send, Shield } from 'lucide-react'
 import { useTheme } from '../App'
+import type { WorkshopMode } from '../contexts/LayoutContext'
 
 // ─── Data Types ───
 
@@ -29,14 +30,16 @@ interface DemoSlide {
   featureName: string
   featureColor: string
   featureGlow: string
-  featureIconKey: 'search' | 'target' | 'dollar' | 'brain' | 'database'
+  featureIconKey: 'search' | 'target' | 'dollar' | 'brain' | 'database' | 'shield'
   userMessage: string
-  aiAvatarIconKey: 'search' | 'target' | 'dollar' | 'brain' | 'database'
+  aiAvatarIconKey: 'search' | 'target' | 'dollar' | 'brain' | 'database' | 'shield'
   aiAvatarLabel: string
   agentBadges: AgentBadge[]
   aiResponseText: string
   productCards?: DemoProductCard[]
   contextNote?: string
+  /** Minimum workshopMode required to show this slide */
+  minMode: WorkshopMode
 }
 
 const ICON_MAP = {
@@ -45,7 +48,10 @@ const ICON_MAP = {
   dollar: DollarSign,
   brain: Brain,
   database: Database,
+  shield: Shield,
 }
+
+const MODE_ORDER: WorkshopMode[] = ['legacy', 'semantic', 'tools', 'full', 'agentcore']
 
 // ─── Slide Data ───
 
@@ -67,23 +73,7 @@ const DEMO_SLIDES: DemoSlide[] = [
       { name: 'OXO Good Grips Salad Spinner', price: '$29.99', rating: '4.7', image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&q=80' },
       { name: 'Cuisinart Bamboo Cutting Board', price: '$24.99', rating: '4.6', image: 'https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=200&q=80' },
     ],
-  },
-  {
-    id: 'multi-agent',
-    featureName: 'Multi-Agent Orchestration',
-    featureColor: 'linear-gradient(135deg, #a855f7, #ec4899)',
-    featureGlow: 'rgba(168, 85, 247, 0.4)',
-    featureIconKey: 'target',
-    userMessage: 'Are any of those low on stock? And what about pricing?',
-    aiAvatarIconKey: 'target',
-    aiAvatarLabel: 'Orchestrator',
-    agentBadges: [
-      { label: 'Inventory Agent', bgColor: 'rgba(59, 130, 246, 0.2)', textColor: '#93c5fd' },
-      { label: 'Pricing Agent', bgColor: 'rgba(245, 158, 11, 0.2)', textColor: '#fcd34d' },
-      { label: 'Recommendation', bgColor: 'rgba(234, 179, 8, 0.2)', textColor: '#fde047' },
-    ],
-    aiResponseText: 'I routed your request to 3 agents simultaneously — Inventory checked stock, Pricing analyzed value, and Recommendation ranked the best options.',
-    contextNote: '3 agents collaborated in 1.2s',
+    minMode: 'tools',
   },
   {
     id: 'price-intelligence',
@@ -103,21 +93,7 @@ const DEMO_SLIDES: DemoSlide[] = [
       { name: 'Tissot T-My Lady Quartz', price: '$325.00', rating: '4.7', image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=200&q=80' },
       { name: 'Michael Kors Runway Rose Gold', price: '$275.00', rating: '4.5', image: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?w=200&q=80' },
     ],
-  },
-  {
-    id: 'conversation-memory',
-    featureName: 'Conversation Memory',
-    featureColor: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
-    featureGlow: 'rgba(139, 92, 246, 0.4)',
-    featureIconKey: 'brain',
-    userMessage: 'What about the Tissot — is it good for everyday wear?',
-    aiAvatarIconKey: 'brain',
-    aiAvatarLabel: 'Orchestrator',
-    agentBadges: [
-      { label: 'Search Agent', bgColor: 'rgba(59, 130, 246, 0.2)', textColor: '#93c5fd' },
-    ],
-    aiResponseText: 'Recalling from our earlier conversation — yes, the Tissot T-My Lady features a sapphire crystal and stainless steel case, making it durable for daily wear.',
-    contextNote: 'Recalled context from 2 messages ago',
+    minMode: 'tools',
   },
   {
     id: 'inventory-awareness',
@@ -134,6 +110,58 @@ const DEMO_SLIDES: DemoSlide[] = [
     ],
     aiResponseText: 'Checking real-time inventory — 12 units in stock, eligible for express shipping. Estimated delivery: Thursday. $289.99 with free shipping over $200.',
     contextNote: 'Live stock: 12 units available',
+    minMode: 'tools',
+  },
+  {
+    id: 'multi-agent',
+    featureName: 'Multi-Agent Orchestration',
+    featureColor: 'linear-gradient(135deg, #a855f7, #ec4899)',
+    featureGlow: 'rgba(168, 85, 247, 0.4)',
+    featureIconKey: 'target',
+    userMessage: 'Are any of those low on stock? And what about pricing?',
+    aiAvatarIconKey: 'target',
+    aiAvatarLabel: 'Orchestrator',
+    agentBadges: [
+      { label: 'Inventory Agent', bgColor: 'rgba(59, 130, 246, 0.2)', textColor: '#93c5fd' },
+      { label: 'Pricing Agent', bgColor: 'rgba(245, 158, 11, 0.2)', textColor: '#fcd34d' },
+      { label: 'Recommendation', bgColor: 'rgba(234, 179, 8, 0.2)', textColor: '#fde047' },
+    ],
+    aiResponseText: 'I routed your request to 3 agents simultaneously — Inventory checked stock, Pricing analyzed value, and Recommendation ranked the best options.',
+    contextNote: '3 agents collaborated in 1.2s',
+    minMode: 'full',
+  },
+  {
+    id: 'conversation-memory',
+    featureName: 'Conversation Memory',
+    featureColor: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+    featureGlow: 'rgba(139, 92, 246, 0.4)',
+    featureIconKey: 'brain',
+    userMessage: 'What about the Tissot — is it good for everyday wear?',
+    aiAvatarIconKey: 'brain',
+    aiAvatarLabel: 'Orchestrator',
+    agentBadges: [
+      { label: 'Search Agent', bgColor: 'rgba(59, 130, 246, 0.2)', textColor: '#93c5fd' },
+    ],
+    aiResponseText: 'Recalling from our earlier conversation — yes, the Tissot T-My Lady features a sapphire crystal and stainless steel case, making it durable for daily wear.',
+    contextNote: 'Recalled context from 2 messages ago',
+    minMode: 'full',
+  },
+  {
+    id: 'cedar-policy',
+    featureName: 'Cedar Policy Enforcement',
+    featureColor: 'linear-gradient(135deg, #10b981, #0d9488)',
+    featureGlow: 'rgba(16, 185, 129, 0.4)',
+    featureIconKey: 'shield',
+    userMessage: 'Restock the Compact Travel Camera — order 1000 units.',
+    aiAvatarIconKey: 'shield',
+    aiAvatarLabel: 'Policy Engine',
+    agentBadges: [
+      { label: 'Cedar Policy', bgColor: 'rgba(16, 185, 129, 0.2)', textColor: '#6ee7b7' },
+      { label: 'Inventory Agent', bgColor: 'rgba(16, 185, 129, 0.2)', textColor: '#6ee7b7' },
+    ],
+    aiResponseText: 'Policy check failed — Cedar rules block bulk restock over 500 units without manager approval. Would you like me to split this into two approved orders?',
+    contextNote: 'Cedar policy: max_restock_qty = 500',
+    minMode: 'agentcore',
   },
 ]
 
@@ -182,24 +210,50 @@ const msgFromBelow = {
 interface DemoChatCarouselProps {
   onOpenChat: () => void
   compact?: boolean
+  workshopMode?: WorkshopMode
 }
 
-const DemoChatCarousel = ({ onOpenChat, compact = false }: DemoChatCarouselProps) => {
+const DemoChatCarousel = ({ onOpenChat, compact = false, workshopMode = 'full' }: DemoChatCarouselProps) => {
   const { theme } = useTheme()
   const [activeIndex, setActiveIndex] = useState(0)
   const [direction, setDirection] = useState(1)
   const [isPaused, setIsPaused] = useState(false)
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Filter slides based on current workshop mode
+  const modeIdx = MODE_ORDER.indexOf(workshopMode)
+  const visibleSlides = DEMO_SLIDES.filter(s => MODE_ORDER.indexOf(s.minMode) <= modeIdx)
+
+  // Mode accent colors — matches AIAssistant.tsx
+  const modeAccent = workshopMode === 'agentcore' ? '#10b981' : workshopMode === 'full' ? '#f59e0b' : '#0071e3'
+  const modeStatusColor = workshopMode === 'agentcore' ? '#34d399' : workshopMode === 'full' ? '#fbbf24' : '#22c55e'
+  const modeBorderColor = workshopMode === 'agentcore' ? 'rgba(16, 185, 129, 0.2)' : workshopMode === 'full' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255,255,255,0.08)'
+  const modeGlowColor = workshopMode === 'agentcore' ? 'rgba(16, 185, 129, 0.08)' : workshopMode === 'full' ? 'rgba(245, 158, 11, 0.08)' : ''
+  const modeHeaderBg = workshopMode === 'agentcore'
+    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.04) 0%, transparent 100%)'
+    : workshopMode === 'full'
+    ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.04) 0%, transparent 100%)'
+    : 'transparent'
+  const modeStatusText = workshopMode === 'agentcore'
+    ? 'AgentCore Runtime · 5 services'
+    : workshopMode === 'full'
+    ? 'Orchestrator → 3 specialists'
+    : '1 agent online'
+
   // Auto-cycle
   useEffect(() => {
     if (isPaused) return
     const timer = setInterval(() => {
       setDirection(1)
-      setActiveIndex(prev => (prev + 1) % DEMO_SLIDES.length)
+      setActiveIndex(prev => (prev + 1) % visibleSlides.length)
     }, CYCLE_MS)
     return () => clearInterval(timer)
-  }, [isPaused])
+  }, [isPaused, visibleSlides.length])
+
+  // Reset activeIndex when mode changes and slides shrink
+  useEffect(() => {
+    setActiveIndex(0)
+  }, [workshopMode])
 
   const goToSlide = useCallback((index: number) => {
     setDirection(index > activeIndex ? 1 : -1)
@@ -214,18 +268,20 @@ const DemoChatCarousel = ({ onOpenChat, compact = false }: DemoChatCarouselProps
     return () => { if (resumeTimer.current) clearTimeout(resumeTimer.current) }
   }, [])
 
-  const slide = DEMO_SLIDES[activeIndex]
+  const slide = visibleSlides[activeIndex % visibleSlides.length]
 
   const cardContent = (
     <>
         <motion.div
-          className={`relative ${compact ? 'max-w-[520px]' : 'max-w-[700px]'} mx-auto rounded-3xl overflow-hidden`}
+          className={`relative ${compact ? 'max-w-[520px]' : 'max-w-[700px]'} mx-auto rounded-[20px] overflow-hidden`}
           style={{
-            background: theme === 'dark' ? 'rgba(0, 0, 0, 0.9)' : '#ffffff',
-            border: theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.1)',
+            background: theme === 'dark' ? 'rgba(0, 0, 0, 0.95)' : '#ffffff',
+            backdropFilter: 'blur(40px)',
+            WebkitBackdropFilter: 'blur(40px)',
+            border: theme === 'dark' ? `1px solid ${modeBorderColor}` : '1px solid rgba(0,0,0,0.1)',
             boxShadow: theme === 'dark'
-              ? '0 40px 80px rgba(0, 0, 0, 0.5)'
-              : '0 40px 80px rgba(0, 0, 0, 0.1), 0 8px 24px rgba(0, 0, 0, 0.06)',
+              ? `0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04)${modeGlowColor ? `, 0 0 40px ${modeGlowColor}` : ''}`
+              : '0 25px 60px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.08)',
           }}
           initial={{ opacity: 0, y: 40, scale: 0.95 }}
           whileInView={{ opacity: 1, y: 0, scale: 1 }}
@@ -236,11 +292,16 @@ const DemoChatCarousel = ({ onOpenChat, compact = false }: DemoChatCarouselProps
             if (!resumeTimer.current) setIsPaused(false)
           }}
         >
-          {/* Chat header */}
-          <div className="px-6 py-4 flex items-center gap-3"
-            style={{ borderBottom: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` }}>
+          {/* Chat header — matches AIAssistant */}
+          <div className="px-5 py-4 rounded-t-[20px] flex items-center gap-3"
+            style={{
+              borderBottom: theme === 'dark'
+                ? `1px solid ${workshopMode === 'agentcore' ? 'rgba(16, 185, 129, 0.15)' : workshopMode === 'full' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255,255,255,0.06)'}`
+                : '1px solid rgba(0,0,0,0.08)',
+              background: theme === 'dark' ? modeHeaderBg : 'transparent',
+            }}>
             <motion.div
-              className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0"
+              className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0"
               style={{
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
                 border: '1.5px solid var(--border-color)',
@@ -252,9 +313,9 @@ const DemoChatCarousel = ({ onOpenChat, compact = false }: DemoChatCarouselProps
               <img src={`${import.meta.env.BASE_URL}chat-icon.jpeg`} alt="AI" className="w-full h-full object-cover" />
             </motion.div>
             <div>
-              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Blaize AI</div>
-              <div className="text-[10px] flex items-center gap-1" style={{ color: '#22c55e' }}>
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#22c55e' }} /> 5 agents online
+              <div className="font-medium text-sm text-text-primary">Blaize AI</div>
+              <div className="text-[11px] flex items-center gap-1" style={{ color: modeStatusColor }}>
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: modeStatusColor }} /> {modeStatusText}
               </div>
             </div>
           </div>
@@ -295,32 +356,32 @@ const DemoChatCarousel = ({ onOpenChat, compact = false }: DemoChatCarouselProps
                   ); })()}
                 </div>
 
-                {/* Messages */}
+                {/* Messages — matches AIAssistant bubble styling */}
                 <motion.div
-                  className="p-6 pt-3 space-y-4"
+                  className="px-5 py-5 pt-3 space-y-4"
                   variants={staggerContainer}
                   initial="hidden"
                   animate="visible"
                 >
                   {/* User message */}
                   <motion.div className="flex justify-end" variants={msgFromRight}>
-                    <div className="rounded-2xl rounded-br-sm px-4 py-3 max-w-[80%]"
+                    <div className="rounded-2xl rounded-br-sm px-4 py-3 max-w-[85%]"
                       style={{
-                        background: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                        border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'}`,
+                        background: theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#0071e3',
+                        color: theme === 'light' ? '#ffffff' : 'var(--text-primary)',
                       }}>
-                      <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{slide.userMessage}</p>
+                      <p className="text-[14px] leading-relaxed">{slide.userMessage}</p>
                     </div>
                   </motion.div>
 
                   {/* AI response */}
                   <motion.div className="flex gap-3 items-start" variants={msgFromLeft}>
-                    <div className="rounded-2xl rounded-bl-sm px-4 py-3 flex-1"
+                    <div className="rounded-2xl rounded-bl-sm px-4 py-3 max-w-[90%]"
                       style={{
-                        background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-                        border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+                        background: theme === 'dark' ? 'rgba(255, 255, 255, 0.06)' : '#f2f2f7',
+                        border: theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
                       }}>
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
                         {slide.agentBadges.map((badge, i) => (
                           <span key={i} className="text-[10px] px-2 py-0.5 rounded-full font-medium"
                             style={{ background: badge.bgColor, color: badge.textColor }}>
@@ -328,7 +389,7 @@ const DemoChatCarousel = ({ onOpenChat, compact = false }: DemoChatCarouselProps
                           </span>
                         ))}
                       </div>
-                      <p className="text-sm" style={{ color: 'var(--text-primary)', opacity: 0.8 }}>{slide.aiResponseText}</p>
+                      <p className="text-[14px] leading-relaxed" style={{ color: 'var(--text-primary)' }}>{slide.aiResponseText}</p>
                     </div>
                   </motion.div>
 
@@ -373,17 +434,22 @@ const DemoChatCarousel = ({ onOpenChat, compact = false }: DemoChatCarouselProps
             </AnimatePresence>
           </div>
 
-          {/* Input bar */}
-          <div className="px-6 pb-5">
-            <div className="flex items-center gap-3 rounded-xl px-4 py-3"
-              style={{
-                background: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
-                border: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
-              }}>
-              <span className="text-sm flex-1" style={{ color: 'var(--text-secondary)' }}>Ask about any product...</span>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: 'var(--link-color)' }}>
-                <Send className="w-3.5 h-3.5 text-white" />
+          {/* Input bar — matches AIAssistant */}
+          <div className="px-5 py-4"
+            style={{ borderTop: theme === 'dark' ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.08)' }}>
+            <div className="flex gap-2.5">
+              <div className="flex-1 px-4 py-3 rounded-xl text-sm"
+                style={{
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--input-border)',
+                  color: 'var(--text-secondary)',
+                  opacity: 0.4,
+                }}>
+                Ask about any product...
+              </div>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: modeAccent }}>
+                <Send className="h-4 w-4 text-white" />
               </div>
             </div>
           </div>
@@ -393,7 +459,7 @@ const DemoChatCarousel = ({ onOpenChat, compact = false }: DemoChatCarouselProps
             className="absolute inset-0 w-full h-full cursor-pointer z-10 group"
             onClick={onOpenChat}
           >
-            <div className="absolute inset-0 transition-colors duration-300 rounded-3xl"
+            <div className="absolute inset-0 transition-colors duration-300 rounded-[20px]"
               style={{ background: 'transparent' }}
               onMouseEnter={(e) => e.currentTarget.style.background = theme === 'dark' ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
@@ -407,7 +473,7 @@ const DemoChatCarousel = ({ onOpenChat, compact = false }: DemoChatCarouselProps
 
         {/* Navigation dots */}
         <div className="flex justify-center gap-2 mt-6">
-          {DEMO_SLIDES.map((s, index) => (
+          {visibleSlides.map((s, index) => (
             <button
               key={s.id}
               onClick={() => goToSlide(index)}
@@ -450,9 +516,21 @@ const DemoChatCarousel = ({ onOpenChat, compact = false }: DemoChatCarouselProps
           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         >
           <h2 className="text-3xl lg:text-4xl font-extralight mb-4 tracking-tight" style={{ color: 'var(--text-primary)' }}>
-            Meet the <span style={{ color: 'var(--link-color)' }}>agents</span>
+            {workshopMode === 'tools'
+              ? <>Meet the <span style={{ color: '#0071e3' }}>agent</span></>
+              : workshopMode === 'full'
+              ? <>Watch them <span style={{ color: '#f59e0b' }}>collaborate</span></>
+              : <>Ready for <span style={{ color: '#10b981' }}>production</span></>
+            }
           </h2>
-          <p className="text-lg font-light" style={{ color: 'var(--text-secondary)' }}>Five specialized AI agents collaborate to find exactly what you need</p>
+          <p className="text-lg font-light" style={{ color: 'var(--text-secondary)' }}>
+            {workshopMode === 'tools'
+              ? 'Your AI assistant can now query live data through the tools you built'
+              : workshopMode === 'full'
+              ? 'Three specialist agents work together, routed by an orchestrator in real-time'
+              : 'Enterprise memory, Cedar policies, and MCP Gateway — all live'
+            }
+          </p>
         </motion.div>
         {cardContent}
       </div>

@@ -12,6 +12,8 @@ interface HeaderProps {
   onCartClick?: () => void
   onPlaygroundClick?: () => void
   loginSlot?: React.ReactNode
+  completedModules?: Set<string>
+  onModeSwitch?: () => void
 }
 
 const WORKSHOP_STEPS: { key: WorkshopMode; label: string }[] = [
@@ -23,7 +25,7 @@ const WORKSHOP_STEPS: { key: WorkshopMode; label: string }[] = [
 ]
 const MODE_ORDER: WorkshopMode[] = ['legacy', 'semantic', 'tools', 'full', 'agentcore']
 
-const Header = ({ onSearch, cartItemCount = 0, onCartClick, onPlaygroundClick, loginSlot }: HeaderProps) => {
+const Header = ({ onSearch, cartItemCount = 0, onCartClick, onPlaygroundClick, loginSlot, completedModules, onModeSwitch }: HeaderProps) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestions, setSuggestions] = useState<Array<{text: string, category: string}>>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -137,11 +139,11 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick, onPlaygroundClick, l
             <div className="hidden md:flex items-center gap-1 flex-shrink-0" data-tour="workshop-pills">
               {WORKSHOP_STEPS.map((step, idx) => {
                 const isCurrent = step.key === workshopMode
-                const isCompleted = idx < currentModeIdx
+                const isCompleted = completedModules?.has(step.key) || idx < currentModeIdx
                 return (
                   <button
                     key={step.key}
-                    onClick={() => setWorkshopMode(step.key)}
+                    onClick={() => { setWorkshopMode(step.key); onModeSwitch?.() }}
                     className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 hover:opacity-90"
                     style={{
                       background: isCurrent ? '#0071e3' : 'rgba(255, 255, 255, 0.08)',
@@ -280,7 +282,7 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick, onPlaygroundClick, l
 
               {/* GitHub Link */}
               <a
-                href="https://github.com/aws-samples/sample-dat406-build-agentic-ai-powered-search-apg"
+                href="https://github.com/aws-samples/sample-blaize-bazaar-agentic-search-apg"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 rounded-lg transition-all duration-300 group flex-shrink-0"
