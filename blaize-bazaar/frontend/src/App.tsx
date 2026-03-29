@@ -1065,97 +1065,104 @@ function AppContent() {
           {showOnboarding && (
             <motion.div
               className="fixed inset-0 z-[3000] flex items-center justify-center"
-              style={{ background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)' }}
+              style={{ background: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
               <motion.div
                 style={{
-                  width: 540,
+                  width: 520,
                   maxWidth: '92vw',
-                  borderRadius: 24,
+                  borderRadius: 20,
                   overflow: 'hidden',
-                  background: 'rgba(8, 8, 12, 0.97)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  boxShadow: '0 32px 64px -16px rgba(0, 0, 0, 0.6)',
+                  background: 'rgba(28, 28, 30, 0.98)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 24px 80px -12px rgba(0, 0, 0, 0.7)',
                 }}
-                initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                initial={{ scale: 0.96, opacity: 0, y: 16 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+                exit={{ scale: 0.97, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               >
-                {/* Header with gradient accent */}
-                <div style={{
-                  padding: '32px 32px 20px',
-                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.06) 50%, rgba(236, 72, 153, 0.04) 100%)',
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                  textAlign: 'center',
-                }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(139, 92, 246, 0.9)', marginBottom: 8 }}>
-                    AWS re:Invent 2026
-                  </div>
-                  <h2 style={{ fontSize: 22, fontWeight: 700, color: '#ffffff', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
-                    DAT406 — Agentic AI-Powered Search
+                {/* Header */}
+                <div style={{ padding: '36px 32px 24px', textAlign: 'center' }}>
+                  <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+                    style={{
+                      width: 56, height: 56, borderRadius: 16, margin: '0 auto 16px',
+                      background: 'linear-gradient(135deg, #0A84FF, #5E5CE6)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 8px 24px rgba(10, 132, 255, 0.3)',
+                    }}
+                  >
+                    <Zap className="h-6 w-6" style={{ color: '#fff' }} />
+                  </motion.div>
+                  <h2 style={{ fontSize: 24, fontWeight: 700, color: '#ffffff', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+                    Blaize Bazaar
                   </h2>
-                  <p style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.7)', margin: 0 }}>
-                    Aurora PostgreSQL + pgvector + Bedrock AgentCore
+                  <p style={{ fontSize: 14, color: 'rgba(255, 255, 255, 0.5)', margin: 0, fontWeight: 400 }}>
+                    Agentic AI-Powered Search Workshop
                   </p>
                 </div>
 
-                {/* Module roadmap — shown as a connected journey */}
-                <div style={{ padding: '20px 24px 8px', position: 'relative' }}>
+                {/* Module roadmap */}
+                <div style={{ padding: '0 24px 16px' }}>
                   {[
-                    { label: 'Explore the Storefront', desc: 'Start here — browse the store with keyword-only search and see what breaks', color: '#ffffff', icon: <Search className="h-4 w-4" /> },
-                    { label: 'Teach It to Understand', desc: 'Implement pgvector semantic search so "budget laptop for college" actually works', color: '#60a5fa', icon: <Database className="h-4 w-4" />, code: 'vector_search() + hybrid_fusion()' },
-                    { label: 'Give It Superpowers', desc: 'Build @tool functions so the AI can query live inventory and trending data', color: '#a78bfa', icon: <Zap className="h-4 w-4" />, code: 'get_trending_products()' },
-                    { label: 'Make Agents Collaborate', desc: 'Wire up specialist agents with an orchestrator that routes to the right expert', color: '#fbbf24', icon: <GitBranch className="h-4 w-4" />, code: 'recommendation_agent + orchestrator' },
-                    { label: 'Ship It to Production', desc: 'Add session memory, MCP Gateway, and Cedar policies via Bedrock AgentCore', color: '#34d399', icon: <Shield className="h-4 w-4" />, code: 'memory + gateway + policy' },
+                    { num: '1', label: 'Explore the Storefront', desc: 'Browse with keyword search and discover its limitations', color: '#0A84FF', icon: <Search className="h-4 w-4" /> },
+                    { num: '2', label: 'Semantic Search', desc: 'Add pgvector so natural language queries actually work', color: '#5E5CE6', icon: <Database className="h-4 w-4" /> },
+                    { num: '3', label: 'Agent Tools', desc: 'Build tool functions for live inventory and trending data', color: '#BF5AF2', icon: <Zap className="h-4 w-4" /> },
+                    { num: '4', label: 'Multi-Agent Orchestration', desc: 'Wire specialist agents with intelligent routing', color: '#FF9F0A', icon: <GitBranch className="h-4 w-4" /> },
+                    { num: '5', label: 'Production Deployment', desc: 'Add memory, MCP Gateway, and Cedar policies', color: '#30D158', icon: <Shield className="h-4 w-4" /> },
                   ].map((s, i) => {
                     const isLit = onboardHighlight === i
                     return (
                     <motion.div
                       key={i}
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{
-                        opacity: 1, x: 0,
-                        scale: isLit ? 1.015 : 1,
-                        backgroundColor: isLit ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.03)',
-                      }}
-                      transition={i < 5 ? { delay: 0.15 + i * 0.08, duration: 0.35, scale: { duration: 0.4 }, backgroundColor: { duration: 0.4 } } : { duration: 0.35 }}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.15 + i * 0.06, duration: 0.3 }}
                       style={{
                         display: 'flex',
-                        alignItems: 'flex-start',
+                        alignItems: 'center',
                         gap: 14,
-                        padding: '12px 14px',
-                        marginBottom: 6,
-                        borderRadius: 14,
-                        border: `1px solid ${isLit ? s.color + '55' : s.color + '22'}`,
-                        boxShadow: isLit ? `0 0 20px ${s.color}18, inset 0 0 12px ${s.color}08` : 'none',
-                        position: 'relative',
+                        padding: '11px 14px',
+                        marginBottom: 4,
+                        borderRadius: 12,
+                        transition: 'background 0.3s ease',
+                        background: isLit ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
                       }}
                     >
                       <motion.div
                         animate={{
-                          scale: isLit ? 1.1 : 1,
-                          boxShadow: isLit ? `0 0 12px ${s.color}40` : `0 0 0px ${s.color}00`,
+                          scale: isLit ? 1.08 : 1,
+                          boxShadow: isLit ? `0 0 16px ${s.color}50` : `0 0 0px ${s.color}00`,
                         }}
-                        transition={{ duration: 0.4 }}
+                        transition={{ duration: 0.35 }}
                         style={{
                           width: 36, height: 36, borderRadius: 10, flexShrink: 0,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: s.color + '20', color: s.color,
-                          zIndex: 1,
+                          background: isLit ? s.color : 'rgba(255, 255, 255, 0.08)',
+                          color: isLit ? '#fff' : 'rgba(255, 255, 255, 0.5)',
+                          transition: 'background 0.35s ease, color 0.35s ease',
+                          fontSize: 13, fontWeight: 700,
                         }}
                       >
-                        {s.icon}
+                        {isLit ? s.icon : s.num}
                       </motion.div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#ffffff' }}>{s.label}</span>
-                        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', margin: '3px 0 0', lineHeight: 1.45 }}>{s.desc}</p>
-                        {s.code && (
-                          <p style={{ fontSize: 12, color: s.color, margin: '4px 0 0', fontFamily: 'monospace' }}>You build: {s.code}</p>
-                        )}
+                        <span style={{
+                          fontSize: 14, fontWeight: 600,
+                          color: isLit ? '#fff' : 'rgba(255, 255, 255, 0.85)',
+                          transition: 'color 0.3s ease',
+                        }}>{s.label}</span>
+                        <p style={{
+                          fontSize: 13, margin: '2px 0 0', lineHeight: 1.4,
+                          color: isLit ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.4)',
+                          transition: 'color 0.3s ease',
+                        }}>{s.desc}</p>
                       </div>
                     </motion.div>
                     )
@@ -1163,32 +1170,33 @@ function AppContent() {
                 </div>
 
                 {/* Footer */}
-                <div style={{ padding: '12px 24px 24px' }}>
+                <div style={{ padding: '8px 24px 28px' }}>
                   <motion.button
                     onClick={() => {
                       setShowOnboarding(false)
                       localStorage.setItem('blaize-onboarding-done', '1')
                       setWorkshopMode('legacy')
                     }}
-                    whileHover={{ scale: 1.01 }}
+                    whileHover={{ scale: 1.015, boxShadow: '0 6px 20px rgba(10, 132, 255, 0.4)' }}
                     whileTap={{ scale: 0.98 }}
                     style={{
                       width: '100%',
-                      padding: '12px 0',
-                      borderRadius: 14,
-                      fontSize: 14,
+                      padding: '13px 0',
+                      borderRadius: 12,
+                      fontSize: 15,
                       fontWeight: 600,
-                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                      background: '#0A84FF',
                       color: '#ffffff',
                       border: 'none',
                       cursor: 'pointer',
-                      letterSpacing: '0.01em',
+                      letterSpacing: '-0.01em',
+                      transition: 'box-shadow 0.2s ease',
                     }}
                   >
-                    Start Building
+                    Get Started
                   </motion.button>
-                  <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: 10 }}>
-                    Switch between modules anytime using the header pills or the Playground
+                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', textAlign: 'center', marginTop: 12 }}>
+                    Aurora PostgreSQL · pgvector · Amazon Bedrock · AgentCore
                   </p>
                 </div>
               </motion.div>

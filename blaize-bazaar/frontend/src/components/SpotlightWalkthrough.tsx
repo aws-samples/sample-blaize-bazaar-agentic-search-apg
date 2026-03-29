@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLayout } from '../contexts/LayoutContext'
 import { TOUR_STEPS, type TourAction } from '../data/tourSteps'
-import { ChevronRight, X, Sparkles, PartyPopper, Github } from 'lucide-react'
+import { ChevronRight, X, Sparkles, PartyPopper, Github, Check } from 'lucide-react'
 
 interface SpotlightWalkthroughProps {
   onAction: (actionKey: TourAction['actionKey']) => void
@@ -44,7 +44,6 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
         width: rect.width + padding * 2,
         height: rect.height + padding * 2,
       }
-      // Only update state if rect actually changed (avoid re-renders)
       const prev = prevRectRef.current
       if (!prev || prev.top !== newRect.top || prev.left !== newRect.left ||
           prev.width !== newRect.width || prev.height !== newRect.height) {
@@ -62,12 +61,10 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
 
   useEffect(() => {
     if (!activeTour || !currentStep) return
-    // Scroll target into view
     const el = document.querySelector(currentStep.selector)
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
-    // Start tracking
     rafRef.current = requestAnimationFrame(trackTarget)
     return () => cancelAnimationFrame(rafRef.current)
   }, [activeTour, currentStep, trackTarget])
@@ -89,19 +86,24 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
   const getTooltipStyle = (): React.CSSProperties => {
     if (!targetRect) return { opacity: 0 }
     const gap = 16
-    const tooltipWidth = 340
-    const pos = currentStep.position
+    const tooltipWidth = 360
 
-    switch (pos) {
+    switch (currentStep.position) {
       case 'bottom':
         return {
           top: targetRect.top + targetRect.height + gap,
-          left: targetRect.left + targetRect.width / 2 - tooltipWidth / 2,
+          left: Math.max(16, Math.min(
+            targetRect.left + targetRect.width / 2 - tooltipWidth / 2,
+            window.innerWidth - tooltipWidth - 16
+          )),
         }
       case 'top':
         return {
           bottom: window.innerHeight - targetRect.top + gap,
-          left: targetRect.left + targetRect.width / 2 - tooltipWidth / 2,
+          left: Math.max(16, Math.min(
+            targetRect.left + targetRect.width / 2 - tooltipWidth / 2,
+            window.innerWidth - tooltipWidth - 16
+          )),
         }
       case 'right':
         return {
@@ -130,76 +132,58 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="absolute inset-0" style={{ background: 'rgba(0, 0, 0, 0.85)' }} onClick={endTour} />
+      <div className="absolute inset-0" style={{ background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }} onClick={endTour} />
       <motion.div
-        className="relative w-[440px] max-w-[90vw]"
-        initial={{ opacity: 0, scale: 0.85, y: 30 }}
+        className="relative w-[460px] max-w-[90vw]"
+        initial={{ opacity: 0, scale: 0.9, y: 24 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.1 }}
+        transition={{ type: 'spring', stiffness: 240, damping: 24, delay: 0.1 }}
       >
         <div
-          className="rounded-3xl p-8 shadow-2xl text-center"
+          className="rounded-2xl p-8 text-center"
           style={{
-            background: 'rgba(0, 0, 0, 0.95)',
-            backdropFilter: 'blur(40px)',
-            WebkitBackdropFilter: 'blur(40px)',
+            background: 'rgba(28, 28, 30, 0.98)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 24px 80px -12px rgba(0, 0, 0, 0.7)',
           }}
         >
+          {/* Animated checkmark */}
           <motion.div
-            className="text-6xl mb-5"
-            animate={{ rotate: [0, -10, 10, -5, 5, 0], scale: [1, 1.2, 1] }}
-            transition={{ duration: 0.8, delay: 0.3 }}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+            style={{
+              width: 64, height: 64, borderRadius: 20, margin: '0 auto 20px',
+              background: 'linear-gradient(135deg, #30D158, #34C759)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 8px 24px rgba(48, 209, 88, 0.3)',
+            }}
           >
-            🎉
+            <Check className="h-8 w-8" style={{ color: '#fff', strokeWidth: 3 }} />
           </motion.div>
 
-          <h2 className="text-2xl font-semibold mb-3 text-white" style={{ letterSpacing: '-0.02em' }}>
+          <h2 className="text-2xl font-semibold mb-2 text-white" style={{ letterSpacing: '-0.02em' }}>
             {currentStep.title}
           </h2>
 
-          <p className="text-[14px] leading-relaxed mb-6" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+          <p className="text-[14px] leading-relaxed mb-8" style={{ color: 'rgba(255, 255, 255, 0.55)', maxWidth: 360, margin: '0 auto' }}>
             {currentStep.description}
           </p>
 
-          {/* Tech stack badges */}
-          <div className="flex flex-wrap justify-center gap-2 mb-6">
-            {['Aurora PostgreSQL', 'pgvector', 'Amazon Bedrock', 'Strands SDK'].map(tech => (
+          {/* Tech stack — minimal pills */}
+          <div className="flex flex-wrap justify-center gap-2 mb-8">
+            {['Aurora PostgreSQL', 'pgvector', 'Amazon Bedrock', 'Strands SDK', 'AgentCore'].map(tech => (
               <span
                 key={tech}
                 className="px-3 py-1 rounded-full text-[11px] font-medium"
                 style={{
-                  background: 'rgba(52, 211, 153, 0.1)',
-                  border: '1px solid rgba(52, 211, 153, 0.25)',
-                  color: 'rgba(52, 211, 153, 0.9)',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  color: 'rgba(255, 255, 255, 0.5)',
                 }}
               >
                 {tech}
               </span>
             ))}
-          </div>
-
-          {/* Next steps */}
-          <div
-            className="rounded-xl p-4 mb-6 text-left"
-            style={{ background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.06)' }}
-          >
-            <p className="text-[12px] font-semibold uppercase tracking-wider mb-2.5" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
-              Next Steps
-            </p>
-            <div className="space-y-2">
-              {[
-                'Explore all Developer Tools — every panel is now unlocked',
-                'Try multi-turn agent conversations with complex queries',
-                'Test Guardrails with PII and off-topic inputs',
-                'Toggle Chaos Mode and watch retry patterns in Agent Traces',
-              ].map((step, i) => (
-                <div key={i} className="flex items-start gap-2 text-[13px]" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
-                  <span className="text-[10px] mt-0.5" style={{ color: 'rgba(52, 211, 153, 0.7)' }}>▸</span>
-                  {step}
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Actions */}
@@ -208,22 +192,23 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
               href="https://github.com/aws-samples/sample-blaize-bazaar-agentic-search-apg"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all hover:bg-white/10"
+              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-all hover:bg-white/10"
               style={{
-                background: 'rgba(255, 255, 255, 0.06)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 color: 'rgba(255, 255, 255, 0.7)',
               }}
             >
               <Github className="h-4 w-4" />
-              View Source
+              Source Code
             </a>
             <button
               onClick={advanceTour}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-all hover:brightness-110"
+              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-all"
               style={{
-                background: '#0071e3',
+                background: '#0A84FF',
                 color: '#ffffff',
+                boxShadow: '0 4px 12px rgba(10, 132, 255, 0.3)',
               }}
             >
               <PartyPopper className="h-4 w-4" />
@@ -243,38 +228,44 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.25 }}
     >
       {/* Dark overlay with cutout */}
       <div
         className="absolute inset-0"
         onClick={endTour}
-        style={{ background: 'rgba(0, 0, 0, 0.75)' }}
+        style={{ background: 'rgba(0, 0, 0, 0.7)' }}
       />
 
       {/* Spotlight cutout */}
       {targetRect && (
         <motion.div
-          className="absolute rounded-xl"
+          className="absolute"
           style={{
             top: targetRect.top,
             left: targetRect.left,
             width: targetRect.width,
             height: targetRect.height,
-            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.75)',
+            borderRadius: 14,
+            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7)',
             pointerEvents: 'none',
           }}
-          initial={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 28 }}
         >
-          {/* Glowing border ring */}
-          <div
-            className="absolute inset-0 rounded-xl"
-            style={{
-              border: '2px solid rgba(59, 130, 246, 0.5)',
-              boxShadow: '0 0 20px rgba(59, 130, 246, 0.2), inset 0 0 20px rgba(59, 130, 246, 0.05)',
+          {/* Subtle ring */}
+          <motion.div
+            className="absolute inset-0"
+            style={{ borderRadius: 14 }}
+            animate={{
+              boxShadow: [
+                '0 0 0 2px rgba(10, 132, 255, 0.4), 0 0 16px rgba(10, 132, 255, 0.15)',
+                '0 0 0 2px rgba(10, 132, 255, 0.6), 0 0 24px rgba(10, 132, 255, 0.2)',
+                '0 0 0 2px rgba(10, 132, 255, 0.4), 0 0 16px rgba(10, 132, 255, 0.15)',
+              ],
             }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           />
         </motion.div>
       )}
@@ -282,104 +273,109 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
       {/* Tooltip card */}
       <motion.div
         key={`tooltip-${tourStep}`}
-        className="absolute w-[340px]"
+        className="absolute"
         style={{
           ...getTooltipStyle(),
+          width: 360,
           pointerEvents: 'auto',
         }}
-        initial={{ opacity: 0, y: currentStep.position === 'top' ? 12 : -12 }}
+        initial={{ opacity: 0, y: currentStep.position === 'top' ? 10 : -10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 28, delay: 0.08 }}
       >
         <div
-          className="rounded-2xl p-5 shadow-2xl"
+          className="rounded-2xl p-5"
           style={{
-            background: 'rgba(0, 0, 0, 0.95)',
-            backdropFilter: 'blur(40px)',
-            WebkitBackdropFilter: 'blur(40px)',
+            background: 'rgba(28, 28, 30, 0.98)',
             border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 16px 48px -8px rgba(0, 0, 0, 0.6)',
           }}
         >
-          {/* Step counter */}
+          {/* Header row: progress + close */}
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-medium" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
-              {tourStep + 1} of {totalSteps}
-            </span>
+            <div className="flex items-center gap-2">
+              <span
+                className="text-[11px] font-semibold px-2 py-0.5 rounded-md"
+                style={{ background: 'rgba(10, 132, 255, 0.15)', color: 'rgba(10, 132, 255, 0.9)' }}
+              >
+                {tourStep + 1}/{totalSteps}
+              </span>
+            </div>
             <button
               onClick={endTour}
-              className="p-1 rounded-lg transition-colors hover:bg-white/10"
+              className="p-1.5 rounded-lg transition-colors hover:bg-white/10"
+              aria-label="Close tour"
             >
-              <X className="h-3.5 w-3.5" style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
+              <X className="h-3.5 w-3.5" style={{ color: 'rgba(255, 255, 255, 0.35)' }} />
             </button>
           </div>
 
-          {/* Step dots */}
-          <div className="flex items-center gap-1.5 mb-4">
-            {steps.map((_, i) => (
-              <div
-                key={i}
-                className="h-1.5 rounded-full transition-all duration-300"
-                style={{
-                  width: i === tourStep ? 20 : 6,
-                  background: i === tourStep
-                    ? 'rgba(59, 130, 246, 0.8)'
-                    : i < tourStep
-                      ? 'rgba(52, 211, 153, 0.6)'
-                      : 'rgba(255, 255, 255, 0.15)',
-                }}
-              />
-            ))}
+          {/* Progress bar */}
+          <div
+            className="h-[3px] rounded-full mb-4 overflow-hidden"
+            style={{ background: 'rgba(255, 255, 255, 0.08)' }}
+          >
+            <motion.div
+              className="h-full rounded-full"
+              style={{ background: '#0A84FF' }}
+              initial={{ width: 0 }}
+              animate={{ width: `${((tourStep + 1) / totalSteps) * 100}%` }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+            />
           </div>
 
           {/* Content */}
           <h3 className="text-[16px] font-semibold mb-2" style={{ color: '#ffffff', letterSpacing: '-0.01em' }}>
             {currentStep.title}
           </h3>
-          <p className="text-[14px] leading-relaxed mb-4" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
+          <p className="text-[13px] leading-relaxed mb-5" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
             {currentStep.description}
           </p>
 
           {/* Actions */}
           <div className="flex items-center gap-2">
             {currentStep.tryItAction && (
-              <button
+              <motion.button
                 onClick={() => {
                   onAction(currentStep.tryItAction!.actionKey)
-                  // Auto-advance after a short delay so user sees the action
                   setTimeout(() => advanceTour(), 600)
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[13px] font-medium transition-all hover:brightness-110"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-medium"
                 style={{
-                  background: 'rgba(59, 130, 246, 0.25)',
-                  border: '1px solid rgba(59, 130, 246, 0.4)',
-                  color: 'rgba(147, 197, 253, 0.95)',
+                  background: '#0A84FF',
+                  color: '#ffffff',
+                  boxShadow: '0 2px 8px rgba(10, 132, 255, 0.3)',
                 }}
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 {currentStep.tryItAction.label}
-              </button>
+              </motion.button>
             )}
-            <button
+            <motion.button
               onClick={advanceTour}
-              className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-[13px] font-medium transition-all hover:bg-white/15 ml-auto"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-1 px-4 py-2 rounded-xl text-[13px] font-medium ml-auto"
               style={{
                 background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 color: 'rgba(255, 255, 255, 0.8)',
               }}
             >
               {isLastStep ? 'Done' : 'Next'}
               {!isLastStep && <ChevronRight className="h-3.5 w-3.5" />}
-            </button>
+            </motion.button>
           </div>
 
           {/* Skip link */}
           {!isLastStep && (
             <button
               onClick={endTour}
-              className="mt-3 text-[11px] transition-colors hover:underline block mx-auto"
-              style={{ color: 'rgba(255, 255, 255, 0.3)' }}
+              className="mt-3 text-[11px] transition-colors hover:text-white/50 block mx-auto"
+              style={{ color: 'rgba(255, 255, 255, 0.25)' }}
             >
               Skip tour
             </button>
