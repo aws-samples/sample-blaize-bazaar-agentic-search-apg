@@ -120,13 +120,22 @@ const SearchOverlay = ({
     const startTime = performance.now()
 
     try {
-      const categoryTerms = ['security cameras', 'vacuum cleaners', 'gaming consoles', 'shaving grooming', 'kids watches', 'kids play tractors']
+      // Exact DB category names (lowercase) + common variants for reliable category browsing
+      const categoryTerms = [
+        'smartphones', 'mens watches', 'womens watches', 'watches', 'laptops', 'furniture',
+        'fragrances', 'sunglasses', 'sports accessories', 'mens shoes', 'womens shoes', 'shoes',
+        'kitchen accessories', 'beauty', 'skin care', 'groceries', 'home decoration',
+        'mobile accessories', 'motorcycle', 'tablets', 'tops', 'mens shirts', 'vehicle',
+        'womens bags', 'womens dresses', 'womens jewellery',
+        'security cameras', 'vacuum cleaners', 'gaming consoles', 'shaving grooming',
+        'kids watches', 'kids play tractors',
+      ]
       const isCategorySearch = categoryTerms.some(term => searchTerm.toLowerCase().includes(term))
 
       let response
       if (isCategorySearch) {
         const apiUrl = import.meta.env.VITE_API_URL || ''
-        const res = await fetch(`${apiUrl}/api/products/category/${encodeURIComponent(searchTerm)}?limit=5`)
+        const res = await fetch(`${apiUrl}/api/products/category/${encodeURIComponent(searchTerm)}?limit=12`)
         response = await res.json()
         setIsSemanticSearch(false)
       } else {
@@ -200,16 +209,35 @@ const SearchOverlay = ({
     setRerankTiming(null)
     setRerankRevealed(false)
 
+    // Category bypass for keyword side (same list as performSearch)
+    const categoryTerms = [
+      'smartphones', 'mens watches', 'womens watches', 'watches', 'laptops', 'furniture',
+      'fragrances', 'sunglasses', 'sports accessories', 'mens shoes', 'womens shoes', 'shoes',
+      'kitchen accessories', 'beauty', 'skin care', 'groceries', 'home decoration',
+      'mobile accessories', 'motorcycle', 'tablets', 'tops', 'mens shirts', 'vehicle',
+      'womens bags', 'womens dresses', 'womens jewellery',
+      'security cameras', 'vacuum cleaners', 'gaming consoles', 'shaving grooming',
+      'kids watches', 'kids play tractors',
+    ]
+    const isCategorySearch = categoryTerms.some(term => searchTerm.toLowerCase().includes(term))
+
     await Promise.allSettled([
       (async () => {
         const startTime = performance.now()
         try {
-          const response = await apiClient.search({
-            query: searchTerm,
-            limit: 5,
-            min_similarity: 0.0,
-            search_mode: 'keyword'
-          })
+          let response
+          if (isCategorySearch) {
+            const apiUrl = import.meta.env.VITE_API_URL || ''
+            const res = await fetch(`${apiUrl}/api/products/category/${encodeURIComponent(searchTerm)}?limit=12`)
+            response = await res.json()
+          } else {
+            response = await apiClient.search({
+              query: searchTerm,
+              limit: 5,
+              min_similarity: 0.0,
+              search_mode: 'keyword'
+            })
+          }
           setKeywordLatency(`${Math.round(performance.now() - startTime)}ms`)
           setKeywordResults(transformApiResults(response))
         } catch {

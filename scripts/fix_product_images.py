@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
 """
-Fix product images using Unsplash API — category-based approach.
+Fix product images using Unsplash API — fetch 42+ unique images per category.
 
-Instead of searching per-product (1,008 API calls), searches per-category
-(24 categories × 6 images = 144 calls) and assigns images round-robin
-within each category. Fits within Unsplash demo tier limits with batching.
+Uses broad search queries with per_page=30, 2 pages per category = 60 candidates.
+Total API calls: 24 categories × 2 pages = 48 (fits in free tier's 50/hour).
 
 Usage:
-    # Run all categories (may need multiple runs if rate limited)
     UNSPLASH_ACCESS_KEY=<key> python3 scripts/fix_product_images.py
-
-    # Dry run (preview without writing)
     UNSPLASH_ACCESS_KEY=<key> python3 scripts/fix_product_images.py --dry-run
-
-    # Resume from a specific category
-    UNSPLASH_ACCESS_KEY=<key> python3 scripts/fix_product_images.py --resume-from "Laptops"
 """
 
 import csv
@@ -24,72 +17,79 @@ import sys
 import time
 import urllib.request
 import urllib.parse
+import shutil
 from collections import defaultdict
-from pathlib import Path
 
 UNSPLASH_ACCESS_KEY = os.environ.get("UNSPLASH_ACCESS_KEY", "")
-CSV_PATH = "data/premium-products-with-embeddings.csv"
-CACHE_PATH = "data/.image_cache.json"
-IMAGES_PER_CATEGORY = 6
-REQUEST_DELAY = 1.5  # seconds between API calls
+CSV_PATH = "data/product-catalog-cohere-v4.csv"
+CACHE_PATH = "data/.image_cache_v2.json"
+TARGET_PER_CATEGORY = 42
+REQUEST_DELAY = 1.2  # seconds between API calls
 
-# Search queries per category — tuned for Unsplash's stock photo library
+# One broad query per category — optimized for diverse results
 CATEGORY_QUERIES = {
-    "Beauty": ["cosmetics flatlay", "makeup products", "beauty skincare", "lipstick cosmetic", "foundation makeup", "beauty product bottle"],
-    "Fragrances": ["perfume bottle luxury", "fragrance cologne", "perfume elegant", "eau de parfum", "luxury perfume glass", "scent bottle"],
-    "Furniture": ["modern furniture", "sofa living room", "dining table wood", "bedroom furniture", "office desk chair", "bookshelf interior"],
-    "Groceries": ["organic food grocery", "healthy food ingredients", "pantry staples", "fresh produce kitchen", "spices cooking", "olive oil bottle"],
-    "Home Decoration": ["home decor interior", "wall art decoration", "candle home cozy", "vase flowers decor", "modern lamp interior", "throw pillow decor"],
-    "Kitchen Accessories": ["kitchen utensils", "cutting board knife", "cooking tools", "kitchen gadget", "salad bowl kitchen", "blender juicer"],
-    "Laptops": ["laptop computer desk", "macbook workspace", "laptop coding", "thin laptop silver", "gaming laptop", "laptop coffee desk"],
-    "Mens Shirts": ["mens dress shirt", "button down shirt", "casual mens shirt", "oxford shirt folded", "mens fashion shirt", "polo shirt mens"],
-    "Mens Shoes": ["mens leather shoes", "sneakers mens", "oxford shoes brown", "mens boots casual", "running shoes mens", "loafers mens"],
-    "Mens Watches": ["luxury watch wrist", "mens watch steel", "chronograph watch", "dive watch", "dress watch elegant", "watch closeup"],
-    "Mobile Accessories": ["phone charger cable", "phone case", "wireless earbuds", "power bank", "phone stand desk", "charging station"],
-    "Motorcycle": ["motorcycle road", "sportbike", "cruiser motorcycle", "motorcycle helmet", "motorbike adventure", "classic motorcycle"],
-    "Skin Care": ["skincare routine", "serum bottle dropper", "moisturizer cream jar", "face mask skincare", "cleanser bottle", "skincare products minimal"],
-    "Smartphones": ["smartphone modern", "mobile phone hand", "phone screen", "smartphone photography", "cellphone minimal", "phone technology"],
-    "Sports Accessories": ["fitness equipment gym", "yoga mat accessories", "running gear", "sports water bottle", "resistance bands", "workout accessories"],
-    "Sunglasses": ["sunglasses fashion", "aviator sunglasses", "designer sunglasses", "sunglasses beach", "polarized sunglasses", "cat eye sunglasses"],
-    "Tablets": ["tablet device", "ipad digital", "tablet drawing", "tablet reading", "digital tablet pen", "tablet workspace"],
-    "Tops": ["fashion top clothing", "casual tshirt", "womens blouse", "sweater knitwear", "crop top fashion", "turtleneck sweater"],
-    "Vehicle": ["car modern", "sedan luxury", "suv vehicle", "electric car", "sports car", "car interior dashboard"],
-    "Womens Bags": ["handbag leather", "tote bag fashion", "crossbody bag", "designer purse", "backpack womens", "clutch bag evening"],
-    "Womens Dresses": ["dress fashion elegant", "summer dress floral", "maxi dress", "cocktail dress", "casual dress womens", "wrap dress"],
-    "Womens Jewellery": ["jewelry earrings gold", "necklace pendant", "bracelet silver", "ring diamond", "jewelry minimal", "pearl earrings"],
-    "Womens Shoes": ["womens heels elegant", "ankle boots womens", "sneakers womens", "sandals summer", "ballet flats", "wedge shoes"],
-    "Womens Watches": ["womens watch elegant", "rose gold watch", "bracelet watch", "minimalist watch womens", "luxury watch feminine", "watch jewelry"],
+    "Beauty":              "beauty cosmetics makeup products",
+    "Fragrances":          "perfume fragrance bottle luxury",
+    "Furniture":           "modern furniture interior design",
+    "Groceries":           "fresh food groceries organic",
+    "Home Decoration":     "home decoration interior decor",
+    "Kitchen Accessories": "kitchen utensils cookware tools",
+    "Laptops":             "laptop computer workspace technology",
+    "Mens Shirts":         "mens shirt fashion clothing",
+    "Mens Shoes":          "mens shoes sneakers footwear",
+    "Mens Watches":        "mens luxury watch wristwatch",
+    "Mobile Accessories":  "phone accessories charger earbuds",
+    "Motorcycle":          "motorcycle motorbike road",
+    "Skin Care":           "skincare serum cream products",
+    "Smartphones":         "smartphone mobile phone technology",
+    "Sports Accessories":  "fitness sports equipment workout",
+    "Sunglasses":          "sunglasses eyewear fashion",
+    "Tablets":             "tablet ipad digital device",
+    "Tops":                "fashion clothing tops tshirt",
+    "Vehicle":             "car automobile luxury vehicle",
+    "Womens Bags":         "handbag purse fashion bag",
+    "Womens Dresses":      "dress womens fashion elegant",
+    "Womens Jewellery":    "jewelry necklace earrings gold",
+    "Womens Shoes":        "womens shoes heels fashion",
+    "Womens Watches":      "womens watch elegant jewelry",
 }
 
 
-def search_unsplash(query: str) -> str | None:
-    """Search Unsplash and return the small image URL."""
+def search_unsplash(query: str, page: int = 1, per_page: int = 30) -> list[str]:
+    """Search Unsplash and return list of image URLs."""
     encoded = urllib.parse.quote(query)
-    url = f"https://api.unsplash.com/search/photos?query={encoded}&per_page=1&orientation=squarish"
+    url = (
+        f"https://api.unsplash.com/search/photos"
+        f"?query={encoded}&per_page={per_page}&page={page}"
+        f"&order_by=relevant&content_filter=high"
+    )
     req = urllib.request.Request(url)
     req.add_header("Authorization", f"Client-ID {UNSPLASH_ACCESS_KEY}")
 
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode())
+        with urllib.request.urlopen(req, timeout=15) as resp:
             remaining = resp.headers.get("X-Ratelimit-Remaining", "?")
+            data = json.loads(resp.read().decode())
             results = data.get("results", [])
-            if results:
-                # Use w=400 for consistent sizing
-                raw_url = results[0]["urls"]["raw"]
-                return f"{raw_url}&w=400&q=80"
+            urls = []
+            for r in results:
+                raw_url = r["urls"]["raw"]
+                # Construct consistent URL: 400px wide, high quality
+                clean_url = raw_url.split("?")[0] + "?w=400&q=80&fit=crop"
+                urls.append(clean_url)
+            print(f"    Page {page}: {len(urls)} images (remaining: {remaining})")
+            return urls
     except urllib.error.HTTPError as e:
         if e.code == 403:
-            print(f"\n❌ Rate limited! Remaining: 0. Save cache and resume later.")
-            return "RATE_LIMITED"
-        print(f"  ⚠️ HTTP {e.code}")
+            print(f"\n    RATE LIMITED! Wait ~1 hour and re-run.")
+            return ["RATE_LIMITED"]
+        print(f"    HTTP {e.code}")
     except Exception as e:
-        print(f"  ⚠️ {e}")
-    return None
+        print(f"    Error: {e}")
+    return []
 
 
 def load_cache() -> dict:
-    """Load cached category→images mapping."""
     if os.path.exists(CACHE_PATH):
         with open(CACHE_PATH) as f:
             return json.load(f)
@@ -97,7 +97,6 @@ def load_cache() -> dict:
 
 
 def save_cache(cache: dict):
-    """Save category→images mapping to disk."""
     with open(CACHE_PATH, "w") as f:
         json.dump(cache, f, indent=2)
 
@@ -106,66 +105,59 @@ def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--resume-from", type=str, default=None, help="Resume from this category")
     args = parser.parse_args()
 
     if not UNSPLASH_ACCESS_KEY:
-        print("❌ Set UNSPLASH_ACCESS_KEY environment variable")
+        print("Set UNSPLASH_ACCESS_KEY environment variable")
         sys.exit(1)
 
-    # Load existing cache (for resume)
     cache = load_cache()
-    print(f"📦 Cache has images for {len(cache)} categories")
+    print(f"Cache has images for {len(cache)} categories\n")
 
-    # Phase 1: Fetch images per category
+    # Track all used URLs globally to ensure uniqueness across categories
+    all_used_urls = set()
+    for cat, urls in cache.items():
+        if len(urls) >= TARGET_PER_CATEGORY:
+            all_used_urls.update(urls)
+
+    # Phase 1: Fetch images per category (2 pages × 30 results = 60 candidates)
     categories = sorted(CATEGORY_QUERIES.keys())
-    skip = args.resume_from is not None
     api_calls = 0
 
     for cat in categories:
-        if skip:
-            if cat == args.resume_from:
-                skip = False
-            else:
-                continue
-
-        if cat in cache and len(cache[cat]) >= IMAGES_PER_CATEGORY:
-            print(f"✅ {cat}: {len(cache[cat])} images (cached)")
+        if cat in cache and len(cache[cat]) >= TARGET_PER_CATEGORY:
+            print(f"  {cat}: {len(cache[cat])} images (cached)")
             continue
 
-        queries = CATEGORY_QUERIES.get(cat, [f"{cat.lower()} product"])
-        images = cache.get(cat, [])
+        query = CATEGORY_QUERIES[cat]
+        print(f"\n  {cat} — searching \"{query}\"")
 
-        print(f"\n🔍 {cat} — fetching {IMAGES_PER_CATEGORY - len(images)} images...")
-
-        for query in queries:
-            if len(images) >= IMAGES_PER_CATEGORY:
-                break
-
-            print(f"  Searching: \"{query}\"", end=" ")
-            url = search_unsplash(query)
+        urls = []
+        for page in [1, 2]:
+            result = search_unsplash(query, page=page, per_page=30)
             api_calls += 1
 
-            if url == "RATE_LIMITED":
+            if result and result[0] == "RATE_LIMITED":
                 save_cache(cache)
-                print(f"\n💾 Cache saved. Resume with: --resume-from \"{cat}\"")
-                print(f"   API calls made this run: {api_calls}")
+                print(f"\n  Cache saved ({len(cache)} categories). Re-run after rate limit resets.")
+                print(f"  API calls this run: {api_calls}")
                 sys.exit(0)
-            elif url:
-                images.append(url)
-                print(f"✅")
-            else:
-                print(f"❌")
+
+            # Only add URLs not used by other categories
+            for url in result:
+                if url not in all_used_urls:
+                    urls.append(url)
+                    all_used_urls.add(url)
 
             time.sleep(REQUEST_DELAY)
 
-        cache[cat] = images
+        cache[cat] = urls
         save_cache(cache)
-        print(f"  → {cat}: {len(images)} images collected")
+        print(f"    -> {len(urls)} unique images for {cat}")
 
     # Phase 2: Assign images to products
-    print(f"\n{'='*50}")
-    print(f"Phase 2: Assigning images to products...")
+    print(f"\n{'='*60}")
+    print(f"Phase 2: Assigning unique images to products...\n")
 
     rows = []
     with open(CSV_PATH, newline="", encoding="utf-8") as f:
@@ -174,38 +166,52 @@ def main():
         for row in reader:
             rows.append(row)
 
-    # Group products by category
+    # Group products by category and assign unique images
+    cat_counters = defaultdict(int)
     updated = 0
+    skipped_cats = set()
+
     for row in rows:
         cat = row.get("category_name", "").strip()
         images = cache.get(cat, [])
         if not images:
+            skipped_cats.add(cat)
             continue
-        # Round-robin assignment based on product index within category
-        idx = updated % len(images)
-        row["imgUrl"] = images[idx]
+
+        idx = cat_counters[cat]
+        # Use modulo for safety, but we should have enough (42+ per category)
+        row["imgUrl"] = images[idx % len(images)]
+        cat_counters[cat] += 1
         updated += 1
 
-    print(f"Updated {updated}/{len(rows)} products")
+    # Report
+    print(f"  Updated {updated}/{len(rows)} products")
+    for cat in sorted(cat_counters.keys()):
+        images = cache.get(cat, [])
+        count = cat_counters[cat]
+        unique = min(count, len(images))
+        reused = count - unique if count > len(images) else 0
+        status = f"{unique} unique" + (f", {reused} reused" if reused else "")
+        print(f"    {cat}: {count} products, {len(images)} images available ({status})")
+
+    if skipped_cats:
+        print(f"\n  Skipped (no images): {skipped_cats}")
 
     if not args.dry_run:
-        # Backup
-        backup = CSV_PATH + ".backup"
-        import shutil
+        backup = CSV_PATH + ".backup2"
         shutil.copy2(CSV_PATH, backup)
-        print(f"💾 Backup: {backup}")
+        print(f"\n  Backup: {backup}")
 
-        # Write
         with open(CSV_PATH, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(rows)
-        print(f"✅ Written to {CSV_PATH}")
+        print(f"  Written to {CSV_PATH}")
     else:
-        print("🔍 Dry run — no files changed")
+        print("\n  Dry run — no files changed")
 
-    print(f"\nAPI calls this run: {api_calls}")
-    print(f"Categories cached: {len(cache)}")
+    print(f"\n  API calls: {api_calls}")
+    print(f"  Categories: {len(cache)}")
 
 
 if __name__ == "__main__":

@@ -16,8 +16,8 @@ import os
 import shutil
 import sys
 
-CSV_PATH = "data/premium-products-with-embeddings.csv"
-BACKUP_PATH = "data/premium-products-with-embeddings.csv.backup"
+CSV_PATH = "data/product-catalog-cohere-v4.csv"
+BACKUP_PATH = "data/product-catalog-cohere-v4.csv.backup"
 
 def unsplash_url(photo_id: str, w: int = 400, q: int = 80) -> str:
     return f"https://images.unsplash.com/photo-{photo_id}?w={w}&q={q}&fit=crop"

@@ -17,11 +17,11 @@ interface HeaderProps {
 }
 
 const WORKSHOP_STEPS: { key: WorkshopMode; label: string }[] = [
-  { key: 'legacy', label: 'Legacy App' },
+  { key: 'legacy', label: 'Keyword Search' },
   { key: 'semantic', label: 'Semantic Search' },
-  { key: 'tools', label: 'Agent Tools' },
+  { key: 'tools', label: 'Agent + Tools' },
   { key: 'full', label: 'Multi-Agent' },
-  { key: 'agentcore', label: 'Production' },
+  { key: 'agentcore', label: 'AgentCore' },
 ]
 const MODE_ORDER: WorkshopMode[] = ['legacy', 'semantic', 'tools', 'full', 'agentcore']
 

@@ -71,7 +71,7 @@ export default function SignInPage() {
           AI-Powered Product Search
         </p>
         <p className="text-sm mt-1" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>
-          DAT406 — Build Agentic AI-Powered Search
+          DAT406 — Blaize Bazaar
         </p>
       </motion.div>
 

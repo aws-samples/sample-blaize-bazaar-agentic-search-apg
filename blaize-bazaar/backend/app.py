@@ -391,9 +391,9 @@ async def semantic_search(
                     "boughtInLastMonth" as boughtinlastmonth,
                     category_name,
                     quantity,
-                    ts_rank(to_tsvector('english', product_description), plainto_tsquery('english', %s)) as similarity_score
+                    ts_rank(to_tsvector('english', product_description || ' ' || category_name), plainto_tsquery('english', %s)) as similarity_score
                 FROM bedrock_integration.product_catalog
-                WHERE to_tsvector('english', product_description) @@ plainto_tsquery('english', %s)
+                WHERE to_tsvector('english', product_description || ' ' || category_name) @@ plainto_tsquery('english', %s)
                   AND stars >= 3.0
                   AND "imgUrl" IS NOT NULL
                 ORDER BY similarity_score DESC

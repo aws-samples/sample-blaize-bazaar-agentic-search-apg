@@ -132,17 +132,18 @@ function AppContent() {
   // Hero search bar rotating placeholders (mode-specific)
   const legacyPlaceholders = [
     'MacBook Air',
+    'something to keep my drinks cold',
     'Samsung Galaxy',
+    'comfortable shoes for standing all day',
     'iPhone 15',
-    'Chanel perfume',
-    'Cuisinart kitchen'
+    'gift for someone who loves cooking',
   ]
   const semanticPlaceholders = [
     'something to keep my skin glowing',
     'gift for someone who loves cooking',
     'comfortable shoes for standing all day',
     'gear for outdoor adventures',
-    'budget laptop for college'
+    'budget laptop for college',
   ]
   const heroPlaceholders = workshopMode === 'legacy' ? legacyPlaceholders : semanticPlaceholders
   const [heroPlaceholderIndex, setHeroPlaceholderIndex] = useState(0)
@@ -203,11 +204,11 @@ function AppContent() {
 
   // Mode switch handler with enhanced toast
   const MODE_LABELS: Record<string, string> = {
-    legacy: 'Legacy App — Keyword Search Only',
+    legacy: 'Keyword Search — The Starting Point',
     semantic: 'Semantic Search — Teaching Your Database to Think',
-    tools: 'Agent Tools — From SQL to Structured Capabilities',
-    full: 'Multi-Agent Orchestration — Specialists and Routing',
-    agentcore: 'Production Deployment — Policies, Memory, and Runtime',
+    tools: 'Agent + Tools — From SQL to Structured Capabilities',
+    full: 'Multi-Agent — Specialists and Routing',
+    agentcore: 'AgentCore — Policies, Memory, and Runtime',
   }
   const MODE_FEATURES: Record<string, string[]> = {
     legacy: ['Full-text keyword search', 'Exact match only — no semantic understanding'],
@@ -392,7 +393,7 @@ function AppContent() {
         <main className="mt-[72px] relative z-10 transition-[margin-right] duration-300 ease-in-out" style={{ marginRight: mainContentMarginRight }}>
           {/* Hero Section — Always dark, Apple MacBook Pro style with video */}
           <section className="min-h-[100vh] flex flex-col items-center justify-center relative overflow-hidden bg-black">
-            {/* Background image carousel — warm golden-hour, no faces */}
+            {/* Background image carousel — near full-color with soft vignette */}
             {heroImages.map((img, i) => (
               <div
                 key={i}
@@ -400,17 +401,20 @@ function AppContent() {
                 style={{
                   backgroundImage: `url(${img})`,
                   transitionDuration: '2000ms',
-                  opacity: i === heroIdx ? 0.35 : 0,
+                  opacity: i === heroIdx ? 0.9 : 0,
                 }}
               />
             ))}
-            {/* Gradient overlay for text readability + subtle blue AI glow */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/15 to-black/55" />
+            {/* Light vignette — just enough for text readability at edges */}
+            <div className="absolute inset-0" style={{
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0.35) 100%)',
+            }} />
+            {/* Subtle radial glow — mode-aware accent */}
             <div className="absolute inset-0" style={{ background: workshopMode === 'agentcore'
-              ? 'radial-gradient(ellipse at 50% 40%, rgba(16, 185, 129, 0.10) 0%, transparent 60%)'
+              ? 'radial-gradient(ellipse at 50% 40%, rgba(16, 185, 129, 0.06) 0%, transparent 55%)'
               : workshopMode === 'full'
-              ? 'radial-gradient(ellipse at 50% 40%, rgba(245, 158, 11, 0.08) 0%, transparent 60%)'
-              : 'radial-gradient(ellipse at 50% 40%, rgba(41, 151, 255, 0.06) 0%, transparent 60%)',
+              ? 'radial-gradient(ellipse at 50% 40%, rgba(245, 158, 11, 0.05) 0%, transparent 55%)'
+              : 'radial-gradient(ellipse at 50% 40%, rgba(41, 151, 255, 0.04) 0%, transparent 55%)',
               transition: 'background 1s ease',
             }} />
 
@@ -427,18 +431,20 @@ function AppContent() {
                   <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8 text-xs font-medium tracking-wide uppercase"
                     data-tour="hero-badge"
                     style={{
-                      background: 'rgba(255, 255, 255, 0.06)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      color: 'rgba(255, 255, 255, 0.6)',
+                      background: 'rgba(0, 0, 0, 0.35)',
+                      backdropFilter: 'blur(16px)',
+                      WebkitBackdropFilter: 'blur(16px)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      color: 'rgba(255, 255, 255, 0.85)',
                       letterSpacing: '0.12em',
                     }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                    {workshopMode === 'legacy' ? 'DAT406 — E-Commerce (Legacy)'
-                      : workshopMode === 'semantic' ? 'DAT406 — Semantic Search Enabled'
-                      : workshopMode === 'tools' ? 'DAT406 — AI Agent Tools'
-                      : workshopMode === 'agentcore' ? 'DAT406 — Production Infrastructure'
-                      : 'DAT406 — Multi-Agent AI Commerce'}
+                    {workshopMode === 'legacy' ? 'Keyword Search Active'
+                      : workshopMode === 'semantic' ? 'Semantic Search Enabled'
+                      : workshopMode === 'tools' ? 'Agent + Tools Enabled'
+                      : workshopMode === 'agentcore' ? 'AgentCore Live'
+                      : 'Multi-Agent Orchestration Active'}
                   </div>
                 </motion.div>
               )
@@ -446,7 +452,7 @@ function AppContent() {
               const heroHeading = (
                 <motion.h1
                   className={`${isAgentMode ? 'text-[40px] md:text-[48px] xl:text-[56px]' : 'text-[48px] md:text-[64px] xl:text-[80px]'} leading-[1.05] mb-4 text-white`}
-                  style={{ fontWeight: 600, letterSpacing: '-0.02em' }}
+                  style={{ fontWeight: 600, letterSpacing: '-0.02em', textShadow: '0 2px 16px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3)' }}
                   initial={{ opacity: 0, y: 40 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ type: 'spring', stiffness: 150, damping: 20, delay: 0.2 }}
@@ -458,20 +464,20 @@ function AppContent() {
               const heroSubtitle = (
                 <motion.p
                   className={`text-xl md:text-2xl mb-10 md:mb-12 ${isAgentMode ? '' : 'max-w-[650px] mx-auto'} leading-relaxed`}
-                  style={{ fontWeight: 400, color: '#a1a1a6' }}
+                  style={{ fontWeight: 400, color: '#f5f5f7', textShadow: '0 1px 8px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4)' }}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ type: 'spring', stiffness: 200, damping: 20, delay: 0.4 }}
                 >
                   {workshopMode === 'legacy'
-                    ? 'Traditional keyword search — try searching for "something to keep my drinks cold" and see what happens.'
+                    ? 'Classic keyword matching — try searching for "something to keep my drinks cold" and see the gap.'
                     : workshopMode === 'semantic'
-                    ? 'Semantic search powered by Aurora PostgreSQL and pgvector — search by intent, not just keywords.'
+                    ? 'Now search by intent, not just keywords. Aurora PostgreSQL with pgvector understands what you mean.'
                     : workshopMode === 'tools'
-                    ? 'AI agent with custom tools answers questions about products, trends, and pricing.'
+                    ? 'The AI agent can now call structured tools — ask about products, trends, and pricing with real data.'
                     : workshopMode === 'agentcore'
-                    ? 'Production-grade AI with AgentCore runtime, Valkey caching, Cedar policies, and managed memory.'
-                    : 'Five AI agents collaborate in real-time to search, compare, and recommend.'
+                    ? 'AgentCore runtime with Valkey caching, Cedar policies, and managed memory — production-grade AI.'
+                    : 'Specialist agents collaborate in real-time — one searches, one compares, one recommends.'
                   }
                 </motion.p>
               )
@@ -507,13 +513,13 @@ function AppContent() {
                       : 'Try the Full Stack'}
                   </button>
                   <button
-                    className="px-7 py-3 rounded-full text-lg font-normal transition-all duration-300 hover:opacity-80"
+                    className="text-lg font-normal transition-all duration-300 hover:opacity-70"
                     onClick={() => {
                       document.getElementById('collections-section')?.scrollIntoView({ behavior: 'smooth' })
                     }}
-                    style={{ background: 'transparent', border: '2px solid rgba(255, 255, 255, 0.3)', color: '#f5f5f7' }}
+                    style={{ color: 'rgba(255, 255, 255, 0.7)', textShadow: '0 1px 6px rgba(0,0,0,0.4)' }}
                   >
-                    Explore Collections
+                    Explore Collections →
                   </button>
                 </motion.div>
               )
@@ -525,13 +531,13 @@ function AppContent() {
                   animate={{ opacity: 1 }}
                   transition={{ delay: 1.2, duration: 1 }}
                 >
-                  <span className="text-white/20 text-xs tracking-widest uppercase">Scroll to explore</span>
+                  <span className="text-white/70 text-xs tracking-widest uppercase" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>Scroll to explore</span>
                   <motion.div
-                    className="w-5 h-8 rounded-full border border-white/15 flex justify-center pt-1.5"
+                    className="w-5 h-8 rounded-full border border-white/40 flex justify-center pt-1.5"
                     animate={{ y: [0, 5, 0] }}
                     transition={{ duration: 2, repeat: Infinity }}
                   >
-                    <div className="w-1 h-2 rounded-full bg-white/30" />
+                    <div className="w-1 h-2 rounded-full bg-white/60" />
                   </motion.div>
                 </motion.div>
               )
@@ -549,9 +555,11 @@ function AppContent() {
                       style={{ background: 'radial-gradient(ellipse, rgba(41, 151, 255, 0.12), transparent 70%)' }} />
                     <div className="relative flex items-center rounded-2xl overflow-hidden"
                       style={{
-                        background: 'rgba(255, 255, 255, 0.08)',
-                        border: '1px solid rgba(255, 255, 255, 0.15)',
-                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        backdropFilter: 'blur(24px)',
+                        WebkitBackdropFilter: 'blur(24px)',
+                        border: '1px solid rgba(255, 255, 255, 0.18)',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
                       }}>
                       <Search className="h-5 w-5 ml-5 flex-shrink-0" style={{ color: 'rgba(255, 255, 255, 0.35)' }} />
                       <input
@@ -599,7 +607,7 @@ function AppContent() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.05 }}
                     >
-                      <h2 className="text-3xl lg:text-4xl font-extralight mb-3 tracking-tight text-white">
+                      <h2 className="text-3xl lg:text-4xl font-extralight mb-3 tracking-tight text-white" style={{ textShadow: '0 1px 12px rgba(0,0,0,0.4)' }}>
                         {workshopMode === 'tools'
                           ? <>Meet the <span style={{ color: '#0071e3' }}>agent</span></>
                           : workshopMode === 'full'
@@ -607,7 +615,7 @@ function AppContent() {
                           : <>Ready for <span style={{ color: '#10b981' }}>production</span></>
                         }
                       </h2>
-                      <p className="text-lg font-light" style={{ color: '#a1a1a6' }}>
+                      <p className="text-lg font-light" style={{ color: '#d1d1d6', textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>
                         {workshopMode === 'tools'
                           ? 'Your AI assistant can now query live data through the tools you built'
                           : workshopMode === 'full'
@@ -666,9 +674,9 @@ function AppContent() {
           <div id="collections-section">
             {/* Featured blocks — alternating dark/light */}
             {/* Interleaved full-width dark blocks and 2-up light grids */}
-            {/* 1. Smartphones — full-width dark */}
+            {/* 1. Smartphones — full-width with vivid video */}
             {[
-              { title: 'Smartphones', subtitle: 'The future in your pocket.', query: 'smartphone iphone samsung', img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=1920&q=80', video: 'https://videos.pexels.com/video-files/3255275/3255275-uhd_2560_1440_25fps.mp4' },
+              { title: 'Smartphones', subtitle: 'The future in your pocket.', query: 'smartphones', img: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=1920&q=80', video: 'https://videos.pexels.com/video-files/3255275/3255275-uhd_2560_1440_25fps.mp4' },
             ].map((block, index) => (
               <motion.section
                 key={`dark-${index}`}
@@ -679,22 +687,23 @@ function AppContent() {
                 viewport={{ once: true, margin: '-100px' }}
                 transition={{ duration: 0.8 }}
               >
-                <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.15 }} poster={block.img}>
+                <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.85 }} poster={block.img}>
                   <source src={block.video} type="video/mp4" />
                 </video>
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0.3) 100%)' }} />
                 <div className="relative z-10 text-center px-8">
-                  <motion.h2 className="text-[48px] md:text-[56px] lg:text-[64px] font-semibold mb-3" style={{ color: '#f5f5f7', letterSpacing: '-0.015em', lineHeight: 1.07 }} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25 }}>{block.title}</motion.h2>
-                  <motion.p className="text-xl md:text-2xl mb-8" style={{ color: '#a1a1a6', fontWeight: 400 }} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.1 }}>{block.subtitle}</motion.p>
+                  <motion.h2 className="text-[48px] md:text-[56px] lg:text-[64px] font-semibold mb-3" style={{ color: '#f5f5f7', letterSpacing: '-0.015em', lineHeight: 1.07, textShadow: '0 2px 16px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.4)' }} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25 }}>{block.title}</motion.h2>
+                  <motion.p className="text-xl md:text-2xl mb-8" style={{ color: '#d1d1d6', fontWeight: 400, textShadow: '0 1px 8px rgba(0,0,0,0.6)' }} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.1 }}>{block.subtitle}</motion.p>
                   <motion.div className="flex gap-4 justify-center items-center" initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.2 }}>
-                    <button className="px-8 py-3 rounded-full text-base font-medium transition-all duration-300 hover:brightness-110 hover:scale-105" onClick={() => { setSearchQuery(block.query); setSearchOverlayVisible(true) }} style={{ background: '#0071e3', color: '#ffffff' }}>Shop now</button>
+                    <button className="px-8 py-3 rounded-full text-base font-medium transition-all duration-300 hover:brightness-110 hover:scale-105" onClick={() => { setSearchQuery(block.query); setSearchOverlayVisible(true) }} style={{ background: '#0071e3', color: '#ffffff', boxShadow: '0 4px 16px rgba(0,113,227,0.3)' }}>Shop now</button>
                   </motion.div>
                 </div>
               </motion.section>
             ))}
 
-            {/* 2. Watches — full-width dark */}
+            {/* 2. Watches — full-width with vivid video */}
             {[
-              { title: 'Watches', subtitle: 'Time, elevated.', query: 'watch rolex leather', img: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=1920&q=80', video: 'https://videos.pexels.com/video-files/4065924/4065924-uhd_2560_1440_24fps.mp4' },
+              { title: 'Watches', subtitle: 'Time, elevated.', query: 'watches', img: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=1920&q=80', video: 'https://videos.pexels.com/video-files/4065924/4065924-uhd_2560_1440_24fps.mp4' },
             ].map((block, index) => (
               <motion.section
                 key={`dark2-${index}`}
@@ -705,14 +714,15 @@ function AppContent() {
                 viewport={{ once: true, margin: '-100px' }}
                 transition={{ duration: 0.8 }}
               >
-                <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.15 }} poster={block.img}>
+                <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.85 }} poster={block.img}>
                   <source src={block.video} type="video/mp4" />
                 </video>
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0.3) 100%)' }} />
                 <div className="relative z-10 text-center px-8">
-                  <motion.h2 className="text-[48px] md:text-[56px] lg:text-[64px] font-semibold mb-3" style={{ color: '#f5f5f7', letterSpacing: '-0.015em', lineHeight: 1.07 }} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25 }}>{block.title}</motion.h2>
-                  <motion.p className="text-xl md:text-2xl mb-8" style={{ color: '#a1a1a6', fontWeight: 400 }} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.1 }}>{block.subtitle}</motion.p>
+                  <motion.h2 className="text-[48px] md:text-[56px] lg:text-[64px] font-semibold mb-3" style={{ color: '#f5f5f7', letterSpacing: '-0.015em', lineHeight: 1.07, textShadow: '0 2px 16px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.4)' }} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25 }}>{block.title}</motion.h2>
+                  <motion.p className="text-xl md:text-2xl mb-8" style={{ color: '#d1d1d6', fontWeight: 400, textShadow: '0 1px 8px rgba(0,0,0,0.6)' }} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.1 }}>{block.subtitle}</motion.p>
                   <motion.div className="flex gap-4 justify-center items-center" initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.2 }}>
-                    <button className="px-8 py-3 rounded-full text-base font-medium transition-all duration-300 hover:brightness-110 hover:scale-105" onClick={() => { setSearchQuery(block.query); setSearchOverlayVisible(true) }} style={{ background: '#0071e3', color: '#ffffff' }}>Shop now</button>
+                    <button className="px-8 py-3 rounded-full text-base font-medium transition-all duration-300 hover:brightness-110 hover:scale-105" onClick={() => { setSearchQuery(block.query); setSearchOverlayVisible(true) }} style={{ background: '#0071e3', color: '#ffffff', boxShadow: '0 4px 16px rgba(0,113,227,0.3)' }}>Shop now</button>
                   </motion.div>
                 </div>
               </motion.section>
@@ -723,8 +733,8 @@ function AppContent() {
               {
                 bg: 'light' as const,
                 items: [
-                  { title: 'Laptops', subtitle: 'Power to do it all.', query: 'laptop macbook dell', img: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800&q=80' },
-                  { title: 'Furniture', subtitle: 'Live beautifully.', query: 'furniture sofa bed table', img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&q=80' },
+                  { title: 'Laptops', subtitle: 'Power to do it all.', query: 'laptops', img: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=800&q=80' },
+                  { title: 'Furniture', subtitle: 'Live beautifully.', query: 'furniture', img: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&q=80' },
                 ]
               },
             ].map((row, rowIdx) => (
@@ -746,9 +756,9 @@ function AppContent() {
               </section>
             ))}
 
-            {/* 4. Fragrances — full-width dark */}
+            {/* 4. Fragrances — full-width with vivid video */}
             {[
-              { title: 'Fragrances', subtitle: 'Scent that speaks.', query: 'fragrance perfume calvin klein chanel', img: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=1920&q=80', video: 'https://videos.pexels.com/video-files/3165335/3165335-uhd_2560_1440_30fps.mp4' },
+              { title: 'Fragrances', subtitle: 'Scent that speaks.', query: 'fragrances', img: 'https://images.unsplash.com/photo-1541643600914-78b084683601?w=1920&q=80', video: 'https://videos.pexels.com/video-files/3165335/3165335-uhd_2560_1440_30fps.mp4' },
             ].map((block, index) => (
               <motion.section
                 key={`dark3-${index}`}
@@ -759,14 +769,15 @@ function AppContent() {
                 viewport={{ once: true, margin: '-100px' }}
                 transition={{ duration: 0.8 }}
               >
-                <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.15 }} poster={block.img}>
+                <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" style={{ opacity: 0.85 }} poster={block.img}>
                   <source src={block.video} type="video/mp4" />
                 </video>
+                <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.05) 40%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0.3) 100%)' }} />
                 <div className="relative z-10 text-center px-8">
-                  <motion.h2 className="text-[48px] md:text-[56px] lg:text-[64px] font-semibold mb-3" style={{ color: '#f5f5f7', letterSpacing: '-0.015em', lineHeight: 1.07 }} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25 }}>{block.title}</motion.h2>
-                  <motion.p className="text-xl md:text-2xl mb-8" style={{ color: '#a1a1a6', fontWeight: 400 }} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.1 }}>{block.subtitle}</motion.p>
+                  <motion.h2 className="text-[48px] md:text-[56px] lg:text-[64px] font-semibold mb-3" style={{ color: '#f5f5f7', letterSpacing: '-0.015em', lineHeight: 1.07, textShadow: '0 2px 16px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.4)' }} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25 }}>{block.title}</motion.h2>
+                  <motion.p className="text-xl md:text-2xl mb-8" style={{ color: '#d1d1d6', fontWeight: 400, textShadow: '0 1px 8px rgba(0,0,0,0.6)' }} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.1 }}>{block.subtitle}</motion.p>
                   <motion.div className="flex gap-4 justify-center items-center" initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.2 }}>
-                    <button className="px-8 py-3 rounded-full text-base font-medium transition-all duration-300 hover:brightness-110 hover:scale-105" onClick={() => { setSearchQuery(block.query); setSearchOverlayVisible(true) }} style={{ background: '#0071e3', color: '#ffffff' }}>Shop now</button>
+                    <button className="px-8 py-3 rounded-full text-base font-medium transition-all duration-300 hover:brightness-110 hover:scale-105" onClick={() => { setSearchQuery(block.query); setSearchOverlayVisible(true) }} style={{ background: '#0071e3', color: '#ffffff', boxShadow: '0 4px 16px rgba(0,113,227,0.3)' }}>Shop now</button>
                   </motion.div>
                 </div>
               </motion.section>
@@ -778,14 +789,14 @@ function AppContent() {
                 bg: 'light' as const,
                 items: [
                   { title: 'Sunglasses', subtitle: 'See the world differently.', query: 'sunglasses', img: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&q=80' },
-                  { title: 'Sports', subtitle: 'Gear up for adventure.', query: 'sports football basketball tennis', img: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&q=80' },
+                  { title: 'Sports', subtitle: 'Gear up for adventure.', query: 'sports accessories', img: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&q=80' },
                 ]
               },
               {
                 bg: 'dark' as const,
                 items: [
-                  { title: 'Shoes', subtitle: 'Step into something new.', query: 'shoes nike jordan sneakers', img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' },
-                  { title: 'Kitchen', subtitle: 'Cook with confidence.', query: 'kitchen accessories pan knife', img: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80' },
+                  { title: 'Shoes', subtitle: 'Step into something new.', query: 'shoes', img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' },
+                  { title: 'Kitchen', subtitle: 'Cook with confidence.', query: 'kitchen accessories', img: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80' },
                 ]
               },
             ].map((row, rowIdx) => (
@@ -808,21 +819,24 @@ function AppContent() {
                       setSearchOverlayVisible(true)
                     }}
                   >
-                    {/* Dark grids: image as background */}
+                    {/* Dark grids: vivid image as background */}
                     {row.bg === 'dark' && (
-                      <div
-                        className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
-                        style={{ backgroundImage: `url(${item.img})`, opacity: 0.12 }}
-                      />
+                      <>
+                        <div
+                          className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105"
+                          style={{ backgroundImage: `url(${item.img})`, opacity: 0.8 }}
+                        />
+                        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.4) 100%)' }} />
+                      </>
                     )}
                     <div className="relative z-10 text-center px-8">
                       <h3
                         className={`font-semibold mb-1 ${row.bg === 'light' ? 'text-[28px] md:text-[36px]' : 'text-[36px] md:text-[44px] mb-2'}`}
-                        style={{ color: row.bg === 'dark' ? '#f5f5f7' : '#1d1d1f', letterSpacing: '-0.01em', lineHeight: 1.1 }}
+                        style={{ color: row.bg === 'dark' ? '#f5f5f7' : '#1d1d1f', letterSpacing: '-0.01em', lineHeight: 1.1, ...(row.bg === 'dark' ? { textShadow: '0 2px 16px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.4)' } : {}) }}
                       >
                         {item.title}
                       </h3>
-                      <p className={`${row.bg === 'light' ? 'text-base mb-4' : 'text-lg mb-6'}`} style={{ color: row.bg === 'dark' ? '#a1a1a6' : '#6e6e73' }}>
+                      <p className={`${row.bg === 'light' ? 'text-base mb-4' : 'text-lg mb-6'}`} style={{ color: row.bg === 'dark' ? '#d1d1d6' : '#6e6e73', ...(row.bg === 'dark' ? { textShadow: '0 1px 8px rgba(0,0,0,0.6)' } : {}) }}>
                         {item.subtitle}
                       </p>
                       <div className="flex gap-3 justify-center">
@@ -855,14 +869,7 @@ function AppContent() {
           <footer style={{ borderTop: '1px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
             <div className="max-w-[1400px] mx-auto px-6 lg:px-10 py-8">
               <div className="text-center text-xs" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
-                <p className="mb-1.5">© 2026 Shayon Sanyal | DAT406: Build Agentic AI-Powered Search with Amazon Aurora</p>
-                <p>
-                  {workshopMode === 'legacy' ? 'Aurora PostgreSQL • Keyword Search'
-                    : workshopMode === 'semantic' ? 'Aurora PostgreSQL • Amazon Bedrock • pgvector'
-                    : workshopMode === 'tools' ? 'Aurora PostgreSQL • Amazon Bedrock • pgvector • Strands Agents SDK'
-                    : workshopMode === 'agentcore' ? 'Aurora PostgreSQL • Amazon Bedrock • pgvector • Strands Agents SDK • AgentCore • ElastiCache/Valkey'
-                    : 'Aurora PostgreSQL • Amazon Bedrock • pgvector • Strands Agents SDK • Multi-Agent Orchestration'}
-                </p>
+                <p>© 2026 Shayon Sanyal | Blaize Bazaar</p>
               </div>
             </div>
           </footer>

@@ -235,11 +235,11 @@ setup_frontend() {
 }
 
 setup_database() {
-    if [ -n "$DB_HOST" ] && [ -f "$REPO_PATH/scripts/load-database-fast.sh" ]; then
+    if [ -n "$DB_HOST" ] && [ -f "$REPO_PATH/scripts/seed-database.sh" ]; then
         cd "$REPO_PATH"
         export DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD AWS_REGION
         export ASSETS_BUCKET_NAME ASSETS_BUCKET_PREFIX
-        bash scripts/load-database-fast.sh 2>&1 | tee /var/log/database-setup.log
+        bash scripts/seed-database.sh 2>&1 | tee /var/log/database-setup.log
         return ${PIPESTATUS[0]}
     fi
     return 1

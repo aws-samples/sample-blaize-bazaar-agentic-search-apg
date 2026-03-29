@@ -70,7 +70,22 @@
       "Bash(ls -la /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/labs/*.py)",
       "Bash(ls -la /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/labs/solutions/*.py)",
       "Bash(npm install tailwindcss-animate --save-dev)",
-      "Bash(chmod +x /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/modules/05/test_gateway_auth.py /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/modules/05/test_gateway_tools.py /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/modules/05/check_traces.py)"
+      "Bash(chmod +x /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/modules/05/test_gateway_auth.py /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/modules/05/test_gateway_tools.py /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/modules/05/check_traces.py)",
+      "Bash(xargs ls)",
+      "Bash(curl -s \"http://localhost:8000/api/products/category/smartphones?limit=3\")",
+      "Bash(curl -s \"http://localhost:8000/api/search/keyword?query=smartphones&limit=5\")",
+      "Bash(curl -s \"http://localhost:8000/docs\")",
+      "Bash(curl -s \"http://localhost:8000/openapi.json\")",
+      "Bash(lsof -i :8000)",
+      "Bash(curl -s -X POST \"http://localhost:8000/api/search\" -H \"Content-Type: application/json\" -d '{\"\"query\"\":\"\"smartphones\"\",\"\"limit\"\":3,\"\"search_mode\"\":\"\"keyword\"\"}')",
+      "Bash(UNSPLASH_ACCESS_KEY=REDACTED_UNSPLASH_KEY python3 scripts/fix_product_images.py)",
+      "Bash(PGPASSWORD='REDACTED_DB_PASSWORD' psql -h REDACTED_RDS_HOSTNAME -p 5432 -U postgres -d postgres -c \":*)",
+      "Bash(for query in \"something to keep my drinks cold\" \"comfortable shoes for standing all day\" \"gift for someone who loves cooking\" \"MacBook Air\" \"Samsung Galaxy\" \"iPhone 15\" \"something to keep my skin glowing\" \"luxury watch for a gift\")",
+      "Bash(do)",
+      "Bash(echo \"=== ''$query'' ===\")",
+      "Bash(curl -s -X POST \"http://localhost:8000/api/search\" -H \"Content-Type: application/json\" -d \"{\"\"query\"\":\"\"$query\"\",\"\"limit\"\":5,\"\"search_mode\"\":\"\"vector\"\"}\")",
+      "Bash(done)",
+      "Bash(# Wait for the remaining queries to finish sleep 5 cat /private/tmp/claude-503/-Users-shayons-Desktop-Workshops-sample-blaize-bazaar-agentic-search-apg/tasks/bhjn6x97i.output)"
     ]
   }
 }
