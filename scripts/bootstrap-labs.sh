@@ -357,7 +357,120 @@ else
 fi
 
 # ============================================================================
-# STEP 14: STATUS MARKER
+# STEP 14: AUTO-START BACKEND & FRONTEND SERVICES
+# ============================================================================
+log "Creating auto-start services for backend and frontend..."
+
+# --- Backend systemd service (uvicorn with --reload) ---
+cat > /etc/systemd/system/blaize-backend.service << EOF
+[Unit]
+Description=Blaize Bazaar Backend (FastAPI + uvicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=$CODE_EDITOR_USER
+Group=$CODE_EDITOR_USER
+WorkingDirectory=$REPO_PATH/blaize-bazaar/backend
+EnvironmentFile=$REPO_PATH/.env
+Environment=PATH=/home/$CODE_EDITOR_USER/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=HOME=/home/$CODE_EDITOR_USER
+ExecStartPre=/bin/bash -c 'cd $REPO_PATH/blaize-bazaar/backend && python3 generate_mcp_config.py 2>/dev/null || true'
+ExecStart=/home/$CODE_EDITOR_USER/.local/bin/uvicorn app:app --reload --host 0.0.0.0 --port 8000 --reload-dir .
+Restart=always
+RestartSec=3
+StandardOutput=append:/tmp/blaize-bazaar/backend.log
+StandardError=append:/tmp/blaize-bazaar/backend.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# --- Frontend rebuild watcher + static server ---
+cat > /etc/systemd/system/blaize-frontend.service << EOF
+[Unit]
+Description=Blaize Bazaar Frontend (static server)
+After=network.target
+
+[Service]
+Type=simple
+User=$CODE_EDITOR_USER
+Group=$CODE_EDITOR_USER
+WorkingDirectory=$REPO_PATH/blaize-bazaar/frontend
+Environment=PATH=/home/$CODE_EDITOR_USER/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=HOME=/home/$CODE_EDITOR_USER
+Environment=NODE_ENV=production
+ExecStartPre=/bin/bash -c 'cd $REPO_PATH/blaize-bazaar/frontend && npm run build'
+ExecStart=/usr/bin/npx http-server dist -p 5173 --cors -c-1
+Restart=always
+RestartSec=3
+StandardOutput=append:/tmp/blaize-bazaar/frontend-server.log
+StandardError=append:/tmp/blaize-bazaar/frontend-server.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# --- Frontend file watcher (auto-rebuild on .tsx/.ts changes) ---
+cat > /etc/systemd/system/blaize-frontend-watcher.service << EOF
+[Unit]
+Description=Blaize Bazaar Frontend File Watcher (auto-rebuild)
+After=blaize-frontend.service
+
+[Service]
+Type=simple
+User=$CODE_EDITOR_USER
+Group=$CODE_EDITOR_USER
+WorkingDirectory=$REPO_PATH/blaize-bazaar/frontend
+Environment=PATH=/home/$CODE_EDITOR_USER/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=HOME=/home/$CODE_EDITOR_USER
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npx chokidar-cli 'src/**/*.tsx' 'src/**/*.ts' 'src/**/*.css' -c 'npm run build' --debounce 1500
+Restart=always
+RestartSec=5
+StandardOutput=append:/tmp/blaize-bazaar/frontend-watcher.log
+StandardError=append:/tmp/blaize-bazaar/frontend-watcher.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Create log directory
+mkdir -p /tmp/blaize-bazaar
+chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" /tmp/blaize-bazaar
+
+# Install chokidar-cli globally for the file watcher
+sudo -u "$CODE_EDITOR_USER" npm install -g chokidar-cli 2>/dev/null || true
+
+# Enable and start all services
+systemctl daemon-reload
+systemctl enable blaize-backend blaize-frontend blaize-frontend-watcher
+systemctl start blaize-backend
+sleep 5
+systemctl start blaize-frontend
+sleep 3
+systemctl start blaize-frontend-watcher
+
+# Verify services started
+if systemctl is-active --quiet blaize-backend; then
+    log "✅ Backend service running (port 8000, auto-reload on .py changes)"
+else
+    warn "Backend service failed to start — check: journalctl -u blaize-backend"
+fi
+
+if systemctl is-active --quiet blaize-frontend; then
+    log "✅ Frontend service running (port 5173, auto-rebuild on save)"
+else
+    warn "Frontend service failed to start — check: journalctl -u blaize-frontend"
+fi
+
+log "✅ Auto-start services configured"
+log "   App URL: https://<cloudfront>/app/"
+log "   Backend auto-reloads on .py file changes"
+log "   Frontend auto-rebuilds on .tsx/.ts/.css file changes (refresh browser)"
+
+# ============================================================================
+# STEP 15: STATUS MARKER
 # ============================================================================
 cat > /tmp/workshop-ready.json << EOF
 {
@@ -389,11 +502,16 @@ echo "✅ Blaize Bazaar Frontend (React) dependencies installed"
 echo "✅ Database setup complete (~1,000 products with indexes)"
 echo "✅ MCP server configured for Amazon Q"
 echo "✅ Bash environment configured (psql ready)"
+echo "✅ Backend & Frontend auto-started (always running)"
 echo ""
-echo "Quick Start Commands:"
-echo "  start-backend   # Launch FastAPI backend"
-echo "  start-frontend  # Launch React frontend"
+echo "🌐 App is live at: https://<cloudfront>/app/"
+echo "   Backend auto-reloads on .py changes"
+echo "   Frontend auto-rebuilds on .tsx/.ts/.css changes (refresh browser)"
+echo ""
+echo "Quick Commands:"
 echo "  psql            # Connect to database"
+echo "  journalctl -fu blaize-backend   # Backend logs"
+echo "  journalctl -fu blaize-frontend  # Frontend logs"
 echo ""
 log "=========================================="
 

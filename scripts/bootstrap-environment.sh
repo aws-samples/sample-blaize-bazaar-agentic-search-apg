@@ -152,6 +152,15 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 300;
     }
+
+    # Blaize Bazaar frontend (static build served on port 5173)
+    location /app/ {
+        proxy_pass http://127.0.0.1:5173/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
     
     # Frontend/IDE proxy (Code Editor)
     location / {
@@ -427,9 +436,11 @@ cat << 'EOF'
    blaize-bazaar  - Navigate to Blaize Bazaar
    backend        - Navigate to backend
    frontend       - Navigate to frontend
-   start-backend  - Launch FastAPI backend
-   start-frontend - Launch React frontend
    psql           - Connect to PostgreSQL database
+
+🌐 Blaize Bazaar is running at: https://<cloudfront>/app/
+   Backend auto-reloads when you save .py files
+   Frontend auto-rebuilds when you save .tsx/.ts files (refresh browser)
 
 📁 Workshop Structure:
    /workshop/sample-blaize-bazaar-agentic-search-apg/
