@@ -305,7 +305,7 @@ class IndexPerformanceService:
                 plan = query_plan.get("Plan", {})
             
             return plan.get("Index Name")
-        except:
+        except Exception:
             return None
     
     def _calculate_comparison(

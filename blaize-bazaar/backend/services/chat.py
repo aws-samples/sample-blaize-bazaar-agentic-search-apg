@@ -8,8 +8,6 @@ Context Manager tracks tokens and manages conversation state.
 import json
 import logging
 import os
-import subprocess
-import sys
 from typing import List, Dict, Any, Optional
 import re
 

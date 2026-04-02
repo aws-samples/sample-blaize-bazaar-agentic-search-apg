@@ -24,20 +24,30 @@ class BusinessLogic:
     def __init__(self, db_service):
         self.db = db_service
     
-    async def get_trending_products(self, limit: int = 5) -> Dict[str, Any]:
+    async def get_trending_products(self, limit: int = 5, category: str = None) -> Dict[str, Any]:
         """
         Get trending products based on reviews, ratings, and popularity.
-        
+
         Trending score = (reviews * stars) with high-rated products prioritized
-        
+
         Args:
             limit: Number of trending products to return
-            
+            category: Optional category filter
+
         Returns:
             Dictionary with trending products and metadata
         """
-        query = """
-            SELECT 
+        conditions = ["quantity > 0", "stars >= 4.0", "reviews > 50"]
+        params: list = []
+
+        if category:
+            conditions.append("category_name ILIKE %s")
+            params.append(f"%{category}%")
+
+        where_clause = " AND ".join(conditions)
+
+        query = f"""
+            SELECT
                 "productId",
                 product_description,
                 price,
@@ -48,9 +58,7 @@ class BusinessLogic:
                 "productURL" as product_url,
                 (reviews * stars) as trending_score
             FROM blaize_bazaar.product_catalog
-            WHERE quantity > 0 
-              AND stars >= 4.0
-              AND reviews > 50
+            WHERE {where_clause}
             ORDER BY trending_score DESC, stars DESC
             LIMIT %s
         """

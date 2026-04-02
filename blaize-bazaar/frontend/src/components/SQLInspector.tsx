@@ -193,7 +193,7 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
               <p className="font-semibold mb-1" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Search Pipeline Breakdown (approximate)</p>
               <p className="leading-relaxed">
                 <span className="font-medium" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>End-to-end (~300-500ms)</span> =
-                <span style={{ color: '#fbbf24' }}> Titan v2 Embedding (~150-250ms)</span> +
+                <span style={{ color: '#fbbf24' }}> Cohere Embed v4 (~150-250ms)</span> +
                 <span style={{ color: '#34d399' }}> pgvector HNSW Query (&lt;5ms warm)</span> +
                 <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}> Network + Processing (~100ms)</span>
               </p>

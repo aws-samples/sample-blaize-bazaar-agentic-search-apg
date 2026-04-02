@@ -79,7 +79,7 @@ class HealthResponse(BaseModel):
     status: str
     database: str
     bedrock: str
-    mcp: Optional[str] = None
+    custom_tools: str = "not_available"
     version: str
 
 

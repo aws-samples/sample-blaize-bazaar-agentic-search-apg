@@ -24,7 +24,7 @@ class ImageSearchService:
             region_name=settings.AWS_REGION
         )
         # Claude Sonnet 4 supports vision
-        self.vision_model = "global.anthropic.claude-sonnet-4-6"
+        self.vision_model = settings.BEDROCK_CHAT_MODEL
         logger.info(f"Initialized ImageSearchService with model: {self.vision_model}")
     
     async def analyze_image(

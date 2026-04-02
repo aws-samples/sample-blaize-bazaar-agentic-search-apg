@@ -13,7 +13,7 @@ Author: DAT406 Workshop - AWS re:Invent 2025
 """
 
 import tiktoken
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
 from enum import Enum

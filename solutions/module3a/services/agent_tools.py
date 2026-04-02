@@ -10,6 +10,7 @@ import asyncio
 # Global service references
 _db_service = None
 _rerank_service = None
+_main_loop = None
 
 def set_db_service(db_service):
     """Set the database service instance"""
@@ -21,14 +22,34 @@ def set_rerank_service(rerank_service):
     global _rerank_service
     _rerank_service = rerank_service
 
+def set_main_loop(loop):
+    """Store reference to the main uvicorn event loop for cross-thread dispatch"""
+    global _main_loop
+    _main_loop = loop
+
 def _run_async(coro):
-    """Helper to run async functions in sync context"""
+    """Run async coroutine from a sync context (e.g. Strands @tool in a background thread).
+
+    Dispatches to the main uvicorn event loop via run_coroutine_threadsafe so that
+    the AsyncConnectionPool (bound to the main loop) works correctly.
+    """
+    if _main_loop and _main_loop.is_running():
+        future = asyncio.run_coroutine_threadsafe(coro, _main_loop)
+        return future.result(timeout=30)
+    # Fallback for standalone / test contexts where no main loop is set
     try:
         loop = asyncio.get_event_loop()
+        if loop.is_running():
+            future = asyncio.run_coroutine_threadsafe(coro, loop)
+            return future.result(timeout=30)
+        return loop.run_until_complete(coro)
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-    return loop.run_until_complete(coro)
+        try:
+            return loop.run_until_complete(coro)
+        finally:
+            loop.close()
 
 @tool
 def get_inventory_health() -> str:
@@ -96,22 +117,25 @@ _CATEGORY_MAP = {
     'laptop': 'Laptops', 'macbook': 'Laptops', 'notebook': 'Laptops', 'computer': 'Laptops',
     'phone': 'Smartphones', 'smartphone': 'Smartphones', 'iphone': 'Smartphones', 'samsung galaxy': 'Smartphones',
     'watch': 'Watches', 'rolex': 'Watches', 'timepiece': 'Watches',
-    'shoe': 'Shoes', 'sneaker': 'Shoes', 'nike': 'Shoes', 'jordan': 'Shoes', 'running': 'Shoes',
+    'shoe': 'Shoes', 'sneaker': 'Shoes', 'nike': 'Shoes', 'jordan': 'Shoes',
     'furniture': 'Furniture', 'sofa': 'Furniture', 'bed': 'Furniture', 'table': 'Furniture', 'chair': 'Furniture',
     'kitchen': 'Kitchen Accessories', 'pan': 'Kitchen Accessories', 'knife': 'Kitchen Accessories', 'cookware': 'Kitchen Accessories', 'spatula': 'Kitchen Accessories',
     'sunglasses': 'Sunglasses', 'shades': 'Sunglasses',
     'bag': 'Bags', 'handbag': 'Bags', 'backpack': 'Bags', 'purse': 'Bags',
     'dress': 'Dresses', 'gown': 'Dresses',
-    'shirt': 'Shirts', 'tshirt': 'Shirts',
+    'shirt': 'Shirts', 'tshirt': 'Shirts', 'polo': 'Shirts',
+    'top': 'Tops', 'crop top': 'Tops', 'blouse': 'Tops',
     'sports': 'Sports Accessories', 'football': 'Sports Accessories', 'basketball': 'Sports Accessories', 'yoga': 'Sports Accessories',
     'tablet': 'Tablets', 'ipad': 'Tablets',
     'beauty': 'Beauty', 'mascara': 'Beauty', 'lipstick': 'Beauty', 'makeup': 'Beauty',
     'skin care': 'Skin Care', 'lotion': 'Skin Care', 'moisturizer': 'Skin Care',
     'motorcycle': 'Motorcycle', 'helmet': 'Motorcycle',
-    'jewel': 'Jewellery', 'earring': 'Jewellery', 'necklace': 'Jewellery', 'bracelet': 'Jewellery',
+    'vehicle': 'Vehicle', 'car': 'Vehicle', 'tesla': 'Vehicle',
+    'jewel': 'Jewellery', 'earring': 'Jewellery', 'necklace': 'Jewellery', 'bracelet': 'Jewellery', 'ring': 'Jewellery',
     'grocer': 'Groceries', 'food': 'Groceries', 'snack': 'Groceries',
     'mobile': 'Mobile Accessories', 'charger': 'Mobile Accessories', 'power bank': 'Mobile Accessories',
-    'headphone': 'Mobile Accessories', 'headphones': 'Mobile Accessories', 'earbuds': 'Sports Accessories', 'earphone': 'Mobile Accessories',
+    'headphone': 'Mobile Accessories', 'headphones': 'Mobile Accessories', 'earbuds': 'Mobile Accessories', 'earphone': 'Mobile Accessories',
+    'candle': 'Home Decoration', 'decor': 'Home Decoration', 'decoration': 'Home Decoration',
 }
 
 def _detect_category(query: str) -> str | None:
@@ -317,3 +341,42 @@ def compare_products(product_id_1: str, product_id_2: str) -> str:
     except Exception as e:
         return json.dumps({"error": str(e)})
 # === END WIRE IT LIVE ===
+
+
+# === RETURN POLICY TOOL (backed by blaize_bazaar.return_policies table) ===
+
+@tool
+def get_return_policy(category: str = "default") -> str:
+    """Look up the return and refund policy for a specific product category. Use when customers ask about returns, refunds, warranties, or return windows.
+
+    Args:
+        category: Product category name (e.g., "Electronics", "Shoes")
+
+    Returns:
+        JSON string with return policy details
+    """
+    if not _db_service:
+        return json.dumps({"error": "Database service not initialized"})
+
+    try:
+        query = """
+            SELECT category_name, return_window_days, conditions, refund_method
+            FROM blaize_bazaar.return_policies
+            WHERE category_name = %s
+        """
+        row = _run_async(_db_service.fetch_one(query, category))
+
+        if not row:
+            row = _run_async(_db_service.fetch_one(query, "default"))
+
+        if not row:
+            return json.dumps({"error": f"No return policy found for category: {category}"})
+
+        return json.dumps({
+            "category": row["category_name"],
+            "return_window_days": row["return_window_days"],
+            "conditions": row["conditions"],
+            "refund_method": row["refund_method"],
+        })
+    except Exception as e:
+        return json.dumps({"error": f"Return policy lookup error: {str(e)}"})

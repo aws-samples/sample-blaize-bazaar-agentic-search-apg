@@ -20,19 +20,17 @@ from models.search import (
     SearchRequest,
     SearchResponse,
     SearchResult,
-    RecommendationRequest,
-    AgentResponse,
     HealthResponse,
     ChatRequest,
     ChatResponse,
 )
 from models.image_search_models import ImageSearchResponse
-from models.product import Product, ProductWithScore, InventoryStats
+from models.product import Product, ProductWithScore
 from services.database import DatabaseService
 from services.auth import get_current_user
 from services.embeddings import EmbeddingService
 from services.chat import ChatService
-from services.image_search import ImageSearchService, get_image_search_service
+from services.image_search import ImageSearchService
 from datetime import datetime
 from services.sql_query_logger import init_query_logger, get_query_logger, QueryLog
 from services.index_performance import get_index_performance_service
@@ -1741,7 +1739,7 @@ async def agentcore_runtime_status():
         # Check health of remote runtime
         try:
             import requests as req
-            resp = req.get(f"{runtime_endpoint}/health", timeout=3)
+            resp = await asyncio.to_thread(req.get, f"{runtime_endpoint}/health", timeout=3)
             return {
                 "mode": "agentcore",
                 "endpoint": runtime_endpoint,

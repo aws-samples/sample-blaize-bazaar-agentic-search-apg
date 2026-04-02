@@ -207,7 +207,7 @@ function AppContent() {
   }
   const MODE_FEATURES: Record<string, string[]> = {
     legacy: ['Full-text keyword search', 'Exact match only — no semantic understanding'],
-    semantic: ['+ Titan v2 embeddings → pgvector', '+ Hybrid search (keyword + vector)', '+ HNSW index tuning & iterative scan', '+ RAG-grounded LLM answers'],
+    semantic: ['+ Cohere Embed v4 embeddings → pgvector', '+ Hybrid search (keyword + vector)', '+ HNSW index tuning & iterative scan', '+ RAG-grounded LLM answers'],
     tools: ['+ Strands agent with structured tool calls', '+ Step-by-step reasoning traces', '+ Token usage & cost tracking', '+ Preference-based re-ranking'],
     full: ['+ Graph Orchestrator → multi-agent routing', '+ Bedrock Guardrails (safety + PII)', '+ Chaos injection for resilience testing'],
     agentcore: ['+ Lambda MCP servers on AgentCore Gateway', '+ Orchestrator on AgentCore Runtime', '+ Persistent cross-session memory', '+ End-to-end deploy_all.sh'],

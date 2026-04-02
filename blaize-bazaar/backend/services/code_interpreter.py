@@ -57,7 +57,7 @@ def create_analytics_agent():
 
         agent = Agent(
             model=BedrockModel(
-                model_id="global.anthropic.claude-sonnet-4-6",
+                model_id=settings.BEDROCK_CHAT_MODEL,
                 max_tokens=8192,
             ),
             system_prompt=(
