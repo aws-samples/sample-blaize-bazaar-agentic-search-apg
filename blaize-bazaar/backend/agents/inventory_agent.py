@@ -5,6 +5,7 @@ import json
 import re
 from strands import Agent, tool
 from strands.models import BedrockModel
+from config import settings
 from services.agent_tools import get_inventory_health, restock_product, get_low_stock_products
 
 
@@ -46,18 +47,23 @@ def inventory_restock_agent(query: str) -> str:
 
         agent = Agent(
             model=BedrockModel(
-                model_id="global.anthropic.claude-sonnet-4-6",
+                model_id=settings.BEDROCK_CHAT_MODEL,
                 max_tokens=4096,
                 temperature=0.2,
             ),
             system_prompt=(
                 "You are Blaize Bazaar's Inventory Specialist. "
-                "Use get_inventory_health for overall stock statistics. "
-                "Use get_low_stock_products for items needing restocking. "
-                "Use restock_product when the user specifies a product ID and quantity. "
+                "<tools>"
+                "- get_inventory_health: Use for overall stock statistics and warehouse health overview. "
+                "- get_low_stock_products: Use to find items that need restocking, prioritized by demand. "
+                "- restock_product: Use when the user provides a specific product ID and quantity to restock. "
+                "If the user mentions a product by name instead of ID, inform them you need the product ID. "
+                "</tools>"
+                "<output-rules>"
                 "Write 1-2 short sentences summarizing stock status. Products render as visual cards "
                 "automatically — do not list them in text. Never use markdown tables, numbered lists, "
                 "headers, or emojis. Never ask follow-up questions."
+                "</output-rules>"
             ),
             tools=[get_inventory_health, restock_product, get_low_stock_products],
         )

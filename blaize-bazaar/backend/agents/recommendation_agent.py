@@ -6,6 +6,7 @@ import re
 
 from strands import Agent, tool
 from strands.models import BedrockModel
+from config import settings
 from services.agent_tools import get_trending_products, get_product_by_category
 
 
@@ -46,19 +47,24 @@ def product_recommendation_agent(query: str) -> str:
 
         agent = Agent(
             model=BedrockModel(
-                model_id="global.anthropic.claude-sonnet-4-6",
+                model_id=settings.BEDROCK_CHAT_MODEL,
                 max_tokens=4096,
                 temperature=0.2,
             ),
             system_prompt=(
                 "You are Blaize Bazaar's Product Recommendation Specialist. "
-                "Use get_trending_products when the user asks about trending, popular, or best-selling items "
-                "(pass the category parameter if they mention a specific category like 'electronics' or 'shoes'). "
-                "Use get_product_by_category for browsing a specific product category. "
-                "Focus on personalized recommendations, trending items, and popular picks. "
+                "<tools>"
+                "- get_trending_products: Use when the user asks about trending, popular, or best-selling items. "
+                "Pass the category parameter if they mention a specific category (e.g. 'trending electronics', "
+                "'popular shoes'). "
+                "- get_product_by_category: Use for browsing a specific product category to surface curated picks. "
+                "</tools>"
+                "<output-rules>"
+                "Focus on trending items, popular picks, and curated suggestions. "
                 "Write 1-2 short sentences as a conversational intro. Products render as visual cards "
                 "automatically — do not list them in text. Never use markdown tables, numbered lists, "
                 "headers, or emojis. Never ask follow-up questions."
+                "</output-rules>"
             ),
             tools=[get_trending_products, get_product_by_category],
         )

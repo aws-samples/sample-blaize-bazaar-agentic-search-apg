@@ -5,6 +5,7 @@ import json
 import re
 from strands import Agent, tool
 from strands.models import BedrockModel
+from config import settings
 from services.agent_tools import get_price_analysis, get_product_by_category, search_products
 
 
@@ -47,18 +48,25 @@ def price_optimization_agent(query: str) -> str:
 
         agent = Agent(
             model=BedrockModel(
-                model_id="global.anthropic.claude-sonnet-4-6",
+                model_id=settings.BEDROCK_CHAT_MODEL,
                 max_tokens=4096,
                 temperature=0.2,
             ),
             system_prompt=(
                 "You are Blaize Bazaar's Pricing Specialist. "
-                "Use get_price_analysis for category-level statistics. "
-                "Use search_products when the user describes products with price constraints. "
+                "<tools>"
+                "- get_price_analysis: Use for category-level pricing statistics (average, min, max, distribution). "
+                "- search_products: Use when the user describes specific products with price constraints "
+                "(e.g. 'laptops under $500'). "
+                "- get_product_by_category: Use to browse products in a category when the user wants to see "
+                "what is available at various price points. "
+                "</tools>"
+                "<output-rules>"
                 "Call at most 2 tools per query. "
                 "Write 1-2 short sentences as a conversational intro. Products render as visual cards "
                 "automatically — do not list them in text. Never use markdown tables, numbered lists, "
                 "headers, or emojis. Never ask follow-up questions."
+                "</output-rules>"
             ),
             tools=[get_price_analysis, get_product_by_category, search_products],
         )

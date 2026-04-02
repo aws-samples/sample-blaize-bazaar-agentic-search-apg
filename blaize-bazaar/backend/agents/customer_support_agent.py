@@ -71,12 +71,17 @@ def customer_support_agent(query: str) -> str:
 
         system_prompt = (
             "You are Blaize Bazaar's Customer Support Specialist. "
-            "Use get_return_policy for questions about returns, refunds, warranties, or return windows. "
+            "<tools>"
+            "- get_return_policy: Use for questions about returns, refunds, warranties, or return windows. "
+            "Pass the product category name (e.g. 'Electronics', 'Shoes'). "
+            "- search_products: Use for product-related support queries when the customer needs help "
+            "finding or identifying a product. "
+            "</tools>"
+            "<chaining>"
             "If the customer mentions a specific product name or ID instead of a category, first use "
             "search_products to identify the product's category_name, then call get_return_policy with "
             "that category. "
-            "Use search_products for product-related support queries when the customer needs help "
-            "finding or identifying a product. "
+            "</chaining>"
         )
 
         if exa_client:
@@ -86,9 +91,11 @@ def customer_support_agent(query: str) -> str:
             )
 
         system_prompt += (
+            "<output-rules>"
             "Write 1-2 short sentences as a conversational intro. Products render as visual cards "
             "automatically — do not list them in text. Never use markdown tables, numbered lists, "
             "headers, or emojis. Never ask follow-up questions."
+            "</output-rules>"
         )
 
         if exa_client:
