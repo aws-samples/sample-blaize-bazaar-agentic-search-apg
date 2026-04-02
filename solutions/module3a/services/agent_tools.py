@@ -45,15 +45,20 @@ def get_inventory_health() -> str:
         return json.dumps({"error": str(e)})
 
 @tool
-def get_trending_products(limit: int = 5) -> str:
-    """Get trending products with live data from database"""
+def get_trending_products(limit: int = 5, category: str = None) -> str:
+    """Get trending products with live data from database.
+
+    Args:
+        limit: Maximum number of products to return (default: 5)
+        category: Optional category filter (e.g. "Electronics", "Shoes")
+    """
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
     
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
-        result = _run_async(logic.get_trending_products(limit))
+        result = _run_async(logic.get_trending_products(limit, category))
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -106,6 +111,7 @@ _CATEGORY_MAP = {
     'jewel': 'Jewellery', 'earring': 'Jewellery', 'necklace': 'Jewellery', 'bracelet': 'Jewellery',
     'grocer': 'Groceries', 'food': 'Groceries', 'snack': 'Groceries',
     'mobile': 'Mobile Accessories', 'charger': 'Mobile Accessories', 'power bank': 'Mobile Accessories',
+    'headphone': 'Mobile Accessories', 'headphones': 'Mobile Accessories', 'earbuds': 'Sports Accessories', 'earphone': 'Mobile Accessories',
 }
 
 def _detect_category(query: str) -> str | None:
@@ -267,7 +273,7 @@ def compare_products(product_id_1: str, product_id_2: str) -> str:
         query = """
             SELECT "productId", product_description, price, stars, reviews,
                    category_name, quantity, "imgUrl", "productURL"
-            FROM bedrock_integration.product_catalog
+            FROM blaize_bazaar.product_catalog
             WHERE "productId" = %s
         """
         p1 = _run_async(_db_service.fetch_one(query, product_id_1))

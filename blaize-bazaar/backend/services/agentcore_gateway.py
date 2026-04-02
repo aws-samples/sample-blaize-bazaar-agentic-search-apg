@@ -51,9 +51,47 @@ def create_gateway_orchestrator():
     ⏩ SHORT ON TIME? Run:
        cp solutions/module4/services/agentcore_gateway.py blaize-bazaar/backend/services/agentcore_gateway.py
     """
-    # TODO: Your implementation here (~20 lines)
-    logger.info("⏳ Gateway orchestrator not implemented — using direct tools (Module 4 TODO)")
-    return None
+    if not settings.AGENTCORE_GATEWAY_URL:
+        logger.info("AGENTCORE_GATEWAY_URL not set — gateway disabled")
+        return None
+
+    try:
+        from strands import Agent
+        from strands.models import BedrockModel
+        from strands.tools.mcp.mcp_client import MCPClient
+        from mcp.client.streamable_http import streamablehttp_client
+
+        def _create_transport():
+            return streamablehttp_client(
+                settings.AGENTCORE_GATEWAY_URL,
+                headers={"x-api-key": settings.AGENTCORE_GATEWAY_API_KEY},
+            )
+
+        mcp_client = MCPClient(_create_transport)
+
+        orchestrator = Agent(
+            model=BedrockModel(
+                model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
+                max_tokens=4096,
+                temperature=0.0,
+            ),
+            system_prompt=(
+                "You are the Blaize Bazaar shopping assistant. "
+                "Use the available tools to find products, check prices, and manage inventory. "
+                "Write 1-2 sentences of context before results. Do not mention tool names or routing."
+            ),
+            tools=[mcp_client],
+        )
+
+        logger.info(f"✅ Gateway orchestrator created (url={settings.AGENTCORE_GATEWAY_URL})")
+        return orchestrator
+
+    except ImportError as e:
+        logger.warning(f"MCP dependencies not installed: {e}")
+        return None
+    except Exception as e:
+        logger.warning(f"Gateway orchestrator setup failed: {e}")
+        return None
 # === END TODO ===
 
 
@@ -102,7 +140,10 @@ def create_gateway_orchestrator_with_semantic_search():
                 "relevant tools for the user's query, then invoke them. "
                 "For product searches, search for 'product search' tools. "
                 "For inventory questions, search for 'inventory' tools. "
-                "For pricing, search for 'pricing' tools."
+                "For pricing, search for 'pricing' tools. "
+                "For return policies and support, search for 'return policy' or 'customer support' tools. "
+                "For category browsing, search for 'category' tools. "
+                "For product comparisons, search for 'compare products' tools."
             ),
             tools=[mcp_client],
         )

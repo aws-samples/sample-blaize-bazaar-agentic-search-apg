@@ -11,14 +11,20 @@ const MarkdownMessage = ({ content }: Props) => {
   const renderContent = (raw: string) => {
     // Pre-clean: strip artifacts the backend should have removed
     let text = raw
-      // Remove code blocks (```json ... ``` or ``` ... ```)
-      .replace(/```[\s\S]*?```/g, '')
+      // Extract text content from code blocks (keep the data, remove the fences)
+      .replace(/```(?:json)?\s*\n?([\s\S]*?)```/g, (_match, content) => {
+        // If it's valid JSON, skip it (products are rendered separately via ProductCardCompact)
+        try {
+          JSON.parse(content.trim())
+          return '' // pure JSON block — products rendered as cards, not text
+        } catch {
+          return content.trim() // not JSON — keep the text content
+        }
+      })
       // Remove markdown table rows (| col | col |)
       .replace(/^\|.*$/gm, '')
       // Remove horizontal rules (---, ***, ___)
       .replace(/^[-*_]{3,}\s*$/gm, '')
-      // Remove header-style section labels (### Highlights, ## Summary)
-      .replace(/^#{1,4}\s+.*$/gm, '')
       // Remove "Products:" / "Suggestions:" labels
       .replace(/^(?:Products?|Suggestions?):?\s*$/gim, '')
       // Collapse blank lines

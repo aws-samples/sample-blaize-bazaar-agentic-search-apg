@@ -6,51 +6,38 @@ from strands.models import BedrockModel
 from .inventory_agent import inventory_restock_agent
 from .recommendation_agent import product_recommendation_agent
 from .pricing_agent import price_optimization_agent
+from .customer_support_agent import customer_support_agent
+from .search_agent import search_agent
 
 
-ORCHESTRATOR_PROMPT = ""
-# TODO (Module 3b): Write the orchestrator system prompt.
-#
-# The prompt should include:
-# 1. Role: "You are the Blaize Bazaar shopping assistant"
-# 2. List of available agents and when to route to each:
-#    - price_optimization_agent: Best deals, pricing queries
-#    - inventory_restock_agent: Stock levels, restocking
-#    - product_recommendation_agent: General product search
-# 3. Rules:
-#    - Call the right agent, then return its output directly
-#    - Write 1 short sentence before the products
-#    - NEVER mention agent names to the user
-#    - When user mentions a price limit, pass max_price to the agent
-#
-# See inventory_agent.py and pricing_agent.py for examples of agent prompts.
-#
-# ⏩ SHORT ON TIME? Run:
-#    cp solutions/module3b/agents/orchestrator.py blaize-bazaar/backend/agents/orchestrator.py
+ORCHESTRATOR_PROMPT = """You are the Blaize Bazaar shopping assistant.
+
+You have specialist agents. If the query starts with [USE: agent_name], call that agent.
+Otherwise analyze the query and route to the best specialist:
+
+- search_agent: Product search, browsing, comparisons (e.g. "find me headphones", "compare these two products", "show me laptops")
+- product_recommendation_agent: Trending, popular, best-selling items (e.g. "what's trending", "recommend something", "popular shoes")
+- price_optimization_agent: Pricing, deals, budget questions (e.g. "cheapest laptops", "deals on electronics", "price analysis")
+- inventory_restock_agent: Stock, inventory, restocking (e.g. "what's low on stock", "restock product", "inventory health")
+- customer_support_agent: Returns, refunds, support, troubleshooting (e.g. "return policy for electronics", "my product is defective", "how do I get a refund")
+
+Pass the full user query to the selected agent.
+Write 1 short sentence before the results. Do not mention agent names or explain routing.
+If the user mentions a price limit, include it in the query you pass to the agent.
+Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."""
 
 
 def create_orchestrator():
-    """
-    TODO (Module 3b): Create the orchestrator agent that routes to specialists.
-
-    Steps:
-        1. Create an Agent() with:
-           - model: BedrockModel(model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
-                                 max_tokens=4096, temperature=0.0)
-           - system_prompt: ORCHESTRATOR_PROMPT (fill it in above)
-           - tools: [product_recommendation_agent, price_optimization_agent,
-                      inventory_restock_agent]
-        2. Return the agent
-
-    The orchestrator's "tools" are the specialist agents themselves (wrapped
-    with @tool in their respective files). It decides which specialist to
-    invoke based on the user's query.
-
-    Returns:
-        Strands Agent instance
-    """
-    # TODO: Your implementation here (~8 lines)
-    return None
+    """Create the orchestrator agent with all specialized agents as tools"""
+    return Agent(
+        model=BedrockModel(
+            model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
+            max_tokens=4096,
+            temperature=0.0
+        ),
+        system_prompt=ORCHESTRATOR_PROMPT,
+        tools=[product_recommendation_agent, price_optimization_agent, inventory_restock_agent, customer_support_agent, search_agent]
+    )
 
 
 # === WIRE IT LIVE (Lab 3) ===
@@ -75,6 +62,6 @@ def create_guarded_orchestrator():
             temperature=0.0
         ),
         system_prompt=ORCHESTRATOR_PROMPT + GUARDRAILS_PROMPT_SUFFIX,
-        tools=[product_recommendation_agent, price_optimization_agent, inventory_restock_agent]
+        tools=[product_recommendation_agent, price_optimization_agent, inventory_restock_agent, customer_support_agent, search_agent]
     )
 # === END WIRE IT LIVE ===

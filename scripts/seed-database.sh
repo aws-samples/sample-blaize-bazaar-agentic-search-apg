@@ -7,15 +7,16 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 log() { echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $1"; }
+warn() { echo -e "${YELLOW}[$(date +'%H:%M:%S')] WARNING:${NC} $1"; }
 error() { echo -e "${RED}[$(date +'%H:%M:%S')] ERROR:${NC} $1"; exit 1; }
 
-log "==================== DAT406 Fast Database Load ===================="
+log "==================== DAT406 Database Setup ===================="
 
 # Find project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Find or download CSV file
+# Find CSV file
 CSV_FILE=""
 for path in "$PROJECT_ROOT/data/product-catalog-cohere-v4.csv" \
             "/workshop/sample-blaize-bazaar-agentic-search-apg/data/product-catalog-cohere-v4.csv"; do
@@ -30,15 +31,14 @@ if [ -z "$CSV_FILE" ]; then
     log "CSV not found locally, downloading from S3..."
     mkdir -p "$PROJECT_ROOT/data"
     CSV_FILE="$PROJECT_ROOT/data/product-catalog-cohere-v4.csv"
-    
+
     # Use Workshop Studio assets bucket (variables set by CloudFormation)
     if [ -n "${ASSETS_BUCKET_NAME:-}" ] && [ -n "${ASSETS_BUCKET_PREFIX:-}" ]; then
         S3_URL="s3://${ASSETS_BUCKET_NAME}/${ASSETS_BUCKET_PREFIX}product-catalog-cohere-v4.csv"
     else
-        # Fallback for local development
         S3_URL="s3://ws-assets-prod-iad-r-pdx-f3b3f9f1a7d6a3d0/YOUR-EVENT-ID/product-catalog-cohere-v4.csv"
     fi
-    
+
     if command -v aws &> /dev/null; then
         log "Downloading from: $S3_URL"
         aws s3 cp "$S3_URL" "$CSV_FILE" || error "Failed to download CSV from S3"
@@ -70,11 +70,11 @@ PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB
 
 -- Create extension and schema
 CREATE EXTENSION IF NOT EXISTS vector;
-CREATE SCHEMA IF NOT EXISTS bedrock_integration;
-DROP TABLE IF EXISTS bedrock_integration.product_catalog CASCADE;
+CREATE SCHEMA IF NOT EXISTS blaize_bazaar;
+DROP TABLE IF EXISTS blaize_bazaar.product_catalog CASCADE;
 
 -- Create optimized table
-CREATE TABLE bedrock_integration.product_catalog (
+CREATE TABLE blaize_bazaar.product_catalog (
     "productId" CHAR(10) PRIMARY KEY,
     product_description VARCHAR(500) NOT NULL,
     "imgUrl" VARCHAR(200),
@@ -112,10 +112,10 @@ CREATE TEMP TABLE temp_products (
 \copy temp_products FROM '$CSV_FILE' WITH (FORMAT csv, HEADER true);
 
 -- Copy from temp to final table with column name mapping
-INSERT INTO bedrock_integration.product_catalog 
-    ("productId", product_description, "imgUrl", "productURL", stars, reviews, 
+INSERT INTO blaize_bazaar.product_catalog
+    ("productId", product_description, "imgUrl", "productURL", stars, reviews,
      price, category_id, "isBestSeller", "boughtInLastMonth", category_name, quantity, embedding)
-SELECT 
+SELECT
     "productId", product_description, imgurl, producturl, stars, reviews,
     price, category_id, isbestseller, boughtinlastmonth, category_name, quantity, embedding
 FROM temp_products;
@@ -124,45 +124,144 @@ DROP TABLE temp_products;
 
 \echo 'Creating indexes...'
 
--- Vector similarity index (HNSW) - optimized for ~1,000 products
-CREATE INDEX idx_product_embedding_hnsw 
-ON bedrock_integration.product_catalog 
+-- Vector similarity index (HNSW)
+CREATE INDEX idx_product_embedding_hnsw
+ON blaize_bazaar.product_catalog
 USING hnsw (embedding vector_cosine_ops)
 WITH (m = 16, ef_construction = 128);
 
 -- Full-text search index
-CREATE INDEX idx_product_fts 
-ON bedrock_integration.product_catalog
+CREATE INDEX idx_product_fts
+ON blaize_bazaar.product_catalog
 USING GIN (to_tsvector('english', product_description));
 
 -- Category index
-CREATE INDEX idx_product_category_name 
-ON bedrock_integration.product_catalog(category_name);
+CREATE INDEX idx_product_category_name
+ON blaize_bazaar.product_catalog(category_name);
 
 -- Price index (partial - only valid prices)
-CREATE INDEX idx_product_price 
-ON bedrock_integration.product_catalog(price) WHERE price > 0;
+CREATE INDEX idx_product_price
+ON blaize_bazaar.product_catalog(price) WHERE price > 0;
 
 -- Stars index (partial - highly rated)
-CREATE INDEX idx_product_stars 
-ON bedrock_integration.product_catalog(stars) WHERE stars >= 4.0;
+CREATE INDEX idx_product_stars
+ON blaize_bazaar.product_catalog(stars) WHERE stars >= 4.0;
 
 -- Composite index for common queries
-CREATE INDEX idx_product_category_price 
-ON bedrock_integration.product_catalog(category_name, price) 
+CREATE INDEX idx_product_category_price
+ON blaize_bazaar.product_catalog(category_name, price)
 WHERE price > 0 AND quantity > 0;
 
 -- Bestseller index (partial)
-CREATE INDEX idx_product_bestseller 
-ON bedrock_integration.product_catalog("isBestSeller") 
+CREATE INDEX idx_product_bestseller
+ON blaize_bazaar.product_catalog("isBestSeller")
 WHERE "isBestSeller" = TRUE;
 
--- Analyze for query planner
-VACUUM ANALYZE bedrock_integration.product_catalog;
+-- ======================================================================
+-- Post-Load Adjustments — Star Rating & Inventory Redistribution
+-- IMPORTANT: The star and inventory exclusion lists are intentionally
+-- different. Do NOT unify them.
+--   Stars:     excludes 42 products (29 locked + 13 new)
+--   Inventory: excludes 14 products (13 new + PSUNG0007)
+-- ======================================================================
+
+\echo 'Applying star rating redistribution...'
+-- Target: 3% at 2.0-2.9, 7% at 3.0-3.4, 15% at 3.5-3.9, 35% at 4.0-4.4, 40% at 4.5-5.0
+-- Excludes: 29 locked products + 13 new products = 42 total
+WITH ranked AS (
+    SELECT "productId",
+        ROW_NUMBER() OVER (ORDER BY md5("productId")) AS rn,
+        COUNT(*) OVER () AS total
+    FROM blaize_bazaar.product_catalog
+    WHERE "productId" NOT IN (
+            'PLAPT0001', 'PLAPT0016', 'PLAPT0007', 'PLAPT0026', 'PLAPT0033',
+            'PLAPT0010', 'PSMRT0001', 'PSMRT0009', 'PSMRT0039', 'PMOBI0002',
+            'PMOBI0004', 'PKITC0010', 'PKITC0005', 'PSPRT0022', 'PSPRT0027',
+            'PMSHO0011', 'PMSHO0016', 'PMSHO0017', 'PMSHO0018', 'PMSHO0021',
+            'PMSHO0036', 'PWSHO0019', 'PWSHO0009', 'PWSHO0022', 'PWSHO0028',
+            'PSUNG0007', 'PMWAT0001', 'PWBAG0001', 'PWBAG0002',
+            'PMOBI0043', 'PMOBI0044', 'PMOBI0045', 'PMOBI0046', 'PMOBI0047',
+            'PMOBI0048', 'PSPRT0043', 'PSPRT0044', 'PSPRT0045', 'PSPRT0046',
+            'PBEAU0043', 'PKITC0043', 'PSKCA0043'
+        )
+)
+UPDATE blaize_bazaar.product_catalog pc
+SET stars = CASE
+        WHEN r.rn <= r.total * 0.03 THEN ROUND(2.0 + (random() * 0.9)::numeric, 1)
+        WHEN r.rn <= r.total * 0.10 THEN ROUND(3.0 + (random() * 0.4)::numeric, 1)
+        WHEN r.rn <= r.total * 0.25 THEN ROUND(3.5 + (random() * 0.4)::numeric, 1)
+        WHEN r.rn <= r.total * 0.60 THEN ROUND(4.0 + (random() * 0.4)::numeric, 1)
+        ELSE ROUND(4.5 + (random() * 0.5)::numeric, 1)
+    END
+FROM ranked r
+WHERE pc."productId" = r."productId";
+
+\echo 'Applying inventory redistribution...'
+-- Target: 6% at 0, 8% at 1-5, 12% at 6-15, 34% at 16-100, 40% at 101-1000
+-- Excludes: 13 new products + PSUNG0007 = 14 total
+WITH ranked AS (
+    SELECT "productId",
+        ROW_NUMBER() OVER (ORDER BY md5("productId" || 'inv')) AS rn,
+        COUNT(*) OVER () AS total
+    FROM blaize_bazaar.product_catalog
+    WHERE "productId" NOT IN (
+            'PMOBI0043', 'PMOBI0044', 'PMOBI0045', 'PMOBI0046', 'PMOBI0047',
+            'PMOBI0048', 'PSPRT0043', 'PSPRT0044', 'PSPRT0045', 'PSPRT0046',
+            'PBEAU0043', 'PKITC0043', 'PSKCA0043', 'PSUNG0007'
+        )
+)
+UPDATE blaize_bazaar.product_catalog pc
+SET quantity = CASE
+        WHEN r.rn <= r.total * 0.06 THEN 0
+        WHEN r.rn <= r.total * 0.14 THEN 1 + (random() * 4)::int
+        WHEN r.rn <= r.total * 0.26 THEN 6 + (random() * 9)::int
+        WHEN r.rn <= r.total * 0.60 THEN 16 + (random() * 84)::int
+        ELSE 101 + (random() * 899)::int
+    END
+FROM ranked r
+WHERE pc."productId" = r."productId";
+
+-- Analyze for query planner (after all adjustments)
+VACUUM ANALYZE blaize_bazaar.product_catalog;
+
+\echo 'Creating return policies table...'
+-- Return policies (queried by customer support agent)
+CREATE TABLE IF NOT EXISTS blaize_bazaar.return_policies (
+    category_name VARCHAR(50) PRIMARY KEY,
+    return_window_days INTEGER NOT NULL,
+    conditions TEXT NOT NULL,
+    refund_method TEXT NOT NULL
+);
+
+INSERT INTO blaize_bazaar.return_policies (category_name, return_window_days, conditions, refund_method) VALUES
+    ('Electronics',         30, 'Item must be in original packaging, unused, with all accessories', 'Original payment method within 5-7 business days'),
+    ('Shoes',               30, 'Unworn, in original box with tags attached', 'Original payment method within 5-7 business days'),
+    ('Laptops',             15, 'Factory reset, original packaging, all accessories included', 'Original payment method within 5-7 business days'),
+    ('Smartphones',         15, 'Factory reset, original packaging, all accessories included', 'Original payment method within 5-7 business days'),
+    ('Watches',             30, 'Unworn, with tags and original packaging', 'Original payment method within 5-7 business days'),
+    ('Furniture',           14, 'Unassembled or in original condition, original packaging required', 'Original payment method within 10-14 business days'),
+    ('Kitchen Accessories', 30, 'Unused, in original packaging', 'Original payment method within 5-7 business days'),
+    ('Sunglasses',          30, 'Unworn, with case and original packaging', 'Original payment method within 5-7 business days'),
+    ('Bags',                30, 'Unused, with tags and original packaging', 'Original payment method within 5-7 business days'),
+    ('Dresses',             30, 'Unworn, with tags attached, in original packaging', 'Original payment method within 5-7 business days'),
+    ('Shirts',              30, 'Unworn, with tags attached, in original packaging', 'Original payment method within 5-7 business days'),
+    ('Sports Accessories',  30, 'Unused, in original packaging with all parts', 'Original payment method within 5-7 business days'),
+    ('Tablets',             15, 'Factory reset, original packaging, all accessories included', 'Original payment method within 5-7 business days'),
+    ('Beauty',              30, 'Unopened and sealed in original packaging', 'Original payment method or store credit within 5-7 business days'),
+    ('Skin Care',           30, 'Unopened and sealed in original packaging', 'Original payment method or store credit within 5-7 business days'),
+    ('Fragrances',          30, 'Unopened and sealed in original packaging', 'Original payment method or store credit within 5-7 business days'),
+    ('Jewellery',           30, 'Unworn, with tags and original packaging, certificate of authenticity if applicable', 'Original payment method within 7-10 business days'),
+    ('Groceries',            7, 'Unopened, non-perishable items only', 'Store credit within 3-5 business days'),
+    ('Mobile Accessories',  30, 'Unused, in original packaging', 'Original payment method within 5-7 business days'),
+    ('Motorcycle',          14, 'Unused, uninstalled, in original packaging with all hardware', 'Original payment method within 10-14 business days'),
+    ('default',             30, 'Item must be in original condition with packaging', 'Original payment method or store credit within 5-10 business days')
+ON CONFLICT (category_name) DO NOTHING;
+
+GRANT SELECT ON blaize_bazaar.return_policies TO postgres;
 
 \echo 'Creating session management tables...'
 -- Session management tables (required by Blaize Bazaar app)
-CREATE TABLE IF NOT EXISTS bedrock_integration.conversations (
+CREATE TABLE IF NOT EXISTS blaize_bazaar.conversations (
     session_id VARCHAR(255) PRIMARY KEY,
     agent_name VARCHAR(255),
     context JSONB DEFAULT '{}'::jsonb,
@@ -171,62 +270,129 @@ CREATE TABLE IF NOT EXISTS bedrock_integration.conversations (
     metadata JSONB DEFAULT '{}'::jsonb
 );
 
-CREATE INDEX IF NOT EXISTS idx_conversations_created_at 
-ON bedrock_integration.conversations(created_at);
+CREATE INDEX IF NOT EXISTS idx_conversations_created_at
+ON blaize_bazaar.conversations(created_at);
 
-CREATE TABLE IF NOT EXISTS bedrock_integration.messages (
+CREATE TABLE IF NOT EXISTS blaize_bazaar.messages (
     id SERIAL PRIMARY KEY,
-    session_id VARCHAR(255) NOT NULL REFERENCES bedrock_integration.conversations(session_id) ON DELETE CASCADE,
+    session_id VARCHAR(255) NOT NULL REFERENCES blaize_bazaar.conversations(session_id) ON DELETE CASCADE,
     role VARCHAR(50) NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
     content TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     metadata JSONB DEFAULT '{}'::jsonb
 );
 
-CREATE INDEX IF NOT EXISTS idx_messages_session_id 
-ON bedrock_integration.messages(session_id);
+CREATE INDEX IF NOT EXISTS idx_messages_session_id
+ON blaize_bazaar.messages(session_id);
 
-CREATE INDEX IF NOT EXISTS idx_messages_created_at 
-ON bedrock_integration.messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_created_at
+ON blaize_bazaar.messages(created_at);
 
-CREATE TABLE IF NOT EXISTS bedrock_integration.session_metadata (
-    session_id VARCHAR(255) PRIMARY KEY REFERENCES bedrock_integration.conversations(session_id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS blaize_bazaar.session_metadata (
+    session_id VARCHAR(255) PRIMARY KEY REFERENCES blaize_bazaar.conversations(session_id) ON DELETE CASCADE,
     user_preferences JSONB DEFAULT '{}'::jsonb,
     context_data JSONB DEFAULT '{}'::jsonb,
     last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS bedrock_integration.tool_uses (
+CREATE TABLE IF NOT EXISTS blaize_bazaar.tool_uses (
     id SERIAL PRIMARY KEY,
-    session_id VARCHAR(255) NOT NULL REFERENCES bedrock_integration.conversations(session_id) ON DELETE CASCADE,
+    session_id VARCHAR(255) NOT NULL REFERENCES blaize_bazaar.conversations(session_id) ON DELETE CASCADE,
     tool_name VARCHAR(255) NOT NULL,
     tool_input JSONB,
     tool_output JSONB,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_tool_uses_session_id 
-ON bedrock_integration.tool_uses(session_id);
+CREATE INDEX IF NOT EXISTS idx_tool_uses_session_id
+ON blaize_bazaar.tool_uses(session_id);
 
-CREATE INDEX IF NOT EXISTS idx_tool_uses_timestamp 
-ON bedrock_integration.tool_uses(timestamp);
+CREATE INDEX IF NOT EXISTS idx_tool_uses_timestamp
+ON blaize_bazaar.tool_uses(timestamp);
 
 -- Grant permissions
-GRANT SELECT, INSERT, UPDATE, DELETE ON bedrock_integration.conversations TO postgres;
-GRANT SELECT, INSERT, UPDATE, DELETE ON bedrock_integration.messages TO postgres;
-GRANT SELECT, INSERT, UPDATE, DELETE ON bedrock_integration.session_metadata TO postgres;
-GRANT SELECT, INSERT, UPDATE, DELETE ON bedrock_integration.tool_uses TO postgres;
-GRANT USAGE, SELECT ON SEQUENCE bedrock_integration.messages_id_seq TO postgres;
-GRANT USAGE, SELECT ON SEQUENCE bedrock_integration.tool_uses_id_seq TO postgres;
+GRANT SELECT, INSERT, UPDATE, DELETE ON blaize_bazaar.conversations TO postgres;
+GRANT SELECT, INSERT, UPDATE, DELETE ON blaize_bazaar.messages TO postgres;
+GRANT SELECT, INSERT, UPDATE, DELETE ON blaize_bazaar.session_metadata TO postgres;
+GRANT SELECT, INSERT, UPDATE, DELETE ON blaize_bazaar.tool_uses TO postgres;
+GRANT USAGE, SELECT ON SEQUENCE blaize_bazaar.messages_id_seq TO postgres;
+GRANT USAGE, SELECT ON SEQUENCE blaize_bazaar.tool_uses_id_seq TO postgres;
 
-\echo 'Verifying data...'
-SELECT COUNT(*) as product_count FROM bedrock_integration.product_catalog;
-SELECT 'Session tables created' as session_status;
+-- ======================================================================
+-- Validation
+-- ======================================================================
+
+\echo ''
+\echo '=========================================='
+\echo 'Product count and category breakdown'
+\echo '=========================================='
+SELECT COUNT(*) as product_count FROM blaize_bazaar.product_catalog;
+SELECT category_name, COUNT(*) AS product_count
+FROM blaize_bazaar.product_catalog
+GROUP BY category_name
+ORDER BY category_name;
+
+\echo ''
+\echo '=========================================='
+\echo 'Locked product quantities preserved?'
+\echo '=========================================='
+SELECT "productId", quantity,
+    CASE
+        WHEN "productId" = 'PSUNG0007' AND quantity = 1 THEN 'PASS'
+        WHEN "productId" = 'PMOBI0043' AND quantity = 312 THEN 'PASS'
+        WHEN "productId" = 'PMOBI0044' AND quantity = 8 THEN 'PASS'
+        WHEN "productId" = 'PMOBI0045' AND quantity = 445 THEN 'PASS'
+        WHEN "productId" = 'PMOBI0046' AND quantity = 6 THEN 'PASS'
+        WHEN "productId" = 'PMOBI0047' AND quantity = 203 THEN 'PASS'
+        WHEN "productId" = 'PMOBI0048' AND quantity = 538 THEN 'PASS'
+        WHEN "productId" = 'PSPRT0043' AND quantity = 267 THEN 'PASS'
+        WHEN "productId" = 'PSPRT0044' AND quantity = 4 THEN 'PASS'
+        WHEN "productId" = 'PSPRT0045' AND quantity = 389 THEN 'PASS'
+        WHEN "productId" = 'PSPRT0046' AND quantity = 156 THEN 'PASS'
+        WHEN "productId" = 'PBEAU0043' AND quantity = 711 THEN 'PASS'
+        WHEN "productId" = 'PKITC0043' AND quantity = 0 THEN 'PASS'
+        WHEN "productId" = 'PSKCA0043' AND quantity = 423 THEN 'PASS'
+        ELSE 'FAIL'
+    END AS status
+FROM blaize_bazaar.product_catalog
+WHERE "productId" IN (
+        'PSUNG0007', 'PMOBI0043', 'PMOBI0044', 'PMOBI0045', 'PMOBI0046',
+        'PMOBI0047', 'PMOBI0048', 'PSPRT0043', 'PSPRT0044', 'PSPRT0045',
+        'PSPRT0046', 'PBEAU0043', 'PKITC0043', 'PSKCA0043'
+    )
+ORDER BY "productId";
+
+\echo ''
+\echo '=========================================='
+\echo 'Star rating distribution'
+\echo '=========================================='
+SELECT COUNT(*) AS total_products,
+    COUNT(*) FILTER (WHERE stars < 3.0) AS "2.0-2.9",
+    COUNT(*) FILTER (WHERE stars >= 3.0 AND stars < 3.5) AS "3.0-3.4",
+    COUNT(*) FILTER (WHERE stars >= 3.5 AND stars < 4.0) AS "3.5-3.9",
+    COUNT(*) FILTER (WHERE stars >= 4.0 AND stars < 4.5) AS "4.0-4.4",
+    COUNT(*) FILTER (WHERE stars >= 4.5) AS "4.5-5.0"
+FROM blaize_bazaar.product_catalog;
+
+\echo ''
+\echo '=========================================='
+\echo 'Inventory distribution'
+\echo '=========================================='
+SELECT COUNT(*) AS total_products,
+    COUNT(*) FILTER (WHERE quantity = 0) AS out_of_stock,
+    COUNT(*) FILTER (WHERE quantity BETWEEN 1 AND 5) AS critical,
+    COUNT(*) FILTER (WHERE quantity BETWEEN 6 AND 15) AS low,
+    COUNT(*) FILTER (WHERE quantity BETWEEN 16 AND 100) AS healthy,
+    COUNT(*) FILTER (WHERE quantity > 100) AS well_stocked
+FROM blaize_bazaar.product_catalog;
+
+\echo ''
+\echo 'Validation complete.'
 SQL
 
 if [ $? -eq 0 ]; then
     log "✅ Database loaded successfully"
-    log "==================== Load Complete ===================="
+    log "==================== Setup Complete ===================="
 else
     error "Database load failed"
 fi

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTheme } from '../App'
 import { useLayout, type WorkshopMode } from '../contexts/LayoutContext'
+import { useCart } from '../contexts/CartContext'
 import ImageSearchModal from './ImageSearchModal'
 import { Camera, Sun, Moon, Check, Compass, Wrench } from 'lucide-react'
 
@@ -8,8 +9,6 @@ interface HeaderProps {
   activeSection?: 'shop' | 'collections'
   onNavigate?: (section: 'shop' | 'collections') => void
   onSearch?: (query: string) => void
-  cartItemCount?: number
-  onCartClick?: () => void
   onPlaygroundClick?: () => void
   loginSlot?: React.ReactNode
   completedModules?: Set<string>
@@ -25,7 +24,9 @@ const WORKSHOP_STEPS: { key: WorkshopMode; label: string }[] = [
 ]
 const MODE_ORDER: WorkshopMode[] = ['legacy', 'semantic', 'tools', 'full', 'agentcore']
 
-const Header = ({ onSearch, cartItemCount = 0, onCartClick, onPlaygroundClick, loginSlot, completedModules, onModeSwitch }: HeaderProps) => {
+const Header = ({ onSearch, onPlaygroundClick, loginSlot, completedModules, onModeSwitch }: HeaderProps) => {
+  const { items: cartItems, setCartOpen } = useCart()
+  const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
   const [searchQuery, setSearchQuery] = useState('')
   const [suggestions, setSuggestions] = useState<Array<{text: string, category: string}>>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -242,9 +243,8 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick, onPlaygroundClick, l
               )}
 
               {/* Shopping Cart Icon */}
-              {onCartClick && (
-                <button
-                  onClick={onCartClick}
+              <button
+                  onClick={() => setCartOpen(true)}
                   className="relative p-2 rounded-lg transition-all duration-300 group flex-shrink-0"
                   style={{ background: 'transparent' }}
                   onMouseEnter={e => (e.currentTarget.style.background = 'var(--input-bg)')}
@@ -260,7 +260,6 @@ const Header = ({ onSearch, cartItemCount = 0, onCartClick, onPlaygroundClick, l
                     </span>
                   )}
                 </button>
-              )}
 
               {/* Login (Lab 4) */}
               {loginSlot}

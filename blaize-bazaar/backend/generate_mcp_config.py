@@ -148,7 +148,7 @@ def generate_mcp_config():
     print()
     print("🎯 Usage:")
     print("   • Amazon Q Developer: Open Q Chat in VS Code")
-    print("   • Ask: 'What tables exist in bedrock_integration schema?'")
+    print("   • Ask: 'What tables exist in blaize_bazaar schema?'")
     print("   • MCP tools available: get_table_schema, run_query")
     print()
     print("💡 Verification:")

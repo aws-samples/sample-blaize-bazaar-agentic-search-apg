@@ -4,13 +4,15 @@
  */
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, X, AlertCircle, GitCompare, PanelRightOpen, PanelRightClose } from 'lucide-react'
+import { Send, X, AlertCircle, GitCompare, PanelRightOpen, PanelRightClose, Sparkles, MessageSquare, Shield } from 'lucide-react'
 import ProductCardCompact from './ProductCardCompact'
 import MarkdownMessage from './MarkdownMessage'
 import ProductComparison from './ProductComparison'
 import { sendChatMessageStreaming, ChatProduct, checkBackendHealth } from '../services/chat'
 import { AGENT_IDENTITIES, type AgentType } from '../utils/agentIdentity'
 import { useLayout } from '../contexts/LayoutContext'
+import { useCart } from '../contexts/CartContext'
+import { useUI } from '../contexts/UIContext'
 import { useTheme } from '../App'
 
 interface AgentExecution {
@@ -47,11 +49,35 @@ function setCachedResponse(query: string, data: { response: string; products?: C
   responseCache.set(query.trim().toLowerCase(), { ...data, timestamp: Date.now() })
 }
 
+// Mode → accent color mapping (eliminates repeated ternary chains)
+const MODE_ACCENT: Record<string, string> = {
+  legacy: '#0A84FF',
+  semantic: '#0A84FF',
+  tools: '#0A84FF',
+  full: '#FF9F0A',
+  agentcore: '#30D158',
+}
+
+function accentAlpha(mode: string, alpha: number): string {
+  const hex = MODE_ACCENT[mode] || MODE_ACCENT.tools
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
 const AIAssistant = () => {
   const { chatMode, setChatMode, setChatOpen, workshopMode, guardrailsEnabled } = useLayout()
+  const { addToCart } = useCart()
+  const { announcementDismissed, dismissAnnouncement } = useUI()
   const { theme } = useTheme()
   const [isOpen, setIsOpenRaw] = useState(false)
-  const setIsOpen = (open: boolean) => { setIsOpenRaw(open); setChatOpen(open) }
+  const [hasOpenedChat, setHasOpenedChat] = useState(false)
+  const setIsOpen = (open: boolean) => {
+    setIsOpenRaw(open)
+    setChatOpen(open)
+    if (open) setHasOpenedChat(true)
+  }
   const [sessionCost, setSessionCost] = useState(0)
   const [expandedHoods, setExpandedHoods] = useState<Set<number>>(new Set())
   const toggleHood = (idx: number) => {
@@ -70,19 +96,19 @@ const AIAssistant = () => {
           content: "Hey! I'm your AI shopping assistant — powered by custom tools that query live data from Aurora PostgreSQL. Ask me about products, trends, or inventory and watch the tools fire in real-time.",
           suggestions: [
             "What's trending in electronics right now?",
-            'Find noise-canceling headphones under $200',
-            'Is the Compact Travel Camera in stock?',
-            'Compare the top 3 running shoes',
+            'I need a gift for someone who loves cooking',
+            'Show me kitchen accessories under $30',
+            'What running shoes have the best reviews?',
           ],
         }
       case 'full':
         return {
           content: "Hey! I'm backed by a team of specialist agents — search, pricing, inventory, and recommendation — all coordinated by an orchestrator. Ask something complex and watch them collaborate.",
           suggestions: [
-            'Compare laptops under $1000 — which has the best value?',
+            'Find me the best laptop under $1500',
             "What's low on stock that I should grab before it's gone?",
             'I need a birthday gift — something unique under $75',
-            'Find premium headphones, check stock, and compare prices',
+            'Show me trending watches and compare prices',
           ],
         }
       case 'agentcore':
@@ -99,9 +125,9 @@ const AIAssistant = () => {
         return {
           content: "Hey! I'm your AI shopping assistant. I can search our entire catalog, compare products side by side, analyze pricing trends, and check what's in stock — all in one conversation. What are you working with today?",
           suggestions: [
-            'Compare the top 5 laptops under $1000',
+            'Find me the best laptop under $1500',
             "What's trending in electronics right now?",
-            'Find me running shoes with the best reviews',
+            'Show me running shoes with great reviews',
             'I need a gift under $50 — surprise me',
           ],
         }
@@ -285,14 +311,28 @@ const AIAssistant = () => {
               }
               return [...updated]
             })
-          } else if (data.type === 'content') {
-            // Final clean content replaces streamed text
+          } else if (data.type === 'content_reset') {
+            // Tool completed — clear accumulated thinking text before final response streams
             setMessages(prev => {
               const updated = [...prev]
               const lastMsg = updated[updated.length - 1]
-              lastMsg.content = data.content
-              lastMsg.agentStatus = 'complete'
-              lastMsg.agentExecution = undefined
+              lastMsg.content = ''
+              return [...updated]
+            })
+          } else if (data.type === 'content') {
+            // Final clean content — only replace streamed text if it adds value
+            setMessages(prev => {
+              const updated = [...prev]
+              const lastMsg = updated[updated.length - 1]
+              // If we already have streamed content and the final is shorter/empty, keep streamed
+              if (lastMsg.agentStatus === 'streaming' && lastMsg.content && (!data.content || data.content.length < lastMsg.content.length * 0.5)) {
+                lastMsg.agentStatus = 'complete'
+                lastMsg.agentExecution = undefined
+              } else {
+                lastMsg.content = data.content
+                lastMsg.agentStatus = 'complete'
+                lastMsg.agentExecution = undefined
+              }
               return [...updated]
             })
           } else if (data.type === 'product') {
@@ -342,14 +382,16 @@ const AIAssistant = () => {
       }
 
       // Determine agent badge based on workshop mode
-      let agentType: 'search' | 'pricing' | 'recommendation' | 'orchestrator' = 'search'
+      let agentType: 'search' | 'pricing' | 'recommendation' | 'orchestrator' | 'support' = 'search'
       if (workshopMode === 'full' || response.orchestrator_enabled) {
         // Lab 3: Multi-agent orchestrator
         agentType = 'orchestrator'
       } else {
         // Lab 2: Single agent — infer type from query keywords
         const q = messageText.toLowerCase()
-        if (q.includes('cheap') || q.includes('price') || q.includes('deal') || q.includes('cost') || q.includes('budget') || q.includes('afford')) {
+        if (q.includes('return') || q.includes('refund') || q.includes('policy') || q.includes('support') || q.includes('warranty') || q.includes('help')) {
+          agentType = 'support'
+        } else if (q.includes('cheap') || q.includes('price') || q.includes('deal') || q.includes('cost') || q.includes('budget') || q.includes('afford')) {
           agentType = 'pricing'
         } else if (q.includes('recommend') || q.includes('suggest') || q.includes('best') || q.includes('top') || q.includes('popular') || q.includes('trending')) {
           agentType = 'recommendation'
@@ -430,6 +472,66 @@ const AIAssistant = () => {
 
   return (
     <>
+      {/* Announcement Banner — appears once per mode transition */}
+      <AnimatePresence>
+        {!isOpen && !announcementDismissed[workshopMode] && (
+          <motion.div
+            className="fixed top-20 left-0 right-0 z-[1001] flex justify-center pointer-events-none"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+          >
+            <div
+              className="pointer-events-auto flex items-center gap-4 px-6 py-4 rounded-2xl max-w-lg"
+              style={{
+                background: theme === 'dark' ? 'rgba(28, 28, 30, 0.98)' : 'rgba(255, 255, 255, 0.98)',
+                border: `1px solid ${accentAlpha(workshopMode, 0.3)}`,
+                boxShadow: theme === 'dark'
+                  ? '0 16px 48px -8px rgba(0, 0, 0, 0.6)'
+                  : '0 16px 48px -8px rgba(0, 0, 0, 0.15)',
+                backdropFilter: 'blur(20px)',
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: accentAlpha(workshopMode, 0.15) }}
+              >
+                <Sparkles className="h-5 w-5" style={{ color: MODE_ACCENT[workshopMode] }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
+                  {workshopMode === 'agentcore' ? 'Production stack deployed'
+                    : workshopMode === 'full' ? 'Three specialist agents are ready'
+                    : 'AI Assistant is now active'}
+                </p>
+                <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+                  {workshopMode === 'agentcore' ? 'Memory-aware agents with Cedar policy enforcement'
+                    : workshopMode === 'full' ? 'Recommendations, pricing, and inventory — working together'
+                    : 'Search products, check inventory, and analyze pricing through conversation'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => { setIsOpen(true); dismissAnnouncement(workshopMode) }}
+                  className="px-4 py-2 rounded-xl text-[13px] font-medium"
+                  style={{ background: MODE_ACCENT[workshopMode], color: '#fff' }}
+                >
+                  Open Chat
+                </button>
+                <button
+                  onClick={() => dismissAnnouncement(workshopMode)}
+                  className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                  aria-label="Dismiss announcement"
+                >
+                  <X className="h-3.5 w-3.5" style={{ color: 'var(--text-tertiary)' }} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Chat Window */}
       <AnimatePresence>
         {isOpen && (
@@ -620,6 +722,8 @@ const AIAssistant = () => {
                                       'Product Recommendation': { bg: 'rgba(234, 179, 8, 0.2)', text: '#fde047' },
                                       'Inventory': { bg: 'rgba(16, 185, 129, 0.2)', text: '#6ee7b7' },
                                       'Inventory & Restock': { bg: 'rgba(16, 185, 129, 0.2)', text: '#6ee7b7' },
+                                      'Support Agent': { bg: 'rgba(20, 184, 166, 0.2)', text: '#5eead4' },
+                                      'Customer Support': { bg: 'rgba(20, 184, 166, 0.2)', text: '#5eead4' },
                                     }
                                     const colors = badgeColors[step.agent] || { bg: 'rgba(168, 85, 247, 0.2)', text: '#c084fc' }
                                     return (
@@ -719,15 +823,13 @@ const AIAssistant = () => {
                                 product={product}
                                 agentSource={message.agent as AgentType}
                                 onAddToCart={() => {
-                                  if ((window as any).addToCart) {
-                                    (window as any).addToCart({
-                                      productId: product.id,
-                                      name: product.name,
-                                      price: product.price,
-                                      quantity: 1,
-                                      image: product.image || ''
-                                    })
-                                  }
+                                  addToCart({
+                                    productId: product.id,
+                                    name: product.name,
+                                    price: product.price,
+                                    image: product.image || '',
+                                    origin: 'chat',
+                                  })
                                 }}
                               />
                             </motion.div>
@@ -961,72 +1063,100 @@ const AIAssistant = () => {
         )}
       </AnimatePresence>
 
-      {/* Floating Bubble — closed state */}
+      {/* Floating Pill — closed state (Option A: no avatar, mode-aware pill) */}
       <AnimatePresence>
         {!isOpen && (
-          <motion.div
-            className="fixed bottom-6 right-6 z-[1000] flex items-center gap-3 cursor-pointer"
+          <motion.button
+            className="fixed bottom-6 right-6 z-[1000] appearance-none border-0 p-0 bg-transparent"
             data-tour="chat-bubble"
             onClick={() => setIsOpen(true)}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            aria-label="Open chat"
+            initial={{ opacity: 0, scale: 0.9, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 26 }}
           >
             <motion.div
-              className="px-5 py-3 rounded-full text-[15px] font-medium whitespace-nowrap"
+              className="flex items-center gap-2.5 h-10 px-4 rounded-xl"
               style={{
-                background: theme === 'dark' ? 'rgba(0, 0, 0, 0.9)' : '#ffffff',
-                backdropFilter: 'blur(12px)',
-                border: theme === 'dark' ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.1)',
+                background: theme === 'dark' ? 'rgba(28, 28, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                border: `1px solid ${accentAlpha(workshopMode, 0.25)}`,
+                boxShadow: theme === 'dark'
+                  ? '0 4px 16px rgba(0, 0, 0, 0.3)'
+                  : '0 4px 16px rgba(0, 0, 0, 0.08)',
+              }}
+              whileHover={{
+                background: theme === 'dark' ? 'rgba(44, 44, 46, 0.95)' : 'rgba(240, 240, 242, 0.95)',
+              }}
+              // Single entrance pulse — plays once, then static
+              {...(!hasOpenedChat ? {
+                animate: { boxShadow: [
+                  theme === 'dark' ? '0 4px 16px rgba(0, 0, 0, 0.3)' : '0 4px 16px rgba(0, 0, 0, 0.08)',
+                  `0 4px 24px ${accentAlpha(workshopMode, 0.25)}`,
+                  theme === 'dark' ? '0 4px 16px rgba(0, 0, 0, 0.3)' : '0 4px 16px rgba(0, 0, 0, 0.08)',
+                ]},
+                transition: { boxShadow: { duration: 2, repeat: 2 } },
+              } : {})}
+            >
+              {/* Status dot */}
+              <div
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{
+                  background: MODE_ACCENT[workshopMode],
+                  boxShadow: `0 0 6px ${accentAlpha(workshopMode, 0.5)}`,
+                }}
+              />
+
+              {/* Label */}
+              <span className="text-[13px] font-medium" style={{
                 color: 'var(--text-primary)',
-                boxShadow: theme === 'light' ? '0 4px 16px rgba(0,0,0,0.08)' : 'none',
-              }}
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              Ask me anything
+                letterSpacing: '-0.01em',
+              }}>
+                {workshopMode === 'agentcore' ? 'AgentCore Active'
+                  : workshopMode === 'full' ? 'Multi-Agent Ready'
+                  : 'Agent Ready'}
+              </span>
+
+              {/* Icon — chat bubble for tools/full, shield for agentcore */}
+              {workshopMode === 'agentcore' ? (
+                <Shield className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--text-tertiary)' }} strokeWidth={1.5} />
+              ) : (
+                <MessageSquare className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--text-tertiary)' }} strokeWidth={1.5} />
+              )}
             </motion.div>
-            <motion.div
-              className="w-[76px] h-[76px] rounded-full flex-shrink-0 overflow-hidden"
-              style={{
-                boxShadow: workshopMode === 'agentcore'
-                  ? '0 6px 28px rgba(0, 0, 0, 0.5), 0 0 20px rgba(16, 185, 129, 0.25)'
-                  : workshopMode === 'full'
-                  ? '0 6px 28px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.25)'
-                  : '0 6px 28px rgba(0, 0, 0, 0.5)',
-                border: workshopMode === 'agentcore'
-                  ? '2px solid rgba(16, 185, 129, 0.5)'
-                  : workshopMode === 'full'
-                  ? '2px solid rgba(245, 158, 11, 0.5)'
-                  : '2px solid var(--border-color)',
-              }}
-              whileHover={{ scale: 1.1 }}
-              animate={{ y: [0, -4, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <img src={`${import.meta.env.BASE_URL}chat-icon.jpeg`} alt="Chat" className="w-full h-full object-cover" />
-            </motion.div>
-          </motion.div>
+          </motion.button>
         )}
       </AnimatePresence>
 
-      {/* Minimized icon when chat IS open */}
-      {isOpen && (
-        <div className="fixed bottom-6 right-6 z-[998]">
-          <motion.div
+      {/* Minimized status dot when chat IS open */}
+      <AnimatePresence>
+        {isOpen && chatMode !== 'docked' && (
+          <motion.button
+            className="fixed bottom-6 right-6 z-[998] appearance-none border-0 p-0 bg-transparent"
             onClick={() => setIsOpen(false)}
-            className="w-[60px] h-[60px] rounded-full flex items-center justify-center cursor-pointer overflow-hidden opacity-40 hover:opacity-80 transition-opacity"
-            style={{
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
-              border: '2px solid var(--border-color)',
-            }}
-            whileHover={{ scale: 1.1 }}
+            aria-label="Minimize chat"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.15 }}
           >
-            <img src={`${import.meta.env.BASE_URL}chat-icon.jpeg`} alt="Chat" className="w-full h-full object-cover" />
-          </motion.div>
-        </div>
-      )}
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{
+                background: theme === 'dark' ? 'rgba(28, 28, 30, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                border: `1px solid ${theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
+              }}
+            >
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ background: MODE_ACCENT[workshopMode] }}
+              />
+            </div>
+          </motion.button>
+        )}
+      </AnimatePresence>
     </>
   )
 }

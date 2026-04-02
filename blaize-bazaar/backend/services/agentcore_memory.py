@@ -52,9 +52,35 @@ def create_agentcore_session_manager(
     ⏩ SHORT ON TIME? Run:
        cp solutions/module4/services/agentcore_memory.py blaize-bazaar/backend/services/agentcore_memory.py
     """
-    # TODO: Your implementation here (~15 lines)
-    logger.info("⏳ AgentCore Memory not implemented — using local sessions (Module 4 TODO)")
-    return None
+    if not settings.AGENTCORE_MEMORY_ID:
+        logger.info("AGENTCORE_MEMORY_ID not set — memory disabled")
+        return None
+
+    try:
+        from bedrock_agentcore.memory.integrations.strands.config import AgentCoreMemoryConfig
+        from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
+
+        config = AgentCoreMemoryConfig(
+            memory_id=settings.AGENTCORE_MEMORY_ID,
+            session_id=session_id,
+            actor_id=user_id,
+            batch_size=5,
+        )
+
+        session_manager = AgentCoreMemorySessionManager(
+            config,
+            region_name=settings.AWS_REGION,
+        )
+
+        logger.info(f"✅ AgentCore Memory session created (memory_id={settings.AGENTCORE_MEMORY_ID}, user={user_id})")
+        return session_manager
+
+    except ImportError:
+        logger.warning("bedrock-agentcore package not installed — pip install bedrock-agentcore")
+        return None
+    except Exception as e:
+        logger.warning(f"AgentCore Memory setup failed: {e}")
+        return None
 # === END TODO ===
 
 

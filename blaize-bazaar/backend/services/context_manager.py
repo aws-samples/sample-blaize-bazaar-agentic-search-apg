@@ -29,6 +29,8 @@ class AgentType(Enum):
     INVENTORY = "inventory_agent"
     PRICING = "pricing_agent"
     RECOMMENDATION = "recommendation_agent"
+    CUSTOMER_SUPPORT = "customer_support_agent"
+    SEARCH = "search_agent"
 
 
 @dataclass
@@ -507,12 +509,38 @@ Use the get_price_analysis() tool for statistical insights.""",
 
 Your specialization: Semantic product search, personalized recommendations, and gift suggestions.
 
-Use the semantic_product_search() tool for intelligent matching.""",
+Use the search_products() tool for intelligent matching.""",
             "performance_metrics": {
                 "avg_response_time_ms": 890,
                 "success_rate": 0.91
             }
-        }
+        },
+
+        AgentType.CUSTOMER_SUPPORT: {
+            "version": "v1.0",
+            "system": """You are the Customer Support Agent for Blaize Bazaar.
+
+Your specialization: Return policies, refund inquiries, warranty questions, and general troubleshooting.
+
+Use the get_return_policy() tool for return and refund policy lookups. Use search_products() for product-related support queries.""",
+            "performance_metrics": {
+                "avg_response_time_ms": 750,
+                "success_rate": 0.93
+            }
+        },
+
+        AgentType.SEARCH: {
+            "version": "v1.0",
+            "system": """You are the Product Search Agent for Blaize Bazaar.
+
+Your specialization: Product search, category browsing, and product comparisons.
+
+Use search_products() for natural language queries, get_product_by_category() for category browsing, and compare_products() for side-by-side comparisons.""",
+            "performance_metrics": {
+                "avg_response_time_ms": 820,
+                "success_rate": 0.92
+            }
+        },
     }
     
     @classmethod

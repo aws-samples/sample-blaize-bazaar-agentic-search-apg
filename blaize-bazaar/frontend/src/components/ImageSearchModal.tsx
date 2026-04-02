@@ -1,10 +1,9 @@
 /**
  * ImageSearchModal - Multi-Modal Product Search Component
- * Upload or drag-drop product images to find similar items.
- * Supports Classic (Claude Vision) and Nova-enhanced pipelines.
+ * Upload or drag-drop product images to find similar items using Claude Vision + pgvector.
  */
-import { useState, useRef, useEffect } from 'react';
-import { Camera, X, Loader, Sparkles, GitCompare, AlertCircle } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Camera, X, Loader, Sparkles } from 'lucide-react';
 
 interface ImageSearchModalProps {
   isOpen: boolean;
@@ -17,10 +16,7 @@ interface AnalysisResult {
   category: string;
   key_features: string[];
   search_keywords: string[];
-  pipeline?: string;
 }
-
-type Pipeline = 'classic' | 'compare';
 
 const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) => {
   const [analyzing, setAnalyzing] = useState(false);
@@ -28,20 +24,7 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [pipeline, setPipeline] = useState<Pipeline>('classic');
-  const [novaAvailable, setNovaAvailable] = useState<boolean | null>(null);
-  const [comparison, setComparison] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const lastFileRef = useRef<File | null>(null);
-
-  useEffect(() => {
-    if (isOpen && novaAvailable === null) {
-      fetch('/api/search/image/nova-status')
-        .then(r => r.json())
-        .then(d => setNovaAvailable(d.available))
-        .catch(() => setNovaAvailable(false));
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -59,39 +42,24 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
     setAnalyzing(true);
     setPreview(URL.createObjectURL(file));
     setAnalysis(null);
-    setComparison(null);
-    lastFileRef.current = file;
 
     try {
-      if (pipeline === 'compare') {
-        // Run comparison pipeline
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await fetch('/api/search/image/compare', { method: 'POST', body: formData });
-        if (!res.ok) throw new Error('Pipeline comparison failed');
-        const data = await res.json();
-        setComparison(data);
-        // Use classic analysis for the main search
-        if (data.classic?.analysis) setAnalysis(data.classic.analysis);
-      } else {
-        // Standard classic pipeline
-        const formData = new FormData();
-        formData.append('file', file);
-        const response = await fetch('/api/search/image?limit=12', { method: 'POST', body: formData });
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || 'Image search failed');
-        }
-        const data = await response.json();
-        setAnalysis(data.analysis);
-        onSearch({
-          type: 'image',
-          query: data.search_query,
-          analysis: data.analysis,
-          results: data.results,
-          searchTime: data.search_time_ms,
-        });
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/api/search/image?limit=12', { method: 'POST', body: formData });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Image search failed');
       }
+      const data = await response.json();
+      setAnalysis(data.analysis);
+      onSearch({
+        type: 'image',
+        query: data.search_query,
+        analysis: data.analysis,
+        results: data.results,
+        searchTime: data.search_time_ms,
+      });
     } catch (err: any) {
       console.error('Image search error:', err);
       setError(err.message || 'Failed to search by image. Please try again.');
@@ -121,7 +89,6 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
     setAnalysis(null);
     setError(null);
     setAnalyzing(false);
-    setComparison(null);
     onClose();
   };
 
@@ -141,37 +108,9 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
             <Camera className="h-5 w-5" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
             <h2 className="text-lg font-semibold tracking-tight" style={{ color: '#ffffff' }}>Visual Search</h2>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Pipeline toggle */}
-            {novaAvailable && (
-              <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                {([
-                  { key: 'classic' as Pipeline, label: 'Classic' },
-                  { key: 'compare' as Pipeline, label: 'Compare' },
-                ] as const).map(p => (
-                  <button
-                    key={p.key}
-                    onClick={() => setPipeline(p.key)}
-                    className="px-3 py-1 text-[10px] font-medium transition-all"
-                    style={{
-                      background: pipeline === p.key ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                      color: pipeline === p.key ? '#ffffff' : 'rgba(255, 255, 255, 0.4)',
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            )}
-            {novaAvailable === false && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1" style={{ background: 'rgba(251, 191, 36, 0.08)', color: '#fbbf24' }}>
-                <AlertCircle className="h-2.5 w-2.5" /> Nova unavailable
-              </span>
-            )}
-            <button onClick={handleClose} className="p-1.5 rounded-full hover:bg-white/10 transition-colors" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+          <button onClick={handleClose} className="p-1.5 rounded-full hover:bg-white/10 transition-colors" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Content */}
@@ -212,61 +151,15 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
                     <div className="flex flex-col items-center gap-3">
                       <Loader className="h-6 w-6 animate-spin" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
                       <p className="text-xs font-medium tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
-                        {pipeline === 'compare' ? 'Running both pipelines...' : 'Analyzing with Claude Sonnet 4.6'}
+                        Analyzing with Claude Sonnet 4.6
                       </p>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Comparison Results */}
-              {comparison && !analyzing && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <GitCompare className="h-4 w-4" style={{ color: 'rgba(255, 255, 255, 0.5)' }} />
-                    <span className="text-xs font-semibold" style={{ color: '#ffffff' }}>Pipeline Comparison</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Classic */}
-                    <div className="p-4 rounded-xl" style={{ background: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-xs font-semibold" style={{ color: '#60a5fa' }}>Classic (Claude Vision)</h5>
-                        {comparison.classic?.time_ms && (
-                          <span className="text-[10px] font-mono" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{comparison.classic.time_ms}ms</span>
-                        )}
-                      </div>
-                      {comparison.classic?.search_query ? (
-                        <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                          {comparison.classic.search_query.slice(0, 150)}...
-                        </p>
-                      ) : (
-                        <p className="text-[11px]" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>Failed</p>
-                      )}
-                    </div>
-                    {/* Nova-enhanced */}
-                    <div className="p-4 rounded-xl" style={{ background: comparison.nova_enhanced?.available ? 'rgba(52, 211, 153, 0.06)' : 'rgba(255, 255, 255, 0.02)', border: `1px solid ${comparison.nova_enhanced?.available ? 'rgba(52, 211, 153, 0.15)' : 'rgba(255, 255, 255, 0.06)'}` }}>
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-xs font-semibold" style={{ color: comparison.nova_enhanced?.available ? '#34d399' : 'rgba(255, 255, 255, 0.3)' }}>Nova Enhanced</h5>
-                        {comparison.nova_enhanced?.time_ms && (
-                          <span className="text-[10px] font-mono" style={{ color: 'rgba(255, 255, 255, 0.4)' }}>{comparison.nova_enhanced.time_ms}ms</span>
-                        )}
-                      </div>
-                      {comparison.nova_enhanced?.available && comparison.nova_enhanced?.search_query ? (
-                        <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                          {comparison.nova_enhanced.search_query.slice(0, 150)}...
-                        </p>
-                      ) : (
-                        <p className="text-[11px]" style={{ color: 'rgba(255, 255, 255, 0.3)' }}>
-                          {comparison.nova_enhanced?.available ? 'Failed' : 'Nova model not available'}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Standard Analysis Results */}
-              {analysis && !analyzing && !comparison && (
+              {/* Analysis Results */}
+              {analysis && !analyzing && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-green-400/80" />
@@ -310,7 +203,7 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
               {/* Try Another Button */}
               {!analyzing && (
                 <button
-                  onClick={() => { setPreview(null); setAnalysis(null); setError(null); setComparison(null); }}
+                  onClick={() => { setPreview(null); setAnalysis(null); setError(null); }}
                   className="w-full px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-white/10"
                   style={{ background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.08)', color: 'rgba(255, 255, 255, 0.7)' }}
                 >
@@ -323,15 +216,13 @@ const ImageSearchModal = ({ isOpen, onClose, onSearch }: ImageSearchModalProps) 
 
         {/* Footer Info */}
         <div className="px-6 py-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'rgba(255, 255, 255, 0.06)' }}>
-                <Sparkles className="h-3 w-3" style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
-              </div>
-              <span className="text-xs font-medium tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
-                {pipeline === 'compare' ? 'Claude Vision + Nova Multimodal comparison' : 'Claude Sonnet 4.6 Vision + Cohere Embeddings + pgvector'}
-              </span>
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'rgba(255, 255, 255, 0.06)' }}>
+              <Sparkles className="h-3 w-3" style={{ color: 'rgba(255, 255, 255, 0.4)' }} />
             </div>
+            <span className="text-xs font-medium tracking-wide" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
+              Claude Sonnet 4.6 Vision + Cohere Embeddings + pgvector
+            </span>
           </div>
         </div>
       </div>

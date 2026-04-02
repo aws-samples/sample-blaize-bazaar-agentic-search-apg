@@ -46,7 +46,7 @@ class AuroraSessionManager:
                 with conn.cursor() as cur:
                     # Check if session already exists
                     cur.execute("""
-                        SELECT session_id, created_at FROM bedrock_integration.conversations
+                        SELECT session_id, created_at FROM blaize_bazaar.conversations
                         WHERE session_id = %s
                     """, (self.session_id,))
                     existing = cur.fetchone()
@@ -56,7 +56,7 @@ class AuroraSessionManager:
                     else:
                         logger.info(f"🆕 Creating new session: {self.session_id}")
                         cur.execute("""
-                            INSERT INTO bedrock_integration.conversations (session_id, agent_name, context, created_at)
+                            INSERT INTO blaize_bazaar.conversations (session_id, agent_name, context, created_at)
                             VALUES (%s, %s, %s, %s)
                         """, (self.session_id, self.agent_name, json.dumps({}), datetime.now()))
                         conn.commit()
@@ -77,7 +77,7 @@ class AuroraSessionManager:
             with psycopg.connect(self.conn_string) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        INSERT INTO bedrock_integration.messages (session_id, role, content, timestamp)
+                        INSERT INTO blaize_bazaar.messages (session_id, role, content, timestamp)
                         VALUES (%s, %s, %s, %s)
                     """, (self.session_id, role, content, datetime.now()))
                     conn.commit()
@@ -99,7 +99,7 @@ class AuroraSessionManager:
             with psycopg.connect(self.conn_string) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        INSERT INTO bedrock_integration.tool_uses (session_id, tool_name, tool_input, tool_output, timestamp)
+                        INSERT INTO blaize_bazaar.tool_uses (session_id, tool_name, tool_input, tool_output, timestamp)
                         VALUES (%s, %s, %s, %s, %s)
                     """, (self.session_id, tool_name, json.dumps(tool_input), json.dumps(tool_output), datetime.now()))
                     conn.commit()
@@ -123,7 +123,7 @@ class AuroraSessionManager:
                 with conn.cursor() as cur:
                     cur.execute("""
                         SELECT role, content, timestamp
-                        FROM bedrock_integration.messages
+                        FROM blaize_bazaar.messages
                         WHERE session_id = %s
                         ORDER BY timestamp ASC
                         LIMIT %s
@@ -145,7 +145,7 @@ class AuroraSessionManager:
             with psycopg.connect(self.conn_string, row_factory=dict_row) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        SELECT context FROM bedrock_integration.conversations
+                        SELECT context FROM blaize_bazaar.conversations
                         WHERE session_id = %s
                     """, (self.session_id,))
                     result = cur.fetchone()
@@ -165,7 +165,7 @@ class AuroraSessionManager:
             with psycopg.connect(self.conn_string) as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
-                        UPDATE bedrock_integration.conversations
+                        UPDATE blaize_bazaar.conversations
                         SET context = %s, updated_at = %s
                         WHERE session_id = %s
                     """, (json.dumps(context), datetime.now(), self.session_id))
@@ -180,8 +180,8 @@ class AuroraSessionManager:
         try:
             with psycopg.connect(self.conn_string) as conn:
                 with conn.cursor() as cur:
-                    cur.execute("DELETE FROM bedrock_integration.messages WHERE session_id = %s", (self.session_id,))
-                    cur.execute("DELETE FROM bedrock_integration.tool_uses WHERE session_id = %s", (self.session_id,))
+                    cur.execute("DELETE FROM blaize_bazaar.messages WHERE session_id = %s", (self.session_id,))
+                    cur.execute("DELETE FROM blaize_bazaar.tool_uses WHERE session_id = %s", (self.session_id,))
                     conn.commit()
             logger.info(f"Cleared session {self.session_id}")
         except Exception as e:

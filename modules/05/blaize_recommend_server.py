@@ -20,7 +20,7 @@ REGION = os.environ.get("REGION", "us-east-1")
 DB_CLUSTER_ARN = os.environ.get("DB_CLUSTER_ARN", "")
 SECRET_ARN = os.environ.get("SECRET_ARN", "")
 DATABASE = os.environ.get("DATABASE", "postgres")
-SCHEMA = "bedrock_integration"
+SCHEMA = "blaize_bazaar"
 
 # Module-level clients for Lambda warm start reuse
 rds_client = boto3.client("rds-data", region_name=REGION)

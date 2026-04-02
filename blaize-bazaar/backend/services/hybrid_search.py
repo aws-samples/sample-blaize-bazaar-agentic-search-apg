@@ -158,10 +158,34 @@ class HybridSearchService:
         ⏩ SHORT ON TIME? Run:
            cp solutions/module2/services/hybrid_search.py blaize-bazaar/backend/services/hybrid_search.py
         """
-        # TODO: Your implementation here (~14 lines)
-        # Return empty list as fallback — fulltext search still works
-        logger.warning("⏳ _vector_search not implemented — returning empty (Module 2 TODO)")
-        return []
+        async with self.db.get_connection() as conn:
+            async with conn.cursor() as cur:
+                await cur.execute(f"SET LOCAL hnsw.ef_search = {int(ef_search)}")
+                if iterative_scan:
+                    await cur.execute("SET LOCAL hnsw.iterative_scan = 'relaxed_order'")
+                await cur.execute("""
+                    SELECT
+                        "productId" as product_id,
+                        product_description,
+                        "imgUrl" as img_url,
+                        "productURL" as product_url,
+                        category_name,
+                        price,
+                        reviews,
+                        stars as rating,
+                        "isBestSeller" as isbestseller,
+                        "boughtInLastMonth" as boughtinlastmonth,
+                        quantity,
+                        1 - (embedding <=> %s::vector) as similarity
+                    FROM blaize_bazaar.product_catalog
+                    WHERE stars >= 3.5
+                      AND reviews >= 10
+                      AND "imgUrl" IS NOT NULL
+                    ORDER BY embedding <=> %s::vector
+                    LIMIT %s
+                """, (embedding, embedding, limit))
+                results = await cur.fetchall()
+                return [dict(r) for r in results]
     
     async def _fulltext_search(
         self,
@@ -186,7 +210,7 @@ class HybridSearchService:
                     to_tsvector('english', product_description || ' ' || category_name),
                     plainto_tsquery('english', %s)
                 ) as rank
-            FROM bedrock_integration.product_catalog
+            FROM blaize_bazaar.product_catalog
             WHERE to_tsvector('english', product_description || ' ' || category_name) 
                   @@ plainto_tsquery('english', %s)
               AND stars >= 3.5

@@ -130,7 +130,7 @@ class HybridSearchService:
                         "boughtInLastMonth" as boughtinlastmonth,
                         quantity,
                         1 - (embedding <=> %s::vector) as similarity
-                    FROM bedrock_integration.product_catalog
+                    FROM blaize_bazaar.product_catalog
                     WHERE stars >= 3.5
                       AND reviews >= 10
                       AND "imgUrl" IS NOT NULL
@@ -163,7 +163,7 @@ class HybridSearchService:
                     to_tsvector('english', product_description || ' ' || category_name),
                     plainto_tsquery('english', %s)
                 ) as rank
-            FROM bedrock_integration.product_catalog
+            FROM blaize_bazaar.product_catalog
             WHERE to_tsvector('english', product_description || ' ' || category_name) 
                   @@ plainto_tsquery('english', %s)
               AND stars >= 3.5

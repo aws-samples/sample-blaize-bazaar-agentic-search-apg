@@ -38,6 +38,112 @@ GUARDRAILS (ACTIVE):
 - Flag inappropriate requests politely
 - Keep all responses family-friendly"""
 
+SINGLE_AGENT_PROMPT = """You are Blaize AI, the shopping assistant for Blaize Bazaar.
+
+TOOL SELECTION:
+- get_trending_products → When user asks about trending, popular, or best-selling items. Pass category if they mention one (e.g. "trending in electronics" → category="Electronics").
+- search_products → Descriptive or intent-based product queries (e.g. "gift for a cook", "noise-canceling headphones under $200")
+- get_price_analysis → Pricing statistics and category comparisons
+
+Call exactly one tool per query. Extract price limits and pass as max_price.
+The search tool handles category mapping automatically — pass the user's words directly.
+
+RESPONSE STYLE:
+Write 1-2 short sentences as a conversational intro. Products render as visual cards
+automatically — do not list them in text. Never use markdown tables, numbered lists,
+headers, or emojis. Never claim products are unavailable or inventory is being refreshed.
+Never ask follow-up questions. If zero results, say "I couldn't find exact matches —
+try a different search term."."""
+
+
+# ---------------------------------------------------------------------------
+# Deterministic intent classification — replaces LLM-based routing
+# ---------------------------------------------------------------------------
+PRICING_KEYWORDS = {"deal", "deals", "cheap", "cheapest", "price", "pricing",
+                    "discount", "affordable", "budget", "value", "cost", "save",
+                    "best price", "on sale", "bargain", "under $", "below $",
+                    "less than $", "compare price"}
+INVENTORY_KEYWORDS = {"restock", "inventory", "stock", "out of stock",
+                      "low stock", "available", "availability", "in stock",
+                      "running low", "sold out", "back in stock"}
+SUPPORT_KEYWORDS = {"return", "refund", "policy", "help", "support", "troubleshoot",
+                    "issue", "problem", "warranty", "broken", "defective"}
+SEARCH_KEYWORDS = {"search for", "looking for", "where can I", "compare", "browse"}
+
+
+def classify_intent(query: str) -> str:
+    """Deterministic intent classification via keyword matching.
+    Returns 'pricing', 'inventory', 'customer_support', 'search', or 'recommendation'."""
+    q = query.lower()
+    words = set(re.findall(r'\w+', q))
+
+    # Multi-word phrases first (higher specificity)
+    for phrase in PRICING_KEYWORDS:
+        if ' ' in phrase and phrase in q:
+            return "pricing"
+    for phrase in INVENTORY_KEYWORDS:
+        if ' ' in phrase and phrase in q:
+            return "inventory"
+
+    # Single-word matches — pricing first, then inventory
+    if words & {w for w in PRICING_KEYWORDS if ' ' not in w}:
+        return "pricing"
+    if words & {w for w in INVENTORY_KEYWORDS if ' ' not in w}:
+        return "inventory"
+
+    # Support keywords (single-word only)
+    if words & SUPPORT_KEYWORDS:
+        return "customer_support"
+
+    # Search keywords (multi-word phrase matching)
+    for phrase in SEARCH_KEYWORDS:
+        if ' ' in phrase and phrase in q:
+            return "search"
+    # Single-word search keywords
+    if words & {w for w in SEARCH_KEYWORDS if ' ' not in w}:
+        return "search"
+
+    return "recommendation"
+
+
+# ---------------------------------------------------------------------------
+# Product extraction — single source of truth, replaces LLM JSON generation
+# ---------------------------------------------------------------------------
+class ProductExtractor:
+    """Extract products from tool results programmatically.
+    The LLM never generates product JSON — this class handles it."""
+
+    @staticmethod
+    def extract(tool_result_str: str) -> list:
+        """Parse tool result JSON and return normalized product dicts."""
+        try:
+            data = json.loads(tool_result_str)
+        except (json.JSONDecodeError, TypeError):
+            return []
+
+        products = []
+        if isinstance(data, dict) and "products" in data:
+            products = data["products"]
+        elif isinstance(data, list):
+            products = data
+
+        return [ProductExtractor._normalize(p) for p in products if isinstance(p, dict)]
+
+    @staticmethod
+    def _normalize(p: dict) -> dict:
+        """Normalize field names from various tool output formats."""
+        return {
+            "productId": p.get("productId") or p.get("product_id", ""),
+            "name": (p.get("product_description") or p.get("name", ""))[:80],
+            "price": _safe_float(p.get("price", 0)),
+            "stars": _safe_float(p.get("stars") or p.get("rating", 0)),
+            "reviews": _safe_int(p.get("reviews", 0)),
+            "category": p.get("category_name") or p.get("category", ""),
+            "quantity": _safe_int(p.get("quantity", 0)),
+            "imgUrl": p.get("imgUrl") or p.get("img_url", ""),
+            "productURL": p.get("productURL") or p.get("product_url", ""),
+        }
+
 
 def _repair_json(raw: str) -> str:
     """Best-effort repair of common LLM JSON quirks."""
@@ -117,89 +223,6 @@ class EnhancedChatService:
         """Return current session agent stats."""
         return dict(self._agent_stats)
 
-    def _get_system_prompt(self, guardrails_enabled: bool = False) -> str:
-        """Premium concise system prompt for product recommendations"""
-        base = """You are Blaize AI, the shopping assistant for Blaize Bazaar — a premium AI-powered e-commerce platform.
-
-You have direct access to an Aurora PostgreSQL database with 21,000+ products.
-
-TONE & VOICE:
-- Be confident, concise, and helpful — like a knowledgeable store associate
-- NEVER apologize. NEVER say "I apologize", "unfortunately", or "I'm sorry"
-- If a product isn't found, immediately suggest the closest alternatives
-- Keep text responses to 1-2 SHORT sentences max. Let the products speak for themselves
-- Sound premium and assured, not robotic or overly formal
-
-CRITICAL RULES:
-1. Make ONLY ONE database query per user request
-2. Return 3-5 products maximum
-3. STOP after providing recommendations — no follow-up queries
-4. Use LIMIT 5 in every SELECT query
-5. After the query completes, format results and STOP
-
-WHEN NO EXACT MATCH IS FOUND:
-- Do NOT write paragraphs explaining what's missing
-- Instead, broaden the search terms and show the closest alternatives
-- Example: If "wireless headphones" returns nothing, try "watch" or "shoes" or "laptop"
-- Say something like: "Here's what we have:" — then show products
-
-CONTEXT AWARENESS:
-- Check CONVERSATION HISTORY for follow-up queries
-- "cheapest one" / "best one" = refer to the product category from the previous message
-- "other brands" / "similar items" = same category, different products
-- "different price range" = same category, varied pricing
-
-MANDATORY QUERY FORMAT:
-```sql
-SELECT "productId", product_description as name, price, stars, reviews,
-       category_name as category, quantity, "imgUrl" as image_url
-FROM bedrock_integration.product_catalog
-WHERE product_description ILIKE '%SEARCH_TERM%'
-  AND price > 0
-  AND quantity > 0
-ORDER BY stars DESC, reviews DESC
-LIMIT 5
-```
-
-RESPONSE FORMAT (output ONCE, then STOP):
-
-[1-2 sentence intro — confident, no apologies]
-
-Products:
-```json
-[
-  {
-    "productId": "B001",
-    "name": "Product Name",
-    "price": 399.00,
-    "stars": 5.0,
-    "reviews": 834,
-    "category": "Category",
-    "quantity": 10,
-    "image_url": "url"
-  }
-]
-```
-
-Suggestions:
-- "Suggestion 1"
-- "Suggestion 2"
-- "Suggestion 3"
-
-Generate 3 follow-up suggestions that help the user take a NEXT ACTION. Good suggestions:
-- Narrow results: "Under $50" or "With 4.5+ stars"
-- Explore adjacent: "Show wireless options" or "Compare top 3"
-- Change direction: "What about [related category]?"
-Bad suggestions: "Show similar items" (too vague), repeating the original query.
-Base suggestions on the actual products returned — reference price ranges, categories, or features you found.
-
-STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
-
-        if guardrails_enabled:
-            base += GUARDRAILS_SUFFIX
-
-        return base
-    
     async def chat(
         self,
         message: str,
@@ -349,6 +372,18 @@ STOP IMMEDIATELY after this. No follow-up queries. No follow-up questions."""
 {conversation_context}
 ---
 CURRENT REQUEST: {message}"""
+
+            # Deterministic intent classification
+            intent = classify_intent(message)
+            intent_hint = {
+                "pricing": "price_optimization_agent",
+                "inventory": "inventory_restock_agent",
+                "customer_support": "customer_support_agent",
+                "search": "search_agent",
+                "recommendation": "product_recommendation_agent",
+            }[intent]
+            full_message = f"[USE: {intent_hint}] {full_message}"
+            logger.info(f"🎯 Intent: {intent} → {intent_hint}")
             
             # Invoke orchestrator with timing
             import time
@@ -420,38 +455,19 @@ CURRENT REQUEST: {message}"""
             from strands import Agent
             from strands.models.bedrock import BedrockModel
             from services.agent_tools import (
-                semantic_product_search,
+                search_products,
                 get_trending_products,
                 get_price_analysis,
             )
 
-            single_prompt = (
-                "You are Blaize AI, the shopping assistant for Blaize Bazaar.\n"
-                "Use the available tools to find products, trends, and pricing info.\n\n"
-                "TOOL USAGE RULES:\n"
-                "- Use semantic_product_search for ALL product search queries. It uses hybrid AI search with reranking.\n"
-                "- ONLY use get_trending_products when the user explicitly asks about trending/popular items across ALL categories.\n"
-                "- NEVER call both semantic_product_search AND get_trending_products for the same query.\n"
-                "- Call ONE tool per query, then respond.\n"
-                "- CRITICAL: When the user mentions a price limit (e.g. 'under $50', 'below $200', 'less than $100'), "
-                "ALWAYS pass the max_price parameter to semantic_product_search. Extract the number from the query.\n\n"
-                "RESPONSE RULES:\n"
-                "- Products are displayed as visual cards automatically from tool results.\n"
-                "- Your text response should ONLY be a brief 1-2 sentence conversational intro.\n"
-                "- Do NOT list, repeat, or summarize individual product names, prices, ratings, or details in your text.\n"
-                "- NEVER use markdown tables, horizontal rules, numbered lists, or section headers.\n"
-                "- Be confident and concise, like a knowledgeable store associate.\n"
-                "- NEVER apologize or say 'unfortunately'.\n"
-                "- Example good response: 'Here are some great smartphones under $500!'\n"
-                "- Example bad response: '1. iPhone SE — $429.99 ⭐ 4.3 ...'"
-            )
+            single_prompt = SINGLE_AGENT_PROMPT
             if guardrails_enabled:
                 single_prompt += GUARDRAILS_SUFFIX
 
             agent = Agent(
                 model=BedrockModel(model_id=self.model_id, max_tokens=8192, temperature=0.0),
                 system_prompt=single_prompt,
-                tools=[semantic_product_search, get_trending_products, get_price_analysis]
+                tools=[search_products, get_trending_products, get_price_analysis]
             )
 
             # Build conversation context
@@ -559,7 +575,7 @@ CURRENT REQUEST: {message}"""
                 elif "_tool_done" in event:
                     result_str = event.get("_result", "")
                     if result_str:
-                        raw_products = self._extract_products_from_result(result_str)
+                        raw_products = ProductExtractor.extract(result_str)
                         logger.info(f"📦 Extracted {len(raw_products)} raw products from tool result")
                         if raw_products:
                             formatted = await self._format_products(raw_products)
@@ -578,6 +594,8 @@ CURRENT REQUEST: {message}"""
                             products_sent.extend(new_products)
 
                     yield {"type": "agent_step", "agent": "SearchAssistant", "action": "Done", "status": "completed"}
+                    # Clear pre-tool thinking text so post-tool response doesn't concatenate
+                    yield {"type": "content_reset"}
 
             await task
 
@@ -646,31 +664,12 @@ CURRENT REQUEST: {message}"""
             from strands import Agent
             from strands.models.bedrock import BedrockModel
             from services.agent_tools import (
-                semantic_product_search,
+                search_products,
                 get_trending_products,
                 get_price_analysis,
             )
 
-            single_prompt = (
-                "You are Blaize AI, the shopping assistant for Blaize Bazaar.\n"
-                "Use the available tools to find products, trends, and pricing info.\n\n"
-                "TOOL USAGE RULES:\n"
-                "- Use semantic_product_search for ALL product search queries. It uses hybrid AI search with reranking.\n"
-                "- ONLY use get_trending_products when the user explicitly asks about trending/popular items across ALL categories.\n"
-                "- NEVER call both semantic_product_search AND get_trending_products for the same query.\n"
-                "- Call ONE tool per query, then respond.\n"
-                "- CRITICAL: When the user mentions a price limit (e.g. 'under $50', 'below $200', 'less than $100'), "
-                "ALWAYS pass the max_price parameter to semantic_product_search. Extract the number from the query.\n\n"
-                "RESPONSE RULES:\n"
-                "- Products are displayed as visual cards automatically from tool results.\n"
-                "- Your text response should ONLY be a brief 1-2 sentence conversational intro.\n"
-                "- Do NOT list, repeat, or summarize individual product names, prices, ratings, or details in your text.\n"
-                "- NEVER use markdown tables, horizontal rules, numbered lists, or section headers.\n"
-                "- Be confident and concise, like a knowledgeable store associate.\n"
-                "- NEVER apologize or say 'unfortunately'.\n"
-                "- Example good response: 'Here are some great smartphones under $500!'\n"
-                "- Example bad response: '1. iPhone SE — $429.99 ⭐ 4.3 ...'"
-            )
+            single_prompt = SINGLE_AGENT_PROMPT
             if guardrails_enabled:
                 single_prompt += GUARDRAILS_SUFFIX
 
@@ -681,7 +680,7 @@ CURRENT REQUEST: {message}"""
                     temperature=0.0
                 ),
                 system_prompt=single_prompt,
-                tools=[semantic_product_search, get_trending_products, get_price_analysis]
+                tools=[search_products, get_trending_products, get_price_analysis]
             )
 
             # Build conversation context
@@ -815,22 +814,25 @@ CURRENT REQUEST: {message}"""
         clean_text = re.sub(r'^[-*_]{3,}\s*$', '', clean_text, flags=re.MULTILINE)
         # Remove markdown headers
         clean_text = re.sub(r'^#{1,4}\s+.*$', '', clean_text, flags=re.MULTILINE)
-        # Remove numbered list lines (1. **Product** — $xx)
-        clean_text = re.sub(r'^\d+\.\s+\*\*.*$', '', clean_text, flags=re.MULTILINE)
+        # Remove numbered list lines (1. **Product** — $xx) — only when product cards exist
+        if have_products:
+            clean_text = re.sub(r'^\d+\.\s+\*\*.*$', '', clean_text, flags=re.MULTILINE)
 
-        # Remove plain-text product listings (price patterns, star ratings, view links)
-        # Lines containing price patterns like $xx.xx or $xxx.xx
-        clean_text = re.sub(r'^.*\$\d+[\d,.]*\s*.*$', '', clean_text, flags=re.MULTILINE)
-        # Lines with star ratings (⭐, ★, or "x.x stars")
-        clean_text = re.sub(r'^.*[⭐★].*$', '', clean_text, flags=re.MULTILINE)
-        clean_text = re.sub(r'^.*\d+\.\d+\s*stars?.*$', '', clean_text, flags=re.MULTILINE | re.IGNORECASE)
-        # Lines with "View Product" or product links
-        clean_text = re.sub(r'^.*\[View Product\].*$', '', clean_text, flags=re.MULTILINE | re.IGNORECASE)
-        clean_text = re.sub(r'^.*🔗.*$', '', clean_text, flags=re.MULTILINE)
-        # Lines with "reviews)" pattern
-        clean_text = re.sub(r'^.*\d+[\d,]*\s*reviews?\).*$', '', clean_text, flags=re.MULTILINE | re.IGNORECASE)
-        # Lines that are just product names with em dash or bullet formatting
-        clean_text = re.sub(r'^[-•]\s+\*\*.*$', '', clean_text, flags=re.MULTILINE)
+        # Remove plain-text product listings ONLY when we have product cards to show instead.
+        # When there are no product cards (e.g. inventory queries), the text IS the response.
+        if have_products:
+            # Lines containing price patterns like $xx.xx or $xxx.xx
+            clean_text = re.sub(r'^.*\$\d+[\d,.]*\s*.*$', '', clean_text, flags=re.MULTILINE)
+            # Lines with star ratings (⭐, ★, or "x.x stars")
+            clean_text = re.sub(r'^.*[⭐★].*$', '', clean_text, flags=re.MULTILINE)
+            clean_text = re.sub(r'^.*\d+\.\d+\s*stars?.*$', '', clean_text, flags=re.MULTILINE | re.IGNORECASE)
+            # Lines with "View Product" or product links
+            clean_text = re.sub(r'^.*\[View Product\].*$', '', clean_text, flags=re.MULTILINE | re.IGNORECASE)
+            clean_text = re.sub(r'^.*🔗.*$', '', clean_text, flags=re.MULTILINE)
+            # Lines with "reviews)" pattern
+            clean_text = re.sub(r'^.*\d+[\d,]*\s*reviews?\).*$', '', clean_text, flags=re.MULTILINE | re.IGNORECASE)
+            # Lines that are just product names with em dash or bullet formatting
+            clean_text = re.sub(r'^[-•]\s+\*\*.*$', '', clean_text, flags=re.MULTILINE)
 
         # Collapse blank lines
         clean_text = re.sub(r'\n{3,}', '\n\n', clean_text)
@@ -885,7 +887,7 @@ CURRENT REQUEST: {message}"""
                     placeholders = " OR ".join(["product_description ILIKE %s"] * len(names))
                     params = [f"%{n[:30]}%" for n in names]
                     rows = await self.db_service.fetch_all(
-                        f'SELECT "productId", product_description, "imgUrl" FROM bedrock_integration.product_catalog WHERE {placeholders}',
+                        f'SELECT "productId", product_description, "imgUrl" FROM blaize_bazaar.product_catalog WHERE {placeholders}',
                         *params
                     )
                     img_lookup = {}
@@ -1014,38 +1016,10 @@ CURRENT REQUEST: {message}"""
             'product_recommendation_agent': 'Search Agent',
             'price_optimization_agent': 'Pricing Agent',
             'inventory_restock_agent': 'Inventory Agent',
-            'semantic_product_search': 'Search Agent',
+            'customer_support_agent': 'Support Agent',
+            'search_agent': 'Search Agent',
+            'search_products': 'Search Agent',
         }.get(tool_name, 'Search Agent')
-
-    def _extract_products_from_result(self, result_str: str) -> list:
-        """Extract product list from a tool result string."""
-        # First, try to parse as a JSON object with a "products" key
-        try:
-            obj = json.loads(result_str)
-            if isinstance(obj, dict) and "products" in obj and isinstance(obj["products"], list):
-                return obj["products"]
-            if isinstance(obj, list):
-                return obj
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-        # Fallback: regex extraction for embedded JSON arrays
-        patterns = [
-            r'```json\s*(\[[\s\S]*?\])\s*```',
-            r'```\s*(\[[\s\S]*?\])\s*```',
-            r'(\[\s*\{[^\[]*"productId"[^\]]*\])',
-            r'(\[\s*\{[^\[]*"product_description"[^\]]*\])',
-        ]
-        for pattern in patterns:
-            matches = re.findall(pattern, result_str, re.DOTALL)
-            if matches:
-                raw = matches[0]
-                for text in [raw, _repair_json(raw)]:
-                    try:
-                        return json.loads(text)
-                    except json.JSONDecodeError:
-                        continue
-        return []
 
     async def chat_stream(
         self,
@@ -1165,6 +1139,18 @@ CURRENT REQUEST: {message}"""
                 f"CURRENT REQUEST: {message}"
             )
 
+        # Deterministic intent classification — tells the orchestrator which agent to use
+        intent = classify_intent(message)
+        intent_hint = {
+            "pricing": "price_optimization_agent",
+            "inventory": "inventory_restock_agent",
+            "customer_support": "customer_support_agent",
+            "search": "search_agent",
+            "recommendation": "product_recommendation_agent",
+        }[intent]
+        full_message = f"[USE: {intent_hint}] {full_message}"
+        logger.info(f"🎯 Intent: {intent} → {intent_hint}")
+
         # --- Queue-based streaming bridge ---
         loop = asyncio.get_running_loop()
         queue: asyncio.Queue = asyncio.Queue()
@@ -1281,7 +1267,7 @@ CURRENT REQUEST: {message}"""
             elif "_tool_done" in event:
                 result_str = event.get("_result", "")
                 if result_str:
-                    raw_products = self._extract_products_from_result(result_str)
+                    raw_products = ProductExtractor.extract(result_str)
                     if raw_products:
                         formatted = await self._format_products(raw_products)
                         # Enforce price limit from user query as safety net
@@ -1311,6 +1297,9 @@ CURRENT REQUEST: {message}"""
                     "action": "Done",
                     "status": "completed"
                 }
+                # Reset streamed content — the orchestrator will now generate its final response
+                # and we don't want pre-tool thinking text mixed with post-tool response
+                yield {"type": "content_reset"}
 
             elif "_text" in event:
                 # Stream text tokens to the client in real time

@@ -37,8 +37,8 @@ interface EvalResult {
 const TEST_SCENARIOS = [
   { label: 'Restock 100 units', action: 'restock_product', params: { quantity: 100 } },
   { label: 'Restock 1000 units', action: 'restock_product', params: { quantity: 1000 } },
-  { label: 'Search headphones', action: 'semantic_product_search', params: { query: 'wireless headphones' } },
-  { label: 'Search weapons', action: 'semantic_product_search', params: { query: 'best weapons for hunting' } },
+  { label: 'Search headphones', action: 'search_products', params: { query: 'wireless headphones' } },
+  { label: 'Search weapons', action: 'search_products', params: { query: 'best weapons for hunting' } },
   { label: 'Set price $50', action: 'set_price', params: { price: 50 } },
   { label: 'Set price $15,000', action: 'set_price', params: { price: 15000 } },
 ]
@@ -164,7 +164,7 @@ const PolicyDemoPanel = ({ isOpen, onClose }: PolicyDemoPanelProps) => {
                 style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
               >
                 <option value="restock_product" style={{ background: '#1a1a1a' }}>restock_product</option>
-                <option value="semantic_product_search" style={{ background: '#1a1a1a' }}>semantic_product_search</option>
+                <option value="search_products" style={{ background: '#1a1a1a' }}>search_products</option>
                 <option value="set_price" style={{ background: '#1a1a1a' }}>set_price</option>
               </select>
             </div>

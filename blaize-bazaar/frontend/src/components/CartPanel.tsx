@@ -1,27 +1,52 @@
 import { X, ShoppingBag, Plus, Minus, ChevronRight, Package } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useCart, type CheckoutMetrics } from '../contexts/CartContext'
+import { useLayout, type WorkshopMode } from '../contexts/LayoutContext'
 
-export interface CartItem {
-  productId: string
-  name: string
-  price: number
-  quantity: number
-  image?: string
-}
+// Re-export CartItem for backward compatibility with existing import paths
+export type { CartItem } from '../contexts/CartContext'
 
 interface CartPanelProps {
   isOpen: boolean
   onClose: () => void
-  items: CartItem[]
-  onUpdateQuantity: (productId: string, quantity: number) => void
-  onRemoveItem: (productId: string) => void
-  onCheckout: () => void
-  onClearCart?: () => void
 }
 
-const CartPanel = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onCheckout, onClearCart }: CartPanelProps) => {
+const MODE_LABELS: Record<WorkshopMode, string> = {
+  legacy: 'Keyword Search',
+  semantic: 'Semantic Search',
+  tools: 'Agent + Tools',
+  full: 'Multi-Agent',
+  agentcore: 'AgentCore',
+}
+
+function getStepMessage(mode: WorkshopMode, steps: number): { text: string; color: string } {
+  const n = steps === 0 ? 'no' : String(steps)
+  switch (mode) {
+    case 'legacy':
+      return { text: `Cart built in ${n} steps`, color: 'var(--text-tertiary)' }
+    case 'semantic':
+      return { text: `Cart built in ${n} steps — semantic search helped`, color: '#0A84FF' }
+    case 'tools':
+      return { text: `Cart built in ${n} steps — your agent handled discovery`, color: '#BF5AF2' }
+    case 'full':
+      return { text: `Cart built in ${n} steps — specialists collaborated`, color: '#FF9F0A' }
+    case 'agentcore':
+      return { text: `Cart built in ${n} steps — your preferences did the work`, color: '#30D158' }
+  }
+}
+
+function computeSteps(m: CheckoutMetrics): number {
+  return m.searchCount + m.productViews + m.additions.length
+}
+
+const CartPanel = ({ isOpen, onClose }: CartPanelProps) => {
+  const { items, metrics, previousModeSteps, updateQuantity, removeFromCart, handleCheckout, clearCart } = useCart()
+  const { workshopMode } = useLayout()
+
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
+  const steps = computeSteps(metrics)
+  const stepInfo = getStepMessage(workshopMode, steps)
 
   return (
     <AnimatePresence>
@@ -70,9 +95,9 @@ const CartPanel = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onC
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  {items.length > 0 && onClearCart && (
+                  {items.length > 0 && (
                     <button
-                      onClick={onClearCart}
+                      onClick={clearCart}
                       className="text-xs font-medium px-3 py-1.5 rounded-full transition-all duration-200
                                hover:bg-red-500/10 active:scale-95"
                       style={{ color: 'var(--text-tertiary)' }}
@@ -174,7 +199,7 @@ const CartPanel = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onC
                                 style={{ border: '1px solid var(--border-color)' }}
                               >
                                 <button
-                                  onClick={() => onUpdateQuantity(item.productId, Math.max(1, item.quantity - 1))}
+                                  onClick={() => updateQuantity(item.productId, Math.max(1, item.quantity - 1))}
                                   className="px-2.5 py-1.5 transition-colors duration-150 hover:bg-white/5 active:bg-white/10"
                                   style={{ color: item.quantity <= 1 ? 'var(--text-tertiary)' : 'var(--text-primary)' }}
                                   aria-label="Decrease quantity"
@@ -191,7 +216,7 @@ const CartPanel = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onC
                                   {item.quantity}
                                 </motion.span>
                                 <button
-                                  onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
+                                  onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                                   className="px-2.5 py-1.5 transition-colors duration-150 hover:bg-white/5 active:bg-white/10"
                                   style={{ color: 'var(--text-primary)' }}
                                   aria-label="Increase quantity"
@@ -202,7 +227,7 @@ const CartPanel = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onC
 
                               {/* Remove — always visible but subtle */}
                               <button
-                                onClick={() => onRemoveItem(item.productId)}
+                                onClick={() => removeFromCart(item.productId)}
                                 className="text-[11px] font-medium px-2 py-1 rounded-md transition-all duration-200
                                          hover:bg-red-500/10 hover:text-red-400 active:scale-95"
                                 style={{ color: 'var(--text-tertiary)' }}
@@ -266,7 +291,7 @@ const CartPanel = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onC
 
                 {/* Checkout Button */}
                 <motion.button
-                  onClick={onCheckout}
+                  onClick={handleCheckout}
                   whileHover={{ scale: 1.015, boxShadow: '0 6px 20px rgba(10, 132, 255, 0.35)' }}
                   whileTap={{ scale: 0.98 }}
                   className="w-full py-3.5 rounded-full font-medium text-[15px] flex items-center justify-center gap-2"
@@ -281,6 +306,20 @@ const CartPanel = ({ isOpen, onClose, items, onUpdateQuantity, onRemoveItem, onC
                   Check Out
                   <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
                 </motion.button>
+
+                {/* Step Counter */}
+                {steps > 0 && (
+                  <div className="mt-3 text-center">
+                    <p className="text-[11px] font-medium" style={{ color: stepInfo.color }}>
+                      {stepInfo.text}
+                    </p>
+                    {previousModeSteps && previousModeSteps.totalSteps > 0 && (
+                      <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-tertiary)', opacity: 0.7 }}>
+                        was {previousModeSteps.totalSteps} in {MODE_LABELS[previousModeSteps.mode]}
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <p className="text-[11px] text-center mt-3 tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
                   Demo only — no real transactions

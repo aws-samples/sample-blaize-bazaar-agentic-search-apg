@@ -1,45 +1,86 @@
 """
 Product Recommendation Agent - Suggests products based on user preferences
-
-TODO (Module 3b): Implement the recommendation agent.
 """
+import json
+import re
+
 from strands import Agent, tool
-from services.agent_tools import get_trending_products, semantic_product_search, get_product_by_category
+from strands.models import BedrockModel
+from services.agent_tools import get_trending_products, get_product_by_category
+
+
+def _ensure_products_in_output(text: str, tool_results: list) -> str:
+    """If the LLM output lacks a JSON products block, extract from tool results and append."""
+    if re.search(r'```json\s*\[', text):
+        return text
+
+    all_products = []
+    for result_str in tool_results:
+        try:
+            data = json.loads(result_str)
+            if isinstance(data, dict) and "products" in data:
+                all_products.extend(data["products"])
+            elif isinstance(data, list):
+                all_products.extend(data)
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    if all_products:
+        text += f"\n\n```json\n{json.dumps(all_products)}\n```"
+    return text
 
 
 @tool
 def product_recommendation_agent(query: str) -> str:
     """
-    TODO (Module 3b): Build the Product Recommendation Agent.
-
-    This specialist agent handles product discovery queries like
-    "find me running shoes under $80" or "what's trending in electronics?"
-
-    Follow the pattern from inventory_agent.py and pricing_agent.py:
-        1. Create an Agent() with:
-           - model: BedrockModel with "global.anthropic.claude-sonnet-4-6"
-           - system_prompt: Describe a recommendation specialist who helps
-             users discover products using semantic search and trending data
-           - tools: [semantic_product_search, get_trending_products, get_product_by_category]
-        2. Invoke the agent with the query: result = agent(query)
-        3. Return str(result)
-        4. Wrap in try/except
-
-    Hints:
-        - Import BedrockModel: from strands.models import BedrockModel
-        - Keep the system prompt focused: "You are Blaize Bazaar's Product
-          Recommendation Specialist. Help users discover products..."
-        - The agent will automatically choose which tool to call based on the query
+    Provide personalized product recommendations based on user preferences.
 
     Args:
         query: User's product inquiry
 
     Returns:
-        Agent response as string (typically includes ```json product blocks)
-
-    ⏩ SHORT ON TIME? Run:
-       cp solutions/module3b/agents/recommendation_agent.py blaize-bazaar/backend/agents/recommendation_agent.py
+        Agent response with product recommendations
     """
-    # TODO: Your implementation here (~10 lines)
-    import json
-    return json.dumps({"error": "Recommendation agent not implemented yet — complete Module 3b TODO"})
+    try:
+        tool_results = []
+
+        agent = Agent(
+            model=BedrockModel(
+                model_id="global.anthropic.claude-sonnet-4-6",
+                max_tokens=4096,
+                temperature=0.2,
+            ),
+            system_prompt=(
+                "You are Blaize Bazaar's Product Recommendation Specialist. "
+                "Use get_trending_products when the user asks about trending, popular, or best-selling items "
+                "(pass the category parameter if they mention a specific category like 'electronics' or 'shoes'). "
+                "Use get_product_by_category for browsing a specific product category. "
+                "Focus on personalized recommendations, trending items, and popular picks. "
+                "Write 1-2 short sentences as a conversational intro. Products render as visual cards "
+                "automatically — do not list them in text. Never use markdown tables, numbered lists, "
+                "headers, or emojis. Never ask follow-up questions."
+            ),
+            tools=[get_trending_products, get_product_by_category],
+        )
+
+        # Capture inner tool results so we can guarantee product data in output
+        try:
+            from strands.hooks.events import AfterToolCallEvent
+
+            def capture_result(event: AfterToolCallEvent):
+                if hasattr(event, 'result') and event.result:
+                    raw = event.result
+                    if isinstance(raw, dict) and 'content' in raw:
+                        for block in raw.get('content', []):
+                            if isinstance(block, dict) and 'text' in block:
+                                tool_results.append(block['text'])
+
+            agent.add_hook(capture_result)
+        except ImportError:
+            pass
+
+        result = agent(query)
+        text = str(result)
+        return _ensure_products_in_output(text, tool_results)
+    except Exception as e:
+        return json.dumps({"error": f"Recommendation agent error: {str(e)}"})

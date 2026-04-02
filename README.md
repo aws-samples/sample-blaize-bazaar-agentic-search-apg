@@ -58,8 +58,10 @@ blaize-bazaar/                      # The App
 │   ├── agents/
 │   │   ├── recommendation_agent.py ← Challenge: specialist agent
 │   │   ├── orchestrator.py         ← Challenge: routing prompt
+│   │   ├── search_agent.py         Pre-built (study as pattern)
 │   │   ├── inventory_agent.py      Pre-built (study as pattern)
-│   │   └── pricing_agent.py        Pre-built (study as pattern)
+│   │   ├── pricing_agent.py        Pre-built (study as pattern)
+│   │   └── customer_support_agent.py Pre-built (study as pattern)
 │   └── app.py                      Pre-built FastAPI server
 ├── frontend/                       Pre-built React storefront
 │
@@ -71,7 +73,7 @@ solutions/                          # Drop-in replacements (cp and restart)
 
 modules/05/                         # AgentCore deployment scripts
 scripts/                            # Bootstrap & setup
-data/                               # Product catalog (~1,000 products with embeddings)
+data/                               # Product catalog (444 products with embeddings)
 sample-images/                      # Visual search test images
 ```
 
@@ -82,7 +84,7 @@ sample-images/                      # Visual search test images
 | Layer           | Technologies                                                       |
 | --------------- | ------------------------------------------------------------------ |
 | Database        | Aurora PostgreSQL 17.5, pgvector 0.8.0 (HNSW)                      |
-| AI/ML           | Amazon Bedrock — Claude Sonnet 4, Cohere Embed v4                  |
+| AI/ML           | Amazon Bedrock — Claude Sonnet 4.6, Cohere Embed v4                |
 | Agent Infra     | Amazon Bedrock AgentCore — Gateway, Memory, Observability, Runtime |
 | Agent Framework | Strands Agents SDK                                                 |
 | Backend         | FastAPI, Python 3.13, psycopg3, boto3                              |
@@ -105,17 +107,22 @@ See `solutions/README.md` for all copy commands.
 
 ## Database Schema
 
-**Table**: `bedrock_integration.product_catalog` (~1,000 products)
+**Table**: `blaize_bazaar.product_catalog` (444 products)
 
 ```sql
-CREATE TABLE bedrock_integration.product_catalog (
-    "productId"         VARCHAR(10) PRIMARY KEY,
-    product_description TEXT NOT NULL,
-    price               NUMERIC(10,2),
+CREATE TABLE blaize_bazaar.product_catalog (
+    "productId"         CHAR(10) PRIMARY KEY,
+    product_description VARCHAR(500) NOT NULL,
+    "imgUrl"            VARCHAR(200),
+    "productURL"        VARCHAR(40),
     stars               NUMERIC(2,1),
     reviews             INTEGER,
-    category_name       VARCHAR(100),
-    quantity            INTEGER DEFAULT 0,
+    price               NUMERIC(8,2),
+    category_id         SMALLINT,
+    "isBestSeller"      BOOLEAN DEFAULT FALSE,
+    "boughtInLastMonth" INTEGER,
+    category_name       VARCHAR(50) NOT NULL,
+    quantity            SMALLINT,
     embedding           vector(1024)    -- Cohere Embed v4
 );
 

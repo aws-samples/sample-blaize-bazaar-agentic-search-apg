@@ -83,7 +83,7 @@ class IndexPerformanceService:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT COUNT(*) as count
-                FROM bedrock_integration.product_catalog
+                FROM blaize_bazaar.product_catalog
                 WHERE embedding IS NOT NULL
             """)
             result = cur.fetchone()
@@ -143,7 +143,7 @@ class IndexPerformanceService:
                         price,
                         stars,
                         1 - (embedding <=> %s::vector) as similarity_score
-                    FROM bedrock_integration.product_catalog
+                    FROM blaize_bazaar.product_catalog
                     WHERE embedding IS NOT NULL
                     ORDER BY embedding <=> %s::vector
                     LIMIT %s
@@ -241,7 +241,7 @@ class IndexPerformanceService:
                         price,
                         stars,
                         1 - (embedding <=> %s::vector) as similarity_score
-                    FROM bedrock_integration.product_catalog
+                    FROM blaize_bazaar.product_catalog
                     WHERE embedding IS NOT NULL
                     ORDER BY embedding <=> %s::vector
                     LIMIT %s
@@ -469,7 +469,7 @@ class IndexPerformanceService:
                 # Get row count
                 cur.execute("""
                     SELECT COUNT(*) as cnt
-                    FROM bedrock_integration.product_catalog
+                    FROM blaize_bazaar.product_catalog
                     WHERE embedding IS NOT NULL
                 """)
                 row_count = cur.fetchone()["cnt"]
@@ -512,7 +512,7 @@ class IndexPerformanceService:
                 "memory_reduction": "32x",
             },
             "sql_examples": {
-                "sq": f"CREATE INDEX ON bedrock_integration.product_catalog USING hnsw ((embedding::halfvec({dim})) halfvec_cosine_ops) WITH (m = 16, ef_construction = 64);",
+                "sq": f"CREATE INDEX ON blaize_bazaar.product_catalog USING hnsw ((embedding::halfvec({dim})) halfvec_cosine_ops) WITH (m = 16, ef_construction = 64);",
                 "bq": f"-- pgvector 0.8.0+ required for binary quantization\n-- Binary quantization trades accuracy for massive memory savings\n-- Best for initial candidate retrieval with re-ranking",
             },
             "note": "SQ/BQ sizes are estimated — cannot create additional indexes on shared Aurora cluster.",
@@ -528,7 +528,7 @@ class IndexPerformanceService:
             with conn.cursor() as cur:
                 cur.execute("""
                     SELECT DISTINCT category_name
-                    FROM bedrock_integration.product_catalog
+                    FROM blaize_bazaar.product_catalog
                     WHERE category_name IS NOT NULL
                     ORDER BY category_name
                 """)
@@ -566,7 +566,7 @@ class IndexPerformanceService:
             SELECT
                 "productId", product_description, price, stars, category_name,
                 1 - (embedding <=> %s::vector) as similarity_score
-            FROM bedrock_integration.product_catalog
+            FROM blaize_bazaar.product_catalog
             WHERE embedding IS NOT NULL
               AND category_name = %s
             ORDER BY embedding <=> %s::vector
@@ -660,7 +660,7 @@ class IndexPerformanceService:
                     cur.execute("""
                         SELECT "productId", product_description, price, stars,
                                1 - (embedding <=> %s::vector) as similarity_score
-                        FROM bedrock_integration.product_catalog
+                        FROM blaize_bazaar.product_catalog
                         WHERE embedding IS NOT NULL
                         ORDER BY embedding <=> %s::vector
                         LIMIT %s
@@ -685,7 +685,7 @@ class IndexPerformanceService:
                         cur.execute("""
                             SELECT "productId", product_description, price, stars,
                                    1 - ((embedding::halfvec(1024)) <=> %s::halfvec(1024)) as similarity_score
-                            FROM bedrock_integration.product_catalog
+                            FROM blaize_bazaar.product_catalog
                             WHERE embedding IS NOT NULL
                             ORDER BY (embedding::halfvec(1024)) <=> %s::halfvec(1024)
                             LIMIT %s
@@ -714,7 +714,7 @@ class IndexPerformanceService:
                         start = time.perf_counter()
                         cur.execute("""
                             SELECT "productId", product_description, price, stars
-                            FROM bedrock_integration.product_catalog
+                            FROM blaize_bazaar.product_catalog
                             WHERE embedding IS NOT NULL
                             ORDER BY (binary_quantize(embedding)::bit(1024)) <#> binary_quantize(%s::vector)::bit(1024)
                             LIMIT %s
@@ -765,9 +765,9 @@ class IndexPerformanceService:
                 # Get table stats
                 table_query = """
                     SELECT
-                        pg_size_pretty(pg_total_relation_size('bedrock_integration.product_catalog')) as total_size,
+                        pg_size_pretty(pg_total_relation_size('blaize_bazaar.product_catalog')) as total_size,
                         COUNT(*) as row_count
-                    FROM bedrock_integration.product_catalog
+                    FROM blaize_bazaar.product_catalog
                     WHERE embedding IS NOT NULL
                 """
                 

@@ -3,7 +3,7 @@
  * Used across chat avatars, workflow visualizers, handoff diagrams, and product annotations.
  */
 
-export type AgentType = 'search' | 'pricing' | 'recommendation' | 'orchestrator' | 'inventory'
+export type AgentType = 'search' | 'pricing' | 'recommendation' | 'orchestrator' | 'inventory' | 'support'
 
 export interface AgentIdentity {
   name: string
@@ -24,6 +24,15 @@ export const AGENT_IDENTITIES: Record<AgentType, AgentIdentity> = {
     borderColor: 'rgba(168, 85, 247, 0.3)',
     textColor: 'text-purple-400',
     accentHex: '#a855f7',
+  },
+  support: {
+    name: 'Support Agent',
+    icon: 'H',
+    gradient: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
+    bgColor: 'rgba(20, 184, 166, 0.1)',
+    borderColor: 'rgba(20, 184, 166, 0.3)',
+    textColor: 'text-teal-400',
+    accentHex: '#14b8a6',
   },
   search: {
     name: 'Search Agent',
@@ -65,7 +74,7 @@ export const AGENT_IDENTITIES: Record<AgentType, AgentIdentity> = {
 
 export function resolveAgentType(agentName: string): AgentType {
   const lower = agentName.toLowerCase()
-  if (lower.includes('orchestrat')) return 'orchestrator'
+  if (lower.includes('support')) return 'support'
   if (lower.includes('search')) return 'search'
   if (lower.includes('inventory') || lower.includes('stock') || lower.includes('restock')) return 'inventory'
   if (lower.includes('pricing') || lower.includes('price')) return 'pricing'

@@ -112,7 +112,7 @@ class DatabaseService:
                     await cur.execute("""
                         SELECT EXISTS (
                             SELECT FROM information_schema.tables 
-                            WHERE table_schema = 'bedrock_integration'
+                            WHERE table_schema = 'blaize_bazaar'
                             AND table_name = 'product_catalog'
                         );
                     """)
@@ -123,7 +123,7 @@ class DatabaseService:
                         
                         # Get row count
                         await cur.execute(
-                            "SELECT COUNT(*) as count FROM bedrock_integration.product_catalog;"
+                            "SELECT COUNT(*) as count FROM blaize_bazaar.product_catalog;"
                         )
                         count_result = await cur.fetchone()
                         logger.info(f"📊 Products in catalog: {count_result['count']:,}")

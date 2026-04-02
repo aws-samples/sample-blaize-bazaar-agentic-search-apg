@@ -6,9 +6,6 @@ import {
   SearchQuery,
   SearchResponse,
   Product,
-  InventoryAnalysis,
-  RecommendationRequest,
-  RecommendationResponse,
   HealthCheck,
 } from './types'
 
@@ -78,35 +75,6 @@ class ApiClient {
     max_price?: number
   }): Promise<Product[]> {
     const response = await this.client.get<Product[]>('/api/products', { params })
-    return response.data
-  }
-
-  // Lab 2: Inventory
-  async analyzeInventory(lowStockThreshold?: number): Promise<InventoryAnalysis> {
-    const response = await this.client.get<InventoryAnalysis>('/api/inventory/analyze', {
-      params: { low_stock_threshold: lowStockThreshold },
-    })
-    return response.data
-  }
-
-  async getLowStockProducts(threshold?: number): Promise<Product[]> {
-    const response = await this.client.get<Product[]>('/api/inventory/low-stock', {
-      params: { threshold },
-    })
-    return response.data
-  }
-
-  async getOutOfStockProducts(): Promise<Product[]> {
-    const response = await this.client.get<Product[]>('/api/inventory/out-of-stock')
-    return response.data
-  }
-
-  // Lab 2: Recommendations
-  async getRecommendations(request: RecommendationRequest): Promise<RecommendationResponse> {
-    const response = await this.client.post<RecommendationResponse>(
-      '/api/recommendations',
-      request
-    )
     return response.data
   }
 

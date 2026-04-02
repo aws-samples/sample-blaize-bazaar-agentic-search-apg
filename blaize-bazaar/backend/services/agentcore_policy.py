@@ -34,7 +34,7 @@ DEFAULT_POLICIES = [
         "cedar": (
             'forbid (\n'
             '  principal,\n'
-            '  action == Action::"semantic_product_search",\n'
+            '  action == Action::"search_products",\n'
             '  resource\n'
             ')\n'
             'when {\n'
@@ -45,7 +45,7 @@ DEFAULT_POLICIES = [
             '  resource.query like "*ammunition*"\n'
             '};'
         ),
-        "applies_to": "semantic_product_search",
+        "applies_to": "search_products",
     },
     {
         "id": "price-ceiling",
@@ -143,7 +143,45 @@ class PolicyService:
         ⏩ SHORT ON TIME? Run:
            cp solutions/module4/services/agentcore_policy.py blaize-bazaar/backend/services/agentcore_policy.py
         """
-        # TODO: Your implementation here (~20 lines)
+        pid = policy["id"]
+
+        if pid == "max-restock-quantity":
+            try:
+                qty = float(params.get("quantity", 0))
+            except (TypeError, ValueError):
+                qty = 0
+            if qty > 500:
+                return {
+                    "policy_id": pid,
+                    "policy_name": policy["name"],
+                    "reason": f"Restock quantity {qty} exceeds maximum of 500 units",
+                    "cedar_condition": "resource.quantity > 500",
+                }
+
+        elif pid == "restrict-categories":
+            query = str(params.get("query", "")).lower()
+            found = RESTRICTED_WORDS & set(re.findall(r'\w+', query))
+            if found:
+                return {
+                    "policy_id": pid,
+                    "policy_name": policy["name"],
+                    "reason": f"Query contains restricted terms: {', '.join(sorted(found))}",
+                    "cedar_condition": 'resource.query like "*<term>*"',
+                }
+
+        elif pid == "price-ceiling":
+            try:
+                price = float(params.get("price", 0))
+            except (TypeError, ValueError):
+                price = 0
+            if price > 10000:
+                return {
+                    "policy_id": pid,
+                    "policy_name": policy["name"],
+                    "reason": f"Price ${price:,.2f} exceeds ceiling of $10,000",
+                    "cedar_condition": "resource.price > 10000",
+                }
+
         return None
 
 

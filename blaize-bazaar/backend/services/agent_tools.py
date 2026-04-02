@@ -10,6 +10,7 @@ import asyncio
 # Global service references
 _db_service = None
 _rerank_service = None
+_main_loop = None
 
 def set_db_service(db_service):
     """Set the database service instance"""
@@ -21,18 +22,38 @@ def set_rerank_service(rerank_service):
     global _rerank_service
     _rerank_service = rerank_service
 
+def set_main_loop(loop):
+    """Store reference to the main uvicorn event loop for cross-thread dispatch"""
+    global _main_loop
+    _main_loop = loop
+
 def _run_async(coro):
-    """Helper to run async functions in sync context"""
+    """Run async coroutine from a sync context (e.g. Strands @tool in a background thread).
+
+    Dispatches to the main uvicorn event loop via run_coroutine_threadsafe so that
+    the AsyncConnectionPool (bound to the main loop) works correctly.
+    """
+    if _main_loop and _main_loop.is_running():
+        future = asyncio.run_coroutine_threadsafe(coro, _main_loop)
+        return future.result(timeout=30)
+    # Fallback for standalone / test contexts where no main loop is set
     try:
         loop = asyncio.get_event_loop()
+        if loop.is_running():
+            future = asyncio.run_coroutine_threadsafe(coro, loop)
+            return future.result(timeout=30)
+        return loop.run_until_complete(coro)
     except RuntimeError:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-    return loop.run_until_complete(coro)
+        try:
+            return loop.run_until_complete(coro)
+        finally:
+            loop.close()
 
 @tool
 def get_inventory_health() -> str:
-    """Get current inventory health statistics with live data from database"""
+    """Get current inventory health statistics including stock levels and alerts. Use for warehouse, stock status, or inventory overview questions."""
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
     
@@ -45,39 +66,30 @@ def get_inventory_health() -> str:
         return json.dumps({"error": str(e)})
 
 @tool
-def get_trending_products(limit: int = 5) -> str:
-    """
-    TODO (Module 3a): Build a tool that returns trending products.
-
-    Trending = high ratings + proven popularity + in stock.
-    This is your first @tool function — when implemented, the AI chat
-    will be able to answer "what's trending?" with real data.
-
-    Steps:
-        1. Check _db_service is available (return error JSON if not)
-        2. Import BusinessLogic from services.business_logic
-        3. Create a BusinessLogic instance with _db_service
-        4. Call _run_async(logic.get_trending_products(limit))
-        5. Return json.dumps(result, indent=2)
-        6. Wrap in try/except, return error JSON on failure
-
-    Pattern — follow get_inventory_health() above as your template.
+def get_trending_products(limit: int = 5, category: str = None) -> str:
+    """Get the most popular and trending products, optionally filtered by category. Use when customers ask about bestsellers, what's hot, or popular items.
 
     Args:
-        limit: Maximum number of products to return (default: 10)
+        limit: Maximum number of products to return (default: 5)
+        category: Optional category filter (e.g. "Electronics", "Shoes")
 
     Returns:
         JSON string with trending products
-
-    ⏩ SHORT ON TIME? Run:
-       cp solutions/module3a/services/agent_tools.py blaize-bazaar/backend/services/agent_tools.py
     """
-    # TODO: Your implementation here (~8 lines)
-    return json.dumps({"error": "Not implemented yet — complete Module 3a TODO"})
+    if not _db_service:
+        return json.dumps({"error": "Database service not initialized"})
+
+    try:
+        from services.business_logic import BusinessLogic
+        logic = BusinessLogic(_db_service)
+        result = _run_async(logic.get_trending_products(limit, category))
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
 
 @tool
 def get_price_analysis(category: str = None) -> str:
-    """Get category price analysis with live data from database (matches Part 2 notebook)"""
+    """Get pricing statistics and price distribution analysis for a product category. Use for price comparisons, budget analysis, or average price questions."""
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
     
@@ -91,7 +103,7 @@ def get_price_analysis(category: str = None) -> str:
 
 @tool
 def restock_product(product_id: str, quantity: int) -> str:
-    """Restock a product in database with live execution"""
+    """Restock a specific product by adding inventory quantity. Use when an inventory manager needs to replenish stock for a product ID."""
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
     
@@ -123,6 +135,7 @@ _CATEGORY_MAP = {
     'jewel': 'Jewellery', 'earring': 'Jewellery', 'necklace': 'Jewellery', 'bracelet': 'Jewellery',
     'grocer': 'Groceries', 'food': 'Groceries', 'snack': 'Groceries',
     'mobile': 'Mobile Accessories', 'charger': 'Mobile Accessories', 'power bank': 'Mobile Accessories',
+    'headphone': 'Mobile Accessories', 'headphones': 'Mobile Accessories', 'earbuds': 'Sports Accessories', 'earphone': 'Mobile Accessories',
 }
 
 def _detect_category(query: str) -> str | None:
@@ -134,14 +147,14 @@ def _detect_category(query: str) -> str | None:
     return None
 
 @tool
-def semantic_product_search(
+def search_products(
     query: str,
     max_price: float = None,
     min_rating: float = 0.0,
     category: str = None,
     limit: int = 5
 ) -> str:
-    """Search products using hybrid AI search (semantic + keyword + reranking) for best relevance.
+    """Search for products by natural language query with optional price and rating filters. Use for descriptive or intent-based product searches.
 
     Args:
         query: Natural language search query
@@ -228,7 +241,7 @@ def get_product_by_category(
     max_price: float = None,
     limit: int = 5
 ) -> str:
-    """Get products by category with filters
+    """Browse products within a specific category with rating and price filters. Use when customers want to browse a known category.
     
     Args:
         category: Product category name
@@ -250,11 +263,11 @@ def get_product_by_category(
         return json.dumps({"error": str(e)})
 
 @tool
-def get_low_stock_products(limit: int = 3) -> str:
-    """Get products with low stock (quantity < 10) prioritized by demand
+def get_low_stock_products(limit: int = 5) -> str:
+    """Get products that are running low on stock, prioritized by demand. Use to identify items that need restocking soon.
 
     Args:
-        limit: Number of results (default: 3)
+        limit: Number of results (default: 5)
     """
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
@@ -271,7 +284,7 @@ def get_low_stock_products(limit: int = 3) -> str:
 # === WIRE IT LIVE (Lab 2) ===
 @tool
 def compare_products(product_id_1: str, product_id_2: str) -> str:
-    """Compare two products side by side by their product IDs.
+    """Compare two products side by side by their product IDs. Use when customers want to see differences in price, rating, and features.
 
     Args:
         product_id_1: First product ID to compare
@@ -284,7 +297,7 @@ def compare_products(product_id_1: str, product_id_2: str) -> str:
         query = """
             SELECT "productId", product_description, price, stars, reviews,
                    category_name, quantity, "imgUrl", "productURL"
-            FROM bedrock_integration.product_catalog
+            FROM blaize_bazaar.product_catalog
             WHERE "productId" = %s
         """
         p1 = _run_async(_db_service.fetch_one(query, product_id_1))
@@ -328,3 +341,42 @@ def compare_products(product_id_1: str, product_id_2: str) -> str:
     except Exception as e:
         return json.dumps({"error": str(e)})
 # === END WIRE IT LIVE ===
+
+
+# === RETURN POLICY TOOL (backed by blaize_bazaar.return_policies table) ===
+
+@tool
+def get_return_policy(category: str = "default") -> str:
+    """Look up the return and refund policy for a specific product category. Use when customers ask about returns, refunds, warranties, or return windows.
+
+    Args:
+        category: Product category name (e.g., "Electronics", "Shoes")
+
+    Returns:
+        JSON string with return policy details
+    """
+    if not _db_service:
+        return json.dumps({"error": "Database service not initialized"})
+
+    try:
+        query = """
+            SELECT category_name, return_window_days, conditions, refund_method
+            FROM blaize_bazaar.return_policies
+            WHERE category_name = %s
+        """
+        row = _run_async(_db_service.fetch_one(query, category))
+
+        if not row:
+            row = _run_async(_db_service.fetch_one(query, "default"))
+
+        if not row:
+            return json.dumps({"error": f"No return policy found for category: {category}"})
+
+        return json.dumps({
+            "category": row["category_name"],
+            "return_window_days": row["return_window_days"],
+            "conditions": row["conditions"],
+            "refund_method": row["refund_method"],
+        })
+    except Exception as e:
+        return json.dumps({"error": f"Return policy lookup error: {str(e)}"})

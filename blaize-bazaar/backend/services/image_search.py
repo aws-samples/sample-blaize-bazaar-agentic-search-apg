@@ -5,7 +5,6 @@ Optionally uses Nova Multimodal for enhanced image analysis.
 """
 import logging
 import json
-import time
 import base64
 from typing import Optional, Dict, List, Any
 import boto3
@@ -181,77 +180,6 @@ Focus on attributes like: type, color, style, material, brand indicators, use ca
         logger.info(f"🔍 Generated search query: {search_query[:100]}...")
         return search_query
     
-    async def analyze_with_nova(
-        self,
-        image_data: bytes,
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Enhanced image analysis: uses Nova-style richer prompting to generate
-        a more detailed product description, then structures it like the
-        standard analysis output.
-        """
-        try:
-            from services.nova_embeddings import get_nova_embedding_service
-            nova = get_nova_embedding_service()
-            description = nova.analyze_image_for_search(image_data)
-            if not description:
-                return None
-
-            # Parse the rich description into structured format
-            return {
-                "description": description[:300],
-                "category": "Auto-detected",
-                "key_features": [s.strip() for s in description.split(",")[:5]],
-                "search_keywords": description.split()[:7],
-                "pipeline": "nova_enhanced",
-            }
-        except Exception as e:
-            logger.error(f"Nova-enhanced analysis failed: {e}")
-            return None
-
-    async def compare_pipelines(
-        self,
-        image_data: bytes,
-        mime_type: str = "image/jpeg",
-    ) -> Dict[str, Any]:
-        """
-        Run both Classic (Claude Vision) and Nova-enhanced pipelines
-        side-by-side and return timing + result comparison.
-        """
-        results: Dict[str, Any] = {
-            "classic": {"available": True},
-            "nova_enhanced": {"available": False},
-        }
-
-        # Classic pipeline
-        start = time.perf_counter()
-        classic_analysis = await self.analyze_image(image_data, mime_type)
-        classic_time = (time.perf_counter() - start) * 1000
-        if classic_analysis:
-            classic_query = self.create_search_query(classic_analysis)
-            results["classic"]["analysis"] = classic_analysis
-            results["classic"]["search_query"] = classic_query
-            results["classic"]["time_ms"] = round(classic_time, 1)
-
-        # Nova-enhanced pipeline
-        try:
-            from services.nova_embeddings import get_nova_embedding_service
-            nova = get_nova_embedding_service()
-            if nova.is_available:
-                results["nova_enhanced"]["available"] = True
-                start = time.perf_counter()
-                nova_analysis = await self.analyze_with_nova(image_data)
-                nova_time = (time.perf_counter() - start) * 1000
-                if nova_analysis:
-                    nova_query = self.create_search_query(nova_analysis)
-                    results["nova_enhanced"]["analysis"] = nova_analysis
-                    results["nova_enhanced"]["search_query"] = nova_query
-                    results["nova_enhanced"]["time_ms"] = round(nova_time, 1)
-        except Exception as e:
-            logger.warning(f"Nova pipeline comparison skipped: {e}")
-
-        return results
-
     def format_analysis_for_display(self, analysis: Dict[str, Any]) -> str:
         """
         Format analysis results for user-friendly display

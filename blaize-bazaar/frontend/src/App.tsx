@@ -10,7 +10,9 @@ import SearchOverlay from './components/SearchOverlay'
 import SQLInspector from './components/SQLInspector'
 import IndexPerformanceDashboard from './components/IndexPerformanceDashboard'
 import AgentReasoningTraces from './components/AgentReasoningTraces'
-import CartPanel, { CartItem } from './components/CartPanel'
+import CartPanel from './components/CartPanel'
+import { CartProvider, useCart } from './contexts/CartContext'
+import { UIProvider, useUI } from './contexts/UIContext'
 import Toast from './components/Toast'
 import RecentlyViewed from './components/RecentlyViewed'
 import ProactiveSuggestions from './components/ProactiveSuggestions'
@@ -22,7 +24,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import HybridSearchComparison from './components/HybridSearchComparison'
 import AgentActivityDashboard from './components/AgentActivityDashboard'
 import ContextDashboard from './components/ContextDashboard'
-import RAGDemo from './components/RAGDemo'
 import PersonalizationDemo from './components/PersonalizationDemo'
 import GuardrailsDemo from './components/GuardrailsDemo'
 import LoginButton from './components/LoginButton'
@@ -40,7 +41,7 @@ import { useWorkshopStatus } from './hooks/useWorkshopStatus'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import SignInPage from './components/SignInPage'
 import type { TourAction } from './data/tourSteps'
-import { Database, BarChart3, Brain, X, Zap, Activity, DollarSign, Shield, BookOpen, User, AlertOctagon, Search, FileCode, GitBranch } from 'lucide-react'
+import { Database, BarChart3, Brain, X, Zap, Activity, DollarSign, Shield, User, AlertOctagon, Search, FileCode, GitBranch } from 'lucide-react'
 import './styles/premium-heading-styles.css'
 
 // Theme Context — dark/light toggle
@@ -83,17 +84,12 @@ function AppContent() {
   const [agentPanelMode, setAgentPanelMode] = useState<'hidden' | 'collapsed' | 'expanded'>('hidden')
   const [showProactiveSuggestions, setShowProactiveSuggestions] = useState(true)
   const [expandedDiagram, setExpandedDiagram] = useState<string | null>(null)
-  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('blaize-cart')
-    return saved ? JSON.parse(saved) : []
-  })
-  const [showCart, setShowCart] = useState(false)
-  const [showToast, setShowToast] = useState(false)
-  const [toastMessage, setToastMessage] = useState('')
+  // Cart state from CartContext
+  const { cartOpen: showCart, setCartOpen: setShowCart, showToast, toastMessage, dismissToast } = useCart()
+  const { openChat } = useUI()
   const [showHybridComparison, setShowHybridComparison] = useState(false)
   const [showAgentDashboard, setShowAgentDashboard] = useState(false)
   const [showContextDashboard, setShowContextDashboard] = useState(false)
-  const [showRAGDemo, setShowRAGDemo] = useState(false)
   const [showPersonalization, setShowPersonalization] = useState(false)
   const [showGuardrailsDemo, setShowGuardrailsDemo] = useState(false)
   const [chaosMode, setChaosMode] = useState(false)
@@ -174,7 +170,6 @@ function AppContent() {
     { icon: <Database className="h-5 w-5" />, label: 'SQL Inspector', desc: 'Watch the actual SQL queries Aurora runs — see how pgvector translates your search into vector distance calculations.', tryHint: 'Search for a product, then open this to see the <=> operator in action.', action: () => { setShowSQLInspector(true); setPlaygroundVisible(false) }, minMode: 'semantic', group: 'lab1' },
     { icon: <Zap className="h-5 w-5" />, label: 'Hybrid Search', desc: 'Compare keyword-only vs. vector search side by side. See how hybrid search combines the best of both.', tryHint: 'Try "something comfortable for long flights" — keyword finds nothing, semantic understands intent.', action: () => { setShowHybridComparison(true); setPlaygroundVisible(false) }, minMode: 'semantic', group: 'lab1' },
     { icon: <BarChart3 className="h-5 w-5" />, label: 'Index Performance', desc: 'Benchmark HNSW index tuning, test quantization (halfvec/binary), and see how iterative scan fixes filtered search recall.', tryHint: 'Compare ef_search=40 vs 200 — higher recall costs more latency.', action: () => { setShowIndexPerformance(true); setPlaygroundVisible(false) }, minMode: 'semantic', group: 'lab1' },
-    { icon: <BookOpen className="h-5 w-5" />, label: 'RAG Demo', desc: 'Retrieval-Augmented Generation in action: the LLM answers grounded in real product data instead of hallucinating.', tryHint: 'Ask "What\'s the best laptop under $500?" and compare naive vs. RAG answers.', action: () => { setShowRAGDemo(true); setPlaygroundVisible(false) }, minMode: 'semantic', group: 'lab1' },
     { icon: <Brain className="h-5 w-5" />, label: 'Agent Traces', desc: 'Step-by-step visualization of the agent\'s reasoning: query analysis, tool selection, and response synthesis.', tryHint: 'Ask "compare laptops under $800" in chat, then open traces to see each tool call.', action: () => { setAgentPanelMode(agentPanelMode === 'expanded' ? 'hidden' : 'expanded'); setPlaygroundVisible(false) }, minMode: 'tools', group: 'lab2' },
     { icon: <Activity className="h-5 w-5" />, label: 'Agent Dashboard', desc: 'Aggregate stats for this session: which agents ran, how long they took, and success rates.', tryHint: 'Have a few conversations first, then check which agents were invoked most.', action: () => { setShowAgentDashboard(true); setPlaygroundVisible(false) }, minMode: 'tools', group: 'lab2' },
     { icon: <DollarSign className="h-5 w-5" />, label: 'Context & Cost', desc: 'Track token usage and estimated API cost per request. See how conversation length grows the context window.', tryHint: 'Watch how cost increases as you ask follow-up questions — more context = more tokens.', action: () => { setShowContextDashboard(true); setPlaygroundVisible(false) }, minMode: 'tools', group: 'lab2' },
@@ -251,8 +246,7 @@ function AppContent() {
         setShowContextDashboard(true)
         break
       case 'open-chat': {
-        const bubble = document.querySelector('[data-tour="chat-bubble"]') as HTMLElement
-        bubble?.click()
+        openChat()
         break
       }
       case 'open-guardrails':
@@ -270,66 +264,12 @@ function AppContent() {
     }
   }
 
-  // Cart management functions
-  const addToCart = (item: CartItem) => {
-    setCartItems(prev => {
-      const existing = prev.find(i => i.productId === item.productId)
-      if (existing) {
-        setToastMessage(`Updated quantity for ${item.name.substring(0, 30)}...`)
-        setShowToast(true)
-        return prev.map(i => 
-          i.productId === item.productId 
-            ? { ...i, quantity: i.quantity + 1 }
-            : i
-        )
-      }
-      setToastMessage(`Added ${item.name.substring(0, 30)}... to cart`)
-      setShowToast(true)
-      return [...prev, { ...item, quantity: 1 }]
-    })
-    setShowCart(true)
-  }
-
-  const updateQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      setCartItems(prev => prev.filter(item => item.productId !== productId))
-    } else {
-      setCartItems(prev => 
-        prev.map(item => 
-          item.productId === productId ? { ...item, quantity } : item
-        )
-      )
-    }
-  }
-
-  const removeItem = (productId: string) => {
-    setCartItems(prev => prev.filter(item => item.productId !== productId))
-  }
-
-  const clearCart = () => {
-    if (confirm('Are you sure you want to clear your cart?')) {
-      setCartItems([])
-      setToastMessage('Cart cleared')
-      setShowToast(true)
-    }
-  }
-
-  const handleCheckout = () => {
-    alert(`Demo Checkout\n\nTotal: $${cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)}\n\nThis is a demo - no real transaction will occur.`)
-    setCartItems([])
-    setShowCart(false)
-  }
 
   // Apply theme to document
   useEffect(() => {
     document.documentElement.classList.remove('dark', 'light')
     document.documentElement.classList.add(theme)
   }, [theme])
-
-  // Persist cart to localStorage
-  useEffect(() => {
-    localStorage.setItem('blaize-cart', JSON.stringify(cartItems))
-  }, [cartItems])
 
   // Hero image carousel — crossfade every 4s
   useEffect(() => {
@@ -338,11 +278,6 @@ function AppContent() {
     }, 4000)
     return () => clearInterval(interval)
   }, [heroImages.length])
-
-  // Expose addToCart globally for chat integration
-  useEffect(() => {
-    (window as any).addToCart = addToCart
-  }, [])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -374,8 +309,6 @@ function AppContent() {
             setSearchQuery(query)
             setSearchOverlayVisible(true)
           }}
-          cartItemCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
-          onCartClick={() => setShowCart(true)}
           onPlaygroundClick={() => setPlaygroundVisible(true)}
           loginSlot={<LoginButton />}
           completedModules={completedSteps}
@@ -498,8 +431,7 @@ function AppContent() {
                       if (workshopMode === 'legacy' || workshopMode === 'semantic') {
                         setSearchOverlayVisible(true)
                       } else {
-                        const bubble = document.querySelector('[data-tour="chat-bubble"]') as HTMLElement
-                        if (bubble) bubble.click()
+                        openChat()
                       }
                     }}
                     style={{
@@ -642,10 +574,7 @@ function AppContent() {
                         <DemoChatCarousel
                           compact
                           workshopMode={workshopMode}
-                          onOpenChat={() => {
-                            const bubble = document.querySelector('[data-tour="chat-bubble"]') as HTMLElement
-                            if (bubble) bubble.click()
-                          }}
+                          onOpenChat={openChat}
                         />
                       </motion.div>
                     </div>
@@ -935,12 +864,6 @@ function AppContent() {
           onClose={() => setShowContextDashboard(false)}
         />
 
-        {/* RAG Demo */}
-        <RAGDemo
-          isOpen={showRAGDemo}
-          onClose={() => setShowRAGDemo(false)}
-        />
-
         {/* Personalization Demo */}
         <PersonalizationDemo
           isOpen={showPersonalization}
@@ -1006,18 +929,13 @@ function AppContent() {
         <CartPanel
           isOpen={showCart}
           onClose={() => setShowCart(false)}
-          items={cartItems}
-          onUpdateQuantity={updateQuantity}
-          onRemoveItem={removeItem}
-          onCheckout={handleCheckout}
-          onClearCart={clearCart}
         />
 
         {/* Toast Notification */}
         <Toast
           message={toastMessage}
           show={showToast}
-          onClose={() => setShowToast(false)}
+          onClose={dismissToast}
         />
 
         {/* Module Completion Celebration */}
@@ -1238,7 +1156,11 @@ function App() {
   return (
     <AuthProvider>
       <LayoutProvider>
-        <AuthGate />
+        <CartProvider>
+          <UIProvider>
+            <AuthGate />
+          </UIProvider>
+        </CartProvider>
       </LayoutProvider>
     </AuthProvider>
   )

@@ -24,7 +24,7 @@ class BusinessLogic:
     def __init__(self, db_service):
         self.db = db_service
     
-    async def get_trending_products(self, limit: int = 5) -> Dict[str, Any]:
+    async def get_trending_products(self, limit: int = 5, category: str = None) -> Dict[str, Any]:
         """
         Get trending products based on reviews, ratings, and popularity.
         
@@ -32,14 +32,41 @@ class BusinessLogic:
         
         Args:
             limit: Number of trending products to return
+            category: Optional category filter
             
         Returns:
             Dictionary with trending products and metadata
         """
-        query = """
+        # Map broad terms to actual category_name values in the catalog
+        _BROAD_CATEGORIES = {
+            "electronics": ["Laptops", "Smartphones", "Tablets", "Mobile Accessories"],
+            "clothing": ["Mens Shirts", "Womens Dresses", "Tops"],
+            "accessories": ["Sunglasses", "Womens Bags", "Womens Jewellery", "Mobile Accessories"],
+            "watches": ["Mens Watches", "Womens Watches"],
+            "shoes": ["Mens Shoes", "Womens Shoes"],
+        }
+
+        conditions = ["quantity > 0", "stars >= 4.0", "reviews > 50"]
+        params = []
+
+        if category:
+            cat_lower = category.lower().strip()
+            mapped = _BROAD_CATEGORIES.get(cat_lower)
+            if mapped:
+                placeholders = ", ".join(["%s"] * len(mapped))
+                conditions.append(f"category_name IN ({placeholders})")
+                params.extend(mapped)
+            else:
+                conditions.append("category_name ILIKE %s")
+                params.append(f"%{category}%")
+
+        where_clause = " AND ".join(conditions)
+
+        query = f"""
             SELECT 
                 "productId",
                 product_description,
+                "imgUrl" as imgurl,
                 price,
                 stars,
                 reviews,
@@ -47,15 +74,14 @@ class BusinessLogic:
                 quantity,
                 "productURL" as product_url,
                 (reviews * stars) as trending_score
-            FROM bedrock_integration.product_catalog
-            WHERE quantity > 0 
-              AND stars >= 4.0
-              AND reviews > 50
+            FROM blaize_bazaar.product_catalog
+            WHERE {where_clause}
             ORDER BY trending_score DESC, stars DESC
             LIMIT %s
         """
         
-        results = await self.db.fetch_all(query, limit)
+        params.append(limit)
+        results = await self.db.fetch_all(query, *params)
         
         products = [convert_decimals(dict(row)) for row in results]
         
@@ -65,7 +91,8 @@ class BusinessLogic:
             "products": products,
             "metadata": {
                 "criteria": "reviews * stars, min 4.0 stars, min 50 reviews",
-                "limit": limit
+                "limit": limit,
+                "category_filter": category
             }
         }
     
@@ -81,11 +108,11 @@ class BusinessLogic:
             SELECT 
                 COUNT(*) as total_products,
                 COUNT(CASE WHEN quantity = 0 THEN 1 END) as out_of_stock,
-                COUNT(CASE WHEN quantity > 0 AND quantity < 10 THEN 1 END) as low_stock,
-                COUNT(CASE WHEN quantity >= 10 THEN 1 END) as healthy_stock,
+                COUNT(CASE WHEN quantity > 0 AND quantity <= 15 THEN 1 END) as low_stock,
+                COUNT(CASE WHEN quantity > 15 THEN 1 END) as healthy_stock,
                 AVG(quantity) as avg_quantity,
                 SUM(quantity) as total_quantity
-            FROM bedrock_integration.product_catalog
+            FROM blaize_bazaar.product_catalog
         """
         
         stats = await self.db.fetch_one(stats_query)
@@ -99,8 +126,8 @@ class BusinessLogic:
                 stars,
                 reviews,
                 quantity
-            FROM bedrock_integration.product_catalog
-            WHERE quantity < 10
+            FROM blaize_bazaar.product_catalog
+            WHERE quantity <= 15
               AND stars >= 4.0
               AND reviews > 100
             ORDER BY quantity ASC, reviews DESC
@@ -132,21 +159,42 @@ class BusinessLogic:
         Returns:
             Dictionary with price statistics and insights
         """
+        # Map broad terms to actual category_name values in the catalog
+        _BROAD_CATEGORIES = {
+            "electronics": ["Laptops", "Smartphones", "Tablets", "Mobile Accessories"],
+            "clothing": ["Mens Shirts", "Womens Dresses", "Tops"],
+            "accessories": ["Sunglasses", "Womens Bags", "Womens Jewellery", "Mobile Accessories"],
+            "watches": ["Mens Watches", "Womens Watches"],
+            "shoes": ["Mens Shoes", "Womens Shoes"],
+        }
+
         if category:
-            query = """
-                SELECT 
+            cat_lower = category.lower().strip()
+            mapped = _BROAD_CATEGORIES.get(cat_lower)
+            params = []
+
+            if mapped:
+                placeholders = ", ".join(["%s"] * len(mapped))
+                cat_condition = f"category_name IN ({placeholders})"
+                params.extend(mapped)
+            else:
+                cat_condition = "category_name ILIKE %s"
+                params.append(f"%{category}%")
+
+            query = f"""
+                SELECT
                     category_name,
                     COUNT(*) as product_count,
                     MIN(price) as min_price,
                     MAX(price) as max_price,
                     AVG(price) as avg_price,
                     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) as median_price
-                FROM bedrock_integration.product_catalog
-                WHERE category_name ILIKE %s
+                FROM blaize_bazaar.product_catalog
+                WHERE {cat_condition}
                   AND quantity > 0
                 GROUP BY category_name
             """
-            results = await self.db.fetch_all(query, f"%{category}%")
+            results = await self.db.fetch_all(query, *params)
         else:
             query = """
                 SELECT 
@@ -156,7 +204,7 @@ class BusinessLogic:
                     MAX(price) as max_price,
                     AVG(price) as avg_price,
                     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) as median_price
-                FROM bedrock_integration.product_catalog
+                FROM blaize_bazaar.product_catalog
                 WHERE quantity > 0
                 GROUP BY category_name
                 ORDER BY product_count DESC
@@ -174,7 +222,7 @@ class BusinessLogic:
                 MAX(price) as max_price,
                 AVG(price) as avg_price,
                 PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) as median_price
-            FROM bedrock_integration.product_catalog
+            FROM blaize_bazaar.product_catalog
             WHERE quantity > 0
         """
         
@@ -202,7 +250,7 @@ class BusinessLogic:
         # Get current product info
         product_query = """
             SELECT "productId", product_description, quantity
-            FROM bedrock_integration.product_catalog
+            FROM blaize_bazaar.product_catalog
             WHERE "productId" = %s
         """
         
@@ -219,7 +267,7 @@ class BusinessLogic:
         
         # Update quantity
         update_query = """
-            UPDATE bedrock_integration.product_catalog
+            UPDATE blaize_bazaar.product_catalog
             SET quantity = quantity + %s
             WHERE "productId" = %s
         """
@@ -236,7 +284,7 @@ class BusinessLogic:
             "message": f"✅ Added {quantity} units to {product['product_description']}"
         }
     
-    async def semantic_product_search(
+    async def search_products(
         self,
         query: str,
         max_price: float = None,
@@ -295,12 +343,98 @@ class BusinessLogic:
         ⏩ SHORT ON TIME? Run:
            cp solutions/module2/services/business_logic.py blaize-bazaar/backend/services/business_logic.py
         """
-        # TODO: Your implementation here (~30 lines)
+        from services.embeddings import EmbeddingService
+        import time
+
+        # Generate query embedding with timing
+        start_time = time.time()
+        if not hasattr(self, '_embedding_service'):
+            self._embedding_service = EmbeddingService()
+        query_embedding = self._embedding_service.embed_query(query)
+        embedding_time_ms = (time.time() - start_time) * 1000
+
+        # Auto-detect category from query if not explicitly provided
+        if not category:
+            query_lower = query.lower()
+            category_map = {
+                'fragrance': 'Fragrances', 'perfume': 'Fragrances', 'cologne': 'Fragrances',
+                'laptop': 'Laptops', 'macbook': 'Laptops', 'notebook': 'Laptops',
+                'phone': 'Smartphones', 'smartphone': 'Smartphones', 'iphone': 'Smartphones', 'samsung galaxy': 'Smartphones',
+                'watch': 'Watches', 'rolex': 'Watches', 'timepiece': 'Watches',
+                'shoe': 'Shoes', 'sneaker': 'Shoes', 'nike': 'Shoes', 'jordan': 'Shoes',
+                'furniture': 'Furniture', 'sofa': 'Furniture', 'bed': 'Furniture', 'table': 'Furniture',
+                'kitchen': 'Kitchen Accessories', 'pan': 'Kitchen Accessories', 'knife': 'Kitchen Accessories',
+                'sunglasses': 'Sunglasses', 'shades': 'Sunglasses',
+                'bag': 'Bags', 'handbag': 'Bags', 'backpack': 'Bags',
+                'dress': 'Dresses', 'gown': 'Dresses',
+                'shirt': 'Shirts', 'tshirt': 'Shirts',
+                'sports': 'Sports Accessories', 'football': 'Sports Accessories', 'basketball': 'Sports Accessories',
+                'tablet': 'Tablets', 'ipad': 'Tablets',
+                'beauty': 'Beauty', 'mascara': 'Beauty', 'lipstick': 'Beauty',
+                'skin care': 'Skin Care', 'lotion': 'Skin Care',
+                'motorcycle': 'Motorcycle',
+                'jewel': 'Jewellery', 'earring': 'Jewellery',
+            }
+            for keyword, cat_name in category_map.items():
+                if keyword in query_lower:
+                    category = cat_name
+                    break
+
+        # Build SQL with filters - embedding first, then filters, then limit
+        conditions = ["quantity > 0"]
+        params = [str(query_embedding)]  # Embedding as first param
+
+        if max_price:
+            conditions.append("price <= %s")
+            params.append(max_price)
+
+        if min_rating:
+            conditions.append("stars >= %s")
+            params.append(min_rating)
+
+        if category:
+            conditions.append("category_name ILIKE %s")
+            params.append(f"%{category}%")
+
+        params.append(limit)  # Limit as last param
+        where_clause = " AND ".join(conditions)
+
+        # Use CTE to define embedding once and reuse it
+        search_query = f"""
+            WITH query_embedding AS (SELECT %s::vector as emb)
+            SELECT
+                "productId",
+                product_description,
+                price,
+                stars,
+                reviews,
+                category_name,
+                quantity,
+                "imgUrl",
+                "productURL" as product_url,
+                1 - (embedding <=> (SELECT emb FROM query_embedding)) as similarity
+            FROM blaize_bazaar.product_catalog
+            WHERE {where_clause}
+            ORDER BY embedding <=> (SELECT emb FROM query_embedding)
+            LIMIT %s
+        """
+
+        # Execute query with timing
+        db_start = time.time()
+        results = await self.db.fetch_all(search_query, *params)
+        db_time_ms = (time.time() - db_start) * 1000
+
+        products = [convert_decimals(dict(row)) for row in results]
+
+        # Filter out low-relevance results
+        if min_similarity > 0:
+            products = [p for p in products if p.get("similarity", 0) >= min_similarity]
+
         return {
-            "status": "not_implemented",
+            "status": "success",
             "query": query,
-            "count": 0,
-            "products": [],
+            "count": len(products),
+            "products": products,
             "filters": {
                 "max_price": max_price,
                 "min_rating": min_rating,
@@ -308,11 +442,11 @@ class BusinessLogic:
                 "min_similarity": min_similarity
             },
             "performance": {
-                "bedrock_embedding_ms": 0,
-                "database_query_ms": 0,
-                "total_ms": 0
+                "bedrock_embedding_ms": round(embedding_time_ms, 2),
+                "database_query_ms": round(db_time_ms, 2),
+                "total_ms": round(embedding_time_ms + db_time_ms, 2)
             },
-            "sql_query": "not implemented — complete Module 2 Challenge 2",
+            "sql_query": search_query.replace("%s", "?"),
             "note": "⚠️ This is a DAT406 workshop tool for educational purposes"
         }
     
@@ -357,7 +491,7 @@ class BusinessLogic:
                 quantity,
                 "imgUrl",
                 "productURL" as product_url
-            FROM bedrock_integration.product_catalog
+            FROM blaize_bazaar.product_catalog
             WHERE {where_clause}
             ORDER BY stars DESC, reviews DESC
             LIMIT %s
@@ -377,18 +511,19 @@ class BusinessLogic:
             }
         }
     
-    async def get_low_stock_products(self, limit: int = 3) -> Dict[str, Any]:
+    async def get_low_stock_products(self, limit: int = 5) -> Dict[str, Any]:
         """
-        Get products with low stock (quantity < 10) prioritized by demand.
-        
+        Get products with low stock (0 < quantity <= 15) prioritized by demand.
+        Excludes out-of-stock items (quantity = 0) — those are already gone.
+
         Args:
             limit: Number of products to return
-            
+
         Returns:
             Dictionary with low-stock products
         """
         query = """
-            SELECT 
+            SELECT
                 "productId",
                 product_description,
                 price,
@@ -398,8 +533,9 @@ class BusinessLogic:
                 quantity,
                 "imgUrl",
                 "productURL" as product_url
-            FROM bedrock_integration.product_catalog
-            WHERE quantity < 10
+            FROM blaize_bazaar.product_catalog
+            WHERE quantity > 0
+              AND quantity <= 15
               AND stars >= 3.0
             ORDER BY quantity ASC, reviews DESC, stars DESC
             LIMIT %s
@@ -434,7 +570,7 @@ class BusinessLogic:
             limit: Number of results
         """
         # Run base semantic search
-        base_results = await self.semantic_product_search(query, limit=limit * 2)
+        base_results = await self.search_products(query, limit=limit * 2)
         products = base_results.get("products", [])
         preferences = preferences or {}
 
@@ -501,7 +637,7 @@ class BusinessLogic:
             alerts.append(f"🚨 {stats['out_of_stock']} products out of stock")
         
         if stats['low_stock'] > 100:
-            alerts.append(f"⚠️ {stats['low_stock']} products low stock (<10 units)")
+            alerts.append(f"⚠️ {stats['low_stock']} products low stock (≤15 units)")
         elif stats['low_stock'] > 0:
             alerts.append(f"⚠️ {stats['low_stock']} products need monitoring")
         

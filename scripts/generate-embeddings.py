@@ -97,7 +97,7 @@ def load_products_from_database(conn_params: dict, limit: Optional[int] = None) 
             boughtinlastmonth,
             category_name,
             quantity
-        FROM bedrock_integration.product_catalog
+        FROM blaize_bazaar.product_catalog
         WHERE embedding IS NULL
         ORDER BY "productId"
     """
@@ -155,7 +155,7 @@ def store_products(df: pd.DataFrame, conn_params: dict, batch_size: int = 1000):
                     batch_start = time.time()
                     
                     cur.executemany("""
-                    INSERT INTO bedrock_integration.product_catalog (
+                    INSERT INTO blaize_bazaar.product_catalog (
                         "productId", product_description, imgurl, producturl,
                         stars, reviews, price, category_id, isbestseller,
                         boughtinlastmonth, category_name, quantity, embedding
@@ -192,10 +192,10 @@ def store_products(df: pd.DataFrame, conn_params: dict, batch_size: int = 1000):
                     batches = []
             
             print("\n\nRunning VACUUM ANALYZE...")
-            cur.execute("VACUUM ANALYZE bedrock_integration.product_catalog;")
+            cur.execute("VACUUM ANALYZE blaize_bazaar.product_catalog;")
             
             # Get final statistics
-            cur.execute("SELECT COUNT(*) FROM bedrock_integration.product_catalog")
+            cur.execute("SELECT COUNT(*) FROM blaize_bazaar.product_catalog")
             final_count = cur.fetchone()[0]
             
             end_time = time.time()

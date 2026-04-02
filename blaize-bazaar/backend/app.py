@@ -3,6 +3,7 @@ DAT406 Workshop - Main FastAPI Application
 FastAPI app with semantic search (Lab 1) and multi-agent system (Lab 2)
 """
 
+import asyncio
 import time
 import logging
 import json
@@ -30,7 +31,6 @@ from models.product import Product, ProductWithScore, InventoryStats
 from services.database import DatabaseService
 from services.auth import get_current_user
 from services.embeddings import EmbeddingService
-from services.bedrock import BedrockService
 from services.chat import ChatService
 from services.image_search import ImageSearchService, get_image_search_service
 from datetime import datetime
@@ -77,7 +77,6 @@ logger.setLevel(logging.INFO)
 # Global service instances
 db_service: DatabaseService = None
 embedding_service: EmbeddingService = None
-bedrock_service: BedrockService = None
 chat_service: ChatService = None
 image_search_service: ImageSearchService = None
 query_logger = None
@@ -96,7 +95,7 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting DAT406 Workshop API...")
     
-    global db_service, embedding_service, bedrock_service, chat_service, image_search_service, query_logger, index_performance_service, rerank_service
+    global db_service, embedding_service, chat_service, image_search_service, query_logger, index_performance_service, rerank_service
     
     try:
         # Initialize Strands OpenTelemetry tracing
@@ -182,9 +181,6 @@ async def lifespan(app: FastAPI):
         )
         logger.info(f"✅ Cache service initialized (mode={cache_svc.mode})")
         
-        bedrock_service = BedrockService()
-        logger.info("✅ Bedrock service initialized")
-        
         chat_service = ChatService(db_service=db_service)
         logger.info("✅ Chat service initialized")
 
@@ -205,9 +201,10 @@ async def lifespan(app: FastAPI):
         logging.getLogger('services.chat').setLevel(logging.INFO)
         
         # Initialize agent tools with database + rerank services (hybrid search)
-        from services.agent_tools import set_db_service, set_rerank_service
+        from services.agent_tools import set_db_service, set_rerank_service, set_main_loop
         set_db_service(db_service)
         set_rerank_service(rerank_service)
+        set_main_loop(asyncio.get_event_loop())
         logger.info("✅ Agent tools initialized with hybrid search (vector + keyword + rerank)")
         
         # Lab 2 agents use Strands SDK function pattern
@@ -265,12 +262,6 @@ async def get_embedding_service() -> EmbeddingService:
         raise HTTPException(status_code=503, detail="Embedding service not initialized")
     return embedding_service
 
-
-async def get_bedrock_service() -> BedrockService:
-    """Get Bedrock service instance"""
-    if not bedrock_service:
-        raise HTTPException(status_code=503, detail="Bedrock service not initialized")
-    return bedrock_service
 
 def get_image_search_service_dep():
     """Dependency for image search service"""
@@ -392,7 +383,7 @@ async def semantic_search(
                     category_name,
                     quantity,
                     ts_rank(to_tsvector('english', product_description || ' ' || category_name), plainto_tsquery('english', %s)) as similarity_score
-                FROM bedrock_integration.product_catalog
+                FROM blaize_bazaar.product_catalog
                 WHERE to_tsvector('english', product_description || ' ' || category_name) @@ plainto_tsquery('english', %s)
                   AND stars >= 3.0
                   AND "imgUrl" IS NOT NULL
@@ -449,7 +440,7 @@ async def semantic_search(
                     category_name,
                     quantity,
                     1 - (embedding <=> %s::vector) as similarity_score
-                FROM bedrock_integration.product_catalog
+                FROM blaize_bazaar.product_catalog
                 WHERE stars >= 3.0
                   AND "imgUrl" IS NOT NULL
                 ORDER BY embedding <=> %s::vector
@@ -603,8 +594,8 @@ async def get_product(
                 "boughtInLastMonth" as boughtinlastmonth,
                 category_name,
                 quantity
-            FROM bedrock_integration.product_catalog
-            WHERE "productId" = $1
+            FROM blaize_bazaar.product_catalog
+            WHERE "productId" = %s
         """
         
         result = await db.fetch_one(query, product_id)
@@ -696,7 +687,7 @@ async def image_search(
                 category_name,
                 quantity,
                 1 - (embedding <=> %s::vector) as similarity_score
-            FROM bedrock_integration.product_catalog
+            FROM blaize_bazaar.product_catalog
             WHERE stars >= 3.0
               AND "imgUrl" IS NOT NULL
             ORDER BY embedding <=> %s::vector
@@ -747,42 +738,6 @@ async def image_search(
     finally:
         await file.close()
 
-@app.get("/api/search/image/nova-status")
-async def nova_status():
-    """Check if Nova Multimodal Embeddings are available"""
-    try:
-        from services.nova_embeddings import get_nova_embedding_service
-        nova = get_nova_embedding_service()
-        return {"available": nova.is_available}
-    except Exception:
-        return {"available": False}
-
-
-@app.post("/api/search/image/compare")
-async def compare_image_pipelines(
-    file: UploadFile = File(...),
-    image_search_svc: ImageSearchService = Depends(get_image_search_service_dep),
-):
-    """Compare Classic (Claude Vision) vs Nova-enhanced image search pipelines"""
-    try:
-        if not file.content_type or not file.content_type.startswith("image/"):
-            raise HTTPException(status_code=400, detail="Must be an image file")
-
-        image_data = await file.read()
-        if len(image_data) > 5 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="Image too large (max 5MB)")
-
-        comparison = await image_search_svc.compare_pipelines(image_data, file.content_type or "image/jpeg")
-        return comparison
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Pipeline comparison failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        await file.close()
-
-
 @app.get("/api/products/category/{category_query}")
 async def browse_category(
     category_query: str,
@@ -805,7 +760,7 @@ async def browse_category(
                 category_name,
                 quantity,
                 1.0 as similarity_score
-            FROM bedrock_integration.product_catalog
+            FROM blaize_bazaar.product_catalog
             WHERE (category_name ILIKE %s OR product_description ILIKE %s)
               AND quantity > 0
             ORDER BY stars DESC, reviews DESC
@@ -844,30 +799,26 @@ async def list_products(
     List products with optional filters
     """
     try:
-        # Build dynamic query
+        # Build dynamic query with psycopg3 %s placeholders
         conditions = []
         params = []
-        param_count = 1
-        
+
         if category:
-            conditions.append(f"category_name = ${param_count}")
+            conditions.append("category_name = %s")
             params.append(category)
-            param_count += 1
-        
+
         if min_stars is not None:
-            conditions.append(f"stars >= ${param_count}")
+            conditions.append("stars >= %s")
             params.append(min_stars)
-            param_count += 1
-        
+
         if max_price is not None:
-            conditions.append(f"price <= ${param_count}")
+            conditions.append("price <= %s")
             params.append(max_price)
-            param_count += 1
-        
+
         where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
-        
+
         query = f"""
-            SELECT 
+            SELECT
                 "productId",
                 product_description,
                 "imgUrl" as imgurl,
@@ -880,12 +831,12 @@ async def list_products(
                 "boughtInLastMonth" as boughtinlastmonth,
                 category_name,
                 quantity
-            FROM bedrock_integration.product_catalog
+            FROM blaize_bazaar.product_catalog
             {where_clause}
             ORDER BY reviews DESC
-            LIMIT ${param_count} OFFSET ${param_count + 1}
+            LIMIT %s OFFSET %s
         """
-        
+
         params.extend([limit, offset])
         results = await db.fetch_all(query, *params)
         
@@ -931,8 +882,9 @@ async def general_exception_handler(request, exc):
 async def list_custom_tools():
     """List all custom business logic tools available"""
     return [
-        {"name": "search_products", "description": "Semantic product search via pgvector embeddings"},
+        {"name": "search_products", "description": "Search for products by natural language query with optional filters"},
         {"name": "get_trending_products", "description": "Get trending products by reviews and ratings"},
+        {"name": "get_product_by_category", "description": "Browse products filtered by category, rating, and price"},
         {"name": "get_inventory_health", "description": "Check stock levels and inventory alerts"},
         {"name": "get_price_analysis", "description": "Price analytics by category"},
         {"name": "restock_product", "description": "Update product stock quantities"},
@@ -944,13 +896,14 @@ async def list_custom_tools():
 @app.get("/api/tools/trending")
 async def get_trending(
     limit: int = Query(default=5, ge=1, le=50),
+    category: str = Query(default=None),
     db: DatabaseService = Depends(get_db_service)
 ):
     """Get trending products using business logic"""
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(db)
-        return await logic.get_trending_products(limit)
+        return await logic.get_trending_products(limit, category)
     except Exception as e:
         logger.error(f"Failed to get trending products: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -1083,7 +1036,7 @@ async def autocomplete(
     try:
         query = """
             SELECT product_description, category_name
-            FROM bedrock_integration.product_catalog
+            FROM blaize_bazaar.product_catalog
             WHERE product_description ILIKE %s
             ORDER BY reviews DESC
             LIMIT %s
@@ -1136,6 +1089,12 @@ async def agent_query(
             response = product_recommendation_agent(query)
         elif agent_type == "pricing":
             response = price_optimization_agent(query)
+        elif agent_type == "customer_support":
+            from agents.customer_support_agent import customer_support_agent
+            response = customer_support_agent(query)
+        elif agent_type == "search":
+            from agents.search_agent import search_agent
+            response = search_agent(query)
         else:
             raise HTTPException(status_code=400, detail="Invalid agent type")
         
@@ -1336,21 +1295,6 @@ async def list_prompts():
 
 
 # ============================================================================
-# RAG DEMO ENDPOINT
-# ============================================================================
-
-@app.post("/api/rag/compare")
-async def rag_compare(request: dict):
-    """Compare LLM responses with and without RAG context"""
-    from services.rag_demo import RAGDemoService
-    query = request.get("query", "")
-    if not query:
-        raise HTTPException(status_code=400, detail="query is required")
-    rag_service = RAGDemoService(db_service=db_service, embedding_service=embedding_service)
-    return await rag_service.rag_compare(query)
-
-
-# ============================================================================
 # QUANTIZATION COMPARISON ENDPOINT
 # ============================================================================
 
@@ -1540,7 +1484,7 @@ async def get_workshop_status():
     from services.hybrid_search import HybridSearchService
     from services.business_logic import BusinessLogic
     m2a = is_stub(HybridSearchService._vector_search, "# TODO: Your implementation here")
-    m2b = is_stub(BusinessLogic.semantic_product_search, "# TODO: Your implementation here")
+    m2b = is_stub(BusinessLogic.search_products, "# TODO: Your implementation here")
 
     # Module 3a
     from services.agent_tools import get_trending_products
@@ -1556,14 +1500,14 @@ async def get_workshop_status():
     from services.agentcore_memory import create_agentcore_session_manager
     from services.agentcore_gateway import create_gateway_orchestrator
     from services.agentcore_policy import PolicyService
-    m4_mem = is_stub(create_agentcore_session_manager, "not implemented")
-    m4_gw = is_stub(create_gateway_orchestrator, "not implemented")
-    m4_pol = is_stub(PolicyService._check_policy, "return none")
+    m4_mem = is_stub(create_agentcore_session_manager, "# TODO: Your implementation here")
+    m4_gw = is_stub(create_gateway_orchestrator, "# TODO: Your implementation here")
+    m4_pol = is_stub(PolicyService._check_policy, "# TODO: Your implementation here")
 
     return {
         "modules": {
             "module2": {"complete": not m2a and not m2b, "label": "Semantic Search",
-                        "stubs": {"vector_search": not m2a, "semantic_product_search": not m2b}},
+                        "stubs": {"vector_search": not m2a, "search_products": not m2b}},
             "module3a": {"complete": not m3a, "label": "Agent Tools",
                          "stubs": {"get_trending_products": not m3a}},
             "module3b": {"complete": not m3b_rec and not m3b_orch, "label": "Multi-Agent",

@@ -217,7 +217,7 @@ def infer_agent_from_query(query: str, start_time: float) -> Dict[str, Any]:
             "alternatives": [{"agent": "Recommendation Agent", "confidence": 5}],
         }
         agent_steps.append({"agent": "Pricing Agent", "action": "Analyzing prices and deals", "status": "completed", "timestamp": step_time, "duration_ms": 160})
-        tool_calls.append({"tool": "semantic_product_search", "params": f"query='{query_snippet}', limit=5", "result": "Found 5 products", "timestamp": step_time + 0.025, "duration_ms": 150, "status": "success"})
+        tool_calls.append({"tool": "search_products", "params": f"query='{query_snippet}', limit=5", "result": "Found 5 products", "timestamp": step_time + 0.025, "duration_ms": 150, "status": "success"})
     elif any(word in query_lower for word in ["stock", "inventory", "restock"]):
         detected = [w for w in ["stock", "inventory", "restock"] if w in query_lower]
         routing_decision = {
@@ -236,7 +236,7 @@ def infer_agent_from_query(query: str, start_time: float) -> Dict[str, Any]:
             "alternatives": [{"agent": "Pricing Agent", "confidence": 10}],
         }
         agent_steps.append({"agent": "Recommendation Agent", "action": "Searching product catalog", "status": "completed", "timestamp": step_time, "duration_ms": 200})
-        tool_calls.append({"tool": "semantic_product_search", "params": f"query='{query_snippet}', limit=5", "result": "Found 5 products", "timestamp": step_time + 0.05, "duration_ms": 150, "status": "success"})
+        tool_calls.append({"tool": "search_products", "params": f"query='{query_snippet}', limit=5", "result": "Found 5 products", "timestamp": step_time + 0.05, "duration_ms": 150, "status": "success"})
 
     total_duration = time.time() - start_time
 

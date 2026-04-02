@@ -5,7 +5,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Search, Target, DollarSign, Database, Send, Shield } from 'lucide-react'
+import { Brain, Search, Target, DollarSign, Database, Send, Shield, HelpCircle } from 'lucide-react'
 import { useTheme } from '../App'
 import type { WorkshopMode } from '../contexts/LayoutContext'
 
@@ -30,9 +30,9 @@ interface DemoSlide {
   featureName: string
   featureColor: string
   featureGlow: string
-  featureIconKey: 'search' | 'target' | 'dollar' | 'brain' | 'database' | 'shield'
+  featureIconKey: 'search' | 'target' | 'dollar' | 'brain' | 'database' | 'shield' | 'help'
   userMessage: string
-  aiAvatarIconKey: 'search' | 'target' | 'dollar' | 'brain' | 'database' | 'shield'
+  aiAvatarIconKey: 'search' | 'target' | 'dollar' | 'brain' | 'database' | 'shield' | 'help'
   aiAvatarLabel: string
   agentBadges: AgentBadge[]
   aiResponseText: string
@@ -49,6 +49,7 @@ const ICON_MAP = {
   brain: Brain,
   database: Database,
   shield: Shield,
+  help: HelpCircle,
 }
 
 const MODE_ORDER: WorkshopMode[] = ['legacy', 'semantic', 'tools', 'full', 'agentcore']
@@ -70,8 +71,8 @@ const DEMO_SLIDES: DemoSlide[] = [
     ],
     aiResponseText: 'I found kitchen accessories matching your intent — not just keywords, but the concept of cooking gifts:',
     productCards: [
-      { name: 'OXO Good Grips Salad Spinner', price: '$29.99', rating: '4.7', image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&q=80' },
-      { name: 'Cuisinart Bamboo Cutting Board', price: '$24.99', rating: '4.6', image: 'https://images.unsplash.com/photo-1466637574441-749b8f19452f?w=200&q=80' },
+      { name: 'Lodge Cast Iron Starter Gift Set', price: '$79.99', rating: '4.8', image: 'https://images.unsplash.com/photo-1602031939964-2854d8c32447?w=200&q=80' },
+      { name: 'Cuisinart Bamboo Cutting Board Set', price: '$28.99', rating: '4.2', image: 'https://images.unsplash.com/photo-1633536705119-bcc37bf6c84e?w=200&q=80' },
     ],
     minMode: 'tools',
   },
@@ -90,8 +91,8 @@ const DEMO_SLIDES: DemoSlide[] = [
     ],
     aiResponseText: 'I analyzed pricing across the watch catalog and found the best value options:',
     productCards: [
-      { name: 'Tissot T-My Lady Quartz', price: '$325.00', rating: '4.7', image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=200&q=80' },
-      { name: 'Michael Kors Runway Rose Gold', price: '$275.00', rating: '4.5', image: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?w=200&q=80' },
+      { name: 'Citizen Promaster Skyhawk AT', price: '$425.00', rating: '4.9', image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=200&q=80' },
+      { name: 'Citizen Eco-Drive Silhouette Crystal', price: '$245.00', rating: '4.9', image: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?w=200&q=80' },
     ],
     minMode: 'tools',
   },
@@ -101,15 +102,31 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureColor: 'linear-gradient(135deg, #10b981, #059669)',
     featureGlow: 'rgba(16, 185, 129, 0.4)',
     featureIconKey: 'database',
-    userMessage: 'Is the Compact Travel Camera in stock? I need it by Friday.',
+    userMessage: 'Is the Stanley Quencher tumbler in stock?',
     aiAvatarIconKey: 'database',
     aiAvatarLabel: 'Inventory Agent',
     agentBadges: [
       { label: 'Inventory Agent', bgColor: 'rgba(16, 185, 129, 0.2)', textColor: '#6ee7b7' },
       { label: 'Pricing Agent', bgColor: 'rgba(245, 158, 11, 0.2)', textColor: '#fcd34d' },
     ],
-    aiResponseText: 'Checking real-time inventory — 12 units in stock, eligible for express shipping. Estimated delivery: Thursday. $289.99 with free shipping over $200.',
-    contextNote: 'Live stock: 12 units available',
+    aiResponseText: 'Low stock alert — only 4 units remaining! The Stanley Quencher H2.0 40oz is $35.00 and our #1 trending product with 12,453 reviews. I\'d recommend ordering soon.',
+    contextNote: 'Live stock: 4 units remaining',
+    minMode: 'tools',
+  },
+  {
+    id: 'customer-support',
+    featureName: 'Customer Support',
+    featureColor: 'linear-gradient(135deg, #14b8a6, #0d9488)',
+    featureGlow: 'rgba(20, 184, 166, 0.4)',
+    featureIconKey: 'help',
+    userMessage: 'What\'s the return policy for electronics?',
+    aiAvatarIconKey: 'help',
+    aiAvatarLabel: 'Support Agent',
+    agentBadges: [
+      { label: 'Support Agent', bgColor: 'rgba(20, 184, 166, 0.2)', textColor: '#5eead4' },
+    ],
+    aiResponseText: 'Electronics have a 30-day return window. Items must be in original packaging, unused, with all accessories. Refunds go to your original payment method within 5-7 business days.',
+    contextNote: 'Return policy: 30-day window',
     minMode: 'tools',
   },
   {
@@ -118,7 +135,7 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureColor: 'linear-gradient(135deg, #a855f7, #ec4899)',
     featureGlow: 'rgba(168, 85, 247, 0.4)',
     featureIconKey: 'target',
-    userMessage: 'Are any of those low on stock? And what about pricing?',
+    userMessage: 'Which headphones are running low? Compare prices too.',
     aiAvatarIconKey: 'target',
     aiAvatarLabel: 'Orchestrator',
     agentBadges: [
@@ -126,8 +143,8 @@ const DEMO_SLIDES: DemoSlide[] = [
       { label: 'Pricing Agent', bgColor: 'rgba(245, 158, 11, 0.2)', textColor: '#fcd34d' },
       { label: 'Recommendation', bgColor: 'rgba(234, 179, 8, 0.2)', textColor: '#fde047' },
     ],
-    aiResponseText: 'I routed your request to 3 agents simultaneously — Inventory checked stock, Pricing analyzed value, and Recommendation ranked the best options.',
-    contextNote: '3 agents collaborated in 1.2s',
+    aiResponseText: 'I routed your request to two specialists — Inventory found AirPods Pro (8 left) and Samsung Buds3 Pro (6 left), then Pricing compared them: AirPods at $249 vs Samsung at $229.99.',
+    contextNote: 'Orchestrator routed to 2 specialists in 1.2s',
     minMode: 'full',
   },
   {
@@ -136,13 +153,13 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureColor: 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
     featureGlow: 'rgba(139, 92, 246, 0.4)',
     featureIconKey: 'brain',
-    userMessage: 'What about the Tissot — is it good for everyday wear?',
+    userMessage: 'What about the Citizen Skyhawk — is it good for everyday wear?',
     aiAvatarIconKey: 'brain',
     aiAvatarLabel: 'Orchestrator',
     agentBadges: [
       { label: 'Search Agent', bgColor: 'rgba(59, 130, 246, 0.2)', textColor: '#93c5fd' },
     ],
-    aiResponseText: 'Recalling from our earlier conversation — yes, the Tissot T-My Lady features a sapphire crystal and stainless steel case, making it durable for daily wear.',
+    aiResponseText: 'Recalling from our earlier conversation — yes, the Citizen Promaster Skyhawk AT features atomic timekeeping and a stainless steel case, making it durable for daily wear.',
     contextNote: 'Recalled context from 2 messages ago',
     minMode: 'full',
   },
@@ -152,7 +169,7 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureColor: 'linear-gradient(135deg, #10b981, #0d9488)',
     featureGlow: 'rgba(16, 185, 129, 0.4)',
     featureIconKey: 'shield',
-    userMessage: 'Restock the Compact Travel Camera — order 1000 units.',
+    userMessage: 'Restock the Stanley Quencher — order 1000 units.',
     aiAvatarIconKey: 'shield',
     aiAvatarLabel: 'Policy Engine',
     agentBadges: [

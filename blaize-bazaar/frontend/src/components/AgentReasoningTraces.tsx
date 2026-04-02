@@ -99,7 +99,7 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
       { id: '1', agent: 'Orchestrator', action: 'Analyzing user query and routing to specialists', status: 'in_progress', timestamp: Date.now() },
       { id: '2', agent: 'Orchestrator', action: 'Query classified as product search → Routing to Search Agent', status: 'pending', timestamp: Date.now() + 500 },
       { id: '3', agent: 'Search Agent', action: 'Generating semantic embedding for query', status: 'pending', timestamp: Date.now() + 1000, tool_calls: [{ tool: 'generate_embedding', params: { query: 'luxury watch' } }] },
-      { id: '4', agent: 'Search Agent', action: 'Executing pgvector similarity search', status: 'pending', timestamp: Date.now() + 1500, tool_calls: [{ tool: 'semantic_product_search', params: { limit: 5, ef_search: 40 } }] },
+      { id: '4', agent: 'Search Agent', action: 'Executing pgvector similarity search', status: 'pending', timestamp: Date.now() + 1500, tool_calls: [{ tool: 'search_products', params: { limit: 5, ef_search: 40 } }] },
       { id: '5', agent: 'Search Agent', action: 'Found 5 matching products', status: 'pending', timestamp: Date.now() + 2000, result: '5 products with avg similarity 0.87' },
       { id: '6', agent: 'Orchestrator', action: 'Synthesizing final response', status: 'pending', timestamp: Date.now() + 2500 },
     ];

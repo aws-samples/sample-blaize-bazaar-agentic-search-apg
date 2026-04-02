@@ -341,7 +341,7 @@ log "Performing final verification..."
 
 # Verify database setup
 if [ -n "$DB_HOST" ]; then
-    PRODUCT_COUNT=$(PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM bedrock_integration.product_catalog;" 2>/dev/null | xargs || echo "0")
+    PRODUCT_COUNT=$(PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT COUNT(*) FROM blaize_bazaar.product_catalog;" 2>/dev/null | xargs || echo "0")
     if [ "$PRODUCT_COUNT" -gt 0 ]; then
         log "✅ Database verified ($PRODUCT_COUNT products)"
     else
