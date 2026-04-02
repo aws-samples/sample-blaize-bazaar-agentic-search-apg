@@ -117,7 +117,7 @@ export const TOUR_STEPS: Record<WorkshopMode, TourStep[]> = {
     {
       selector: '[data-tour="workshop-pills"]',
       title: 'One Agent Isn\'t Enough',
-      description: 'The agent works, but it handles everything alone. Click "Multi-Agent" to add specialist agents for inventory, pricing, and recommendations — each with their own tools and expertise.',
+      description: 'The agent works, but it handles everything alone. Click "Multi-Agent" to add specialist agents for search, inventory, pricing, recommendations, and customer support — each with their own tools and expertise.',
       position: 'bottom',
     },
   ],
@@ -129,7 +129,7 @@ export const TOUR_STEPS: Record<WorkshopMode, TourStep[]> = {
     {
       selector: '[data-tour="chat-bubble"]',
       title: 'Multi-Agent Orchestration',
-      description: 'Three specialist agents now collaborate: Recommendation, Pricing, and Inventory. The orchestrator analyzes your query and routes it to the right expert. Try a complex question that spans multiple domains.',
+      description: 'Five specialist agents now collaborate: Search, Recommendation, Pricing, Inventory, and Customer Support. The orchestrator analyzes your query and routes it to the right expert. Try a complex question that spans multiple domains.',
       position: 'top',
       tryItAction: { label: 'Open Chat', actionKey: 'open-chat' },
       spotlightPadding: 16,

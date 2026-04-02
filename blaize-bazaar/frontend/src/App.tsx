@@ -175,7 +175,7 @@ function AppContent() {
     { icon: <DollarSign className="h-5 w-5" />, label: 'Context & Cost', desc: 'Track token usage and estimated API cost per request. See how conversation length grows the context window.', tryHint: 'Watch how cost increases as you ask follow-up questions — more context = more tokens.', action: () => { setShowContextDashboard(true); setPlaygroundVisible(false) }, minMode: 'tools', group: 'lab2' },
     { icon: <User className="h-5 w-5" />, label: 'Personalization', desc: 'User preference engine that re-ranks search results based on your stated interests.', tryHint: 'Set preferences like "outdoor gear" then search — watch results re-order by relevance.', action: () => { setShowPersonalization(true); setPlaygroundVisible(false) }, minMode: 'tools', group: 'lab2' },
     { icon: <Shield className="h-5 w-5" />, label: 'Guardrails Demo', desc: 'Test content safety filters and PII detection. Harmful queries are blocked; personal information is redacted.', tryHint: 'Try typing a message with a fake SSN or credit card number.', action: () => { setShowGuardrailsDemo(true); setPlaygroundVisible(false) }, minMode: 'full', group: 'lab3' },
-    { icon: <GitBranch className="h-5 w-5" />, label: 'Graph Orchestrator', desc: 'Interactive DAG showing how the orchestrator routes queries to specialized agents and merges results.', tryHint: 'Ask "find me trending shoes under $100 with good reviews" — the orchestrator fans out to 3 agents.', action: () => { setShowGraphViz(true); setPlaygroundVisible(false) }, minMode: 'full', group: 'lab3' },
+    { icon: <GitBranch className="h-5 w-5" />, label: 'Graph Orchestrator', desc: 'Interactive DAG showing how the orchestrator routes queries to specialized agents and merges results.', tryHint: 'Ask "find me trending shoes under $100 with good reviews" — the orchestrator fans out to 5 agents.', action: () => { setShowGraphViz(true); setPlaygroundVisible(false) }, minMode: 'full', group: 'lab3' },
     { icon: <AlertOctagon className="h-5 w-5" />, label: chaosMode ? 'Chaos: ON' : 'Chaos Mode', desc: chaosMode ? 'Chaos injection active — agents will randomly fail. Click to disable.' : 'Inject random failures into agent calls to test retry logic and graceful degradation.', tryHint: chaosMode ? undefined : 'Enable this, then chat — watch how the system handles and recovers from failures.', action: () => {
       const next = !chaosMode
       setChaosMode(next)
@@ -551,7 +551,7 @@ function AppContent() {
                         {workshopMode === 'tools'
                           ? 'Your AI assistant can now query live data through the tools you built'
                           : workshopMode === 'full'
-                          ? 'Three specialist agents work together, routed by an orchestrator in real-time'
+                          ? 'Five specialist agents work together, routed by an orchestrator in real-time'
                           : 'Enterprise memory, Cedar policies, and MCP Gateway — all live'
                         }
                       </p>

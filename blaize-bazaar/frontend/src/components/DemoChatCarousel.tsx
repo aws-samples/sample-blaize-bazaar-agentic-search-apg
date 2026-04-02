@@ -254,7 +254,7 @@ const DemoChatCarousel = ({ onOpenChat, compact = false, workshopMode = 'full' }
   const modeStatusText = workshopMode === 'agentcore'
     ? 'AgentCore Runtime · 5 services'
     : workshopMode === 'full'
-    ? 'Orchestrator → 3 specialists'
+    ? 'Orchestrator → 5 specialists'
     : '1 agent online'
 
   // Auto-cycle
@@ -544,7 +544,7 @@ const DemoChatCarousel = ({ onOpenChat, compact = false, workshopMode = 'full' }
             {workshopMode === 'tools'
               ? 'Your AI assistant can now query live data through the tools you built'
               : workshopMode === 'full'
-              ? 'Three specialist agents work together, routed by an orchestrator in real-time'
+              ? 'Five specialist agents work together, routed by an orchestrator in real-time'
               : 'Enterprise memory, Cedar policies, and MCP Gateway — all live'
             }
           </p>

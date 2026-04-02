@@ -57,6 +57,13 @@ const MODE_ACCENT: Record<string, string> = {
   full: '#FF9F0A',
   agentcore: '#30D158',
 }
+const MODE_ACCENT_DARK: Record<string, string> = {
+  legacy: '#0066CC',
+  semantic: '#0066CC',
+  tools: '#0066CC',
+  full: '#D97706',
+  agentcore: '#25A14A',
+}
 
 function accentAlpha(mode: string, alpha: number): string {
   const hex = MODE_ACCENT[mode] || MODE_ACCENT.tools
@@ -502,12 +509,12 @@ const AIAssistant = () => {
               <div className="flex-1 min-w-0">
                 <p className="text-[14px] font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                   {workshopMode === 'agentcore' ? 'Production stack deployed'
-                    : workshopMode === 'full' ? 'Three specialist agents are ready'
+                    : workshopMode === 'full' ? 'Five specialist agents are ready'
                     : 'AI Assistant is now active'}
                 </p>
                 <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
                   {workshopMode === 'agentcore' ? 'Memory-aware agents with Cedar policy enforcement'
-                    : workshopMode === 'full' ? 'Recommendations, pricing, and inventory — working together'
+                    : workshopMode === 'full' ? 'Search, recommendations, pricing, inventory, and support — working together'
                     : 'Search products, check inventory, and analyze pricing through conversation'}
                 </p>
               </div>
@@ -602,7 +609,7 @@ const AIAssistant = () => {
                         {workshopMode === 'agentcore'
                           ? 'AgentCore Runtime · 5 services'
                           : workshopMode === 'full'
-                          ? 'Orchestrator → 3 specialists'
+                          ? 'Orchestrator → 5 specialists'
                           : '1 agent online'}
                       </span>
                     )}
@@ -1063,11 +1070,11 @@ const AIAssistant = () => {
         )}
       </AnimatePresence>
 
-      {/* Floating Pill — closed state (Option A: no avatar, mode-aware pill) */}
+      {/* Floating Spark FAB — closed state (mode-aware gradient button with hover tooltip) */}
       <AnimatePresence>
         {!isOpen && (
           <motion.button
-            className="fixed bottom-6 right-6 z-[1000] appearance-none border-0 p-0 bg-transparent"
+            className="fixed bottom-6 right-6 z-[1000] appearance-none border-0 p-0 bg-transparent group"
             data-tour="chat-bubble"
             onClick={() => setIsOpen(true)}
             aria-label="Open chat"
@@ -1076,55 +1083,82 @@ const AIAssistant = () => {
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 300, damping: 26 }}
           >
+            {/* Tooltip — slides in on hover */}
+            <div className="absolute bottom-full right-0 mb-3 pointer-events-none opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 ease-out">
+              <div
+                className="rounded-xl py-3 px-4"
+                style={{
+                  background: theme === 'dark' ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                  border: `1px solid ${accentAlpha(workshopMode, 0.25)}`,
+                  boxShadow: theme === 'dark' ? '0 8px 30px rgba(0,0,0,0.5)' : '0 8px 30px rgba(0,0,0,0.12)',
+                  backdropFilter: 'blur(20px)',
+                  minWidth: 180,
+                }}
+              >
+                <div className="flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#34d399' }} />
+                  {workshopMode === 'agentcore' ? 'AgentCore Active'
+                    : workshopMode === 'full' ? 'Multi-Agent Ready'
+                    : 'Agent Ready'}
+                </div>
+                {(workshopMode === 'full' || workshopMode === 'agentcore') && (
+                  <div className="mt-2 space-y-1">
+                    {[
+                      { color: '#a855f7', label: 'Orchestrator' },
+                      { color: '#3b82f6', label: 'Search Agent' },
+                      { color: '#ec4899', label: 'Recommendation Agent' },
+                      { color: '#f59e0b', label: 'Pricing Agent' },
+                      { color: '#10b981', label: 'Inventory Agent' },
+                      { color: '#06b6d4', label: 'Customer Support' },
+                    ].map(a => (
+                      <div key={a.label} className="flex items-center gap-2 py-px">
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: a.color }} />
+                        <span className="text-xs whitespace-nowrap" style={{ color: 'var(--text-secondary)' }}>{a.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Spark button */}
             <motion.div
-              className="flex items-center gap-2.5 h-10 px-4 rounded-xl"
+              className="relative w-[52px] h-[52px] rounded-2xl flex items-center justify-center"
               style={{
-                background: theme === 'dark' ? 'rgba(28, 28, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
-                border: `1px solid ${accentAlpha(workshopMode, 0.25)}`,
-                boxShadow: theme === 'dark'
-                  ? '0 4px 16px rgba(0, 0, 0, 0.3)'
-                  : '0 4px 16px rgba(0, 0, 0, 0.08)',
+                background: `linear-gradient(135deg, ${MODE_ACCENT[workshopMode]}, ${MODE_ACCENT_DARK[workshopMode]})`,
+                boxShadow: `0 4px 20px ${accentAlpha(workshopMode, 0.35)}, 0 0 0 1px ${accentAlpha(workshopMode, 0.15)}, inset 0 1px 0 rgba(255, 255, 255, 0.2)`,
               }}
-              whileHover={{
-                background: theme === 'dark' ? 'rgba(44, 44, 46, 0.95)' : 'rgba(240, 240, 242, 0.95)',
-              }}
-              // Single entrance pulse — plays once, then static
+              whileHover={{ y: -2, scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              // Entrance glow pulse — plays twice then stops
               {...(!hasOpenedChat ? {
                 animate: { boxShadow: [
-                  theme === 'dark' ? '0 4px 16px rgba(0, 0, 0, 0.3)' : '0 4px 16px rgba(0, 0, 0, 0.08)',
-                  `0 4px 24px ${accentAlpha(workshopMode, 0.25)}`,
-                  theme === 'dark' ? '0 4px 16px rgba(0, 0, 0, 0.3)' : '0 4px 16px rgba(0, 0, 0, 0.08)',
+                  `0 4px 20px ${accentAlpha(workshopMode, 0.35)}, 0 0 0 1px ${accentAlpha(workshopMode, 0.15)}, inset 0 1px 0 rgba(255, 255, 255, 0.2)`,
+                  `0 8px 32px ${accentAlpha(workshopMode, 0.5)}, 0 0 0 1px ${accentAlpha(workshopMode, 0.3)}, inset 0 1px 0 rgba(255, 255, 255, 0.25)`,
+                  `0 4px 20px ${accentAlpha(workshopMode, 0.35)}, 0 0 0 1px ${accentAlpha(workshopMode, 0.15)}, inset 0 1px 0 rgba(255, 255, 255, 0.2)`,
                 ]},
                 transition: { boxShadow: { duration: 2, repeat: 2 } },
               } : {})}
             >
-              {/* Status dot */}
+              {/* Glossy overlay */}
+              <div className="absolute inset-0 rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.15) 100%)' }} />
+              {/* Chat icon */}
+              {workshopMode === 'agentcore'
+                ? <Shield className="w-6 h-6 text-white relative z-[1]" strokeWidth={2} style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))' }} />
+                : <MessageSquare className="w-6 h-6 text-white relative z-[1]" strokeWidth={2} style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))' }} />
+              }
+              {/* Agent count badge */}
               <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
+                className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-[9px] flex items-center justify-center z-[2] px-1"
                 style={{
-                  background: MODE_ACCENT[workshopMode],
-                  boxShadow: `0 0 6px ${accentAlpha(workshopMode, 0.5)}`,
+                  background: '#10b981',
+                  border: `2px solid ${theme === 'dark' ? '#0f172a' : '#ffffff'}`,
                 }}
-              />
-
-              {/* Label */}
-              <span className="text-[13px] font-medium" style={{
-                color: 'var(--text-primary)',
-                letterSpacing: '-0.01em',
-              }}>
-                {workshopMode === 'agentcore' ? 'AgentCore Active'
-                  : workshopMode === 'full' ? 'Multi-Agent Ready'
-                  : 'Agent Ready'}
-              </span>
-
-              {/* Icon — chat bubble for tools/full, shield for agentcore */}
-              {workshopMode === 'agentcore' ? (
-                <Shield className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--text-tertiary)' }} strokeWidth={1.5} />
-              ) : (
-                <MessageSquare className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--text-tertiary)' }} strokeWidth={1.5} />
-              )}
+              >
+                <span className="text-[10px] font-semibold text-white leading-none">
+                  {workshopMode === 'full' || workshopMode === 'agentcore' ? '5' : '1'}
+                </span>
+              </div>
             </motion.div>
           </motion.button>
         )}

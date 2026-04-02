@@ -52,14 +52,14 @@ const MODULE_INFO: Record<ModuleKey, ModuleInfo> = {
   },
   module3b: {
     title: 'Module 3b Complete',
-    headline: 'Three specialist agents now collaborate.',
+    headline: 'Five specialist agents now collaborate.',
     subhead: 'You wired up a multi-agent orchestrator using the agent-as-tool pattern.',
     capabilities: [
       { icon: '\u{1f3af}', label: 'Orchestrator routing live', detail: 'Queries are routed to the right specialist automatically' },
       { icon: '\u{1f91d}', label: 'Agent-as-tool pattern', detail: 'Specialist agents are Strands @tool functions to the orchestrator' },
-      { icon: '\u{1f504}', label: 'Parallel specialist calls', detail: 'Pricing, inventory, and recommendation agents run independently' },
+      { icon: '\u{1f504}', label: 'Parallel specialist calls', detail: 'Search, pricing, inventory, recommendation, and support agents run independently' },
     ],
-    techDetail: 'Claude Haiku 4.5 orchestrator + 3 specialist agents (Sonnet 4.6) + Strands interleaved thinking',
+    techDetail: 'Claude Haiku 4.5 orchestrator + 5 specialist agents (Sonnet 4.6) + Strands interleaved thinking',
     accentColor: '#f59e0b',
     Icon: Network,
   },
