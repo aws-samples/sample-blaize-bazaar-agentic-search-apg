@@ -236,7 +236,7 @@ class BusinessLogic:
             "message": f"✅ Added {quantity} units to {product['product_description']}"
         }
     
-    async def semantic_product_search(
+    async def search_products(
         self,
         query: str,
         max_price: float = None,
@@ -481,7 +481,7 @@ class BusinessLogic:
             limit: Number of results
         """
         # Run base semantic search
-        base_results = await self.semantic_product_search(query, limit=limit * 2)
+        base_results = await self.search_products(query, limit=limit * 2)
         products = base_results.get("products", [])
         preferences = preferences or {}
 

@@ -168,7 +168,8 @@
       "Bash(/Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/backend/.venv/bin/python scripts/enrich-descriptions.py)",
       "Bash(/Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/backend/.venv/bin/python /Users/shayons/Desktop/Workshops/sample-blaize-bazaar-agentic-search-apg/scripts/load-database-rds-api.py)",
       "Bash(aws rds-data execute-statement --resource-arn \"$DB_CLUSTER_ARN\" --secret-arn \"$DB_SECRET_ARN\" --database \"$DB_NAME\" --region us-west-2 --sql \"SELECT \"\"productId\"\", LEFT\\(product_description, 60\\), quantity FROM blaize_bazaar.product_catalog WHERE \"\"productId\"\" = ''PSUNG0007''\" --output json)",
-      "Bash(xargs sed -i '' 's/blaize_bazaar/blaize_bazaar/g')"
+      "Bash(xargs sed -i '' 's/blaize_bazaar/blaize_bazaar/g')",
+      "Bash(ls *.jpg.new)"
     ]
   }
 }

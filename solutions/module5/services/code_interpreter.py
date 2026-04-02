@@ -32,7 +32,7 @@ def create_analytics_agent():
         from strands.models import BedrockModel
         from strands_tools.code_interpreter import AgentCoreCodeInterpreter
         from services.agent_tools import (
-            semantic_product_search,
+            search_products,
             get_trending_products,
             get_price_analysis,
             get_inventory_health,
@@ -52,7 +52,7 @@ def create_analytics_agent():
                 "You are Blaize Bazaar's Data Analyst. You help users understand "
                 "product data through analysis, visualization, and computation.\n\n"
                 "WORKFLOW:\n"
-                "1. Use product tools (semantic_product_search, get_trending_products, "
+                "1. Use product tools (search_products, get_trending_products, "
                 "get_price_analysis) to retrieve data\n"
                 "2. Use the code_interpreter tool to write and execute Python code "
                 "for analysis, charts, and calculations\n"
@@ -65,7 +65,7 @@ def create_analytics_agent():
             ),
             tools=[
                 code_interpreter,
-                semantic_product_search,
+                search_products,
                 get_trending_products,
                 get_price_analysis,
                 get_inventory_health,

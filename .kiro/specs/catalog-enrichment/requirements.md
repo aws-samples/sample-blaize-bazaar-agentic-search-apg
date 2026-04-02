@@ -186,9 +186,9 @@ The Blaize Bazaar e-commerce demo application requires a comprehensive catalog o
 #### Acceptance Criteria
 
 1. WHEN the `get_trending_products` tool is invoked, THE tool SHALL return products with high review counts including Stanley Tumbler (12,453 reviews), AirPods Pro (8,932 reviews), and YETI Rambler (7,891 reviews) among the top results.
-2. WHEN the `semantic_product_search` tool is invoked with query "wireless headphones under $50" and max_price=50, THE tool SHALL return at least 2 results including JBL Tune 510BT ($29.95) and Anker Soundcore Life Q20+ ($49.99).
-3. WHEN the `semantic_product_search` tool is invoked with query "stainless steel tumbler", THE tool SHALL return at least 4 results including YETI Rambler, Stanley Quencher, Owala FreeSip, and Corkcicle Canteen.
-4. WHEN the `semantic_product_search` tool is invoked with query "noise canceling headphones", THE tool SHALL return at least 3 results including Sony WH-1000XM5, Apple AirPods Pro 2, and Anker Soundcore Life Q20+.
+2. WHEN the `search_products` tool is invoked with query "wireless headphones under $50" and max_price=50, THE tool SHALL return at least 2 results including JBL Tune 510BT ($29.95) and Anker Soundcore Life Q20+ ($49.99).
+3. WHEN the `search_products` tool is invoked with query "stainless steel tumbler", THE tool SHALL return at least 4 results including YETI Rambler, Stanley Quencher, Owala FreeSip, and Corkcicle Canteen.
+4. WHEN the `search_products` tool is invoked with query "noise canceling headphones", THE tool SHALL return at least 3 results including Sony WH-1000XM5, Apple AirPods Pro 2, and Anker Soundcore Life Q20+.
 5. WHEN the `get_price_analysis` tool is invoked for the Laptops category, THE tool SHALL return a price range spanning from approximately $499 to $3,000.
 
 ### Requirement 16: Verification — Module 3 Multi-Agent Queries

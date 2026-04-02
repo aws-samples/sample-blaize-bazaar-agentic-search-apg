@@ -3,7 +3,7 @@ Product Recommendation Agent - Suggests products based on user preferences
 """
 from strands import Agent, tool
 from strands.models import BedrockModel
-from services.agent_tools import get_trending_products, semantic_product_search, get_product_by_category
+from services.agent_tools import get_trending_products, search_products, get_product_by_category
 
 
 @tool
@@ -29,7 +29,7 @@ def product_recommendation_agent(query: str) -> str:
                 "and trending data for general discovery. Always consider price, ratings, "
                 "and availability when making recommendations."
             ),
-            tools=[semantic_product_search, get_trending_products, get_product_by_category],
+            tools=[search_products, get_trending_products, get_product_by_category],
         )
         result = agent(query)
         return str(result)

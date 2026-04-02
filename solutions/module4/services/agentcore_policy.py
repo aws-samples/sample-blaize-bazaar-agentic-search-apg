@@ -27,12 +27,12 @@ DEFAULT_POLICIES = [
         "name": "Restricted Categories",
         "description": "Block searches for weapons, tobacco, and alcohol",
         "cedar": (
-            'forbid (\n  principal,\n  action == Action::"semantic_product_search",\n'
+            'forbid (\n  principal,\n  action == Action::"search_products",\n'
             '  resource\n)\nwhen {\n  resource.query like "*weapon*" ||\n'
             '  resource.query like "*tobacco*" ||\n  resource.query like "*alcohol*" ||\n'
             '  resource.query like "*gun*" ||\n  resource.query like "*ammunition*"\n};'
         ),
-        "applies_to": "semantic_product_search",
+        "applies_to": "search_products",
     },
     {
         "id": "price-ceiling",

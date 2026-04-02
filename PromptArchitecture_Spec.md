@@ -10,7 +10,7 @@ Six prompts across four files are each independently trying to do three jobs:
 
 The LLM is unreliable at job #3. The evidence is in the codebase:
 
-- `_ensure_products_in_output()` — duplicated in all 3 specialist agents — is a band-aid that extracts product data from tool results and appends it when the LLM forgets to include a JSON block
+- `_ensure_products_in_output()` — duplicated in all 5 specialist agents — is a band-aid that extracts product data from tool results and appends it when the LLM forgets to include a JSON block
 - `_repair_json()` in `chat.py` — fixes trailing commas, single quotes, missing commas between objects — all symptoms of LLM-generated JSON
 - The `CRITICAL RULES` and `IMPORTANT` blocks in every prompt that say "you MUST include the raw product list as a ```json code block" — the word "MUST" in a prompt is a signal that the LLM frequently doesn't
 
@@ -47,7 +47,7 @@ User query
     → No _repair_json() needed
 ```
 
-The key insight: **the LLM should never be responsible for serializing product data**. It already comes back as structured JSON from the tools. The `AfterToolCallEvent` hook already captures it (you have this code in all three agents). The problem is that you then *also* ask the prompt to include it, creating two competing paths for the same data.
+The key insight: **the LLM should never be responsible for serializing product data**. It already comes back as structured JSON from the tools. The `AfterToolCallEvent` hook already captures it (you have this code in all three agents). The problem is that you then _also_ ask the prompt to include it, creating two competing paths for the same data.
 
 ---
 
@@ -94,7 +94,7 @@ def classify_intent(query: str) -> str:
 
 The orchestrator prompt then becomes trivially simple — it doesn't need routing rules at all, because the code already picked the right agent. The orchestrator just needs to pass the query through and format the response.
 
-**Fallback:** For ambiguous queries where code-based classification returns "recommendation" but the LLM might disagree, this is fine — recommendation is the safe default. The recommendation agent has `semantic_product_search` which handles almost any product query.
+**Fallback:** For ambiguous queries where code-based classification returns "recommendation" but the LLM might disagree, this is fine — recommendation is the safe default. The search agent has `search_products` which handles almost any product query.
 
 ### Job 2: Tool selection — keep in prompts (LLMs are good at this)
 
@@ -124,7 +124,7 @@ SINGLE_AGENT_PROMPT = """You are Blaize AI, the shopping assistant for Blaize Ba
 
 TOOL SELECTION:
 - get_trending_products → Only when user asks "what's trending" with no filters
-- semantic_product_search → All product queries (natural language, filtered, category-specific)
+- search_products → All product queries (natural language, filtered, category-specific)
 - get_price_analysis → Pricing statistics and category comparisons
 
 Call exactly one tool per query. Extract price limits from the query and pass as max_price.
@@ -176,7 +176,7 @@ orchestrator(f"[ROUTE: {intent}] {message}")
 ```python
 RECOMMENDATION_PROMPT = """You are Blaize Bazaar's Product Recommendation Specialist.
 
-Use semantic_product_search for specific queries and get_trending_products for general discovery.
+Use search_products for specific queries and get_trending_products for general discovery.
 Consider price, ratings, and availability. Write 1-2 sentences of context before results."""
 ```
 
@@ -190,7 +190,7 @@ Consider price, ratings, and availability. Write 1-2 sentences of context before
 PRICING_PROMPT = """You are Blaize Bazaar's Pricing Specialist.
 
 Use get_price_analysis for category-level statistics and get_product_by_category for product listings.
-Use semantic_product_search when the user describes products in natural language with price constraints.
+Use search_products when the user describes products in natural language with price constraints.
 Write 1-2 sentences of context before results."""
 ```
 
@@ -232,7 +232,7 @@ The `AfterToolCallEvent` hook already captures tool results. Formalize this as t
 
 ```python
 class ProductExtractor:
-    """Extract products from tool results. Single source of truth — 
+    """Extract products from tool results. Single source of truth —
     the LLM never generates product JSON."""
 
     @staticmethod
@@ -283,24 +283,24 @@ In the streaming handler, products come from the hook capture, not from parsing 
 
 ### Current inconsistency
 
-| Layer | Model | Temperature |
-|-------|-------|------------|
-| Orchestrator | Claude Haiku 4.5 | 0.0 |
-| Recommendation agent | Claude Sonnet 4 | default (1.0) |
-| Pricing agent | Claude Sonnet 4 | default (1.0) |
-| Inventory agent | Claude Sonnet 4 | default (1.0) |
-| Single agent | Claude Sonnet 4 | default (1.0) |
+| Layer                | Model            | Temperature   |
+| -------------------- | ---------------- | ------------- |
+| Orchestrator         | Claude Haiku 4.5 | 0.0           |
+| Recommendation agent | Claude Sonnet 4  | default (1.0) |
+| Pricing agent        | Claude Sonnet 4  | default (1.0) |
+| Inventory agent      | Claude Sonnet 4  | default (1.0) |
+| Single agent         | Claude Sonnet 4  | default (1.0) |
 
 ### Recommended settings
 
-| Layer | Model | Temperature | Rationale |
-|-------|-------|------------|-----------|
-| Orchestrator | Claude Haiku 4.5 | 0.0 | Routing must be deterministic |
-| Recommendation agent | Claude Sonnet 4 | 0.2 | Low creativity for tool selection, slight variation for prose |
-| Pricing agent | Claude Sonnet 4 | 0.2 | Same |
-| Inventory agent | Claude Sonnet 4 | 0.2 | Same |
-| Single agent | Claude Sonnet 4 | 0.2 | Same |
-| Gateway orchestrator | Claude Haiku 4.5 | 0.0 | Same as local orchestrator |
+| Layer                | Model            | Temperature | Rationale                                                     |
+| -------------------- | ---------------- | ----------- | ------------------------------------------------------------- |
+| Orchestrator         | Claude Haiku 4.5 | 0.0         | Routing must be deterministic                                 |
+| Recommendation agent | Claude Sonnet 4  | 0.2         | Low creativity for tool selection, slight variation for prose |
+| Pricing agent        | Claude Sonnet 4  | 0.2         | Same                                                          |
+| Inventory agent      | Claude Sonnet 4  | 0.2         | Same                                                          |
+| Single agent         | Claude Sonnet 4  | 0.2         | Same                                                          |
+| Gateway orchestrator | Claude Haiku 4.5 | 0.0         | Same as local orchestrator                                    |
 
 Setting specialists to 0.2 (not 0.0) allows slight natural language variation in the intro sentences while keeping tool selection deterministic. At 0.0, the prose reads robotic with identical responses every time. At 1.0 (current default), tool selection occasionally hallucinates.
 
@@ -308,14 +308,14 @@ Setting specialists to 0.2 (not 0.0) allows slight natural language variation in
 
 ## What Gets Deleted
 
-| Item | Location | Why it's safe to remove |
-|------|----------|----------------------|
-| `_ensure_products_in_output()` | All 3 specialist agents | Products extracted by hook, not LLM |
-| `_repair_json()` | `chat.py` line 64 | LLM no longer generates JSON |
-| JSON format instructions in prompts | All 6 prompts | LLM no longer responsible for JSON |
-| `MANDATORY QUERY FORMAT` SQL template | `chat.py` line 175 | Agents use tools, not raw SQL |
-| `RESPONSE FORMAT` JSON template | `chat.py` line 186+ | Products come from tools |
-| `CRITICAL RULES` blocks | Multiple prompts | Simplified to 1-2 line instructions |
+| Item                                  | Location                | Why it's safe to remove             |
+| ------------------------------------- | ----------------------- | ----------------------------------- |
+| `_ensure_products_in_output()`        | All 5 specialist agents | Products extracted by hook, not LLM |
+| `_repair_json()`                      | `chat.py` line 64       | LLM no longer generates JSON        |
+| JSON format instructions in prompts   | All 6 prompts           | LLM no longer responsible for JSON  |
+| `MANDATORY QUERY FORMAT` SQL template | `chat.py` line 175      | Agents use tools, not raw SQL       |
+| `RESPONSE FORMAT` JSON template       | `chat.py` line 186+     | Products come from tools            |
+| `CRITICAL RULES` blocks               | Multiple prompts        | Simplified to 1-2 line instructions |
 
 ---
 
@@ -323,17 +323,17 @@ Setting specialists to 0.2 (not 0.0) allows slight natural language variation in
 
 After this refactor, the response pipeline has these determinism properties:
 
-| Component | Determinism | Mechanism |
-|-----------|------------|-----------|
-| Intent routing | 100% deterministic | `classify_intent()` — pure keyword match |
-| Tool selection | ~98% deterministic | LLM reads tool docstrings, temp=0.2 |
-| Tool execution | 100% deterministic | SQL queries on Aurora PostgreSQL |
-| Product extraction | 100% deterministic | `ProductExtractor.extract()` — JSON parse |
-| Product normalization | 100% deterministic | `ProductExtractor._normalize()` |
-| Conversational intro | ~95% consistent | LLM generates 1-2 sentences, temp=0.2 |
-| Overall response | Products always correct, prose slightly varies | By design |
+| Component             | Determinism                                    | Mechanism                                 |
+| --------------------- | ---------------------------------------------- | ----------------------------------------- |
+| Intent routing        | 100% deterministic                             | `classify_intent()` — pure keyword match  |
+| Tool selection        | ~98% deterministic                             | LLM reads tool docstrings, temp=0.2       |
+| Tool execution        | 100% deterministic                             | SQL queries on Aurora PostgreSQL          |
+| Product extraction    | 100% deterministic                             | `ProductExtractor.extract()` — JSON parse |
+| Product normalization | 100% deterministic                             | `ProductExtractor._normalize()`           |
+| Conversational intro  | ~95% consistent                                | LLM generates 1-2 sentences, temp=0.2     |
+| Overall response      | Products always correct, prose slightly varies | By design                                 |
 
-The only non-deterministic element is the LLM's 1-2 sentence intro — and that's the one place where variation is *desirable*. "Here are some great running shoes!" vs "Check out these running shoes:" — both are fine.
+The only non-deterministic element is the LLM's 1-2 sentence intro — and that's the one place where variation is _desirable_. "Here are some great running shoes!" vs "Check out these running shoes:" — both are fine.
 
 ---
 
@@ -376,11 +376,11 @@ chat.py: classify_intent()                    ← Code, deterministic
   │
   ├── "recommendation" → recommendation_agent
   │     Prompt: who you are + which tools + tone     (4 lines)
-  │     Tools: semantic_product_search, get_trending_products, get_product_by_category
+  │     Tools: search_products, get_trending_products, get_product_by_category
   │
   ├── "pricing" → pricing_agent
   │     Prompt: who you are + which tools + tone     (4 lines)
-  │     Tools: get_price_analysis, get_product_by_category, semantic_product_search
+  │     Tools: get_price_analysis, get_product_by_category, search_products
   │
   └── "inventory" → inventory_agent
         Prompt: who you are + which tools + tone     (4 lines)

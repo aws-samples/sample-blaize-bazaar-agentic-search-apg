@@ -53,16 +53,16 @@ Usage: `cp solutions/module2/services/hybrid_search.py blaize-bazaar/backend/ser
 
 ## TODO Files (what participants implement)
 
-| Module | File                             | TODO                                                          | Fallback                                       |
-| ------ | -------------------------------- | ------------------------------------------------------------- | ---------------------------------------------- |
-| 2      | `services/hybrid_search.py`      | `_vector_search()` — pgvector cosine distance query           | Returns empty → fulltext search still works    |
-| 2      | `services/business_logic.py`     | `semantic_product_search()` — filtered vector search with CTE | Returns empty product list                     |
-| 3a     | `services/agent_tools.py`        | `get_trending_products()` — @tool function                    | Returns "not implemented" JSON                 |
-| 3b     | `agents/recommendation_agent.py` | `product_recommendation_agent()` — specialist agent           | Returns "not implemented" JSON                 |
-| 3b     | `agents/orchestrator.py`         | `ORCHESTRATOR_PROMPT` + `create_orchestrator()`               | Returns `None` → chat shows "not wired up"     |
-| 4      | `services/agentcore_memory.py`   | `create_agentcore_session_manager()`                          | Returns `None` → falls back to Aurora sessions |
-| 4      | `services/agentcore_gateway.py`  | `create_gateway_orchestrator()`                               | Returns `None` → falls back to direct imports  |
-| 4      | `services/agentcore_policy.py`   | `_check_policy()` — Cedar policy evaluation                   | Returns `None` → all actions allowed           |
+| Module | File                             | TODO                                                  | Fallback                                       |
+| ------ | -------------------------------- | ----------------------------------------------------- | ---------------------------------------------- |
+| 2      | `services/hybrid_search.py`      | `_vector_search()` — pgvector cosine distance query   | Returns empty → fulltext search still works    |
+| 2      | `services/business_logic.py`     | `search_products()` — filtered vector search with CTE | Returns empty product list                     |
+| 3a     | `services/agent_tools.py`        | `get_trending_products()` — @tool function            | Returns "not implemented" JSON                 |
+| 3b     | `agents/recommendation_agent.py` | `product_recommendation_agent()` — specialist agent   | Returns "not implemented" JSON                 |
+| 3b     | `agents/orchestrator.py`         | `ORCHESTRATOR_PROMPT` + `create_orchestrator()`       | Returns `None` → chat shows "not wired up"     |
+| 4      | `services/agentcore_memory.py`   | `create_agentcore_session_manager()`                  | Returns `None` → falls back to Aurora sessions |
+| 4      | `services/agentcore_gateway.py`  | `create_gateway_orchestrator()`                       | Returns `None` → falls back to direct imports  |
+| 4      | `services/agentcore_policy.py`   | `_check_policy()` — Cedar policy evaluation           | Returns `None` → all actions allowed           |
 
 Null guards added in `chat.py` (sync + streaming), `app.py`, and `agentcore_runtime.py`.
 

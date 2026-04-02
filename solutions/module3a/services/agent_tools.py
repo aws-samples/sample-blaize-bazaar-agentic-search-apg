@@ -123,7 +123,7 @@ def _detect_category(query: str) -> str | None:
     return None
 
 @tool
-def semantic_product_search(
+def search_products(
     query: str,
     max_price: float = None,
     min_rating: float = 0.0,
