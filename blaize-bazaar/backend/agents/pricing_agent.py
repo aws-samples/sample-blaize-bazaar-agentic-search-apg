@@ -62,10 +62,13 @@ def price_optimization_agent(query: str) -> str:
                 "what is available at various price points. "
                 "</tools>"
                 "<output-rules>"
+                "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
                 "Call at most 2 tools per query. "
-                "Write 1-2 short sentences as a conversational intro. Products render as visual cards "
-                "automatically — do not list them in text. Never use markdown tables, numbered lists, "
-                "headers, or emojis. Never ask follow-up questions."
+                "After receiving tool results, write 1-2 short sentences as a conversational intro. "
+                "Products render as visual cards automatically — do not list them in text. "
+                "If the tool returns zero products or an error, say what went wrong briefly "
+                "(e.g. 'No pricing data available for that category right now.'). "
+                "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
                 "</output-rules>"
             ),
             tools=[get_price_analysis, get_product_by_category, search_products],

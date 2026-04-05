@@ -45,11 +45,11 @@ interface PlaygroundOverlayProps {
 }
 
 const MODE_META: Record<string, { label: string; desc: string; color: string; step: string }> = {
-  legacy: { label: 'Keyword Search', desc: 'The Starting Point', color: '#86868b', step: 'Lab 0' },
-  semantic: { label: 'Semantic Search', desc: 'Teaching Your Database to Think', color: '#0071e3', step: 'Lab 1' },
-  tools: { label: 'Agent + Tools', desc: 'From SQL to Structured Capabilities', color: '#7c3aed', step: 'Lab 2' },
-  full: { label: 'Multi-Agent', desc: 'Specialists and Routing', color: '#e67e00', step: 'Lab 3' },
-  agentcore: { label: 'AgentCore', desc: 'Policies, Memory, and Runtime', color: '#1db954', step: 'Lab 4' },
+  legacy: { label: 'Keyword Search', desc: 'The Starting Point', color: '#86868b', step: 'Module 0' },
+  semantic: { label: 'Semantic Search', desc: 'Teaching Your Database to Think', color: '#0071e3', step: 'Module 1' },
+  tools: { label: 'Agent + Tools', desc: 'From SQL to Structured Capabilities', color: '#7c3aed', step: 'Module 2' },
+  full: { label: 'Multi-Agent', desc: 'Specialists and Routing', color: '#e67e00', step: 'Module 3' },
+  agentcore: { label: 'AgentCore', desc: 'Policies, Memory, and Runtime', color: '#1db954', step: 'Module 4' },
 }
 
 const LAB_COLORS: Record<string, string> = {

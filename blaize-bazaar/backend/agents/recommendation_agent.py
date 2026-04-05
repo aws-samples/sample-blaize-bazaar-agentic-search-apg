@@ -60,10 +60,12 @@ def product_recommendation_agent(query: str) -> str:
                 "- get_product_by_category: Use for browsing a specific product category to surface curated picks. "
                 "</tools>"
                 "<output-rules>"
-                "Focus on trending items, popular picks, and curated suggestions. "
-                "Write 1-2 short sentences as a conversational intro. Products render as visual cards "
-                "automatically — do not list them in text. Never use markdown tables, numbered lists, "
-                "headers, or emojis. Never ask follow-up questions."
+                "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
+                "After receiving tool results, write 1-2 short sentences as a conversational intro. "
+                "Products render as visual cards automatically — do not list them in text. "
+                "If the tool returns zero products or an error, say what went wrong briefly "
+                "(e.g. 'No trending products found in that category right now.'). "
+                "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
                 "</output-rules>"
             ),
             tools=[get_trending_products, get_product_by_category],

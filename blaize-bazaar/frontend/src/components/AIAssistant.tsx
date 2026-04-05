@@ -100,7 +100,7 @@ const AIAssistant = () => {
     switch (mode) {
       case 'tools':
         return {
-          content: "Hey! I'm your AI shopping assistant — powered by custom tools that query live data from Aurora PostgreSQL. Ask me about products, trends, or inventory and watch the tools fire in real-time.",
+          content: "I can look up trending products, check inventory levels, and pull real-time pricing — all by calling live tools against Aurora PostgreSQL. Try asking a question and watch the tool calls light up below.",
           suggestions: [
             "What's trending in electronics right now?",
             'I need a gift for someone who loves cooking',
@@ -110,7 +110,7 @@ const AIAssistant = () => {
         }
       case 'full':
         return {
-          content: "Hey! I'm backed by a team of specialist agents — search, pricing, inventory, and recommendation — all coordinated by an orchestrator. Ask something complex and watch them collaborate.",
+          content: "I've got a full team behind me — specialist agents for search, pricing, inventory, and recommendations, all coordinated by an orchestrator that routes your question to the right expert. Ask something that needs more than one perspective.",
           suggestions: [
             'Find me the best laptop under $1500',
             "What's low on stock that I should grab before it's gone?",
@@ -120,7 +120,7 @@ const AIAssistant = () => {
         }
       case 'agentcore':
         return {
-          content: "Hey! I'm running on Bedrock AgentCore — with persistent memory across sessions, Cedar authorization policies, and MCP Gateway for dynamic tool discovery. Try testing the guardrails.",
+          content: "I remember you across sessions and discover tools on the fly through AgentCore Gateway. I also follow Cedar authorization policies — so try asking me to do something I shouldn't be allowed to do.",
           suggestions: [
             'Remember that I prefer premium brands',
             'Can you restock 1000 units of the Travel Camera?',
@@ -130,7 +130,7 @@ const AIAssistant = () => {
         }
       default:
         return {
-          content: "Hey! I'm your AI shopping assistant. I can search our entire catalog, compare products side by side, analyze pricing trends, and check what's in stock — all in one conversation. What are you working with today?",
+          content: "I can search our full catalog, compare products, spot pricing trends, and check what's in stock — all in one conversation. What are you looking for?",
           suggestions: [
             'Find me the best laptop under $1500',
             "What's trending in electronics right now?",
@@ -978,7 +978,7 @@ const AIAssistant = () => {
                               {/* Educational tip */}
                               <div className="pt-1.5 mt-1" style={{ borderTop: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}` }}>
                                 <p className="italic" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
-                                  {workshopMode === 'tools' && 'In Lab 2, one agent handles everything using custom tools. Lab 3 adds multi-agent orchestration.'}
+                                  {workshopMode === 'tools' && 'In Module 2, one agent handles everything using custom tools. Module 3 adds multi-agent orchestration.'}
                                   {workshopMode === 'full' && 'The orchestrator decided which agents to invoke based on your query. Try the Graph Orchestrator in the Playground to visualize this.'}
                                   {workshopMode === 'agentcore' && 'AgentCore adds persistent memory, so the agent remembers your preferences across sessions.'}
                                 </p>

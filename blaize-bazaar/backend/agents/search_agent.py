@@ -63,9 +63,12 @@ def search_agent(query: str) -> str:
                 "with the two IDs. "
                 "</tools>"
                 "<output-rules>"
-                "Write 1-2 short sentences as a conversational intro. Products render as visual cards "
-                "automatically — do not list them in text. Never use markdown tables, numbered lists, "
-                "headers, or emojis. Never ask follow-up questions."
+                "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
+                "After receiving tool results, write 1-2 short sentences as a conversational intro. "
+                "Products render as visual cards automatically — do not list them in text. "
+                "If the tool returns zero products or an error, say what went wrong briefly "
+                "(e.g. 'No results found — try broadening your search.'). "
+                "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
                 "</output-rules>"
             ),
             tools=[search_products, get_product_by_category, compare_products],

@@ -60,9 +60,12 @@ def inventory_restock_agent(query: str) -> str:
                 "If the user mentions a product by name instead of ID, inform them you need the product ID. "
                 "</tools>"
                 "<output-rules>"
-                "Write 1-2 short sentences summarizing stock status. Products render as visual cards "
-                "automatically — do not list them in text. Never use markdown tables, numbered lists, "
-                "headers, or emojis. Never ask follow-up questions."
+                "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
+                "After receiving tool results, write 1-2 short sentences summarizing stock status. "
+                "Products render as visual cards automatically — do not list them in text. "
+                "If the tool returns zero products or an error, say what went wrong briefly "
+                "(e.g. 'Could not retrieve inventory data right now.'). "
+                "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
                 "</output-rules>"
             ),
             tools=[get_inventory_health, restock_product, get_low_stock_products],

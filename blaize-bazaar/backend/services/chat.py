@@ -550,6 +550,7 @@ CURRENT REQUEST: {message}"""
 
             task = asyncio.create_task(run_agent())
             products_sent = []
+            products_buffered = []  # Hold products until text streams first
             price_limit = self._extract_price_limit(message)
 
             while True:
@@ -580,16 +581,14 @@ CURRENT REQUEST: {message}"""
                             # Enforce price limit from user query as safety net
                             if price_limit:
                                 formatted = [p for p in formatted if p.get("price", 0) <= price_limit]
-                            sent_ids = {p.get("id") or p.get("productId") for p in products_sent}
-                            sent_names = {p.get("name") or p.get("product_description") for p in products_sent}
+                            sent_ids = {p.get("id") or p.get("productId") for p in products_buffered}
+                            sent_names = {p.get("name") or p.get("product_description") for p in products_buffered}
                             new_products = [
                                 p for p in formatted
                                 if (p.get("id") or p.get("productId")) not in sent_ids
                                 and (p.get("name") or p.get("product_description")) not in sent_names
                             ]
-                            for i, product in enumerate(new_products):
-                                yield {"type": "product", "product": product, "index": i, "total": len(new_products)}
-                            products_sent.extend(new_products)
+                            products_buffered.extend(new_products)
 
                     yield {"type": "agent_step", "agent": "SearchAssistant", "action": "Done", "status": "completed"}
                     # Clear pre-tool thinking text so post-tool response doesn't concatenate
@@ -603,12 +602,18 @@ CURRENT REQUEST: {message}"""
 
             response_text = str(agent_result[0]) if agent_result[0] else ""
             context_manager.add_message("assistant", response_text)
-            parsed = await self._parse_agent_response(response_text, message, conversation_history, has_tool_products=bool(products_sent))
+            parsed = await self._parse_agent_response(response_text, message, conversation_history, has_tool_products=bool(products_buffered))
 
+            # Send text FIRST
             if parsed["text"]:
                 yield {"type": "content", "content": parsed["text"]}
 
-            if not products_sent and parsed["products"]:
+            # Then send buffered products
+            if products_buffered:
+                for i, product in enumerate(products_buffered):
+                    yield {"type": "product", "product": product, "index": i, "total": len(products_buffered)}
+                products_sent = products_buffered
+            elif parsed["products"]:
                 for i, product in enumerate(parsed["products"]):
                     yield {"type": "product", "product": product, "index": i, "total": len(parsed["products"])}
                 products_sent = parsed["products"]
@@ -1234,6 +1239,7 @@ CURRENT REQUEST: {message}"""
 
         # --- Process events from queue in real-time ---
         products_sent = []
+        products_buffered = []  # Hold products until text streams first
         current_tool = None
         price_limit = self._extract_price_limit(message)
 
@@ -1261,7 +1267,7 @@ CURRENT REQUEST: {message}"""
                     }
                     yield {"type": "tool_call", "tool": tool_name, "status": "executing"}
 
-            # Tool completed (from AfterToolCallEvent hook) — send products NOW
+            # Tool completed (from AfterToolCallEvent hook) — buffer products for later
             elif "_tool_done" in event:
                 result_str = event.get("_result", "")
                 if result_str:
@@ -1271,22 +1277,15 @@ CURRENT REQUEST: {message}"""
                         # Enforce price limit from user query as safety net
                         if price_limit:
                             formatted = [p for p in formatted if p.get("price", 0) <= price_limit]
-                        # Deduplicate: skip products already sent (by id or name)
-                        sent_ids = {p.get("id") or p.get("productId") for p in products_sent}
-                        sent_names = {p.get("name") or p.get("product_description") for p in products_sent}
+                        # Deduplicate: skip products already buffered (by id or name)
+                        sent_ids = {p.get("id") or p.get("productId") for p in products_buffered}
+                        sent_names = {p.get("name") or p.get("product_description") for p in products_buffered}
                         new_products = [
                             p for p in formatted
                             if (p.get("id") or p.get("productId")) not in sent_ids
                             and (p.get("name") or p.get("product_description")) not in sent_names
                         ]
-                        for i, product in enumerate(new_products):
-                            yield {
-                                "type": "product",
-                                "product": product,
-                                "index": i,
-                                "total": len(new_products)
-                            }
-                        products_sent.extend(new_products)
+                        products_buffered.extend(new_products)
 
                 agent_name = self._tool_to_agent_name(event.get("_tool_done", ""))
                 yield {
@@ -1314,14 +1313,24 @@ CURRENT REQUEST: {message}"""
         response_text = str(orchestrator_result[0]) if orchestrator_result[0] else ""
         context_manager.add_message("assistant", response_text)
 
-        parsed = await self._parse_agent_response(response_text, message, conversation_history)
+        parsed = await self._parse_agent_response(response_text, message, conversation_history, has_tool_products=bool(products_buffered))
 
-        # Send clean text content
+        # Send clean text content FIRST (before product cards)
         if parsed["text"]:
             yield {"type": "content", "content": parsed["text"]}
 
-        # Send products if not already sent via hook
-        if not products_sent and parsed["products"]:
+        # Now send buffered products (collected from tool hooks during execution)
+        if products_buffered:
+            for i, product in enumerate(products_buffered):
+                yield {
+                    "type": "product",
+                    "product": product,
+                    "index": i,
+                    "total": len(products_buffered)
+                }
+            products_sent = products_buffered
+        elif parsed["products"]:
+            # Fallback: send products extracted from response text
             for i, product in enumerate(parsed["products"]):
                 yield {
                     "type": "product",

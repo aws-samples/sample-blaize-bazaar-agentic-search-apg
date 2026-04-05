@@ -92,9 +92,12 @@ def customer_support_agent(query: str) -> str:
 
         system_prompt += (
             "<output-rules>"
-            "Write 1-2 short sentences as a conversational intro. Products render as visual cards "
-            "automatically — do not list them in text. Never use markdown tables, numbered lists, "
-            "headers, or emojis. Never ask follow-up questions."
+            "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
+            "After receiving tool results, write 1-2 short sentences as a conversational intro. "
+            "Products render as visual cards automatically — do not list them in text. "
+            "If the tool returns zero results or an error, say what went wrong briefly "
+            "(e.g. 'I could not find a return policy for that category.'). "
+            "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
             "</output-rules>"
         )
 
