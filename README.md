@@ -23,7 +23,7 @@ Blaize Bazaar — an e-commerce platform that starts with broken keyword search 
 | ----------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | **Teaching Your Database to Think** | Semantic search lights up in the storefront       | `services/hybrid_search.py`, `services/business_logic.py`                             |
 | **Giving Your Agent Superpowers**   | AI chat answers "what's trending?" with real data | `services/agent_tools.py`                                                             |
-| **Building the Agent Team**         | Multi-agent routing + AgentCore Memory & Gateway  | `agents/recommendation_agent.py`, `agents/orchestrator.py`, `services/agentcore_*.py` |
+| **Building the Agent Team**         | Multi-agent routing + AgentCore Memory & Gateway  | `agents/recommendation_agent.py`, `agents/orchestrator.py`, `services/agentcore_memory.py`, `services/agentcore_gateway.py` |
 | **Going to Production**             | Cedar policies + AgentCore Runtime deployment     | `services/agentcore_policy.py`, `modules/05/`                                         |
 
 ---
@@ -58,6 +58,7 @@ blaize-bazaar/                      # The App
 │   ├── agents/
 │   │   ├── recommendation_agent.py ← Challenge: specialist agent
 │   │   ├── orchestrator.py         ← Challenge: routing prompt
+│   │   ├── graph_orchestrator.py   Alternate orchestrator (study as pattern)
 │   │   ├── search_agent.py         Pre-built (study as pattern)
 │   │   ├── inventory_agent.py      Pre-built (study as pattern)
 │   │   ├── pricing_agent.py        Pre-built (study as pattern)
@@ -69,7 +70,8 @@ solutions/                          # Drop-in replacements (cp and restart)
 ├── module2/services/               hybrid_search.py, business_logic.py
 ├── module3a/services/              agent_tools.py
 ├── module3b/agents/                recommendation_agent.py, orchestrator.py
-└── module4/services/               agentcore_memory.py, agentcore_gateway.py, agentcore_policy.py
+├── module4/services/               agentcore_memory.py, agentcore_gateway.py, agentcore_policy.py
+└── module5/services/               code_interpreter.py
 
 modules/05/                         # AgentCore deployment scripts
 scripts/                            # Bootstrap & setup
@@ -84,7 +86,7 @@ sample-images/                      # Visual search test images
 | Layer           | Technologies                                                       |
 | --------------- | ------------------------------------------------------------------ |
 | Database        | Aurora PostgreSQL 17.5, pgvector 0.8.0 (HNSW)                      |
-| AI/ML           | Amazon Bedrock — Claude Sonnet 4.6, Cohere Embed v4                |
+| AI/ML           | Amazon Bedrock — Claude Sonnet 4.6, Cohere Embed v4, Cohere Rerank v3.5 |
 | Agent Infra     | Amazon Bedrock AgentCore — Gateway, Memory, Observability, Runtime |
 | Agent Framework | Strands Agents SDK                                                 |
 | Backend         | FastAPI, Python 3.13, psycopg3, boto3                              |

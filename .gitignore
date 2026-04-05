@@ -21,6 +21,9 @@ build/
 lab2/backend/.env
 lab2/frontend/.env
 
+# Claude Code (local permissions may contain secrets)
+.claude/settings.local.json
+
 # IDE
 .vscode/
 .idea/
