@@ -158,34 +158,22 @@ class HybridSearchService:
         ⏩ SHORT ON TIME? Run:
            cp solutions/module2/services/hybrid_search.py blaize-bazaar/backend/services/hybrid_search.py
         """
-        async with self.db.get_connection() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute(f"SET LOCAL hnsw.ef_search = {int(ef_search)}")
-                if iterative_scan:
-                    await cur.execute("SET LOCAL hnsw.iterative_scan = 'relaxed_order'")
-                await cur.execute("""
-                    SELECT
-                        "productId" as product_id,
-                        product_description,
-                        "imgUrl" as img_url,
-                        "productURL" as product_url,
-                        category_name,
-                        price,
-                        reviews,
-                        stars as rating,
-                        "isBestSeller" as isbestseller,
-                        "boughtInLastMonth" as boughtinlastmonth,
-                        quantity,
-                        1 - (embedding <=> %s::vector) as similarity
-                    FROM blaize_bazaar.product_catalog
-                    WHERE stars >= 3.5
-                      AND reviews >= 10
-                      AND "imgUrl" IS NOT NULL
-                    ORDER BY embedding <=> %s::vector
-                    LIMIT %s
-                """, (embedding, embedding, limit))
-                results = await cur.fetchall()
-                return [dict(r) for r in results]
+        # === CHALLENGE 1: Semantic Vector Search — START ===
+        # TODO: Implement vector similarity search using pgvector
+        #
+        # Steps:
+        #   1. Get a connection: async with self.db.get_connection() as conn:
+        #   2. Create a cursor: async with conn.cursor() as cur:
+        #   3. Set HNSW parameter: await cur.execute(f"SET LOCAL hnsw.ef_search = {int(ef_search)}")
+        #   4. Enable iterative scan: await cur.execute("SET LOCAL hnsw.iterative_scan = 'relaxed_order'")
+        #   5. Execute the vector search query (see docstring above for SQL template)
+        #   6. Fetch results: results = await cur.fetchall()
+        #   7. Return: [dict(r) for r in results]
+        #
+        # ⏩ SHORT ON TIME? Run:
+        #    cp solutions/module1/services/hybrid_search.py blaize-bazaar/backend/services/hybrid_search.py
+        return []
+        # === CHALLENGE 1: Semantic Vector Search — END ===
     
     async def _fulltext_search(
         self,

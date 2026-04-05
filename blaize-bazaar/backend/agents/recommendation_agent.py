@@ -42,53 +42,18 @@ def product_recommendation_agent(query: str) -> str:
     Returns:
         Agent response with product recommendations
     """
-    try:
-        tool_results = []
-
-        agent = Agent(
-            model=BedrockModel(
-                model_id=settings.BEDROCK_CHAT_MODEL,
-                max_tokens=4096,
-                temperature=0.2,
-            ),
-            system_prompt=(
-                "You are Blaize Bazaar's Product Recommendation Specialist. "
-                "<tools>"
-                "- get_trending_products: Use when the user asks about trending, popular, or best-selling items. "
-                "Pass the category parameter if they mention a specific category (e.g. 'trending electronics', "
-                "'popular shoes'). "
-                "- get_product_by_category: Use for browsing a specific product category to surface curated picks. "
-                "</tools>"
-                "<output-rules>"
-                "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
-                "After receiving tool results, write 1-2 short sentences as a conversational intro. "
-                "Products render as visual cards automatically — do not list them in text. "
-                "If the tool returns zero products or an error, say what went wrong briefly "
-                "(e.g. 'No trending products found in that category right now.'). "
-                "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
-                "</output-rules>"
-            ),
-            tools=[get_trending_products, get_product_by_category],
-        )
-
-        # Capture inner tool results so we can guarantee product data in output
-        try:
-            from strands.hooks.events import AfterToolCallEvent
-
-            def capture_result(event: AfterToolCallEvent):
-                if hasattr(event, 'result') and event.result:
-                    raw = event.result
-                    if isinstance(raw, dict) and 'content' in raw:
-                        for block in raw.get('content', []):
-                            if isinstance(block, dict) and 'text' in block:
-                                tool_results.append(block['text'])
-
-            agent.add_hook(capture_result)
-        except ImportError:
-            pass
-
-        result = agent(query)
-        text = str(result)
-        return _ensure_products_in_output(text, tool_results)
-    except Exception as e:
-        return json.dumps({"error": f"Recommendation agent error: {str(e)}"})
+    # === CHALLENGE 3: Specialist Agent — START ===
+    # TODO: Implement the recommendation agent following the inventory_agent.py pattern
+    #
+    # Steps:
+    #   1. Create an Agent with BedrockModel(model_id=settings.BEDROCK_CHAT_MODEL, max_tokens=4096, temperature=0.2)
+    #   2. Write a system_prompt for a Product Recommendation Specialist
+    #   3. Set tools=[get_trending_products, get_product_by_category]
+    #   4. Invoke: result = agent(query)
+    #   5. Return: str(result)
+    #   6. Wrap in try/except, return error JSON on failure
+    #
+    # ⏩ SHORT ON TIME? Run:
+    #    cp solutions/module2/agents/recommendation_agent.py blaize-bazaar/backend/agents/recommendation_agent.py
+    return json.dumps({"error": "Recommendation agent not implemented yet — complete Challenge 3"})
+    # === CHALLENGE 3: Specialist Agent — END ===

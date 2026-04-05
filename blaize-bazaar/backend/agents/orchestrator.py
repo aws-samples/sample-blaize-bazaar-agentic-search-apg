@@ -10,49 +10,32 @@ from .customer_support_agent import customer_support_agent
 from .search_agent import search_agent
 
 
-ORCHESTRATOR_PROMPT = """You are the Blaize Bazaar shopping assistant.
+# === CHALLENGE 4: Multi-Agent Orchestrator — START ===
+# TODO: Define ORCHESTRATOR_PROMPT and implement create_orchestrator()
+#
+# Steps:
+#   1. Write ORCHESTRATOR_PROMPT with routing rules for 5 specialist agents:
+#      - price_optimization_agent: pricing, deals, budget queries
+#      - inventory_restock_agent: stock, inventory queries
+#      - customer_support_agent: returns, refunds, support queries
+#      - search_agent: product search, comparison queries
+#      - product_recommendation_agent: trending, recommendation queries (default)
+#   2. Implement create_orchestrator() returning an Agent with:
+#      - model=BedrockModel(model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0", max_tokens=4096, temperature=0.0)
+#      - system_prompt=ORCHESTRATOR_PROMPT
+#      - tools=[all 5 specialist agents]
+#
+# ⏩ SHORT ON TIME? Run:
+#    cp solutions/module2/agents/orchestrator.py blaize-bazaar/backend/agents/orchestrator.py
 
-<routing>
-You have specialist agents. If the query starts with [USE: agent_name], call that agent directly.
-Otherwise analyze the query and route to the best specialist:
-
-- search_agent: Product search, browsing, comparisons (e.g. "find me headphones", "compare these two products", "show me laptops under $100")
-- product_recommendation_agent: Trending, popular, best-selling items (e.g. "what's trending", "recommend something", "popular shoes")
-- price_optimization_agent: Category-level pricing statistics and analysis (e.g. "average price of laptops", "price range for electronics", "pricing breakdown")
-- inventory_restock_agent: Stock levels, inventory health, restocking (e.g. "what's low on stock", "restock product", "inventory health")
-- customer_support_agent: Returns, refunds, warranties, troubleshooting (e.g. "return policy for electronics", "my product is defective", "how do I get a refund")
-
-When in doubt between search and pricing: use search_agent if the user wants to find or buy specific products with a budget, use price_optimization_agent only for aggregate pricing statistics.
-When in doubt between search and recommendation: use search_agent if the user describes what they want, use product_recommendation_agent if they ask for suggestions without specifics.
-</routing>
-
-<multi-intent>
-If the query contains multiple intents (e.g. "return my headphones and find a replacement"), route to the agent that addresses the user's primary goal.
-</multi-intent>
-
-<non-shopping>
-For greetings, general questions, or off-topic queries, respond directly without calling any agent. Keep it friendly and brief.
-</non-shopping>
-
-<rules>
-- Pass the full user query to the selected agent.
-- If the user mentions a price limit, include it in the query you pass to the agent.
-- Write 1 short sentence before the results. Do not mention agent names or explain routing.
-- Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions.
-</rules>"""
+ORCHESTRATOR_PROMPT = """You are the Blaize Bazaar shopping assistant. Route queries to the correct specialist agent."""
 
 
 def create_orchestrator():
     """Create the orchestrator agent with all specialized agents as tools"""
-    return Agent(
-        model=BedrockModel(
-            model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
-            max_tokens=4096,
-            temperature=0.0
-        ),
-        system_prompt=ORCHESTRATOR_PROMPT,
-        tools=[product_recommendation_agent, price_optimization_agent, inventory_restock_agent, customer_support_agent, search_agent]
-    )
+    # TODO: Return an Agent with BedrockModel, ORCHESTRATOR_PROMPT, and all 5 specialist tools
+    return None
+# === CHALLENGE 4: Multi-Agent Orchestrator — END ===
 
 
 # === WIRE IT LIVE (Lab 3) ===

@@ -13,7 +13,6 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
-# === TODO (Module 4) ===
 def create_agentcore_session_manager(
     session_id: str,
     user_id: str = "anonymous"
@@ -52,36 +51,20 @@ def create_agentcore_session_manager(
     ⏩ SHORT ON TIME? Run:
        cp solutions/module4/services/agentcore_memory.py blaize-bazaar/backend/services/agentcore_memory.py
     """
-    if not settings.AGENTCORE_MEMORY_ID:
-        logger.info("AGENTCORE_MEMORY_ID not set — memory disabled")
-        return None
-
-    try:
-        from bedrock_agentcore.memory.integrations.strands.config import AgentCoreMemoryConfig
-        from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
-
-        config = AgentCoreMemoryConfig(
-            memory_id=settings.AGENTCORE_MEMORY_ID,
-            session_id=session_id,
-            actor_id=user_id,
-            batch_size=5,
-        )
-
-        session_manager = AgentCoreMemorySessionManager(
-            config,
-            region_name=settings.AWS_REGION,
-        )
-
-        logger.info(f"✅ AgentCore Memory session created (memory_id={settings.AGENTCORE_MEMORY_ID}, user={user_id})")
-        return session_manager
-
-    except ImportError:
-        logger.warning("bedrock-agentcore package not installed — pip install bedrock-agentcore")
-        return None
-    except Exception as e:
-        logger.warning(f"AgentCore Memory setup failed: {e}")
-        return None
-# === END TODO ===
+    # === CHALLENGE 6: AgentCore Memory (STM) — START ===
+    # TODO: Implement AgentCore Memory session manager
+    #
+    # Steps:
+    #   1. Check settings.AGENTCORE_MEMORY_ID is set (return None if not)
+    #   2. Import AgentCoreMemoryConfig and AgentCoreMemorySessionManager
+    #   3. Create config with memory_id, session_id, actor_id, batch_size=5
+    #   4. Create and return AgentCoreMemorySessionManager(config, region_name=settings.AWS_REGION)
+    #   5. Handle ImportError and general exceptions
+    #
+    # ⏩ SHORT ON TIME? Run:
+    #    cp solutions/module3/services/agentcore_memory.py blaize-bazaar/backend/services/agentcore_memory.py
+    return None
+    # === CHALLENGE 6: AgentCore Memory (STM) — END ===
 
 
 def get_user_memories(user_id: str) -> List[Dict[str, Any]]:

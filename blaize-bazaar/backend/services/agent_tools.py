@@ -76,16 +76,21 @@ def get_trending_products(limit: int = 5, category: str = None) -> str:
     Returns:
         JSON string with trending products
     """
-    if not _db_service:
-        return json.dumps({"error": "Database service not initialized"})
-
-    try:
-        from services.business_logic import BusinessLogic
-        logic = BusinessLogic(_db_service)
-        result = _run_async(logic.get_trending_products(limit, category))
-        return json.dumps(result, indent=2)
-    except Exception as e:
-        return json.dumps({"error": str(e)})
+    # === CHALLENGE 2: @tool Function — START ===
+    # TODO: Implement get_trending_products following the get_inventory_health() pattern above
+    #
+    # Steps:
+    #   1. Check _db_service is available (return error JSON if not)
+    #   2. Import BusinessLogic: from services.business_logic import BusinessLogic
+    #   3. Create instance: logic = BusinessLogic(_db_service)
+    #   4. Call: result = _run_async(logic.get_trending_products(limit, category))
+    #   5. Return: json.dumps(result, indent=2)
+    #   6. Wrap in try/except, return error JSON on failure
+    #
+    # ⏩ SHORT ON TIME? Run:
+    #    cp solutions/module2/services/agent_tools.py blaize-bazaar/backend/services/agent_tools.py
+    return json.dumps({"error": "get_trending_products not implemented yet — complete Challenge 2"})
+    # === CHALLENGE 2: @tool Function — END ===
 
 @tool
 def get_price_analysis(category: str = None) -> str:

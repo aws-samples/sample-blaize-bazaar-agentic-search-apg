@@ -13,7 +13,6 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
-# === TODO (Module 4) ===
 def create_gateway_orchestrator():
     """
     TODO (Module 4): Create an orchestrator that discovers tools via MCP Gateway.
@@ -51,48 +50,22 @@ def create_gateway_orchestrator():
     ⏩ SHORT ON TIME? Run:
        cp solutions/module4/services/agentcore_gateway.py blaize-bazaar/backend/services/agentcore_gateway.py
     """
-    if not settings.AGENTCORE_GATEWAY_URL:
-        logger.info("AGENTCORE_GATEWAY_URL not set — gateway disabled")
-        return None
-
-    try:
-        from strands import Agent
-        from strands.models import BedrockModel
-        from strands.tools.mcp.mcp_client import MCPClient
-        from mcp.client.streamable_http import streamablehttp_client
-
-        def _create_transport():
-            return streamablehttp_client(
-                settings.AGENTCORE_GATEWAY_URL,
-                headers={"x-api-key": settings.AGENTCORE_GATEWAY_API_KEY},
-            )
-
-        mcp_client = MCPClient(_create_transport)
-
-        orchestrator = Agent(
-            model=BedrockModel(
-                model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
-                max_tokens=4096,
-                temperature=0.0,
-            ),
-            system_prompt=(
-                "You are the Blaize Bazaar shopping assistant. "
-                "Use the available tools to find products, check prices, and manage inventory. "
-                "Write 1-2 sentences of context before results. Do not mention tool names or routing."
-            ),
-            tools=[mcp_client],
-        )
-
-        logger.info(f"✅ Gateway orchestrator created (url={settings.AGENTCORE_GATEWAY_URL})")
-        return orchestrator
-
-    except ImportError as e:
-        logger.warning(f"MCP dependencies not installed: {e}")
-        return None
-    except Exception as e:
-        logger.warning(f"Gateway orchestrator setup failed: {e}")
-        return None
-# === END TODO ===
+    # === CHALLENGE 7: MCP Gateway — START ===
+    # TODO: Implement AgentCore Gateway orchestrator with MCP tool discovery
+    #
+    # Steps:
+    #   1. Check settings.AGENTCORE_GATEWAY_URL is set (return None if not)
+    #   2. Import MCPClient and streamablehttp_client
+    #   3. Create transport function pointing to Gateway URL
+    #   4. Create MCPClient with the transport
+    #   5. Create Agent with model, system_prompt, and tools=[mcp_client]
+    #   6. Return the agent
+    #   7. Handle ImportError and general exceptions
+    #
+    # ⏩ SHORT ON TIME? Run:
+    #    cp solutions/module3/services/agentcore_gateway.py blaize-bazaar/backend/services/agentcore_gateway.py
+    return None
+    # === CHALLENGE 7: MCP Gateway — END ===
 
 
 def create_gateway_orchestrator_with_semantic_search():

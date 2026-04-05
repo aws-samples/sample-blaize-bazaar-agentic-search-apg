@@ -13,47 +13,29 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-# === WIRE IT LIVE (Lab 4e) ===
+# === CHALLENGE 5: AgentCore Runtime — START ===
+# TODO: Implement AgentCore Runtime entrypoint
+#
+# Steps:
+#   1. Import BedrockAgentCoreApp from bedrock_agentcore.runtime
+#   2. Create app = BedrockAgentCoreApp()
+#   3. Define @app.entrypoint handler that:
+#      - Extracts prompt and session_id from payload
+#      - Creates orchestrator via create_orchestrator()
+#      - Invokes orchestrator with the prompt
+#      - Returns {"response": str(response), "products": []}
+#   4. Handle ImportError (bedrock-agentcore not installed)
+#
+# ⏩ SHORT ON TIME? Run:
+#    cp solutions/module3/services/agentcore_runtime.py blaize-bazaar/backend/agentcore_runtime.py
 try:
     from bedrock_agentcore.runtime import BedrockAgentCoreApp
-
     app = BedrockAgentCoreApp()
-
-    @app.entrypoint
-    def invoke(payload):
-        """
-        AgentCore Runtime entrypoint.
-
-        Receives a payload from the AgentCore Runtime service and
-        runs the orchestrator agent to produce a response.
-
-        Args:
-            payload: dict with keys like {"prompt": "...", "session_id": "..."}
-
-        Returns:
-            dict with {"response": "...", "products": [...]}
-        """
-        from agents.orchestrator import create_orchestrator
-
-        prompt = payload.get("prompt", "Hello")
-        session_id = payload.get("session_id", "runtime-session")
-
-        orchestrator = create_orchestrator()
-        if orchestrator is None:
-            return {"response": "Orchestrator not implemented yet — complete Module 3b", "products": []}
-        orchestrator.trace_attributes = {
-            "session.id": session_id,
-            "runtime": "agentcore-lambda",
-            "workshop": "DAT406",
-        }
-
-        response = orchestrator(prompt)
-        return {"response": str(response), "products": []}
-
+    # TODO: Add @app.entrypoint handler here
 except ImportError:
     logger.info("bedrock-agentcore not installed — Runtime entrypoint disabled")
     app = None
-# === END WIRE IT LIVE ===
+# === CHALLENGE 5: AgentCore Runtime — END ===
 
 
 if __name__ == "__main__":
