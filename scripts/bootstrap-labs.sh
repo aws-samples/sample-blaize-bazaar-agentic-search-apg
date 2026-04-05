@@ -1,5 +1,5 @@
 #!/bin/bash
-# DAT406 Workshop - Stage 2: Labs Bootstrap
+# Blaize Bazaar Workshop - Stage 2: Labs Bootstrap
 # Optimizations: Parallel pip installs, reduced redundancy, faster execution
 # Duration: ~12-15 minutes
 
@@ -19,7 +19,7 @@ log() { echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $1"; }
 warn() { echo -e "${YELLOW}[$(date +'%H:%M:%S')] WARNING:${NC} $1"; }
 
 log "=========================================="
-log "DAT406 Stage 2: Labs Bootstrap (Optimized)"
+log "Blaize Bazaar Stage 2: Labs Bootstrap (Optimized)"
 log "=========================================="
 
 # ============================================================================
@@ -64,7 +64,7 @@ EOF
 
 # Backend/Root .env (if DB available)
 if [ -n "$DB_HOST" ]; then
-    DB_CLUSTER_ARN="arn:aws:rds:${AWS_REGION}:$(aws sts get-caller-identity --query Account --output text):cluster:apg-pgvector-dat406"
+    DB_CLUSTER_ARN="arn:aws:rds:${AWS_REGION}:$(aws sts get-caller-identity --query Account --output text):cluster:blaize-bazaar-cluster"
     
     # Single .env template
     cat > "$REPO_PATH/.env" << EOF
@@ -249,7 +249,7 @@ setup_frontend & PID_FE=$!
 setup_database & PID_DB=$!
 wait $PID_FE && log "✅ Frontend dependencies installed" || warn "Frontend install issues"
 if wait $PID_DB; then
-    log "✅ Database setup complete (~1,000 products with indexes)"
+    log "✅ Database setup complete (~444 products with indexes)"
 else
     warn "Database setup had issues - check /var/log/database-setup.log"
 fi
@@ -290,7 +290,7 @@ log "Configuring bash environment..."
 cat >> "/home/$CODE_EDITOR_USER/.bashrc" << 'EOF'
 
 # ============================================================================
-# DAT406 Workshop Environment
+# Blaize Bazaar Workshop Environment
 # ============================================================================
 
 if [ -f /workshop/sample-blaize-bazaar-agentic-search-apg/.env ]; then
@@ -499,7 +499,7 @@ echo ""
 echo "✅ Notebooks (Jupyter) dependencies installed"
 echo "✅ Blaize Bazaar Backend (FastAPI + Strands) installed"
 echo "✅ Blaize Bazaar Frontend (React) dependencies installed"
-echo "✅ Database setup complete (~1,000 products with indexes)"
+echo "✅ Database setup complete (~444 products with indexes)"
 echo "✅ MCP server configured for Amazon Q"
 echo "✅ Bash environment configured (psql ready)"
 echo "✅ Backend & Frontend auto-started (always running)"

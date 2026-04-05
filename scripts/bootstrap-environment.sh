@@ -1,5 +1,5 @@
 #!/bin/bash
-# DAT406 Workshop - Stage 1: Environment Bootstrap
+# Blaize Bazaar Workshop - Stage 1: Environment Bootstrap
 # Purpose: Get Code Editor + VS Code ready FAST, then signal CloudFormation
 # Duration: ~8 minutes
 
@@ -28,7 +28,7 @@ warn() { echo -e "${YELLOW}[$(date +'%H:%M:%S')] WARNING:${NC} $1"; }
 error() { echo -e "${RED}[$(date +'%H:%M:%S')] ERROR:${NC} $1"; exit 1; }
 
 log "=========================================="
-log "DAT406 Stage 1: Environment Bootstrap"
+log "Blaize Bazaar Stage 1: Environment Bootstrap"
 log "=========================================="
 log "Assets Bucket: ${ASSETS_BUCKET_NAME:-<not set>}"
 log "Assets Prefix: ${ASSETS_BUCKET_PREFIX:-<not set>}"
@@ -424,7 +424,7 @@ cat > "$HOME_FOLDER/scripts/welcome.sh" << 'WELCOME_EOF'
 clear
 cat << 'EOF'
 ╔═══════════════════════════════════════════════════════════════════╗
-║                    DAT406 Workshop                                ║
+║                 Blaize Bazaar Workshop                             ║
 ║     🚀 Build Agentic AI-Powered Search with Aurora PostgreSQL     ║
 ║                    AWS re:Invent 2026                             ║
 ╚═══════════════════════════════════════════════════════════════════╝

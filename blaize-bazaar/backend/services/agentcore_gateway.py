@@ -48,7 +48,7 @@ def create_gateway_orchestrator():
         Strands Agent with MCP-discovered tools, or None if not configured
 
     ⏩ SHORT ON TIME? Run:
-       cp solutions/module4/services/agentcore_gateway.py blaize-bazaar/backend/services/agentcore_gateway.py
+       cp solutions/module3/services/agentcore_gateway.py blaize-bazaar/backend/services/agentcore_gateway.py
     """
     # === CHALLENGE 7: MCP Gateway — START ===
     # TODO: Implement AgentCore Gateway orchestrator with MCP tool discovery

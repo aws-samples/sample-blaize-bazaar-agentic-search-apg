@@ -1,5 +1,5 @@
 """
-DAT406 Workshop - Backend Package
+Blaize Bazaar - Backend Package
 """
 
 __version__ = "1.0.0"

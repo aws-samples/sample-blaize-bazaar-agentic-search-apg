@@ -1,5 +1,5 @@
 """
-Configuration management for DAT406 Workshop Backend
+Configuration management for Blaize Bazaar Backend
 
 Uses Pydantic Settings for environment variable validation and type safety.
 All configuration is loaded from environment variables or .env file.
@@ -58,7 +58,7 @@ class Settings(BaseSettings):
     # ========================================
     # API settings
     API_VERSION: str = "1.0.0"
-    API_TITLE: str = "DAT406 Workshop API"
+    API_TITLE: str = "Blaize Bazaar Workshop API"
     API_DESCRIPTION: str = "Semantic Search API powered by Amazon Aurora PostgreSQL and Bedrock"
     
     # CORS settings
@@ -281,7 +281,7 @@ if __name__ == "__main__":
     
     settings = get_settings()
     print("\n" + "="*70)
-    print("DAT406 Workshop - Configuration Summary")
+    print("Blaize Bazaar Workshop - Configuration Summary")
     print("="*70)
     print(f"Database: {settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}")
     print(f"AWS Region: {settings.aws_region_resolved}")

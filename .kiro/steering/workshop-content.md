@@ -7,7 +7,7 @@ fileMatchPattern: "lab-content/**/*.md"
 
 ## Lab Content Location
 
-All workshop content lives in `lab-content/dat406-build-agentic-ai-powered-search-with-amazon-aurora-and-amazon-rds/content/`.
+All workshop content lives in `lab-content/workshop/` (2-hour) and `lab-content/builders/` (1-hour).
 
 ## Writing Style
 

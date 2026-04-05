@@ -1,5 +1,5 @@
 /**
- * Type definitions for DAT406 Workshop Frontend
+ * Type definitions for Blaize Bazaar Frontend
  */
 
 // Product Types

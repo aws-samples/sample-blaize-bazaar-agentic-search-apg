@@ -64,7 +64,7 @@ RULES:
         agent.trace_attributes = {
             "session.id": session_id,
             "runtime": "agentcore-lambda",
-            "workshop": "DAT406",
+            "workshop": "blaize-bazaar",
         }
 
         response = agent(prompt)

@@ -1,5 +1,5 @@
 /**
- * API client for DAT406 Workshop Backend
+ * API client for Blaize Bazaar Backend
  */
 import axios, { AxiosInstance } from 'axios'
 import {

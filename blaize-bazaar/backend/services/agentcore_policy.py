@@ -141,7 +141,7 @@ class PolicyService:
             - Each violation dict needs: policy_id, policy_name, reason, cedar_condition
 
         ⏩ SHORT ON TIME? Run:
-           cp solutions/module4/services/agentcore_policy.py blaize-bazaar/backend/services/agentcore_policy.py
+           cp solutions/module3/services/agentcore_policy.py blaize-bazaar/backend/services/agentcore_policy.py
         """
         pid = policy["id"]
 

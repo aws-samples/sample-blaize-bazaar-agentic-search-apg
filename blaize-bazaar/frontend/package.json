@@ -1,7 +1,7 @@
 {
-  "name": "dat406-frontend",
+  "name": "blaize-bazaar-frontend",
   "version": "1.0.0",
-  "description": "DAT406 Workshop - Agentic AI-Powered Search Frontend",
+  "description": "Blaize Bazaar - Agentic AI-Powered Search Frontend",
   "type": "module",
   "scripts": {
     "dev": "vite",

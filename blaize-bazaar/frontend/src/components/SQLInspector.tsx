@@ -377,7 +377,7 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
             <div>
               <p className="font-medium mb-1" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Disclaimer</p>
               <p>
-                SQL Inspector is built for the DAT406 workshop for illustrative and educational purposes only. 
+                SQL Inspector is built for the Blaize Bazaar workshop for illustrative and educational purposes only. 
                 Inspect actual pgvector queries with <span className="text-white/50">&lt;=&gt;</span> operator, 
                 view HNSW index usage, analyze execution times, and understand query plans for optimization.
               </p>

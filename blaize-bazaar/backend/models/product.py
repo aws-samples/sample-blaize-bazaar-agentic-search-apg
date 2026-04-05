@@ -1,5 +1,5 @@
 """
-Product models for DAT406 Workshop
+Product models for Blaize Bazaar
 """
 
 from typing import Optional

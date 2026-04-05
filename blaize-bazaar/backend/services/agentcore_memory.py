@@ -49,7 +49,7 @@ def create_agentcore_session_manager(
         AgentCoreMemorySessionManager instance, or None if not configured
 
     ⏩ SHORT ON TIME? Run:
-       cp solutions/module4/services/agentcore_memory.py blaize-bazaar/backend/services/agentcore_memory.py
+       cp solutions/module3/services/agentcore_memory.py blaize-bazaar/backend/services/agentcore_memory.py
     """
     # === CHALLENGE 6: AgentCore Memory (STM) — START ===
     # TODO: Implement AgentCore Memory session manager

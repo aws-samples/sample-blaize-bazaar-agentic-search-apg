@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start Frontend Server for DAT406 Workshop
+# Start Frontend Server for Blaize Bazaar
 
 cd "$(dirname "$0")/frontend"
 

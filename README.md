@@ -87,7 +87,6 @@ scripts/ # Bootstrap & provisioning
 ├── bootstrap-labs-builders.sh Stage 2: Same + pre-complete C3-C9 (builders)
 └── seed-database.sh Product catalog + return_policies + indexes
 
-modules/05/ # Production deployment scripts
 data/ # Product catalog (~444 products with embeddings)
 lab-content/ # Workshop Studio content (2 formats)
 ├── workshop/ 2-hour workshop lab guide

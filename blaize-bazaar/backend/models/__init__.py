@@ -1,5 +1,5 @@
 """
-Pydantic models for DAT406 Workshop Backend
+Pydantic models for Blaize Bazaar Backend
 """
 from .product import Product, ProductWithScore, ProductSearchResult, ProductFilters
 from .search import SearchRequest, SearchResponse, SearchResult

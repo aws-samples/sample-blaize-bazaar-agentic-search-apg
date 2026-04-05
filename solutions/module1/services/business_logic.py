@@ -368,7 +368,7 @@ class BusinessLogic:
                 "total_ms": round(embedding_time_ms + db_time_ms, 2)
             },
             "sql_query": search_query.replace("%s", "?"),
-            "note": "⚠️ This is a DAT406 workshop tool for educational purposes"
+            "note": "⚠️ This is a Blaize Bazaar workshop tool for educational purposes"
         }
     
     async def get_products_by_category(

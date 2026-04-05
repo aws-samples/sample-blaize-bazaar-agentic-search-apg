@@ -1,3 +1,3 @@
 """
-Core services for DAT406 Workshop Backend
+Core services for Blaize Bazaar Backend
 """

@@ -534,7 +534,7 @@ export default function PlaygroundOverlay({
                 {/* Footer */}
                 <div className="pt-6 pb-4 text-center">
                   <p className="text-[13px]" style={{ color: '#c7c7cc' }}>
-                    Blaize Bazaar Simulation Playground · DAT406
+                    Blaize Bazaar Simulation Playground
                   </p>
                 </div>
               </div>

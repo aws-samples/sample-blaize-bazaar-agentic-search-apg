@@ -37,7 +37,7 @@ inclusion: always
 
 ## Build & Run
 
-- Backend: `source blaize-bazaar/START_BACKEND.sh` (uvicorn on port 8000)
-- Frontend: `source blaize-bazaar/START_FRONTEND.sh` (Vite on port 5173)
+- Backend: `cd blaize-bazaar/backend && uvicorn app:app --reload --host 0.0.0.0 --port 8000`
+- Frontend: `cd blaize-bazaar/frontend && npm run dev`
 - Solutions: `cp solutions/moduleN/path/file.py blaize-bazaar/backend/path/file.py`
 - Database seed: `bash scripts/seed-database.sh`

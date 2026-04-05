@@ -9,7 +9,7 @@ This module demonstrates expert-level context management for multi-agent systems
 - Dynamic prompt assembly with versioning
 - Production cost optimization patterns
 
-Author: DAT406 Workshop - AWS re:Invent 2025
+Author: Blaize Bazaar Workshop - AWS re:Invent 2026
 """
 
 import tiktoken

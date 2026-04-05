@@ -1,5 +1,5 @@
 """
-Embeddings service for DAT406 Workshop
+Embeddings service for Blaize Bazaar
 
 Generates vector embeddings using Cohere Embed v4 via Amazon Bedrock.
 Provides embedding generation for search queries and documents with

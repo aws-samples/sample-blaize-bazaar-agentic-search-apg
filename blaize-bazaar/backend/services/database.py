@@ -1,5 +1,5 @@
 """
-Database service for DAT406 Workshop
+Database service for Blaize Bazaar
 
 Manages PostgreSQL connections using psycopg 3 with connection pooling.
 Provides async context managers for safe database access.

@@ -1,5 +1,5 @@
 """
-DAT406 Workshop - Main FastAPI Application
+Blaize Bazaar - Main FastAPI Application
 FastAPI app with semantic search (Lab 1) and multi-agent system (Lab 2)
 """
 
@@ -91,7 +91,7 @@ async def lifespan(app: FastAPI):
     Handles startup and shutdown events
     """
     # Startup
-    logger.info("Starting DAT406 Workshop API...")
+    logger.info("Starting Blaize Bazaar Workshop API...")
     
     global db_service, embedding_service, chat_service, image_search_service, query_logger, index_performance_service, rerank_service
     
@@ -140,7 +140,7 @@ async def lifespan(app: FastAPI):
                 if settings.OTEL_EXPORTER_OTLP_ENDPOINT:
                     os.environ.setdefault("OTEL_EXPORTER_OTLP_ENDPOINT", settings.OTEL_EXPORTER_OTLP_ENDPOINT)
                     os.environ.setdefault("OTEL_SERVICE_NAME", "blaize-bazaar")
-                    os.environ.setdefault("OTEL_RESOURCE_ATTRIBUTES", "service.namespace=dat406,deployment.environment=workshop")
+                    os.environ.setdefault("OTEL_RESOURCE_ATTRIBUTES", "service.namespace=blaize-bazaar,deployment.environment=workshop")
                     strands_telemetry.setup_otlp_exporter()
                     logger.info("✅ OTLP exporter enabled — traces → CloudWatch X-Ray")
                 else:
@@ -208,7 +208,7 @@ async def lifespan(app: FastAPI):
         # Lab 2 agents use Strands SDK function pattern
         logger.info("✅ Lab 2 agents available via /api/agents/query")
         
-        logger.info("🚀 DAT406 Workshop API is ready!")
+        logger.info("🚀 Blaize Bazaar Workshop API is ready!")
         
     except Exception as e:
         logger.error(f"Failed to initialize services: {e}")
@@ -217,7 +217,7 @@ async def lifespan(app: FastAPI):
     yield
     
     # Shutdown
-    logger.info("Shutting down DAT406 Workshop API...")
+    logger.info("Shutting down Blaize Bazaar Workshop API...")
     
     if db_service:
         await db_service.disconnect()
@@ -227,7 +227,7 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="DAT406 Workshop API",
+    title="Blaize Bazaar Workshop API",
     description="Agentic AI-Powered Search with Amazon Aurora PostgreSQL and pgvector",
     version="1.0.0",
     lifespan=lifespan,
@@ -284,7 +284,7 @@ async def get_rerank_service() -> RerankService:
 async def root():
     """Root endpoint"""
     return {
-        "message": "DAT406 Workshop API",
+        "message": "Blaize Bazaar Workshop API",
         "version": "1.0.0",
         "lab1": "Semantic Search with pgvector",
         "lab2": "Multi-Agent System with Custom Tools" if LAB2_AVAILABLE else "Not Available"

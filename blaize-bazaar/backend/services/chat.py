@@ -341,7 +341,7 @@ class EnhancedChatService:
                 "session.id": session_id or "anonymous",
                 "session.user": user.get("email", "anonymous") if user else "anonymous",
                 "user.query": message[:100],
-                "workshop": "DAT406",
+                "workshop": "blaize-bazaar",
                 "service": "blaize-bazaar"
             }
             
@@ -1117,7 +1117,7 @@ CURRENT REQUEST: {message}"""
             "session.id": session_id or "anonymous",
             "session.user": user.get("email", "anonymous") if user else "anonymous",
             "user.query": message[:100],
-            "workshop": "DAT406",
+            "workshop": "blaize-bazaar",
             "service": "blaize-bazaar"
         }
 

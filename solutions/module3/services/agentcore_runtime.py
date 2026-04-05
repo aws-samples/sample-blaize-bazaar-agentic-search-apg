@@ -44,7 +44,7 @@ try:
         orchestrator.trace_attributes = {
             "session.id": session_id,
             "runtime": "agentcore-lambda",
-            "workshop": "DAT406",
+            "workshop": "blaize-bazaar",
         }
 
         response = orchestrator(prompt)
