@@ -1,7 +1,6 @@
 """
 Image Search Service - Multi-Modal Semantic Search
-Uses Claude Sonnet 4 vision to analyze product images and find similar items.
-Optionally uses Nova Multimodal for enhanced image analysis.
+Uses Claude Sonnet 4.6 vision to analyze product images and find similar items.
 """
 import logging
 import json
