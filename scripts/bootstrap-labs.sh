@@ -255,6 +255,69 @@ else
 fi
 
 # ============================================================================
+# STEP 10b: PROVISION AGENTCORE MEMORY (STM) (~15 sec)
+# ============================================================================
+log "Provisioning AgentCore Memory (STM)..."
+
+AGENTCORE_MEMORY_ID=""
+if command -v python3.13 &>/dev/null; then
+    AGENTCORE_MEMORY_ID=$(sudo -u "$CODE_EDITOR_USER" bash -c "
+        export PATH=\"\$HOME/.local/bin:\$PATH\"
+        export AWS_REGION=$AWS_REGION
+        python3.13 -c '
+import boto3
+import time
+import sys
+
+try:
+    client = boto3.client(\"bedrock-agentcore-control\", region_name=\"$AWS_REGION\")
+
+    # Check if memory already exists
+    existing = client.list_memories(maxResults=10)
+    for mem in existing.get(\"memories\", []):
+        if mem.get(\"name\") == \"BlaizeBazaarSTM\":
+            mem_id = mem[\"id\"]
+            print(mem_id)
+            sys.exit(0)
+
+    # Create new STM-only memory (no strategies = short-term only)
+    response = client.create_memory(
+        name=\"BlaizeBazaarSTM\",
+        description=\"Short-term memory for Blaize Bazaar workshop — conversation context within sessions\",
+        eventExpiryDuration=30
+    )
+    mem_id = response[\"memory\"][\"id\"]
+
+    # Wait for ACTIVE status (usually <10 seconds for STM-only)
+    for i in range(12):
+        status = client.get_memory(memoryId=mem_id)[\"memory\"][\"status\"]
+        if status == \"ACTIVE\":
+            print(mem_id)
+            sys.exit(0)
+        if status == \"FAILED\":
+            print(\"\", file=sys.stderr)
+            sys.exit(1)
+        time.sleep(5)
+
+    # Timeout — print ID anyway, it may activate later
+    print(mem_id)
+except Exception as e:
+    print(f\"Memory provisioning failed: {e}\", file=sys.stderr)
+    sys.exit(1)
+' 2>/dev/null
+    " 2>/dev/null)
+fi
+
+if [ -n "$AGENTCORE_MEMORY_ID" ]; then
+    log "✅ AgentCore Memory provisioned: $AGENTCORE_MEMORY_ID"
+    # Append to .env
+    echo "AGENTCORE_MEMORY_ID=$AGENTCORE_MEMORY_ID" >> "$REPO_PATH/.env"
+    chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH/.env"
+else
+    warn "AgentCore Memory provisioning skipped — STM will fall back to Aurora session tables"
+fi
+
+# ============================================================================
 # STEP 11: CREATE START SCRIPTS (~5 sec)
 # ============================================================================
 log "Creating start scripts..."

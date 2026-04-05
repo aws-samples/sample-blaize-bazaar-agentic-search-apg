@@ -29,6 +29,7 @@ Blaize Bazaar is a hands-on workshop application that teaches developers how to 
 ## Database
 
 - Aurora PostgreSQL 17.5 Serverless v2 (0-16 ACU)
-- Schema: `blaize_bazaar` (product_catalog, return_policies, session tables)
+- Schema: `blaize_bazaar` (product_catalog, return_policies)
 - pgvector extension with HNSW indexes for 1024-dim Cohere Embed v4 vectors
-- ~1000 products with pre-generated embeddings
+- ~444 products with pre-generated embeddings
+- Session management: AgentCore Memory (STM) via `agentcore_memory.py`

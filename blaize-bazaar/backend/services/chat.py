@@ -297,8 +297,7 @@ class EnhancedChatService:
             session_manager = None
             if session_id:
                 # === WIRE IT LIVE (Lab 4b) ===
-                # When in agentcore mode with authenticated user, use AgentCore Memory
-                # instead of AuroraSessionManager for persistent cross-session preferences
+                # Use AgentCore Memory for managed session persistence
                 if user and settings.AGENTCORE_MEMORY_ID:
                     from services.agentcore_memory import create_agentcore_session_manager
                     session_manager = create_agentcore_session_manager(
@@ -309,18 +308,10 @@ class EnhancedChatService:
                         logger.info(f"🧠 AgentCore Memory session created for user={user.get('email')}")
                 # === END WIRE IT LIVE ===
 
-                # Fallback to Aurora session manager
+                # No fallback — AgentCore Memory is the only session manager.
+                # If AGENTCORE_MEMORY_ID is not set, the agent runs without session memory.
                 if not session_manager:
-                    from services.aurora_session_manager import AuroraSessionManager
-
-                    conn_string = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
-
-                    session_manager = AuroraSessionManager(
-                        session_id=session_id,
-                        conn_string=conn_string,
-                        agent_name="blaize_orchestrator"
-                    )
-                    logger.info(f"🗄️ Aurora session manager created: {session_id}")
+                    logger.info(f"ℹ️ No session manager — agent runs stateless (set AGENTCORE_MEMORY_ID to enable)")
 
             # Create orchestrator — use guarded variant when guardrails enabled (Lab 3)
             logger.info(f"🎯 Creating agent orchestrator (guardrails={'ON' if guardrails_enabled else 'OFF'})...")
@@ -1083,20 +1074,7 @@ CURRENT REQUEST: {message}"""
             # === END WIRE IT LIVE ===
 
             if not session_manager:
-                try:
-                    from services.aurora_session_manager import AuroraSessionManager
-                    from config import settings as _settings
-                    conn_string = (
-                        f"postgresql://{_settings.DB_USER}:{_settings.DB_PASSWORD}"
-                        f"@{_settings.DB_HOST}:{_settings.DB_PORT}/{_settings.DB_NAME}"
-                    )
-                    session_manager = AuroraSessionManager(
-                        session_id=session_id,
-                        conn_string=conn_string,
-                        agent_name="blaize_orchestrator"
-                    )
-                except Exception as e:
-                    logger.warning(f"Session manager setup failed: {e}")
+                logger.info("ℹ️ No session manager for streaming — agent runs stateless")
 
         # Use guarded orchestrator when guardrails enabled (Lab 3)
         if guardrails_enabled:

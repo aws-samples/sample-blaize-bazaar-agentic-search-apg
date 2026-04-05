@@ -78,10 +78,6 @@ print(f'Target: {CLUSTER_ARN}')
 print('\n[1/7] Creating extension and schema...')
 run_sql('CREATE EXTENSION IF NOT EXISTS vector')
 run_sql('CREATE SCHEMA IF NOT EXISTS blaize_bazaar')
-run_sql('DROP TABLE IF EXISTS blaize_bazaar.tool_uses CASCADE')
-run_sql('DROP TABLE IF EXISTS blaize_bazaar.messages CASCADE')
-run_sql('DROP TABLE IF EXISTS blaize_bazaar.session_metadata CASCADE')
-run_sql('DROP TABLE IF EXISTS blaize_bazaar.conversations CASCADE')
 run_sql('DROP TABLE IF EXISTS blaize_bazaar.product_catalog CASCADE')
 
 # Step 2: Create table
@@ -286,74 +282,8 @@ except Exception as e:
     except Exception:
         pass
 
-# Step 7: Session management tables
-print('[7/7] Creating session management tables...')
-run_sql("""
-CREATE TABLE IF NOT EXISTS blaize_bazaar.conversations (
-    session_id VARCHAR(255) PRIMARY KEY,
-    agent_name VARCHAR(255),
-    context JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    metadata JSONB DEFAULT '{}'::jsonb
-)
-""")
-run_sql("""
-CREATE INDEX IF NOT EXISTS idx_conversations_created_at
-ON blaize_bazaar.conversations(created_at)
-""")
-run_sql("""
-CREATE TABLE IF NOT EXISTS blaize_bazaar.messages (
-    id SERIAL PRIMARY KEY,
-    session_id VARCHAR(255) NOT NULL REFERENCES blaize_bazaar.conversations(session_id) ON DELETE CASCADE,
-    role VARCHAR(50) NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
-    content TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    metadata JSONB DEFAULT '{}'::jsonb
-)
-""")
-run_sql("""
-CREATE INDEX IF NOT EXISTS idx_messages_session_id
-ON blaize_bazaar.messages(session_id)
-""")
-run_sql("""
-CREATE INDEX IF NOT EXISTS idx_messages_created_at
-ON blaize_bazaar.messages(created_at)
-""")
-run_sql("""
-CREATE TABLE IF NOT EXISTS blaize_bazaar.session_metadata (
-    session_id VARCHAR(255) PRIMARY KEY REFERENCES blaize_bazaar.conversations(session_id) ON DELETE CASCADE,
-    user_preferences JSONB DEFAULT '{}'::jsonb,
-    context_data JSONB DEFAULT '{}'::jsonb,
-    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
-""")
-run_sql("""
-CREATE TABLE IF NOT EXISTS blaize_bazaar.tool_uses (
-    id SERIAL PRIMARY KEY,
-    session_id VARCHAR(255) NOT NULL REFERENCES blaize_bazaar.conversations(session_id) ON DELETE CASCADE,
-    tool_name VARCHAR(255) NOT NULL,
-    tool_input JSONB,
-    tool_output JSONB,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
-""")
-run_sql("""
-CREATE INDEX IF NOT EXISTS idx_tool_uses_session_id
-ON blaize_bazaar.tool_uses(session_id)
-""")
-run_sql("""
-CREATE INDEX IF NOT EXISTS idx_tool_uses_timestamp
-ON blaize_bazaar.tool_uses(timestamp)
-""")
-
-# Grant permissions
-for table in ['conversations', 'messages', 'session_metadata', 'tool_uses']:
-    run_sql(f'GRANT SELECT, INSERT, UPDATE, DELETE ON blaize_bazaar.{table} TO postgres')
-
-run_sql('GRANT USAGE, SELECT ON SEQUENCE blaize_bazaar.messages_id_seq TO postgres')
-run_sql('GRANT USAGE, SELECT ON SEQUENCE blaize_bazaar.tool_uses_id_seq TO postgres')
-print('  Session tables created')
+# Session management is handled by AgentCore Memory (STM) — no Aurora session tables needed.
+print('[7/7] Session management → AgentCore Memory (no Aurora tables)')
 
 # Verify
 result = run_sql('SELECT COUNT(*) as cnt FROM blaize_bazaar.product_catalog')

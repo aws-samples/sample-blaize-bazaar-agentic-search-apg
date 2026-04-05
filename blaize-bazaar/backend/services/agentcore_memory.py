@@ -2,8 +2,8 @@
 AgentCore Memory — Persistent user preferences via Bedrock AgentCore Memory.
 
 Wire It Live: Participants implement create_agentcore_session_manager() using
-AgentCoreMemorySessionManager from the bedrock-agentcore SDK to replace the
-local AuroraSessionManager with managed, persistent memory.
+AgentCoreMemorySessionManager from the bedrock-agentcore SDK to replace
+local session tables with managed, persistent memory.
 """
 import logging
 from typing import Optional, Dict, Any, List
@@ -20,7 +20,7 @@ def create_agentcore_session_manager(
     """
     TODO (Module 4): Create an AgentCore Memory session manager.
 
-    AgentCore Memory replaces the local AuroraSessionManager with a managed
+    AgentCore Memory provides managed session persistence as a
     service that automatically extracts user preferences, maintains conversation
     summaries, and persists context across sessions.
 
