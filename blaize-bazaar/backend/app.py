@@ -1478,40 +1478,36 @@ async def get_workshop_status():
         except Exception:
             return True
 
-    # Module 2
+    # Module 1 — Smart Search
     from services.hybrid_search import HybridSearchService
     from services.business_logic import BusinessLogic
-    m2a = is_stub(HybridSearchService._vector_search, "# TODO: Your implementation here")
-    m2b = is_stub(BusinessLogic.search_products, "# TODO: Your implementation here")
+    m1a = is_stub(HybridSearchService._vector_search, "# TODO: Your implementation here")
+    m1b = is_stub(BusinessLogic.search_products, "# TODO: Your implementation here")
 
-    # Module 3a
+    # Module 2 — Agentic AI (tools + agents + orchestrator)
     from services.agent_tools import get_trending_products
-    m3a = is_stub(get_trending_products, "# TODO: Your implementation here")
-
-    # Module 3b
     from agents.recommendation_agent import product_recommendation_agent
     from agents.orchestrator import create_orchestrator
-    m3b_rec = is_stub(product_recommendation_agent, "# TODO: Your implementation here")
-    m3b_orch = is_stub(create_orchestrator, "# TODO: Your implementation here")
+    m2_tools = is_stub(get_trending_products, "# TODO: Your implementation here")
+    m2_rec = is_stub(product_recommendation_agent, "# TODO: Your implementation here")
+    m2_orch = is_stub(create_orchestrator, "# TODO: Your implementation here")
 
-    # Module 4
+    # Module 3 — Production Patterns
     from services.agentcore_memory import create_agentcore_session_manager
     from services.agentcore_gateway import create_gateway_orchestrator
     from services.agentcore_policy import PolicyService
-    m4_mem = is_stub(create_agentcore_session_manager, "# TODO: Your implementation here")
-    m4_gw = is_stub(create_gateway_orchestrator, "# TODO: Your implementation here")
-    m4_pol = is_stub(PolicyService._check_policy, "# TODO: Your implementation here")
+    m3_mem = is_stub(create_agentcore_session_manager, "# TODO: Your implementation here")
+    m3_gw = is_stub(create_gateway_orchestrator, "# TODO: Your implementation here")
+    m3_pol = is_stub(PolicyService._check_policy, "# TODO: Your implementation here")
 
     return {
         "modules": {
-            "module2": {"complete": not m2a and not m2b, "label": "Semantic Search",
-                        "stubs": {"vector_search": not m2a, "search_products": not m2b}},
-            "module3a": {"complete": not m3a, "label": "Agent Tools",
-                         "stubs": {"get_trending_products": not m3a}},
-            "module3b": {"complete": not m3b_rec and not m3b_orch, "label": "Multi-Agent",
-                         "stubs": {"recommendation_agent": not m3b_rec, "orchestrator": not m3b_orch}},
-            "module4": {"complete": not m4_mem and not m4_gw and not m4_pol, "label": "AgentCore",
-                        "stubs": {"memory": not m4_mem, "gateway": not m4_gw, "policy": not m4_pol}},
+            "module1": {"complete": not m1a and not m1b, "label": "Smart Search",
+                        "stubs": {"vector_search": not m1a, "search_products": not m1b}},
+            "module2": {"complete": not m2_tools and not m2_rec and not m2_orch, "label": "Agentic AI",
+                        "stubs": {"get_trending_products": not m2_tools, "recommendation_agent": not m2_rec, "orchestrator": not m2_orch}},
+            "module3": {"complete": not m3_mem and not m3_gw and not m3_pol, "label": "Production Patterns",
+                        "stubs": {"memory": not m3_mem, "gateway": not m3_gw, "policy": not m3_pol}},
         }
     }
 

@@ -94,7 +94,7 @@ class ChatRequest(BaseModel):
     message: str
     conversation_history: List[ChatMessage] = []
     session_id: Optional[str] = None
-    workshop_mode: Optional[str] = Field(default=None, description="Workshop progression mode: 'legacy', 'semantic', 'tools', 'full'")
+    workshop_mode: Optional[str] = Field(default=None, description="Workshop progression mode: 'legacy', 'search', 'agentic', 'production'")
     guardrails_enabled: bool = Field(default=False, description="Enable content moderation guardrails")
 
 

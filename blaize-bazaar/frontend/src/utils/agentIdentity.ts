@@ -36,7 +36,7 @@ export const AGENT_IDENTITIES: Record<AgentType, AgentIdentity> = {
   recommendation: { name: 'Recommendation Agent', icon: 'R', gradient: '', bgColor: '', borderColor: '', textColor: '', accentHex: '#eab308' },
 }
 
-export function resolveAgentType(agentName: string): AgentType {
+export function resolveAgentType(_agentName: string): AgentType {
   // TODO: Implement agent name resolution with priority ordering
   return 'orchestrator'
 }

@@ -81,7 +81,7 @@ const SearchOverlay = ({
   const [semanticResults, setSemanticResults] = useState<SearchResult[]>([])
   const [semanticLatency, setSemanticLatency] = useState('0ms')
   const [semanticLoading, setSemanticLoading] = useState(false)
-  const isDualMode = workshopMode === 'semantic'
+  const isDualMode = false // Dual mode disabled — use Playground "Hybrid Search" for side-by-side comparison
 
   // Hybrid + Rerank state
   const [rerankResults, setRerankResults] = useState<any[]>([])

@@ -17,12 +17,11 @@ interface HeaderProps {
 
 const WORKSHOP_STEPS: { key: WorkshopMode; label: string }[] = [
   { key: 'legacy', label: 'Keyword Search' },
-  { key: 'semantic', label: 'Semantic Search' },
-  { key: 'tools', label: 'Agent + Tools' },
-  { key: 'full', label: 'Multi-Agent' },
-  { key: 'agentcore', label: 'AgentCore' },
+  { key: 'search', label: 'Smart Search' },
+  { key: 'agentic', label: 'Agentic AI' },
+  { key: 'production', label: 'Production' },
 ]
-const MODE_ORDER: WorkshopMode[] = ['legacy', 'semantic', 'tools', 'full', 'agentcore']
+const MODE_ORDER: WorkshopMode[] = ['legacy', 'search', 'agentic', 'production']
 
 const Header = ({ onSearch, onPlaygroundClick, loginSlot, completedModules, onModeSwitch }: HeaderProps) => {
   const { items: cartItems, setCartOpen } = useCart()
@@ -176,7 +175,7 @@ const Header = ({ onSearch, onPlaygroundClick, loginSlot, completedModules, onMo
             {/* Right Side - Search (Lab 2/3 only), Cart & GitHub */}
             <div className="flex items-center gap-2 flex-shrink-0">
               {/* Search Section — only visible in tools/full (Lab 2 & 3) */}
-              {(workshopMode === 'tools' || workshopMode === 'full' || workshopMode === 'agentcore') && (
+              {(workshopMode === 'agentic' || workshopMode === 'production') && (
               <div className="flex items-center gap-2">
                 <div className="relative w-[280px] sm:w-[320px] md:w-[360px] lg:w-[380px] xl:w-[420px] group" ref={searchRef} data-tour="search-bar">
                   <input

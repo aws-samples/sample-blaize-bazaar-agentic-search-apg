@@ -12,22 +12,20 @@ export interface ModuleStatus {
 
 export interface WorkshopStatus {
   modules: {
+    module1: ModuleStatus
     module2: ModuleStatus
-    module3a: ModuleStatus
-    module3b: ModuleStatus
-    module4: ModuleStatus
+    module3: ModuleStatus
   }
 }
 
 const POLL_INTERVAL_MS = 30_000
-const MODULE_KEYS = ['module2', 'module3a', 'module3b', 'module4'] as const
+const MODULE_KEYS = ['module1', 'module2', 'module3'] as const
 type ModuleKey = (typeof MODULE_KEYS)[number]
 
 const MODE_MAP: Record<ModuleKey, string> = {
-  module2: 'semantic',
-  module3a: 'tools',
-  module3b: 'full',
-  module4: 'agentcore',
+  module1: 'search',
+  module2: 'agentic',
+  module3: 'production',
 }
 
 export function useWorkshopStatus() {

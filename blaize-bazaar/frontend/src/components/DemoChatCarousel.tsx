@@ -52,7 +52,7 @@ const ICON_MAP = {
   help: HelpCircle,
 }
 
-const MODE_ORDER: WorkshopMode[] = ['legacy', 'semantic', 'tools', 'full', 'agentcore']
+const MODE_ORDER: WorkshopMode[] = ['legacy', 'search', 'agentic', 'production']
 
 // ─── Slide Data ───
 
@@ -74,7 +74,7 @@ const DEMO_SLIDES: DemoSlide[] = [
       { name: 'Lodge Cast Iron Starter Gift Set', price: '$79.99', rating: '4.8', image: 'https://images.unsplash.com/photo-1602031939964-2854d8c32447?w=200&q=80' },
       { name: 'Cuisinart Bamboo Cutting Board Set', price: '$28.99', rating: '4.2', image: 'https://images.unsplash.com/photo-1633536705119-bcc37bf6c84e?w=200&q=80' },
     ],
-    minMode: 'tools',
+    minMode: 'agentic',
   },
   {
     id: 'price-intelligence',
@@ -94,7 +94,7 @@ const DEMO_SLIDES: DemoSlide[] = [
       { name: 'Citizen Promaster Skyhawk AT', price: '$425.00', rating: '4.9', image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=200&q=80' },
       { name: 'Citizen Eco-Drive Silhouette Crystal', price: '$245.00', rating: '4.9', image: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?w=200&q=80' },
     ],
-    minMode: 'tools',
+    minMode: 'agentic',
   },
   {
     id: 'inventory-awareness',
@@ -111,7 +111,7 @@ const DEMO_SLIDES: DemoSlide[] = [
     ],
     aiResponseText: 'Low stock alert — only 4 units remaining! The Stanley Quencher H2.0 40oz is $35.00 and our #1 trending product with 12,453 reviews. I\'d recommend ordering soon.',
     contextNote: 'Live stock: 4 units remaining',
-    minMode: 'tools',
+    minMode: 'agentic',
   },
   {
     id: 'customer-support',
@@ -127,7 +127,7 @@ const DEMO_SLIDES: DemoSlide[] = [
     ],
     aiResponseText: 'Electronics have a 30-day return window. Items must be in original packaging, unused, with all accessories. Refunds go to your original payment method within 5-7 business days.',
     contextNote: 'Return policy: 30-day window',
-    minMode: 'tools',
+    minMode: 'agentic',
   },
   {
     id: 'multi-agent',
@@ -145,7 +145,7 @@ const DEMO_SLIDES: DemoSlide[] = [
     ],
     aiResponseText: 'I routed your request to two specialists — Inventory found AirPods Pro (8 left) and Samsung Buds3 Pro (6 left), then Pricing compared them: AirPods at $249 vs Samsung at $229.99.',
     contextNote: 'Orchestrator routed to 2 specialists in 1.2s',
-    minMode: 'full',
+    minMode: 'agentic',
   },
   {
     id: 'conversation-memory',
@@ -161,7 +161,7 @@ const DEMO_SLIDES: DemoSlide[] = [
     ],
     aiResponseText: 'Recalling from our earlier conversation — yes, the Citizen Promaster Skyhawk AT features atomic timekeeping and a stainless steel case, making it durable for daily wear.',
     contextNote: 'Recalled context from 2 messages ago',
-    minMode: 'full',
+    minMode: 'agentic',
   },
   {
     id: 'cedar-policy',
@@ -178,7 +178,7 @@ const DEMO_SLIDES: DemoSlide[] = [
     ],
     aiResponseText: 'Policy check failed — Cedar rules block bulk restock over 500 units without manager approval. Would you like me to split this into two approved orders?',
     contextNote: 'Cedar policy: max_restock_qty = 500',
-    minMode: 'agentcore',
+    minMode: 'production',
   },
 ]
 
@@ -230,7 +230,7 @@ interface DemoChatCarouselProps {
   workshopMode?: WorkshopMode
 }
 
-const DemoChatCarousel = ({ onOpenChat, compact = false, workshopMode = 'full' }: DemoChatCarouselProps) => {
+const DemoChatCarousel = ({ onOpenChat, compact = false, workshopMode = 'agentic' }: DemoChatCarouselProps) => {
   const { theme } = useTheme()
   const [activeIndex, setActiveIndex] = useState(0)
   const [direction, setDirection] = useState(1)
@@ -242,18 +242,18 @@ const DemoChatCarousel = ({ onOpenChat, compact = false, workshopMode = 'full' }
   const visibleSlides = DEMO_SLIDES.filter(s => MODE_ORDER.indexOf(s.minMode) <= modeIdx)
 
   // Mode accent colors — matches AIAssistant.tsx
-  const modeAccent = workshopMode === 'agentcore' ? '#10b981' : workshopMode === 'full' ? '#f59e0b' : '#0071e3'
-  const modeStatusColor = workshopMode === 'agentcore' ? '#34d399' : workshopMode === 'full' ? '#fbbf24' : '#22c55e'
-  const modeBorderColor = workshopMode === 'agentcore' ? 'rgba(16, 185, 129, 0.2)' : workshopMode === 'full' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255,255,255,0.08)'
-  const modeGlowColor = workshopMode === 'agentcore' ? 'rgba(16, 185, 129, 0.08)' : workshopMode === 'full' ? 'rgba(245, 158, 11, 0.08)' : ''
-  const modeHeaderBg = workshopMode === 'agentcore'
+  const modeAccent = workshopMode === 'production' ? '#10b981' : workshopMode === 'agentic' ? '#7c3aed' : '#0071e3'
+  const modeStatusColor = workshopMode === 'production' ? '#34d399' : workshopMode === 'agentic' ? '#a78bfa' : '#22c55e'
+  const modeBorderColor = workshopMode === 'production' ? 'rgba(16, 185, 129, 0.2)' : workshopMode === 'agentic' ? 'rgba(124, 58, 237, 0.2)' : 'rgba(255,255,255,0.08)'
+  const modeGlowColor = workshopMode === 'production' ? 'rgba(16, 185, 129, 0.08)' : workshopMode === 'agentic' ? 'rgba(124, 58, 237, 0.08)' : ''
+  const modeHeaderBg = workshopMode === 'production'
     ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.04) 0%, transparent 100%)'
-    : workshopMode === 'full'
-    ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.04) 0%, transparent 100%)'
+    : workshopMode === 'agentic'
+    ? 'linear-gradient(135deg, rgba(124, 58, 237, 0.04) 0%, transparent 100%)'
     : 'transparent'
-  const modeStatusText = workshopMode === 'agentcore'
+  const modeStatusText = workshopMode === 'production'
     ? 'AgentCore Runtime · 5 services'
-    : workshopMode === 'full'
+    : workshopMode === 'agentic'
     ? 'Orchestrator → 5 specialists'
     : '1 agent online'
 
@@ -313,7 +313,7 @@ const DemoChatCarousel = ({ onOpenChat, compact = false, workshopMode = 'full' }
           <div className="px-5 py-4 rounded-t-[20px] flex items-center gap-3"
             style={{
               borderBottom: theme === 'dark'
-                ? `1px solid ${workshopMode === 'agentcore' ? 'rgba(16, 185, 129, 0.15)' : workshopMode === 'full' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255,255,255,0.06)'}`
+                ? `1px solid ${workshopMode === 'production' ? 'rgba(16, 185, 129, 0.15)' : workshopMode === 'agentic' ? 'rgba(124, 58, 237, 0.15)' : 'rgba(255,255,255,0.06)'}`
                 : '1px solid rgba(0,0,0,0.08)',
               background: theme === 'dark' ? modeHeaderBg : 'transparent',
             }}>
@@ -533,17 +533,13 @@ const DemoChatCarousel = ({ onOpenChat, compact = false, workshopMode = 'full' }
           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         >
           <h2 className="text-3xl lg:text-4xl font-extralight mb-4 tracking-tight" style={{ color: 'var(--text-primary)' }}>
-            {workshopMode === 'tools'
-              ? <>Meet the <span style={{ color: '#0071e3' }}>agent</span></>
-              : workshopMode === 'full'
-              ? <>Watch them <span style={{ color: '#f59e0b' }}>collaborate</span></>
+            {workshopMode === 'agentic'
+              ? <>Watch them <span style={{ color: '#7c3aed' }}>collaborate</span></>
               : <>Ready for <span style={{ color: '#10b981' }}>production</span></>
             }
           </h2>
           <p className="text-lg font-light" style={{ color: 'var(--text-secondary)' }}>
-            {workshopMode === 'tools'
-              ? 'Your AI assistant can now query live data through the tools you built'
-              : workshopMode === 'full'
+            {workshopMode === 'agentic'
               ? 'Five specialist agents work together, routed by an orchestrator in real-time'
               : 'Enterprise memory, Cedar policies, and MCP Gateway — all live'
             }

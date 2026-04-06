@@ -3,9 +3,9 @@
  * as newly completed by the /api/workshop/status endpoint.
  */
 import { motion, AnimatePresence } from 'framer-motion'
-import { CheckCircle, X, Zap, Bot, Network, Server } from 'lucide-react'
+import { CheckCircle, X, Zap, Network, Server } from 'lucide-react'
 
-type ModuleKey = 'module2' | 'module3a' | 'module3b' | 'module4'
+type ModuleKey = 'module1' | 'module2' | 'module3'
 
 interface Capability {
   icon: string
@@ -24,8 +24,8 @@ interface ModuleInfo {
 }
 
 const MODULE_INFO: Record<ModuleKey, ModuleInfo> = {
-  module2: {
-    title: 'Module 2 Complete',
+  module1: {
+    title: 'Module 1 Complete',
     headline: 'Your database now understands meaning.',
     subhead: 'You implemented pgvector semantic search on Amazon Aurora PostgreSQL.',
     capabilities: [
@@ -37,34 +37,21 @@ const MODULE_INFO: Record<ModuleKey, ModuleInfo> = {
     accentColor: '#3b82f6',
     Icon: Zap,
   },
-  module3a: {
-    title: 'Module 3a Complete',
-    headline: 'Your AI can now access real-time data.',
-    subhead: 'You built your first @tool function. The agent can query Aurora PostgreSQL on demand.',
+  module2: {
+    title: 'Module 2 Complete',
+    headline: 'A multi-agent team is live in the storefront.',
+    subhead: 'You built @tool functions, specialist agents, and a multi-agent orchestrator.',
     capabilities: [
-      { icon: '\u{1f6e0}\ufe0f', label: 'get_trending_products active', detail: 'Agent answers "what\'s trending?" with live DB data' },
-      { icon: '\u{1f517}', label: 'Tool-calling enabled', detail: 'Strands SDK routes tool calls to your function automatically' },
-      { icon: '\u{1f4ca}', label: 'Structured JSON output', detail: 'Agent receives typed product data, not raw text' },
+      { icon: '\u{1f6e0}\ufe0f', label: 'Agent tools active', detail: 'get_trending_products and other @tool functions query Aurora on demand' },
+      { icon: '\u{1f3af}', label: 'Orchestrator routing live', detail: 'Queries routed to the right specialist automatically' },
+      { icon: '\u{1f91d}', label: 'Agent-as-tool pattern', detail: '5 specialist agents collaborate: search, pricing, inventory, recommendation, support' },
     ],
-    techDetail: 'Strands SDK @tool decorator + BusinessLogic.get_trending_products() + Aurora async pool',
-    accentColor: '#8b5cf6',
-    Icon: Bot,
-  },
-  module3b: {
-    title: 'Module 3b Complete',
-    headline: 'Five specialist agents now collaborate.',
-    subhead: 'You wired up a multi-agent orchestrator using the agent-as-tool pattern.',
-    capabilities: [
-      { icon: '\u{1f3af}', label: 'Orchestrator routing live', detail: 'Queries are routed to the right specialist automatically' },
-      { icon: '\u{1f91d}', label: 'Agent-as-tool pattern', detail: 'Specialist agents are Strands @tool functions to the orchestrator' },
-      { icon: '\u{1f504}', label: 'Parallel specialist calls', detail: 'Search, pricing, inventory, recommendation, and support agents run independently' },
-    ],
-    techDetail: 'Claude Haiku 4.5 orchestrator + 5 specialist agents (Sonnet 4.6) + Strands interleaved thinking',
-    accentColor: '#f59e0b',
+    techDetail: 'Strands SDK @tool + agent-as-tool pattern + orchestrator (Claude Haiku 4.5) + 5 specialists (Sonnet 4.6)',
+    accentColor: '#7c3aed',
     Icon: Network,
   },
-  module4: {
-    title: 'Module 4 Complete',
+  module3: {
+    title: 'Module 3 Complete',
     headline: 'Production-grade infrastructure is live.',
     subhead: 'You connected AgentCore Memory, MCP Gateway, and Cedar policy evaluation.',
     capabilities: [

@@ -153,9 +153,9 @@ function AppContent() {
   // (scroll reveal now handled by framer-motion whileInView on each element)
 
   // Mode-aware dev tools — buttons grouped by lab section
-  const MODE_ORDER = ['legacy', 'semantic', 'tools', 'full', 'agentcore'] as const
+  const MODE_ORDER = ['legacy', 'search', 'agentic', 'production'] as const
 
-  type LabGroup = 'lab1' | 'lab2' | 'lab3' | 'lab4'
+  type LabGroup = 'lab1' | 'lab2' | 'lab3'
   interface ToolButton {
     icon: React.ReactNode
     label: string
@@ -167,50 +167,50 @@ function AppContent() {
   }
 
   const devToolButtons: ToolButton[] = [
-    { icon: <Database className="h-5 w-5" />, label: 'SQL Inspector', desc: 'Watch the actual SQL queries Aurora runs — see how pgvector translates your search into vector distance calculations.', tryHint: 'Search for a product, then open this to see the <=> operator in action.', action: () => { setShowSQLInspector(true); setPlaygroundVisible(false) }, minMode: 'semantic', group: 'lab1' },
-    { icon: <Zap className="h-5 w-5" />, label: 'Hybrid Search', desc: 'Compare keyword-only vs. vector search side by side. See how hybrid search combines the best of both.', tryHint: 'Try "something comfortable for long flights" — keyword finds nothing, semantic understands intent.', action: () => { setShowHybridComparison(true); setPlaygroundVisible(false) }, minMode: 'semantic', group: 'lab1' },
-    { icon: <BarChart3 className="h-5 w-5" />, label: 'Index Performance', desc: 'Benchmark HNSW index tuning, test quantization (halfvec/binary), and see how iterative scan fixes filtered search recall.', tryHint: 'Compare ef_search=40 vs 200 — higher recall costs more latency.', action: () => { setShowIndexPerformance(true); setPlaygroundVisible(false) }, minMode: 'semantic', group: 'lab1' },
-    { icon: <Brain className="h-5 w-5" />, label: 'Agent Traces', desc: 'Step-by-step visualization of the agent\'s reasoning: query analysis, tool selection, and response synthesis.', tryHint: 'Ask "compare laptops under $800" in chat, then open traces to see each tool call.', action: () => { setAgentPanelMode(agentPanelMode === 'expanded' ? 'hidden' : 'expanded'); setPlaygroundVisible(false) }, minMode: 'tools', group: 'lab2' },
-    { icon: <Activity className="h-5 w-5" />, label: 'Agent Dashboard', desc: 'Aggregate stats for this session: which agents ran, how long they took, and success rates.', tryHint: 'Have a few conversations first, then check which agents were invoked most.', action: () => { setShowAgentDashboard(true); setPlaygroundVisible(false) }, minMode: 'tools', group: 'lab2' },
-    { icon: <DollarSign className="h-5 w-5" />, label: 'Context & Cost', desc: 'Track token usage and estimated API cost per request. See how conversation length grows the context window.', tryHint: 'Watch how cost increases as you ask follow-up questions — more context = more tokens.', action: () => { setShowContextDashboard(true); setPlaygroundVisible(false) }, minMode: 'tools', group: 'lab2' },
-    { icon: <User className="h-5 w-5" />, label: 'Personalization', desc: 'User preference engine that re-ranks search results based on your stated interests.', tryHint: 'Set preferences like "outdoor gear" then search — watch results re-order by relevance.', action: () => { setShowPersonalization(true); setPlaygroundVisible(false) }, minMode: 'tools', group: 'lab2' },
-    { icon: <Shield className="h-5 w-5" />, label: 'Guardrails Demo', desc: 'Test content safety filters and PII detection. Harmful queries are blocked; personal information is redacted.', tryHint: 'Try typing a message with a fake SSN or credit card number.', action: () => { setShowGuardrailsDemo(true); setPlaygroundVisible(false) }, minMode: 'full', group: 'lab3' },
-    { icon: <GitBranch className="h-5 w-5" />, label: 'Graph Orchestrator', desc: 'Interactive DAG showing how the orchestrator routes queries to specialized agents and merges results.', tryHint: 'Ask "find me trending shoes under $100 with good reviews" — the orchestrator fans out to 5 agents.', action: () => { setShowGraphViz(true); setPlaygroundVisible(false) }, minMode: 'full', group: 'lab3' },
+    // Lab 1 — Smart Search
+    { icon: <Database className="h-5 w-5" />, label: 'SQL Inspector', desc: 'Watch the actual SQL queries Aurora runs — see how pgvector translates your search into vector distance calculations.', tryHint: 'Search for a product, then open this to see the <=> operator in action.', action: () => { setShowSQLInspector(true); setPlaygroundVisible(false) }, minMode: 'search', group: 'lab1' },
+    { icon: <Zap className="h-5 w-5" />, label: 'Hybrid Search', desc: 'Compare keyword-only vs. vector search side by side. See how hybrid search combines the best of both.', tryHint: 'Try "something comfortable for long flights" — keyword finds nothing, semantic understands intent.', action: () => { setShowHybridComparison(true); setPlaygroundVisible(false) }, minMode: 'search', group: 'lab1' },
+    { icon: <BarChart3 className="h-5 w-5" />, label: 'Index Performance', desc: 'Benchmark HNSW index tuning, test quantization (halfvec/binary), and see how iterative scan fixes filtered search recall.', tryHint: 'Compare ef_search=40 vs 200 — higher recall costs more latency.', action: () => { setShowIndexPerformance(true); setPlaygroundVisible(false) }, minMode: 'search', group: 'lab1' },
+    // Lab 2 — Agentic AI (tools + agents + orchestrator + guardrails + chaos)
+    { icon: <Brain className="h-5 w-5" />, label: 'Agent Traces', desc: 'Step-by-step visualization of the agent\'s reasoning: query analysis, tool selection, and response synthesis.', tryHint: 'Ask "compare laptops under $800" in chat, then open traces to see each tool call.', action: () => { setAgentPanelMode(agentPanelMode === 'expanded' ? 'hidden' : 'expanded'); setPlaygroundVisible(false) }, minMode: 'agentic', group: 'lab2' },
+    { icon: <Activity className="h-5 w-5" />, label: 'Agent Dashboard', desc: 'Aggregate stats for this session: which agents ran, how long they took, and success rates.', tryHint: 'Have a few conversations first, then check which agents were invoked most.', action: () => { setShowAgentDashboard(true); setPlaygroundVisible(false) }, minMode: 'agentic', group: 'lab2' },
+    { icon: <DollarSign className="h-5 w-5" />, label: 'Context & Cost', desc: 'Track token usage and estimated API cost per request. See how conversation length grows the context window.', tryHint: 'Watch how cost increases as you ask follow-up questions — more context = more tokens.', action: () => { setShowContextDashboard(true); setPlaygroundVisible(false) }, minMode: 'agentic', group: 'lab2' },
+    { icon: <User className="h-5 w-5" />, label: 'Personalization', desc: 'User preference engine that re-ranks search results based on your stated interests.', tryHint: 'Set preferences like "outdoor gear" then search — watch results re-order by relevance.', action: () => { setShowPersonalization(true); setPlaygroundVisible(false) }, minMode: 'agentic', group: 'lab2' },
+    { icon: <Shield className="h-5 w-5" />, label: 'Guardrails Demo', desc: 'Test content safety filters and PII detection. Harmful queries are blocked; personal information is redacted.', tryHint: 'Try typing a message with a fake SSN or credit card number.', action: () => { setShowGuardrailsDemo(true); setPlaygroundVisible(false) }, minMode: 'agentic', group: 'lab2' },
+    { icon: <GitBranch className="h-5 w-5" />, label: 'Graph Orchestrator', desc: 'Interactive DAG showing how the orchestrator routes queries to specialized agents and merges results.', tryHint: 'Ask "find me trending shoes under $100 with good reviews" — the orchestrator fans out to 5 agents.', action: () => { setShowGraphViz(true); setPlaygroundVisible(false) }, minMode: 'agentic', group: 'lab2' },
     { icon: <AlertOctagon className="h-5 w-5" />, label: chaosMode ? 'Chaos: ON' : 'Chaos Mode', desc: chaosMode ? 'Chaos injection active — agents will randomly fail. Click to disable.' : 'Inject random failures into agent calls to test retry logic and graceful degradation.', tryHint: chaosMode ? undefined : 'Enable this, then chat — watch how the system handles and recovers from failures.', action: () => {
       const next = !chaosMode
       setChaosMode(next)
       fetch('/api/dev/chaos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: next }) }).catch(() => {})
       setPlaygroundVisible(false)
-    }, minMode: 'full', group: 'lab3' },
-    { icon: <Brain className="h-5 w-5" />, label: 'Memory Dashboard', desc: 'AgentCore\'s persistent memory store. The agent remembers your preferences and past conversations across sessions.', tryHint: 'Tell the agent "I prefer Nike shoes" — it remembers next time you search.', action: () => { setShowMemoryDashboard(true); setPlaygroundVisible(false) }, minMode: 'agentcore', group: 'lab4' },
-    { icon: <Zap className="h-5 w-5" />, label: 'Gateway Tools', desc: 'MCP (Model Context Protocol) gateway — see which tools are available, their schemas, and how the agent discovers them.', tryHint: 'See how tools are registered and what parameters each one accepts.', action: () => { setShowGatewayTools(true); setPlaygroundVisible(false) }, minMode: 'agentcore', group: 'lab4' },
-    { icon: <Activity className="h-5 w-5" />, label: 'Observability', desc: 'CloudWatch and X-Ray integration showing distributed traces across Lambda, Aurora, and Bedrock calls.', tryHint: 'Make a chat request, then check traces to see the full call chain with latencies.', action: () => { setShowObservability(true); setPlaygroundVisible(false) }, minMode: 'agentcore', group: 'lab4' },
-    { icon: <Search className="h-5 w-5" />, label: 'Runtime Status', desc: 'AgentCore Lambda runtime health: cold start times, memory usage, and execution metrics.', action: () => { setShowRuntimeStatus(true); setPlaygroundVisible(false) }, minMode: 'agentcore', group: 'lab4' },
-    { icon: <FileCode className="h-5 w-5" />, label: 'Cedar Policies', desc: 'Fine-grained authorization using Cedar policy language. Define which agent actions are permitted or denied.', tryHint: 'Try restocking 1000 units — the Cedar policy blocks quantities over 500.', action: () => { setShowPolicyDemo(true); setPlaygroundVisible(false) }, minMode: 'agentcore', group: 'lab4' },
-    { icon: <Zap className="h-5 w-5" />, label: 'Cache Metrics', desc: 'Valkey/ElastiCache performance dashboard showing hit rates, key counts, and embedding cost savings.', tryHint: 'Search for the same query twice — watch the cache hit rate climb.', action: () => { setShowCacheMetrics(true); setPlaygroundVisible(false) }, minMode: 'agentcore', group: 'lab4' },
+    }, minMode: 'agentic', group: 'lab2' },
+    // Lab 3 — Production Patterns
+    { icon: <Brain className="h-5 w-5" />, label: 'Memory Dashboard', desc: 'AgentCore\'s persistent memory store. The agent remembers your preferences and past conversations across sessions.', tryHint: 'Tell the agent "I prefer Nike shoes" — it remembers next time you search.', action: () => { setShowMemoryDashboard(true); setPlaygroundVisible(false) }, minMode: 'production', group: 'lab3' },
+    { icon: <Zap className="h-5 w-5" />, label: 'Gateway Tools', desc: 'MCP (Model Context Protocol) gateway — see which tools are available, their schemas, and how the agent discovers them.', tryHint: 'See how tools are registered and what parameters each one accepts.', action: () => { setShowGatewayTools(true); setPlaygroundVisible(false) }, minMode: 'production', group: 'lab3' },
+    { icon: <Activity className="h-5 w-5" />, label: 'Observability', desc: 'CloudWatch and X-Ray integration showing distributed traces across Lambda, Aurora, and Bedrock calls.', tryHint: 'Make a chat request, then check traces to see the full call chain with latencies.', action: () => { setShowObservability(true); setPlaygroundVisible(false) }, minMode: 'production', group: 'lab3' },
+    { icon: <Search className="h-5 w-5" />, label: 'Runtime Status', desc: 'AgentCore Lambda runtime health: cold start times, memory usage, and execution metrics.', action: () => { setShowRuntimeStatus(true); setPlaygroundVisible(false) }, minMode: 'production', group: 'lab3' },
+    { icon: <FileCode className="h-5 w-5" />, label: 'Cedar Policies', desc: 'Fine-grained authorization using Cedar policy language. Define which agent actions are permitted or denied.', tryHint: 'Try restocking 1000 units — the Cedar policy blocks quantities over 500.', action: () => { setShowPolicyDemo(true); setPlaygroundVisible(false) }, minMode: 'production', group: 'lab3' },
+    { icon: <Zap className="h-5 w-5" />, label: 'Cache Metrics', desc: 'Valkey/ElastiCache performance dashboard showing hit rates, key counts, and embedding cost savings.', tryHint: 'Search for the same query twice — watch the cache hit rate climb.', action: () => { setShowCacheMetrics(true); setPlaygroundVisible(false) }, minMode: 'production', group: 'lab3' },
   ]
 
   const LAB_SECTIONS: { key: LabGroup; label: string; desc: string; minMode: typeof MODE_ORDER[number]; intro: string }[] = [
-    { key: 'lab1', label: 'Semantic Search', desc: 'Teaching Your Database to Think', minMode: 'semantic', intro: 'Move beyond keyword matching. Implement vector similarity search with pgvector, combine it with business filters, and watch the storefront understand natural language queries like "something to keep my drinks cold."' },
-    { key: 'lab2', label: 'Agent Tools', desc: 'Structured Capabilities', minMode: 'tools', intro: 'Give your AI structured tool-calling capabilities. Build @tool functions that query Aurora PostgreSQL and return structured JSON, so agents can answer "what\'s trending?" with real product data.' },
-    { key: 'lab3', label: 'Multi-Agent Orchestration', desc: 'Specialists & Routing', minMode: 'full', intro: 'One agent isn\'t enough. Build specialist agents for recommendations, pricing, and inventory, then wire them together with an orchestrator that routes queries to the right expert.' },
-    { key: 'lab4', label: 'Production Deployment', desc: 'Policies, Memory & Runtime', minMode: 'agentcore', intro: 'Take your agents to production with AgentCore. Add managed memory, secure tool discovery via MCP Gateway, Cedar policy evaluation, and deploy to serverless Lambda microVMs.' },
+    { key: 'lab1', label: 'Smart Search', desc: 'Teaching Your Database to Think', minMode: 'search', intro: 'Move beyond keyword matching. Implement vector similarity search with pgvector, combine it with business filters, and watch the storefront understand natural language queries like "something to keep my drinks cold."' },
+    { key: 'lab2', label: 'Agentic AI', desc: 'Tools, Agents & Orchestration', minMode: 'agentic', intro: 'Build @tool functions, specialist agents, and a multi-agent orchestrator. Give your AI structured tool-calling capabilities, then wire up 5 specialists with an orchestrator that routes queries to the right expert.' },
+    { key: 'lab3', label: 'Production Patterns', desc: 'Policies, Memory & Runtime', minMode: 'production', intro: 'Take your agents to production with AgentCore. Add managed memory, secure tool discovery via MCP Gateway, Cedar policy evaluation, and deploy to serverless Lambda microVMs.' },
   ]
 
   // Mode switch handler with enhanced toast
   const MODE_LABELS: Record<string, string> = {
     legacy: 'Keyword Search — The Starting Point',
-    semantic: 'Semantic Search — Teaching Your Database to Think',
-    tools: 'Agent + Tools — From SQL to Structured Capabilities',
-    full: 'Multi-Agent — Specialists and Routing',
-    agentcore: 'AgentCore — Policies, Memory, and Runtime',
+    search: 'Smart Search — Teaching Your Database to Think',
+    agentic: 'Agentic AI — Tools, Agents, and Orchestration',
+    production: 'Production — Policies, Memory, and Runtime',
   }
   const MODE_FEATURES: Record<string, string[]> = {
     legacy: ['Full-text keyword search', 'Exact match only — no semantic understanding'],
-    semantic: ['+ Cohere Embed v4 embeddings → pgvector', '+ Hybrid search (keyword + vector)', '+ HNSW index tuning & iterative scan', '+ RAG-grounded LLM answers'],
-    tools: ['+ Strands agent with structured tool calls', '+ Step-by-step reasoning traces', '+ Token usage & cost tracking', '+ Preference-based re-ranking'],
-    full: ['+ Graph Orchestrator → multi-agent routing', '+ Bedrock Guardrails (safety + PII)', '+ Chaos injection for resilience testing'],
-    agentcore: ['+ Lambda MCP servers on AgentCore Gateway', '+ Orchestrator on AgentCore Runtime', '+ Persistent cross-session memory', '+ End-to-end deploy_all.sh'],
+    search: ['+ Cohere Embed v4 embeddings → pgvector', '+ Hybrid search (keyword + vector)', '+ HNSW index tuning & iterative scan', '+ RAG-grounded LLM answers'],
+    agentic: ['+ Strands agent with structured tool calls', '+ Multi-agent orchestrator → 5 specialists', '+ Bedrock Guardrails (safety + PII)', '+ Reasoning traces & cost tracking'],
+    production: ['+ Lambda MCP servers on AgentCore Gateway', '+ Orchestrator on AgentCore Runtime', '+ Persistent cross-session memory', '+ Cedar policies & observability'],
   }
   const handleModeSwitch = (mode: typeof workshopMode) => {
     setWorkshopMode(mode) // auto-starts tour via LayoutContext if not completed
@@ -222,8 +222,8 @@ function AppContent() {
   const handleTourAction = (actionKey: TourAction['actionKey']) => {
     switch (actionKey) {
       case 'focus-search': {
-        // In legacy/semantic, focus the hero search bar; in tools/full, focus the header search bar
-        const selector = (workshopMode === 'legacy' || workshopMode === 'semantic')
+        // In legacy/search, focus the hero search bar; in agentic/production, focus the header search bar
+        const selector = (workshopMode === 'legacy' || workshopMode === 'search')
           ? '[data-tour="hero-search"] input'
           : '[data-tour="search-bar"] input'
         const input = document.querySelector(selector) as HTMLInputElement
@@ -343,17 +343,17 @@ function AppContent() {
               background: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.05) 60%, rgba(0,0,0,0.35) 100%)',
             }} />
             {/* Subtle radial glow — mode-aware accent */}
-            <div className="absolute inset-0" style={{ background: workshopMode === 'agentcore'
+            <div className="absolute inset-0" style={{ background: workshopMode === 'production'
               ? 'radial-gradient(ellipse at 50% 40%, rgba(16, 185, 129, 0.06) 0%, transparent 55%)'
-              : workshopMode === 'full'
-              ? 'radial-gradient(ellipse at 50% 40%, rgba(245, 158, 11, 0.05) 0%, transparent 55%)'
+              : workshopMode === 'agentic'
+              ? 'radial-gradient(ellipse at 50% 40%, rgba(124, 58, 237, 0.05) 0%, transparent 55%)'
               : 'radial-gradient(ellipse at 50% 40%, rgba(41, 151, 255, 0.04) 0%, transparent 55%)',
               transition: 'background 1s ease',
             }} />
 
             {/* Hero content — split layout for agent modes, centered for legacy/semantic */}
             {(() => {
-              const isAgentMode = workshopMode === 'tools' || workshopMode === 'full' || workshopMode === 'agentcore'
+              const isAgentMode = workshopMode === 'agentic' || workshopMode === 'production'
 
               const heroBadge = (
                 <motion.div
@@ -374,10 +374,9 @@ function AppContent() {
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                     {workshopMode === 'legacy' ? 'Keyword Search Active'
-                      : workshopMode === 'semantic' ? 'Semantic Search Enabled'
-                      : workshopMode === 'tools' ? 'Agent + Tools Enabled'
-                      : workshopMode === 'agentcore' ? 'AgentCore Live'
-                      : 'Multi-Agent Orchestration Active'}
+                      : workshopMode === 'search' ? 'Smart Search Enabled'
+                      : workshopMode === 'production' ? 'Production Live'
+                      : 'Agentic AI Active'}
                   </div>
                 </motion.div>
               )
@@ -404,13 +403,11 @@ function AppContent() {
                 >
                   {workshopMode === 'legacy'
                     ? 'Classic keyword matching — try searching for "something to keep my drinks cold" and see the gap.'
-                    : workshopMode === 'semantic'
+                    : workshopMode === 'search'
                     ? 'Now search by intent, not just keywords. Aurora PostgreSQL with pgvector understands what you mean.'
-                    : workshopMode === 'tools'
-                    ? 'The AI agent can now call structured tools — ask about products, trends, and pricing with real data.'
-                    : workshopMode === 'agentcore'
+                    : workshopMode === 'production'
                     ? 'AgentCore runtime with Valkey caching, Cedar policies, and managed memory — production-grade AI.'
-                    : 'Specialist agents collaborate in real-time — one searches, one compares, one recommends.'
+                    : 'Specialist agents collaborate in real-time — tools, orchestration, and multi-agent routing live.'
                   }
                 </motion.p>
               )
@@ -428,20 +425,19 @@ function AppContent() {
                     onMouseLeave={magneticCta.onMouseLeave}
                     className="px-7 py-3 rounded-full text-lg font-normal transition-all duration-300 hover:opacity-90"
                     onClick={() => {
-                      if (workshopMode === 'legacy' || workshopMode === 'semantic') {
+                      if (workshopMode === 'legacy' || workshopMode === 'search') {
                         setSearchOverlayVisible(true)
                       } else {
                         openChat()
                       }
                     }}
                     style={{
-                      background: workshopMode === 'agentcore' ? '#10b981' : workshopMode === 'full' ? '#f59e0b' : '#0071e3',
+                      background: workshopMode === 'production' ? '#10b981' : workshopMode === 'agentic' ? '#7c3aed' : '#0071e3',
                       color: '#ffffff',
                     }}
                   >
-                    {workshopMode === 'legacy' || workshopMode === 'semantic' ? 'Search Products'
-                      : workshopMode === 'tools' ? 'Talk to the Agent'
-                      : workshopMode === 'full' ? 'Talk to the Team'
+                    {workshopMode === 'legacy' || workshopMode === 'search' ? 'Search Products'
+                      : workshopMode === 'agentic' ? 'Talk to the Team'
                       : 'Try the Full Stack'}
                   </button>
                   <button
@@ -474,7 +470,7 @@ function AppContent() {
                 </motion.div>
               )
 
-              const heroSearchBar = (workshopMode === 'legacy' || workshopMode === 'semantic') ? (
+              const heroSearchBar = (workshopMode === 'legacy' || workshopMode === 'search') ? (
                 <motion.div
                   className="w-full max-w-[600px] mx-auto mb-10"
                   initial={{ opacity: 0, y: 20 }}
@@ -540,17 +536,13 @@ function AppContent() {
                       transition={{ type: 'spring', stiffness: 200, damping: 25, delay: 0.05 }}
                     >
                       <h2 className="text-3xl lg:text-4xl font-extralight mb-3 tracking-tight text-white" style={{ textShadow: '0 1px 12px rgba(0,0,0,0.4)' }}>
-                        {workshopMode === 'tools'
-                          ? <>Meet the <span style={{ color: '#0071e3' }}>agent</span></>
-                          : workshopMode === 'full'
-                          ? <>Watch them <span style={{ color: '#f59e0b' }}>collaborate</span></>
+                        {workshopMode === 'agentic'
+                          ? <>Watch them <span style={{ color: '#7c3aed' }}>collaborate</span></>
                           : <>Ready for <span style={{ color: '#10b981' }}>production</span></>
                         }
                       </h2>
                       <p className="text-lg font-light" style={{ color: '#d1d1d6', textShadow: '0 1px 8px rgba(0,0,0,0.5)' }}>
-                        {workshopMode === 'tools'
-                          ? 'Your AI assistant can now query live data through the tools you built'
-                          : workshopMode === 'full'
+                        {workshopMode === 'agentic'
                           ? 'Five specialist agents work together, routed by an orchestrator in real-time'
                           : 'Enterprise memory, Cedar policies, and MCP Gateway — all live'
                         }

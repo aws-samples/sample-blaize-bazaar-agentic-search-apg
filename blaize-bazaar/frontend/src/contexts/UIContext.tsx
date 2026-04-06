@@ -33,10 +33,9 @@ export function UIProvider({ children }: { children: ReactNode }) {
   // Announcement banner dismissal — per-mode, React state only (not localStorage).
   const [announcementDismissed, setAnnouncementDismissed] = useState<Record<WorkshopMode, boolean>>({
     legacy: false,
-    semantic: false,
-    tools: false,
-    full: false,
-    agentcore: false,
+    search: false,
+    agentic: false,
+    production: false,
   })
 
   const dismissAnnouncement = useCallback((mode: WorkshopMode) => {

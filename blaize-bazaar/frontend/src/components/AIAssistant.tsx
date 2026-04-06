@@ -29,7 +29,7 @@ interface Message {
   timestamp: Date
   products?: ChatProduct[]
   suggestions?: string[]
-  agent?: 'search' | 'pricing' | 'recommendation' | 'orchestrator'
+  agent?: 'search' | 'pricing' | 'recommendation' | 'orchestrator' | 'support'
   agentStatus?: 'thinking' | 'streaming' | 'complete'
   agentExecution?: AgentExecution
 }
@@ -52,21 +52,19 @@ function setCachedResponse(query: string, data: { response: string; products?: C
 // Mode → accent color mapping (eliminates repeated ternary chains)
 const MODE_ACCENT: Record<string, string> = {
   legacy: '#0A84FF',
-  semantic: '#0A84FF',
-  tools: '#0A84FF',
-  full: '#FF9F0A',
-  agentcore: '#30D158',
+  search: '#0A84FF',
+  agentic: '#7c3aed',
+  production: '#30D158',
 }
 const MODE_ACCENT_DARK: Record<string, string> = {
   legacy: '#0066CC',
-  semantic: '#0066CC',
-  tools: '#0066CC',
-  full: '#D97706',
-  agentcore: '#25A14A',
+  search: '#0066CC',
+  agentic: '#6D28D9',
+  production: '#25A14A',
 }
 
 function accentAlpha(mode: string, alpha: number): string {
-  const hex = MODE_ACCENT[mode] || MODE_ACCENT.tools
+  const hex = MODE_ACCENT[mode] || MODE_ACCENT.agentic
   const r = parseInt(hex.slice(1, 3), 16)
   const g = parseInt(hex.slice(3, 5), 16)
   const b = parseInt(hex.slice(5, 7), 16)
@@ -98,17 +96,7 @@ const AIAssistant = () => {
   // Mode-specific welcome messages and suggestions
   const getWelcomeMessage = (mode: string): { content: string; suggestions: string[] } => {
     switch (mode) {
-      case 'tools':
-        return {
-          content: "I can look up trending products, check inventory levels, and pull real-time pricing — all by calling live tools against Aurora PostgreSQL. Try asking a question and watch the tool calls light up below.",
-          suggestions: [
-            "What's trending in electronics right now?",
-            'I need a gift for someone who loves cooking',
-            'Show me kitchen accessories under $30',
-            'What running shoes have the best reviews?',
-          ],
-        }
-      case 'full':
+      case 'agentic':
         return {
           content: "I've got a full team behind me — specialist agents for search, pricing, inventory, and recommendations, all coordinated by an orchestrator that routes your question to the right expert. Ask something that needs more than one perspective.",
           suggestions: [
@@ -118,7 +106,7 @@ const AIAssistant = () => {
             'Show me trending watches and compare prices',
           ],
         }
-      case 'agentcore':
+      case 'production':
         return {
           content: "I remember you across sessions and discover tools on the fly through AgentCore Gateway. I also follow Cedar authorization policies — so try asking me to do something I shouldn't be allowed to do.",
           suggestions: [
@@ -246,15 +234,15 @@ const AIAssistant = () => {
     }
 
     // Add thinking placeholder — agent name depends on workshop mode
-    const thinkingAgentName = workshopMode === 'full' ? 'Orchestrator'
-      : workshopMode === 'agentcore' ? 'AgentCore'
+    const thinkingAgentName = workshopMode === 'production' ? 'AgentCore'
+      : workshopMode === 'agentic' ? 'Orchestrator'
       : 'Search Agent'
     const loadingMessage: Message = {
       role: 'assistant',
       content: '',
       timestamp: new Date(),
       agentStatus: 'thinking',
-      agent: (workshopMode === 'full' || workshopMode === 'agentcore') ? 'orchestrator' : 'search',
+      agent: (workshopMode === 'agentic' || workshopMode === 'production') ? 'orchestrator' : 'search',
       agentExecution: {
         agent_steps: [{ agent: thinkingAgentName, action: 'Analyzing query', status: 'in_progress', timestamp: Date.now(), duration_ms: 0 }],
         tool_calls: [],
@@ -390,8 +378,8 @@ const AIAssistant = () => {
 
       // Determine agent badge based on workshop mode
       let agentType: 'search' | 'pricing' | 'recommendation' | 'orchestrator' | 'support' = 'search'
-      if (workshopMode === 'full' || response.orchestrator_enabled) {
-        // Lab 3: Multi-agent orchestrator
+      if (workshopMode === 'agentic' || workshopMode === 'production' || response.orchestrator_enabled) {
+        // Module 2+: Multi-agent orchestrator
         agentType = 'orchestrator'
       } else {
         // Lab 2: Single agent — infer type from query keywords
@@ -473,7 +461,7 @@ const AIAssistant = () => {
   }
 
   // Hide entire chat in legacy/semantic workshop modes
-  if (workshopMode === 'legacy' || workshopMode === 'semantic') {
+  if (workshopMode === 'legacy' || workshopMode === 'search') {
     return null
   }
 
@@ -508,13 +496,13 @@ const AIAssistant = () => {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[14px] font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
-                  {workshopMode === 'agentcore' ? 'Production stack deployed'
-                    : workshopMode === 'full' ? 'Five specialist agents are ready'
+                  {workshopMode === 'production' ? 'Production stack deployed'
+                    : workshopMode === 'agentic' ? 'Five specialist agents are ready'
                     : 'AI Assistant is now active'}
                 </p>
                 <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
-                  {workshopMode === 'agentcore' ? 'Memory-aware agents with Cedar policy enforcement'
-                    : workshopMode === 'full' ? 'Search, recommendations, pricing, inventory, and support — working together'
+                  {workshopMode === 'production' ? 'Memory-aware agents with Cedar policy enforcement'
+                    : workshopMode === 'agentic' ? 'Search, recommendations, pricing, inventory, and support — working together'
                     : 'Search products, check inventory, and analyze pricing through conversation'}
                 </p>
               </div>
@@ -553,10 +541,10 @@ const AIAssistant = () => {
               backdropFilter: 'blur(40px)',
               WebkitBackdropFilter: 'blur(40px)',
               border: theme === 'dark'
-                ? `1px solid ${workshopMode === 'agentcore' ? 'rgba(16, 185, 129, 0.2)' : workshopMode === 'full' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255,255,255,0.08)'}`
+                ? `1px solid ${workshopMode === 'production' ? 'rgba(16, 185, 129, 0.2)' : workshopMode === 'agentic' ? 'rgba(124, 58, 237, 0.2)' : 'rgba(255,255,255,0.08)'}`
                 : '1px solid rgba(0,0,0,0.1)',
               boxShadow: theme === 'dark'
-                ? `0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04)${workshopMode === 'agentcore' ? ', 0 0 40px rgba(16, 185, 129, 0.08)' : workshopMode === 'full' ? ', 0 0 40px rgba(245, 158, 11, 0.08)' : ''}`
+                ? `0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04)${workshopMode === 'production' ? ', 0 0 40px rgba(16, 185, 129, 0.08)' : workshopMode === 'agentic' ? ', 0 0 40px rgba(124, 58, 237, 0.08)' : ''}`
                 : '0 25px 60px rgba(0, 0, 0, 0.12), 0 8px 24px rgba(0, 0, 0, 0.08)',
             }}
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
@@ -568,12 +556,12 @@ const AIAssistant = () => {
             <div className="px-5 py-4 rounded-t-[20px] flex justify-between items-center flex-shrink-0"
               style={{
                 borderBottom: theme === 'dark'
-                  ? `1px solid ${workshopMode === 'agentcore' ? 'rgba(16, 185, 129, 0.15)' : workshopMode === 'full' ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255,255,255,0.06)'}`
+                  ? `1px solid ${workshopMode === 'production' ? 'rgba(16, 185, 129, 0.15)' : workshopMode === 'agentic' ? 'rgba(124, 58, 237, 0.15)' : 'rgba(255,255,255,0.06)'}`
                   : '1px solid rgba(0,0,0,0.08)',
-                background: workshopMode === 'agentcore'
+                background: workshopMode === 'production'
                   ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.04) 0%, transparent 100%)'
-                  : workshopMode === 'full'
-                  ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.04) 0%, transparent 100%)'
+                  : workshopMode === 'agentic'
+                  ? 'linear-gradient(135deg, rgba(124, 58, 237, 0.04) 0%, transparent 100%)'
                   : 'transparent',
               }}>
               <div className="flex items-center gap-3">
@@ -601,14 +589,14 @@ const AIAssistant = () => {
                       </span>
                     ) : (
                       <span className="flex items-center gap-1" style={{
-                        color: workshopMode === 'agentcore' ? '#34d399' : workshopMode === 'full' ? '#fbbf24' : '#22c55e',
+                        color: workshopMode === 'production' ? '#34d399' : workshopMode === 'agentic' ? '#a78bfa' : '#22c55e',
                       }}>
                         <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{
-                          background: workshopMode === 'agentcore' ? '#34d399' : workshopMode === 'full' ? '#fbbf24' : '#22c55e',
+                          background: workshopMode === 'production' ? '#34d399' : workshopMode === 'agentic' ? '#a78bfa' : '#22c55e',
                         }} />
-                        {workshopMode === 'agentcore'
+                        {workshopMode === 'production'
                           ? 'AgentCore Runtime · 5 services'
-                          : workshopMode === 'full'
+                          : workshopMode === 'agentic'
                           ? 'Orchestrator → 5 specialists'
                           : '1 agent online'}
                       </span>
@@ -618,7 +606,7 @@ const AIAssistant = () => {
               </div>
               <div className="flex items-center gap-1">
                 {/* Cost pill — visible in tools/full mode */}
-                {(workshopMode === 'tools' || workshopMode === 'full') && sessionCost > 0 && (
+                {workshopMode === 'agentic' && sessionCost > 0 && (
                   <span
                     className="text-[11px] px-2 py-0.5 rounded-full mr-1"
                     style={{ background: theme === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', color: 'var(--text-secondary)' }}
@@ -628,7 +616,7 @@ const AIAssistant = () => {
                   </span>
                 )}
                 {/* Mode-specific status pills */}
-                {workshopMode === 'full' && guardrailsEnabled && (
+                {workshopMode === 'agentic' && guardrailsEnabled && (
                   <span
                     className="text-[11px] px-2 py-0.5 rounded-full mr-1"
                     style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#fbbf24' }}
@@ -637,7 +625,7 @@ const AIAssistant = () => {
                     Guarded
                   </span>
                 )}
-                {workshopMode === 'agentcore' && (
+                {workshopMode === 'production' && (
                   <span
                     className="text-[11px] px-2 py-0.5 rounded-full mr-1 flex items-center gap-1"
                     style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#34d399' }}
@@ -865,7 +853,7 @@ const AIAssistant = () => {
 
                     {/* Under the Hood — contextual feature indicator */}
                     {message.role === 'assistant' && message.agentStatus === 'complete' &&
-                     (workshopMode === 'tools' || workshopMode === 'full' || workshopMode === 'agentcore') && (
+                     (workshopMode === 'agentic' || workshopMode === 'production') && (
                       <div className="mt-1">
                         <button
                           onClick={() => toggleHood(index)}
@@ -894,7 +882,7 @@ const AIAssistant = () => {
                               {message.agentExecution.tool_calls.length} tool{message.agentExecution.tool_calls.length !== 1 ? 's' : ''}
                             </span>
                           )}
-                          {guardrailsEnabled && (workshopMode === 'full' || workshopMode === 'agentcore') && (
+                          {guardrailsEnabled && (workshopMode === 'agentic' || workshopMode === 'production') && (
                             <span className="px-1.5 py-0.5 rounded text-[9px]" style={{ background: 'rgba(52, 211, 153, 0.1)', color: '#34d399' }}>
                               Guarded
                             </span>
@@ -948,7 +936,7 @@ const AIAssistant = () => {
                               )}
 
                               {/* Guardrails */}
-                              {guardrailsEnabled && (workshopMode === 'full' || workshopMode === 'agentcore') && (
+                              {guardrailsEnabled && (workshopMode === 'agentic' || workshopMode === 'production') && (
                                 <div>
                                   <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>Guardrails: </span>
                                   <span style={{ color: '#34d399' }}>Passed</span>
@@ -978,9 +966,8 @@ const AIAssistant = () => {
                               {/* Educational tip */}
                               <div className="pt-1.5 mt-1" style={{ borderTop: `1px solid ${theme === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)'}` }}>
                                 <p className="italic" style={{ color: 'var(--text-secondary)', opacity: 0.5 }}>
-                                  {workshopMode === 'tools' && 'In Module 2, one agent handles everything using custom tools. Module 3 adds multi-agent orchestration.'}
-                                  {workshopMode === 'full' && 'The orchestrator decided which agents to invoke based on your query. Try the Graph Orchestrator in the Playground to visualize this.'}
-                                  {workshopMode === 'agentcore' && 'AgentCore adds persistent memory, so the agent remembers your preferences across sessions.'}
+                                  {workshopMode === 'agentic' && 'The orchestrator decided which agents to invoke based on your query. Try the Graph Orchestrator in the Playground to visualize this.'}
+                                  {workshopMode === 'production' && 'AgentCore adds persistent memory, so the agent remembers your preferences across sessions.'}
                                 </p>
                               </div>
                             </motion.div>
@@ -1035,9 +1022,8 @@ const AIAssistant = () => {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder={isLoading ? 'Searching...'
-                    : workshopMode === 'agentcore' ? "Try: 'remember I like premium brands' or 'restock 1000 cameras'"
-                    : workshopMode === 'full' ? "Try: 'find headphones, check stock, and compare prices'"
-                    : workshopMode === 'tools' ? "Try: 'what's trending?' or 'is the travel camera in stock?'"
+                    : workshopMode === 'production' ? "Try: 'remember I like premium brands' or 'restock 1000 cameras'"
+                    : workshopMode === 'agentic' ? "Try: 'find headphones, check stock, and compare prices'"
                     : "Try: 'compare headphones under $200' or 'what's trending?'"}
                   disabled={isLoading}
                   className="flex-1 px-4 py-3 rounded-xl text-sm disabled:opacity-40 text-text-primary placeholder-text-secondary focus:outline-none focus:ring-1 focus:ring-white/20"
@@ -1052,7 +1038,7 @@ const AIAssistant = () => {
                   className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
                   style={{
                     background: inputValue.trim() && !isLoading
-                      ? (workshopMode === 'agentcore' ? '#10b981' : workshopMode === 'full' ? '#f59e0b' : 'var(--link-color)')
+                      ? (workshopMode === 'production' ? '#10b981' : workshopMode === 'agentic' ? '#7c3aed' : 'var(--link-color)')
                       : theme === 'dark' ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.04)',
                   }}
                   whileHover={inputValue.trim() && !isLoading ? { scale: 1.05 } : {}}
@@ -1097,11 +1083,11 @@ const AIAssistant = () => {
               >
                 <div className="flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>
                   <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#34d399' }} />
-                  {workshopMode === 'agentcore' ? 'AgentCore Active'
-                    : workshopMode === 'full' ? 'Multi-Agent Ready'
+                  {workshopMode === 'production' ? 'Production Active'
+                    : workshopMode === 'agentic' ? 'Multi-Agent Ready'
                     : 'Agent Ready'}
                 </div>
-                {(workshopMode === 'full' || workshopMode === 'agentcore') && (
+                {(workshopMode === 'agentic' || workshopMode === 'production') && (
                   <div className="mt-2 space-y-1">
                     {[
                       { color: '#a855f7', label: 'Orchestrator' },
@@ -1143,7 +1129,7 @@ const AIAssistant = () => {
               {/* Glossy overlay */}
               <div className="absolute inset-0 rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.15) 100%)' }} />
               {/* Chat icon */}
-              {workshopMode === 'agentcore'
+              {workshopMode === 'production'
                 ? <Shield className="w-6 h-6 text-white relative z-[1]" strokeWidth={2} style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))' }} />
                 : <MessageSquare className="w-6 h-6 text-white relative z-[1]" strokeWidth={2} style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.2))' }} />
               }
@@ -1156,7 +1142,7 @@ const AIAssistant = () => {
                 }}
               >
                 <span className="text-[10px] font-semibold text-white leading-none">
-                  {workshopMode === 'full' || workshopMode === 'agentcore' ? '5' : '1'}
+                  {workshopMode === 'agentic' || workshopMode === 'production' ? '5' : '1'}
                 </span>
               </div>
             </motion.div>

@@ -6,7 +6,7 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef, ty
 import { TOUR_STEPS } from '../data/tourSteps'
 
 type ChatMode = 'floating' | 'docked'
-export type WorkshopMode = 'legacy' | 'semantic' | 'tools' | 'full' | 'agentcore'
+export type WorkshopMode = 'legacy' | 'search' | 'agentic' | 'production'
 
 interface LayoutContextType {
   chatMode: ChatMode
@@ -42,7 +42,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   const [chatOpen, setChatOpen] = useState(false)
   const [workshopMode, setWorkshopModeRaw] = useState<WorkshopMode>(() => {
     const saved = localStorage.getItem('blaize-workshop-mode')
-    if (saved && ['legacy', 'semantic', 'tools', 'full', 'agentcore'].includes(saved)) return saved as WorkshopMode
+    if (saved && ['legacy', 'search', 'agentic', 'production'].includes(saved)) return saved as WorkshopMode
     return 'legacy'
   })
   const [guardrailsEnabled, setGuardrailsEnabled] = useState(false)
@@ -116,10 +116,9 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('blaize-onboarding-done')
     localStorage.removeItem('blaize-workshop-mode')
     localStorage.removeItem('blaize-tour-legacy-done')
-    localStorage.removeItem('blaize-tour-semantic-done')
-    localStorage.removeItem('blaize-tour-tools-done')
-    localStorage.removeItem('blaize-tour-full-done')
-    localStorage.removeItem('blaize-tour-agentcore-done')
+    localStorage.removeItem('blaize-tour-search-done')
+    localStorage.removeItem('blaize-tour-agentic-done')
+    localStorage.removeItem('blaize-tour-production-done')
     // Reset runtime state
     setActiveTour(null)
     setTourStep(0)

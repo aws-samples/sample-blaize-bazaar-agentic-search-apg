@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Shield, ArrowRight, Layers, Zap, Database, Brain, Cpu, Server, Sparkles } from 'lucide-react'
 import { useLayout } from '../contexts/LayoutContext'
 
-const MODE_ORDER = ['legacy', 'semantic', 'tools', 'full', 'agentcore'] as const
+const MODE_ORDER = ['legacy', 'search', 'agentic', 'production'] as const
 
 interface ToolButton {
   icon: React.ReactNode
@@ -46,17 +46,15 @@ interface PlaygroundOverlayProps {
 
 const MODE_META: Record<string, { label: string; desc: string; color: string; step: string }> = {
   legacy: { label: 'Keyword Search', desc: 'The Starting Point', color: '#86868b', step: 'Module 0' },
-  semantic: { label: 'Semantic Search', desc: 'Teaching Your Database to Think', color: '#0071e3', step: 'Module 1' },
-  tools: { label: 'Agent + Tools', desc: 'From SQL to Structured Capabilities', color: '#7c3aed', step: 'Module 2' },
-  full: { label: 'Multi-Agent', desc: 'Specialists and Routing', color: '#e67e00', step: 'Module 3' },
-  agentcore: { label: 'AgentCore', desc: 'Policies, Memory, and Runtime', color: '#1db954', step: 'Module 4' },
+  search: { label: 'Smart Search', desc: 'Teaching Your Database to Think', color: '#0071e3', step: 'Module 1' },
+  agentic: { label: 'Agentic AI', desc: 'Tools, Agents, and Orchestration', color: '#7c3aed', step: 'Module 2' },
+  production: { label: 'Production', desc: 'Policies, Memory, and Runtime', color: '#1db954', step: 'Module 3' },
 }
 
 const LAB_COLORS: Record<string, string> = {
   lab1: '#0071e3',
   lab2: '#7c3aed',
-  lab3: '#e67e00',
-  lab4: '#1db954',
+  lab3: '#1db954',
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || ''
@@ -83,7 +81,7 @@ export default function PlaygroundOverlay({
   }, [isVisible, onClose])
 
   useEffect(() => {
-    if (!isVisible || workshopMode !== 'agentcore') return
+    if (!isVisible || workshopMode !== 'production') return
     const fetchStats = async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/api/cache/stats`)
@@ -214,7 +212,7 @@ export default function PlaygroundOverlay({
                           </div>
 
                           {/* Guardrails toggle */}
-                          {section.key === 'lab3' && (
+                          {section.key === 'lab2' && (
                             <button
                               onClick={() => setGuardrailsEnabled(!guardrailsEnabled)}
                               className="flex items-center gap-3 px-4 py-2.5 rounded-full transition-all duration-200 mt-2"
@@ -314,7 +312,7 @@ export default function PlaygroundOverlay({
                   })}
 
                 {/* Architecture section — agentcore only */}
-                {workshopMode === 'agentcore' && (
+                {workshopMode === 'production' && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}

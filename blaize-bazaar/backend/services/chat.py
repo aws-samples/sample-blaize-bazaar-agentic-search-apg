@@ -234,16 +234,15 @@ class EnhancedChatService:
         Enhanced chat that returns structured product data
 
         Routes based on workshop_mode:
-        - 'legacy'/'semantic': Chat disabled
-        - 'tools': Single agent with basic tools (Lab 2)
-        - 'full'/None: Full orchestrator (Lab 3)
-        - 'agentcore': Full orchestrator + AgentCore services (Lab 4)
+        - 'legacy'/'search': Chat disabled
+        - 'agentic'/None: Full multi-agent orchestrator (Module 2)
+        - 'production': Full orchestrator + AgentCore services (Module 3)
         """
         try:
             # Workshop mode routing
-            if workshop_mode in ("legacy", "semantic"):
+            if workshop_mode in ("legacy", "search"):
                 return {
-                    "response": "Chat is not available in this workshop mode. Progress to Lab 2 to unlock agent tools.",
+                    "response": "Chat is not available in this workshop mode. Progress to Module 2 to unlock agentic AI.",
                     "products": [],
                     "suggestions": [],
                     "tool_calls": [],
@@ -253,7 +252,7 @@ class EnhancedChatService:
                     "model": self.model_id
                 }
 
-            logger.info(f"💬 Enhanced chat processing: '{message[:60]}...' (mode={workshop_mode or 'full'}, user={user.get('email') if user else 'anonymous'})")
+            logger.info(f"💬 Enhanced chat processing: '{message[:60]}...' (mode={workshop_mode or 'agentic'}, user={user.get('email') if user else 'anonymous'})")
 
             # Require Strands
             if not self.strands_available:
@@ -261,9 +260,6 @@ class EnhancedChatService:
                     "Strands SDK not available. Install with: "
                     "pip install strands-agents strands-agents-tools"
                 )
-
-            if workshop_mode == "tools":
-                return await self._single_agent_chat(message, conversation_history, session_id, guardrails_enabled)
 
             return await self._strands_enhanced_chat(message, conversation_history, session_id, guardrails_enabled, user=user)
             
@@ -1034,16 +1030,10 @@ CURRENT REQUEST: {message}"""
         import asyncio
         import time
 
-        # Workshop mode: chat disabled for legacy/semantic
-        if workshop_mode in ("legacy", "semantic"):
-            yield {"type": "content", "content": "Chat is not available in this workshop mode. Progress to Lab 2 to unlock agent tools."}
+        # Workshop mode: chat disabled for legacy/search
+        if workshop_mode in ("legacy", "search"):
+            yield {"type": "content", "content": "Chat is not available in this workshop mode. Progress to Module 2 to unlock agentic AI."}
             yield {"type": "complete", "response": {"response": "Chat is not available in this workshop mode.", "products": [], "suggestions": [], "success": True}}
-            return
-
-        # Workshop mode: single-agent for tools mode
-        if workshop_mode == "tools":
-            async for event in self._single_agent_stream(message, conversation_history, session_id, guardrails_enabled):
-                yield event
             return
 
         if not self.strands_available:

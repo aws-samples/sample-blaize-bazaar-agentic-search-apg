@@ -41,18 +41,18 @@ export const TOUR_STEPS: Record<WorkshopMode, TourStep[]> = {
     {
       selector: '[data-tour="workshop-pills"]',
       title: 'What\'s Missing',
-      description: 'No semantic search. No AI chat. No product recommendations. No agent tools. This is where most e-commerce platforms start — and where you\'ll begin building. Click "Semantic Search" to add intelligence.',
+      description: 'No semantic search. No AI chat. No product recommendations. No agent tools. This is where most e-commerce platforms start — and where you\'ll begin building. Click "Smart Search" to add intelligence.',
       position: 'bottom',
     },
   ],
 
   // ─────────────────────────────────────────────────────────────
-  // SEMANTIC SEARCH — The first upgrade. Search understands meaning.
+  // SMART SEARCH — The first upgrade. Search understands meaning.
   // ─────────────────────────────────────────────────────────────
-  semantic: [
+  search: [
     {
       selector: '[data-tour="hero-badge"]',
-      title: 'Semantic Search Active',
+      title: 'Smart Search Active',
       description: 'The database now understands meaning, not just keywords. Every product has a 1024-dimensional vector embedding from Cohere Embed v4, and pgvector finds the closest matches using cosine similarity.',
       position: 'bottom',
     },
@@ -74,16 +74,16 @@ export const TOUR_STEPS: Record<WorkshopMode, TourStep[]> = {
     },
     {
       selector: '[data-tour="workshop-pills"]',
-      title: 'Search Works — Now Add Tools',
-      description: 'Semantic search is live. Next step: wrap these search queries as agent tools so an AI assistant can call them autonomously. Click "Agent Tools" to continue.',
+      title: 'Search Works — Now Add Agents',
+      description: 'Semantic search is live. Next step: build agent tools, specialist agents, and a multi-agent orchestrator. Click "Agentic AI" to continue.',
       position: 'bottom',
     },
   ],
 
   // ─────────────────────────────────────────────────────────────
-  // AGENT TOOLS — Search becomes a callable capability.
+  // AGENTIC AI — Tools, agents, and orchestration.
   // ─────────────────────────────────────────────────────────────
-  tools: [
+  agentic: [
     {
       selector: '[data-tour="chat-bubble"]',
       title: 'AI Chat Assistant',
@@ -94,8 +94,8 @@ export const TOUR_STEPS: Record<WorkshopMode, TourStep[]> = {
     },
     {
       selector: '[data-tour="chat-bubble"]',
-      title: 'Ask a Question',
-      description: 'Try: "What\'s trending right now?" The agent calls get_trending_products, which queries Aurora PostgreSQL and returns structured JSON. The agent then formats it into a natural response.',
+      title: 'Multi-Agent Orchestration',
+      description: 'Five specialist agents collaborate: Search, Recommendation, Pricing, Inventory, and Customer Support. Try: "What\'s trending right now?" or a complex question that spans multiple domains.',
       position: 'top',
       tryItAction: { label: 'Open Chat', actionKey: 'open-chat' },
       spotlightPadding: 16,
@@ -115,38 +115,11 @@ export const TOUR_STEPS: Record<WorkshopMode, TourStep[]> = {
       tryItAction: { label: 'Open Traces', actionKey: 'open-agent-traces' },
     },
     {
-      selector: '[data-tour="workshop-pills"]',
-      title: 'One Agent Isn\'t Enough',
-      description: 'The agent works, but it handles everything alone. Click "Multi-Agent" to add specialist agents for search, inventory, pricing, recommendations, and customer support — each with their own tools and expertise.',
-      position: 'bottom',
-    },
-  ],
-
-  // ─────────────────────────────────────────────────────────────
-  // MULTI-AGENT — Specialists collaborate through an orchestrator.
-  // ─────────────────────────────────────────────────────────────
-  full: [
-    {
-      selector: '[data-tour="chat-bubble"]',
-      title: 'Multi-Agent Orchestration',
-      description: 'Five specialist agents now collaborate: Search, Recommendation, Pricing, Inventory, and Customer Support. The orchestrator analyzes your query and routes it to the right expert. Try a complex question that spans multiple domains.',
-      position: 'top',
-      tryItAction: { label: 'Open Chat', actionKey: 'open-chat' },
-      spotlightPadding: 16,
-    },
-    {
       selector: '[data-tour="dev-tools-tab"]',
-      title: 'Guardrails & Safety',
-      description: 'Amazon Bedrock Guardrails are now active. Open the Guardrails Demo to test content filtering and PII detection — try sending a fake credit card number or an off-topic question.',
+      title: 'Guardrails & Chaos',
+      description: 'Amazon Bedrock Guardrails filter unsafe content and PII. Toggle Chaos Mode to inject random failures and test retry patterns.',
       position: 'right',
       tryItAction: { label: 'Open Guardrails', actionKey: 'open-guardrails' },
-    },
-    {
-      selector: '[data-tour="dev-tools-tab"]',
-      title: 'Chaos Engineering',
-      description: 'Toggle Chaos Mode to inject random backend failures. Watch Agent Traces to see how the system handles errors with exponential backoff and retry patterns.',
-      position: 'right',
-      tryItAction: { label: 'Toggle Chaos', actionKey: 'toggle-chaos' },
     },
     {
       selector: '[data-tour="workshop-pills"]',
@@ -159,7 +132,7 @@ export const TOUR_STEPS: Record<WorkshopMode, TourStep[]> = {
   // ─────────────────────────────────────────────────────────────
   // PRODUCTION — AgentCore infrastructure for enterprise deployment.
   // ─────────────────────────────────────────────────────────────
-  agentcore: [
+  production: [
     {
       selector: '[data-tour="hero-badge"]',
       title: 'Production with AgentCore',

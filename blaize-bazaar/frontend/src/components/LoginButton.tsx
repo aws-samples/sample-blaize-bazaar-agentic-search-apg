@@ -1,6 +1,6 @@
 /**
  * LoginButton — Cognito login/logout + user avatar.
- * Visible when Cognito is configured (any mode) or in 'agentcore' mode.
+ * Visible when Cognito is configured (any mode) or in 'production' mode.
  */
 import { useAuth } from '../contexts/AuthContext'
 import { LogIn, LogOut, User } from 'lucide-react'

@@ -13,10 +13,9 @@ interface CartPanelProps {
 
 const MODE_LABELS: Record<WorkshopMode, string> = {
   legacy: 'Keyword Search',
-  semantic: 'Semantic Search',
-  tools: 'Agent + Tools',
-  full: 'Multi-Agent',
-  agentcore: 'AgentCore',
+  search: 'Smart Search',
+  agentic: 'Agentic AI',
+  production: 'Production',
 }
 
 function getStepMessage(mode: WorkshopMode, steps: number): { text: string; color: string } {
@@ -24,14 +23,12 @@ function getStepMessage(mode: WorkshopMode, steps: number): { text: string; colo
   switch (mode) {
     case 'legacy':
       return { text: `Cart built in ${n} steps`, color: 'var(--text-tertiary)' }
-    case 'semantic':
-      return { text: `Cart built in ${n} steps — semantic search helped`, color: '#0A84FF' }
-    case 'tools':
-      return { text: `Cart built in ${n} steps — your agent handled discovery`, color: '#BF5AF2' }
-    case 'full':
-      return { text: `Cart built in ${n} steps — specialists collaborated`, color: '#FF9F0A' }
-    case 'agentcore':
-      return { text: `Cart built in ${n} steps — your preferences did the work`, color: '#30D158' }
+    case 'search':
+      return { text: `Cart built in ${n} steps — smart search helped`, color: '#0071e3' }
+    case 'agentic':
+      return { text: `Cart built in ${n} steps — specialists collaborated`, color: '#7c3aed' }
+    case 'production':
+      return { text: `Cart built in ${n} steps — your preferences did the work`, color: '#10b981' }
   }
 }
 
