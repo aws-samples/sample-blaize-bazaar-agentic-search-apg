@@ -2,8 +2,9 @@
 Search request and response models
 """
 
-from typing import List, Optional, Dict
-from pydantic import BaseModel, Field
+from typing import List, Literal, Optional, Dict
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
 
 from .product import ProductWithScore
 
@@ -46,7 +47,7 @@ class SearchResult(BaseModel):
 
 
 class SearchResponse(BaseModel):
-    """Search response model containing results and metadata"""
+    """Legacy search response model used by /api/search (snake_case shape)."""
     
     query: str
     results: List[SearchResult]
@@ -57,8 +58,8 @@ class SearchResponse(BaseModel):
 
 class RecommendationRequest(BaseModel):
     """Recommendation request model for Lab 2"""
-    
-    productId: str
+
+    productId: int
     limit: int = 5
     exclude_same_product: bool = True
 
@@ -109,3 +110,91 @@ class ChatResponse(BaseModel):
     success: bool = True
     token_count: Optional[int] = None
     estimated_cost_usd: Optional[float] = None
+
+
+# === STOREFRONT MODELS (Task 1.3 / Design Data Models) ===
+#
+# Mirrors the TypeScript storefront types added in Task 1.2
+# (frontend/src/services/types.ts). The legacy `SearchResponse` above keeps
+# the snake_case shape used by the existing /api/search endpoint; the
+# storefront personalization endpoints described in design.md use
+# `StorefrontSearchResponse` with a camelCase wire format.
+
+
+# Tag literal types - four groups from storefront.md preferences modal.
+VibeTag = Literal[
+    "minimal", "bold", "serene", "adventurous", "creative", "classic"
+]
+ColorTag = Literal["warm", "neutral", "earth", "soft", "moody"]
+OccasionTag = Literal[
+    "everyday", "travel", "evening", "outdoor", "slow", "work"
+]
+CategoryTag = Literal[
+    "linen", "footwear", "outerwear", "accessories", "home", "dresses"
+]
+
+
+ReasoningStyle = Literal["picked", "matched", "pricing", "context"]
+
+
+class ReasoningChip(BaseModel):
+    """Reasoning chip attached to a storefront product card."""
+
+    style: ReasoningStyle
+    text: str
+    urgent_clause: Optional[str] = None
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+
+StorefrontCategory = Literal[
+    "Linen", "Dresses", "Accessories", "Outerwear", "Footwear",
+    "Home", "Tops", "Bottoms", "Bags",
+]
+StorefrontBadge = Literal["EDITORS_PICK", "BESTSELLER", "JUST_IN"]
+
+
+class StorefrontProduct(BaseModel):
+    """Editorial product shape consumed by the storefront home page."""
+
+    id: int
+    brand: str
+    name: str
+    color: str
+    price: float
+    rating: float
+    review_count: int
+    category: StorefrontCategory
+    image_url: str
+    badge: Optional[StorefrontBadge] = None
+    tags: List[str] = Field(default_factory=list)
+    reasoning: Optional[ReasoningChip] = None
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+
+class StorefrontSearchResponse(BaseModel):
+    """Personalized search response wire shape (camelCase on the wire).
+
+    Matches the TypeScript `StorefrontSearchResponse` added in Task 1.2 and
+    the design.md Data Models section. `model_dump(by_alias=True)` emits
+    camelCase keys (`queryEmbeddingMs`, `searchMs`, `totalMs`), while
+    `model_validate({...})` accepts both snake_case and camelCase input
+    (`populate_by_name=True`).
+    """
+
+    products: List[StorefrontProduct] = Field(default_factory=list)
+    query_embedding_ms: int
+    search_ms: int
+    total_ms: int
+
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
