@@ -8,7 +8,7 @@ import time
 import logging
 import json
 from contextlib import asynccontextmanager
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query, Depends, Request
 from fastapi import File, UploadFile
@@ -25,7 +25,7 @@ from models.search import (
     ChatResponse,
 )
 from models.image_search_models import ImageSearchResponse
-from models.product import Product, ProductWithScore
+from models.product import ProductWithScore
 from services.database import DatabaseService
 from services.auth import get_current_user
 from services.embeddings import EmbeddingService
@@ -37,6 +37,13 @@ from services.index_performance import get_index_performance_service
 from services.hybrid_search import HybridSearchService
 from services.rerank import RerankService
 from services.cache import init_cache, get_cache
+from routes import (
+    agent_router,
+    auth_router,
+    products_router,
+    search_router,
+    user_router,
+)
 
 # Lab 2 agents use Strands SDK function pattern (not class-based)
 # Agents are available via /api/agents/query endpoint
@@ -243,6 +250,31 @@ app.add_middleware(
 )
 
 
+# Storefront auth routes (Task 3.3) — Cognito sign-in loop + session
+# cookie management. Mounted at /api/auth/* by the router's own prefix.
+app.include_router(auth_router)
+
+# Storefront user routes (Task 3.4) — preference persistence via
+# AgentCore Memory. Mounted at /api/user/* by the router's own prefix.
+app.include_router(user_router)
+
+# Storefront agent routes (Task 3.5) — SSE chat stream + session
+# history. Mounted at /api/agent/* by the router's own prefix. JWT is
+# validated exactly once at stream start; mid-stream token expiry does
+# not abort the response (Design Error Handling row + Sequence #2).
+app.include_router(agent_router)
+
+# Storefront product + inventory routes (Task 3.6) — editorial and
+# personalized product listings, single-product lookup, and the live
+# inventory signal for the status strip. The routers are AUTHORITATIVE
+# for /api/products, /api/products/{id}, /api/inventory, and /api/search —
+# the legacy @app.get/@app.post handlers for those paths were removed and
+# should NOT be re-added here, not even for "safety." Add new endpoints to
+# routes/products.py and routes/search.py instead.
+app.include_router(products_router)
+app.include_router(search_router)
+
+
 # Dependency injection
 async def get_db_service() -> DatabaseService:
     """Get database service instance"""
@@ -335,185 +367,10 @@ async def health_check(
 # ============================================================================
 # LAB 1: SEMANTIC SEARCH ENDPOINTS
 # ============================================================================
-
-@app.post("/api/search", response_model=SearchResponse)
-async def semantic_search(
-    request: SearchRequest,
-    db: DatabaseService = Depends(get_db_service),
-    embeddings: EmbeddingService = Depends(get_embedding_service),
-    use_hybrid: bool = False
-):
-    """
-    LAB 1: Semantic search endpoint using vector similarity
-    
-    Performs pure vector similarity search using pgvector HNSW index
-    and Cohere Embed v4 embeddings. Optionally uses hybrid search (vector + full-text).
-    """
-    start_time = time.time()
-    use_hybrid = request.query.startswith("hybrid:") or use_hybrid
-    if use_hybrid and request.query.startswith("hybrid:"):
-        request.query = request.query.replace("hybrid:", "").strip()
-    
-    try:
-        # Determine search type based on request parameters
-        if request.search_mode == "keyword":
-            search_type = "keyword"
-        elif use_hybrid:
-            search_type = "hybrid"
-        else:
-            search_type = "vector"
-        logger.info(f"🔍 {search_type.upper()} search: '{request.query}' (limit={request.limit})")
-
-        if search_type == "keyword":
-            # Keyword-only search — no embeddings, PostgreSQL full-text matching only
-            keyword_sql = """
-                SELECT
-                    "productId",
-                    product_description,
-                    "imgUrl" as imgurl,
-                    "productURL" as producturl,
-                    stars,
-                    reviews,
-                    price,
-                    category_id,
-                    "isBestSeller" as isbestseller,
-                    "boughtInLastMonth" as boughtinlastmonth,
-                    category_name,
-                    quantity,
-                    ts_rank(to_tsvector('english', product_description || ' ' || category_name), plainto_tsquery('english', %s)) as similarity_score
-                FROM blaize_bazaar.product_catalog
-                WHERE to_tsvector('english', product_description || ' ' || category_name) @@ plainto_tsquery('english', %s)
-                  AND stars >= 3.0
-                  AND "imgUrl" IS NOT NULL
-                ORDER BY similarity_score DESC
-                LIMIT %s
-            """
-            results = await db.fetch_all(keyword_sql, request.query, request.query, request.limit)
-            logger.info(f"📦 Keyword search found {len(results)} products")
-
-        elif search_type == "hybrid":
-            # Generate query embedding for hybrid/vector paths
-            query_embedding = embeddings.generate_embedding(request.query)
-            logger.info(f"✅ Generated embedding vector (1024 dimensions)")
-
-            # Hybrid search with RRF
-            hybrid_service = HybridSearchService(db)
-            hybrid_result = await hybrid_service.search(
-                query=request.query,
-                embedding=query_embedding,
-                limit=request.limit
-            )
-            results = hybrid_result["results"]
-            logger.info(f"🔀 Hybrid search returned {len(results)} results with RRF scores")
-            
-            # Convert to expected format - preserve RRF fields at top level
-            for r in results:
-                if 'similarity' in r:
-                    r['similarity_score'] = r['similarity']
-                r['productId'] = r.get('product_id')
-                r['imgurl'] = r.get('img_url', '')
-                r['producturl'] = r.get('product_url', '')
-                r['isbestseller'] = r.get('isbestseller', False)
-                r['boughtinlastmonth'] = r.get('boughtinlastmonth', 0)
-                r['stars'] = r.get('rating', 0)
-                # RRF fields are already at top level from hybrid_search.py
-        else:
-            # Generate query embedding for vector search
-            query_embedding = embeddings.generate_embedding(request.query)
-            logger.info(f"✅ Generated embedding vector (1024 dimensions)")
-
-            # Prepare SQL with relaxed quality filters for better semantic coverage
-            query_sql = """
-                SELECT 
-                    "productId",
-                    product_description,
-                    "imgUrl" as imgurl,
-                    "productURL" as producturl,
-                    stars,
-                    reviews,
-                    price,
-                    category_id,
-                    "isBestSeller" as isbestseller,
-                    "boughtInLastMonth" as boughtinlastmonth,
-                    category_name,
-                    quantity,
-                    1 - (embedding <=> %s::vector) as similarity_score
-                FROM blaize_bazaar.product_catalog
-                WHERE stars >= 3.0
-                  AND "imgUrl" IS NOT NULL
-                ORDER BY embedding <=> %s::vector
-                LIMIT %s
-            """
-            
-            # Use a single connection for SET LOCAL + query (SET LOCAL is transaction-scoped)
-            async with db.get_connection() as conn:
-                async with conn.cursor() as cur:
-                    # Force index usage with planner hints
-                    await cur.execute("SET LOCAL enable_seqscan = off")
-                    await cur.execute("SET LOCAL random_page_cost = 1")
-                    await cur.execute("SET LOCAL cpu_tuple_cost = 0.01")
-
-                    # Execute query with index forced
-                    await cur.execute(
-                        query_sql,
-                        (query_embedding, query_embedding, request.limit)
-                    )
-                    results = await cur.fetchall()
-
-            # Log the query for SQLInspector (non-blocking, no EXPLAIN)
-            query_logger_instance = get_query_logger()
-            query_logger_instance.queries.append(
-                QueryLog(
-                    query_type="semantic_search",
-                    sql=query_sql,
-                    params=[query_embedding, query_embedding, request.limit],
-                    execution_time_ms=0,
-                    timestamp=datetime.now(),
-                    rows_returned=len(results),
-                    search_query=request.query,
-                )
-            )
-        
-        # Filter by similarity threshold in application (after HNSW index optimization)
-        if request.min_similarity > 0:
-            results = [r for r in results if r.get("similarity_score", 0) >= request.min_similarity]
-        
-        logger.info(f"📦 Found {len(results)} products")
-        
-        # Convert to response model
-        search_results = []
-        for row in results:
-            row_dict = dict(row)
-            # Extract RRF fields before creating ProductWithScore
-            rrf_score = row_dict.pop('rrf_score', None)
-            vector_rank = row_dict.pop('vector_rank', None)
-            fulltext_rank = row_dict.pop('fulltext_rank', None)
-            
-            product = ProductWithScore(**row_dict)
-            search_result = SearchResult(product=product)
-            
-            # Add RRF fields back to search_result dict for hybrid searches
-            if rrf_score is not None:
-                search_result.rrf_score = rrf_score
-                search_result.vector_rank = vector_rank
-                search_result.fulltext_rank = fulltext_rank
-            
-            search_results.append(search_result)
-        
-        search_time_ms = (time.time() - start_time) * 1000
-        logger.info(f"⚡ Search completed in {search_time_ms:.2f}ms (method: {search_type})")
-        
-        return SearchResponse(
-            query=request.query,
-            results=search_results,
-            total_results=len(search_results),
-            search_time_ms=search_time_ms,
-            search_type=search_type
-        )
-        
-    except Exception as e:
-        logger.error(f"❌ Search failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+#
+# POST /api/search is authoritative on routes/search.py (StorefrontSearchResponse
+# wire shape). The legacy semantic_search handler that used to live here has
+# been removed — don't re-add it; the router owns that path.
 
 
 @app.post("/api/search/hybrid-rerank")
@@ -568,46 +425,6 @@ async def hybrid_rerank_search(
         logger.error(f"❌ Hybrid rerank search failed: {e}")
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
-
-@app.get("/api/products/{product_id}", response_model=Product)
-async def get_product(
-    product_id: str,
-    db: DatabaseService = Depends(get_db_service),
-):
-    """
-    Get a single product by ID
-    """
-    try:
-        query = """
-            SELECT 
-                "productId",
-                product_description,
-                "imgUrl" as imgurl,
-                "productURL" as producturl,
-                stars,
-                reviews,
-                price,
-                category_id,
-                "isBestSeller" as isbestseller,
-                "boughtInLastMonth" as boughtinlastmonth,
-                category_name,
-                quantity
-            FROM blaize_bazaar.product_catalog
-            WHERE "productId" = %s
-        """
-        
-        result = await db.fetch_one(query, product_id)
-        
-        if not result:
-            raise HTTPException(status_code=404, detail="Product not found")
-        
-        return Product(**dict(result))
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to fetch product: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch product: {str(e)}")
 
 @app.post("/api/search/image", response_model=ImageSearchResponse)
 async def image_search(
@@ -747,25 +564,34 @@ async def browse_category(
         logger.info(f"📂 Category browse: '{category_query}' (limit={limit})")
         
         query = """
-            SELECT 
+            SELECT
                 "productId",
-                product_description,
+                name,
+                brand,
+                color,
+                description,
                 "imgUrl" as imgurl,
-                "productURL" as producturl,
-                stars,
+                rating,
                 reviews,
                 price,
-                category_name,
-                quantity,
+                category,
+                badge,
+                tags,
                 1.0 as similarity_score
             FROM blaize_bazaar.product_catalog
-            WHERE (category_name ILIKE %s OR product_description ILIKE %s)
-              AND quantity > 0
-            ORDER BY stars DESC, reviews DESC
+            WHERE (category ILIKE %s OR name ILIKE %s OR description ILIKE %s)
+              AND "imgUrl" IS NOT NULL
+            ORDER BY rating DESC, reviews::int DESC
             LIMIT %s
         """
-        
-        results = await db.fetch_all(query, f"%{category_query}%", f"%{category_query}%", limit)
+
+        results = await db.fetch_all(
+            query,
+            f"%{category_query}%",
+            f"%{category_query}%",
+            f"%{category_query}%",
+            limit,
+        )
         logger.info(f"📦 Found {len(results)} products in category")
         
         return {
@@ -782,67 +608,6 @@ async def browse_category(
     except Exception as e:
         logger.error(f"❌ Category browse failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/products", response_model=List[Product])
-async def list_products(
-    limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
-    category: str = Query(default=None),
-    min_stars: float = Query(default=None, ge=0, le=5),
-    max_price: float = Query(default=None, ge=0),
-    db: DatabaseService = Depends(get_db_service),
-):
-    """
-    List products with optional filters
-    """
-    try:
-        # Build dynamic query with psycopg3 %s placeholders
-        conditions = []
-        params = []
-
-        if category:
-            conditions.append("category_name = %s")
-            params.append(category)
-
-        if min_stars is not None:
-            conditions.append("stars >= %s")
-            params.append(min_stars)
-
-        if max_price is not None:
-            conditions.append("price <= %s")
-            params.append(max_price)
-
-        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
-
-        query = f"""
-            SELECT
-                "productId",
-                product_description,
-                "imgUrl" as imgurl,
-                "productURL" as producturl,
-                stars,
-                reviews,
-                price,
-                category_id,
-                "isBestSeller" as isbestseller,
-                "boughtInLastMonth" as boughtinlastmonth,
-                category_name,
-                quantity
-            FROM blaize_bazaar.product_catalog
-            {where_clause}
-            ORDER BY reviews DESC
-            LIMIT %s OFFSET %s
-        """
-
-        params.extend([limit, offset])
-        results = await db.fetch_all(query, *params)
-        
-        return [Product(**dict(row)) for row in results]
-        
-    except Exception as e:
-        logger.error(f"Failed to list products: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to list products: {str(e)}")
 
 
 # ============================================================================
@@ -1073,14 +838,23 @@ async def agent_query(
         
         # Agents now handle their own tool calls - no need to pre-fetch context
         if agent_type == "orchestrator":
-            orchestrator = create_orchestrator()
-            if orchestrator is None:
+            # Challenge 5: route through the runtime dispatcher so flipping
+            # settings.USE_AGENTCORE_RUNTIME=true in backend/.env forwards
+            # every orchestrator request to AgentCore Runtime without any
+            # further code changes here.
+            from services.agentcore_runtime import run_agent
+
+            response = await run_agent(
+                message=query,
+                session_id="legacy-agents-query",
+                user_id=None,
+            )
+            if not response:
                 return {
                     "response": "🔧 The orchestrator isn't wired up yet. Complete Module 3b to enable it.",
                     "agent_type": agent_type,
                     "status": "not_implemented"
                 }
-            response = orchestrator(query)
         elif agent_type == "inventory":
             response = inventory_restock_agent(query)
         elif agent_type == "recommendation":
@@ -1424,7 +1198,11 @@ async def tune_search_weights(request: Request):
                 fulltext_weight=fulltext_weight,
             )
             results = response.get("results", [])
-            retrieved_ids = [r.get("product_id", r.get("productId", "")) for r in results]
+            retrieved_ids = [
+                r.get("product_id") if r.get("product_id") is not None else r.get("productId")
+                for r in results
+            ]
+            retrieved_ids = [i for i in retrieved_ids if i is not None]
             total_ndcg += eval_svc.ndcg_at_k(retrieved_ids, expected_ids, k)
             total_precision += eval_svc.precision_at_k(retrieved_ids, expected_ids, k)
             evaluated += 1
