@@ -8,9 +8,11 @@ import hashlib
 import json
 import logging
 import time
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 from services.database import DatabaseService
 from services.cache import get_cache
+from services.sql_query_logger import QueryLog, get_query_logger
 
 logger = logging.getLogger(__name__)
 
@@ -111,98 +113,137 @@ class HybridSearchService:
         iterative_scan: bool = True
     ) -> List[Dict[str, Any]]:
         """
-        TODO (Module 2): Implement vector similarity search using pgvector.
+        Semantic vector similarity search using pgvector (Module 1 — Challenge 1).
 
         This is the core of semantic search — it finds products whose meaning
         is similar to the query, even when exact keywords don't match.
 
-        Steps:
-            1. Get a connection from self.db.get_connection() (async context manager)
-            2. Create a cursor (async context manager)
-            3. Set the HNSW ef_search parameter: SET LOCAL hnsw.ef_search = {ef_search}
-            4. Enable iterative scan (pgvector 0.8.0):
-               SET LOCAL hnsw.iterative_scan = 'relaxed_order'
-               This ensures filtered queries always return enough results by
-               continuing to scan the HNSW index if initial results are filtered out.
-            5. Execute a SELECT query that:
-               - Selects: "productId" as product_id, product_description,
-                 "imgUrl" as img_url, "productURL" as product_url,
-                 category_name, price, reviews, stars as rating,
-                 "isBestSeller" as isbestseller, "boughtInLastMonth" as boughtinlastmonth,
-                 quantity, and similarity score
-               - Computes similarity as: 1 - (embedding <=> %s::vector)
-               - Filters: stars >= 3.5, reviews >= 10, "imgUrl" IS NOT NULL
-               - Orders by: embedding <=> %s::vector (ascending = most similar first)
-               - Limits to: %s results
-               - Uses parameters: (embedding, embedding, limit)
-            6. Fetch all results and return as list of dicts
+        The query follows the pgvector pattern documented in `.kiro/steering/database.md`:
+            - CTE: WITH query_embedding AS (SELECT %s::vector as emb)
+            - Cosine distance operator: <=> (lower = more similar)
+            - Similarity: 1 - (embedding <=> emb)  (higher = more similar)
+            - HNSW tuning: SET LOCAL hnsw.ef_search = %s  (per-query accuracy knob)
+            - Iterative scan: SET LOCAL hnsw.iterative_scan = 'relaxed_order'
+              (pgvector 0.8.0 — prevents overfiltering when WHERE clauses are strict)
+            - In-stock filter: quantity > 0
+            - Parameterized placeholders only — never f-string values into SQL.
 
-        Hints:
-            - The <=> operator computes cosine distance (lower = more similar)
-            - Similarity = 1 - distance (higher = more similar)
-            - Use %s::vector to cast the embedding parameter to a vector type
-            - The embedding parameter appears twice: once for similarity score,
-              once for ORDER BY
-            - iterative_scan prevents "overfiltering" — without it, HNSW may
-              return fewer results than requested when WHERE filters are strict
+        The method accepts a pre-computed embedding from the caller and does NOT
+        call Bedrock Embed itself (Req 2.3.5).
 
         Args:
             embedding: Query embedding vector (1024 floats from Cohere Embed v4)
-            ef_search: HNSW search parameter (higher = better accuracy, slower)
             limit: Maximum number of results
+            ef_search: HNSW search parameter (higher = better recall, slower)
             iterative_scan: Enable pgvector 0.8.0 iterative scanning (default: True)
 
         Returns:
-            List of product dicts with similarity scores
+            List of product dicts with similarity scores.
 
         ⏩ SHORT ON TIME? Run:
-           cp solutions/module2/services/hybrid_search.py blaize-bazaar/backend/services/hybrid_search.py
+           cp solutions/module1/services/hybrid_search.py blaize-bazaar/backend/services/hybrid_search.py
         """
-        # === CHALLENGE 1: Semantic Vector Search — START ===
-        # TODO: Implement vector similarity search using pgvector
-        #
-        # Steps:
-        #   1. Get a connection: async with self.db.get_connection() as conn:
-        #   2. Create a cursor: async with conn.cursor() as cur:
-        #   3. Set HNSW parameter: await cur.execute(f"SET LOCAL hnsw.ef_search = {int(ef_search)}")
-        #   4. Enable iterative scan: await cur.execute("SET LOCAL hnsw.iterative_scan = 'relaxed_order'")
-        #   5. Execute the vector search query (see docstring above for SQL template)
-        #   6. Fetch results: results = await cur.fetchall()
-        #   7. Return: [dict(r) for r in results]
-        #
-        # ⏩ SHORT ON TIME? Run:
-        #    cp solutions/module1/services/hybrid_search.py blaize-bazaar/backend/services/hybrid_search.py
-        return []
-        # === CHALLENGE 1: Semantic Vector Search — END ===
+        # === CHALLENGE 1: START ===
+        sql = """
+            WITH query_embedding AS (
+                SELECT %s::vector as emb
+            )
+            SELECT
+                "productId" as product_id,
+                name,
+                brand,
+                color,
+                description,
+                "imgUrl" as img_url,
+                category,
+                price,
+                rating,
+                reviews,
+                badge,
+                tags,
+                1 - (embedding <=> (SELECT emb FROM query_embedding)) as similarity
+            FROM blaize_bazaar.product_catalog
+            WHERE "imgUrl" IS NOT NULL
+            ORDER BY embedding <=> (SELECT emb FROM query_embedding)
+            LIMIT %s
+        """
+        params: List[Any] = [embedding, limit]
+
+        start_time = time.time()
+        async with self.db.get_connection() as conn:
+            async with conn.cursor() as cur:
+                # Per-query HNSW tuning (transaction-scoped via SET LOCAL).
+                await cur.execute(
+                    "SET LOCAL hnsw.ef_search = %s", (ef_search,)
+                )
+                # Iterative scan keeps HNSW returning enough candidates even
+                # when the WHERE clause filters many matches out.
+                if iterative_scan:
+                    await cur.execute(
+                        "SET LOCAL hnsw.iterative_scan = %s",
+                        ("relaxed_order",),
+                    )
+
+                await cur.execute(sql, params)
+                rows = await cur.fetchall()
+                results = [dict(r) for r in rows]
+
+        # Observability — log SQL with parameterized args only (Req 5.3.3, 5.4.2).
+        # The logger redacts the embedding vector; we never interpolate values
+        # into the SQL string itself.
+        try:
+            get_query_logger().queries.append(
+                QueryLog(
+                    query_type="vector_search",
+                    sql=sql,
+                    params=params,
+                    execution_time_ms=(time.time() - start_time) * 1000,
+                    timestamp=datetime.now(),
+                    rows_returned=len(results),
+                )
+            )
+        except Exception as log_err:  # pragma: no cover - never break search on log failure
+            logger.debug(f"sql_query_logger append failed: {log_err}")
+
+        return results
+        # === CHALLENGE 1: END ===
     
     async def _fulltext_search(
         self,
         query: str,
         limit: int
     ) -> List[Dict[str, Any]]:
-        """Full-text search using PostgreSQL tsvector with quality filters"""
+        """Full-text search using PostgreSQL tsvector with quality filters.
+
+        The ``reviews::int`` cast is safe for today's catalog because every
+        row stores a numeric string (e.g. "214"). If a future catalog
+        migration introduces shorthand like "2.1k", swap the cast for a
+        parse helper — until then the cast keeps the 10-review quality
+        floor as a cheap SARGable filter.
+        """
         search_query = """
-            SELECT 
+            SELECT
                 "productId" as product_id,
-                product_description,
+                name,
+                brand,
+                color,
+                description,
                 "imgUrl" as img_url,
-                "productURL" as product_url,
-                category_name,
+                category,
                 price,
+                rating,
                 reviews,
-                stars as rating,
-                "isBestSeller" as isbestseller,
-                "boughtInLastMonth" as boughtinlastmonth,
-                quantity,
+                badge,
+                tags,
                 ts_rank(
-                    to_tsvector('english', product_description || ' ' || category_name),
+                    to_tsvector('english', name || ' ' || COALESCE(description, '') || ' ' || category),
                     plainto_tsquery('english', %s)
                 ) as rank
             FROM blaize_bazaar.product_catalog
-            WHERE to_tsvector('english', product_description || ' ' || category_name) 
+            WHERE to_tsvector('english', name || ' ' || COALESCE(description, '') || ' ' || category)
                   @@ plainto_tsquery('english', %s)
-              AND stars >= 3.5
-              AND reviews >= 10
+              AND rating >= 3.5
+              AND reviews::int >= 10
               AND "imgUrl" IS NOT NULL
             ORDER BY rank DESC
             LIMIT %s
@@ -327,8 +368,13 @@ class HybridSearchService:
 
         logger.info(f"🔀 Merged: {unique_count} unique candidates from {vector_count}+{fulltext_count}")
 
-        # Step 3: Rerank using Cohere (run in thread to avoid blocking event loop)
-        document_texts = [r["product_description"] for r in merged_candidates]
+        # Step 3: Rerank using Cohere (run in thread to avoid blocking event loop).
+        # Prefer the rich ``description`` column; fall back to name+category so
+        # the rerank call never sees an empty document.
+        document_texts = [
+            (r.get("description") or f"{r.get('name', '')} {r.get('category', '')}").strip()
+            for r in merged_candidates
+        ]
 
         rerank_result = await asyncio.to_thread(
             rerank_service.rerank,
