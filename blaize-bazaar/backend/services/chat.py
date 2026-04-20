@@ -129,17 +129,25 @@ class ProductExtractor:
 
     @staticmethod
     def _normalize(p: dict) -> dict:
-        """Normalize field names from various tool output formats."""
+        """Normalize field names from various tool output formats.
+
+        Tool results today come from the boutique catalog (``name``,
+        ``category``, ``imgUrl``); legacy keys (``product_description``,
+        ``category_name``, ``product_url``) are retained as fallbacks so
+        older unit fixtures and any cached agent output still resolve.
+        """
         return {
             "productId": p.get("productId") or p.get("product_id", ""),
-            "name": (p.get("product_description") or p.get("name", ""))[:80],
+            "name": (p.get("name") or p.get("product_description", ""))[:80],
+            "brand": p.get("brand", ""),
+            "color": p.get("color", ""),
             "price": _safe_float(p.get("price", 0)),
-            "stars": _safe_float(p.get("stars") or p.get("rating", 0)),
+            "rating": _safe_float(p.get("rating") or p.get("stars", 0)),
             "reviews": _safe_int(p.get("reviews", 0)),
-            "category": p.get("category_name") or p.get("category", ""),
-            "quantity": _safe_int(p.get("quantity", 0)),
+            "category": p.get("category") or p.get("category_name", ""),
             "imgUrl": p.get("imgUrl") or p.get("img_url", ""),
-            "productURL": p.get("productURL") or p.get("product_url", ""),
+            "badge": p.get("badge"),
+            "tags": list(p.get("tags") or []),
         }
 
 
@@ -840,13 +848,11 @@ CURRENT REQUEST: {message}"""
         return result
     
     async def _format_products(self, products_data: List[Dict]) -> List[Dict]:
-        """Format products for frontend display with URL mapping"""
+        """Format products for frontend display."""
         formatted = []
 
         for product in products_data:
-            product_id = product.get("productId", "")
-            # Map product_url to url with fallback
-            product_url = product.get("product_url") or product.get("productURL") or f"https://www.amazon.com/dp/{product_id}"
+            product_id = product.get("productId") or product.get("product_id")
 
             raw_price = str(product.get("price", "0")).replace("$", "").replace(",", "").strip()
             try:
@@ -854,39 +860,49 @@ CURRENT REQUEST: {message}"""
             except (ValueError, TypeError):
                 price = 0.0
 
+            name = product.get("name") or product.get("product_description", "")
+            name = name.split(" — ")[0].split(" - ")[0][:80]
+
             formatted.append({
                 "id": product_id,
-                "name": (product.get("name", product.get("product_description", "")).split(" — ")[0].split(" - ")[0])[:80],
+                "name": name,
+                "brand": product.get("brand", ""),
+                "color": product.get("color", ""),
                 "price": price,
-                "stars": _safe_float(product.get("stars", 0)),
+                "rating": _safe_float(product.get("rating") or product.get("stars", 0)),
                 "reviews": _safe_int(product.get("reviews", 0)),
-                "category": product.get("category", product.get("category_name", "")),
-                "quantity": _safe_int(product.get("quantity", 0)),
-                "inStock": _safe_int(product.get("quantity", 0)) > 0 if "quantity" in product else product.get("inStock", True),
-                "image": product.get("image_url", product.get("image", product.get("imgUrl", product.get("imgurl", product.get("thumbnail", ""))))),
-                "url": product_url,
+                "category": product.get("category") or product.get("category_name", ""),
+                "image": (
+                    product.get("imgUrl")
+                    or product.get("image_url")
+                    or product.get("image")
+                    or product.get("imgurl")
+                    or ""
+                ),
+                "badge": product.get("badge"),
+                "tags": list(product.get("tags") or []),
                 "originalPrice": None,
                 "discountPercent": 0,
             })
 
-        # Always backfill images from database — LLM often drops image URLs
+        # Backfill images from database — LLM sometimes drops image URLs.
         if formatted and self.db_service:
             try:
                 names = [p.get("name", "")[:60] for p in formatted if p.get("name")]
                 if names:
-                    placeholders = " OR ".join(["product_description ILIKE %s"] * len(names))
+                    placeholders = " OR ".join(["name ILIKE %s"] * len(names))
                     params = [f"%{n[:30]}%" for n in names]
                     rows = await self.db_service.fetch_all(
-                        f'SELECT "productId", product_description, "imgUrl" FROM blaize_bazaar.product_catalog WHERE {placeholders}',
-                        *params
+                        f'SELECT "productId", name, "imgUrl" FROM blaize_bazaar.product_catalog WHERE {placeholders}',
+                        *params,
                     )
-                    img_lookup = {}
+                    img_lookup: Dict[str, str] = {}
                     for r in rows:
-                        desc = (r.get("product_description") or "").split(" — ")[0].split(" - ")[0][:30].lower()
+                        row_name = (r.get("name") or "")[:30].lower()
                         url = r.get("imgUrl") or ""
-                        if desc and url:
-                            img_lookup[desc] = url
-                    
+                        if row_name and url:
+                            img_lookup[row_name] = url
+
                     for p in formatted:
                         name_key = (p.get("name") or "")[:30].lower()
                         if name_key in img_lookup:

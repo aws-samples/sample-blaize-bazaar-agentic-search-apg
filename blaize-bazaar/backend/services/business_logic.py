@@ -1,10 +1,21 @@
 """
 Business Logic Layer for Blaize Bazaar
-Contains custom business logic for inventory, pricing, and trending analysis
+Contains custom business logic for pricing, trending, and category analysis.
+
+Aligned to the boutique catalog schema:
+    productId, name, brand, color, price, description, category, tags,
+    rating, reviews (TEXT), "imgUrl", badge, tier, image_verified,
+    embedding, created_at, updated_at
+
+Legacy columns that no longer exist (quantity, stars, category_name,
+product_description, "productURL", isBestSeller, boughtInLastMonth) have
+been replaced or removed. Stock-level functions (inventory_health,
+restock_product, get_low_stock_products) return a degraded "not
+available on this catalog" envelope instead of issuing broken SQL —
+the boutique catalog has no quantity column to drive them.
 """
 from typing import Dict, Any, List
 from decimal import Decimal
-import json
 
 
 def convert_decimals(obj):
@@ -18,172 +29,88 @@ def convert_decimals(obj):
     return obj
 
 
+_NOT_AVAILABLE_ENVELOPE = {
+    "status": "not_available",
+    "message": (
+        "The boutique catalog doesn't track stock quantities, so this "
+        "inventory operation is unavailable in the current workshop mode."
+    ),
+    "products": [],
+    "count": 0,
+}
+
+
 class BusinessLogic:
     """Business logic layer for custom analytics and operations"""
-    
+
     def __init__(self, db_service):
         self.db = db_service
-    
-    async def get_trending_products(self, limit: int = 5, category: str = None) -> Dict[str, Any]:
-        """
-        Get trending products based on reviews, ratings, and popularity.
-        
-        Trending score = (reviews * stars) with high-rated products prioritized
-        
-        Args:
-            limit: Number of trending products to return
-            category: Optional category filter
-            
-        Returns:
-            Dictionary with trending products and metadata
-        """
-        # Map broad terms to actual category_name values in the catalog
-        _BROAD_CATEGORIES = {
-            "electronics": ["Laptops", "Smartphones", "Tablets", "Mobile Accessories"],
-            "clothing": ["Mens Shirts", "Womens Dresses", "Tops"],
-            "accessories": ["Sunglasses", "Womens Bags", "Womens Jewellery", "Mobile Accessories"],
-            "watches": ["Mens Watches", "Womens Watches"],
-            "shoes": ["Mens Shoes", "Womens Shoes"],
-        }
 
-        conditions = ["quantity > 0", "stars >= 4.0", "reviews > 50"]
-        params = []
+    async def get_trending_products(self, limit: int = 5, category: str = None) -> Dict[str, Any]:
+        """Trending products by rating × reviews.
+
+        The ``reviews::int`` cast is safe for today's catalog (numeric
+        strings like "214"). If a future load introduces shorthand like
+        "2.1k", swap the cast for a parse helper.
+        """
+        conditions = ['rating >= 4.0', "reviews::int > 50", '"imgUrl" IS NOT NULL']
+        params: List[Any] = []
 
         if category:
-            cat_lower = category.lower().strip()
-            mapped = _BROAD_CATEGORIES.get(cat_lower)
-            if mapped:
-                placeholders = ", ".join(["%s"] * len(mapped))
-                conditions.append(f"category_name IN ({placeholders})")
-                params.extend(mapped)
-            else:
-                conditions.append("category_name ILIKE %s")
-                params.append(f"%{category}%")
+            conditions.append("category ILIKE %s")
+            params.append(f"%{category}%")
 
         where_clause = " AND ".join(conditions)
 
         query = f"""
-            SELECT 
+            SELECT
                 "productId",
-                product_description,
-                "imgUrl" as imgurl,
+                name,
+                brand,
+                color,
+                "imgUrl",
                 price,
-                stars,
+                rating,
                 reviews,
-                category_name,
-                quantity,
-                "productURL" as product_url,
-                (reviews * stars) as trending_score
+                category,
+                badge,
+                tags,
+                (reviews::int * rating) as trending_score
             FROM blaize_bazaar.product_catalog
             WHERE {where_clause}
-            ORDER BY trending_score DESC, stars DESC
+            ORDER BY trending_score DESC, rating DESC
             LIMIT %s
         """
-        
+
         params.append(limit)
         results = await self.db.fetch_all(query, *params)
-        
+
         products = [convert_decimals(dict(row)) for row in results]
-        
+
         return {
             "status": "success",
             "count": len(products),
             "products": products,
             "metadata": {
-                "criteria": "reviews * stars, min 4.0 stars, min 50 reviews",
+                "criteria": "reviews * rating, min 4.0 rating, min 50 reviews",
                 "limit": limit,
-                "category_filter": category
-            }
+                "category_filter": category,
+            },
         }
-    
+
     async def get_inventory_health(self) -> Dict[str, Any]:
-        """
-        Get overall inventory health statistics.
-        
-        Returns:
-            Dictionary with inventory health metrics and alerts
-        """
-        # Get inventory statistics
-        stats_query = """
-            SELECT 
-                COUNT(*) as total_products,
-                COUNT(CASE WHEN quantity = 0 THEN 1 END) as out_of_stock,
-                COUNT(CASE WHEN quantity > 0 AND quantity <= 15 THEN 1 END) as low_stock,
-                COUNT(CASE WHEN quantity > 15 THEN 1 END) as healthy_stock,
-                AVG(quantity) as avg_quantity,
-                SUM(quantity) as total_quantity
-            FROM blaize_bazaar.product_catalog
-        """
-        
-        stats = await self.db.fetch_one(stats_query)
-        stats_dict = convert_decimals(dict(stats))
-        
-        # Get critical items (low stock with high demand)
-        critical_query = """
-            SELECT 
-                "productId",
-                product_description,
-                stars,
-                reviews,
-                quantity
-            FROM blaize_bazaar.product_catalog
-            WHERE quantity <= 15
-              AND stars >= 4.0
-              AND reviews > 100
-            ORDER BY quantity ASC, reviews DESC
-            LIMIT 10
-        """
-        
-        critical_items = await self.db.fetch_all(critical_query)
-        
-        # Calculate health score (0-100)
-        total = stats_dict['total_products']
-        healthy = stats_dict['healthy_stock']
-        health_score = int((healthy / total * 100)) if total > 0 else 0
-        
-        return {
-            "status": "success",
-            "health_score": health_score,
-            "statistics": stats_dict,
-            "critical_items": [convert_decimals(dict(row)) for row in critical_items],
-            "alerts": self._generate_inventory_alerts(stats_dict)
-        }
-    
+        """Inventory health is unavailable — boutique catalog has no ``quantity`` column."""
+        return {**_NOT_AVAILABLE_ENVELOPE, "health_score": None, "statistics": {}, "critical_items": [], "alerts": []}
+
     async def get_price_analysis(self, category: str = None) -> Dict[str, Any]:
-        """
-        Get price statistics by category or overall.
-        
-        Args:
-            category: Optional category filter
-            
-        Returns:
-            Dictionary with price statistics and insights
-        """
-        # Map broad terms to actual category_name values in the catalog
-        _BROAD_CATEGORIES = {
-            "electronics": ["Laptops", "Smartphones", "Tablets", "Mobile Accessories"],
-            "clothing": ["Mens Shirts", "Womens Dresses", "Tops"],
-            "accessories": ["Sunglasses", "Womens Bags", "Womens Jewellery", "Mobile Accessories"],
-            "watches": ["Mens Watches", "Womens Watches"],
-            "shoes": ["Mens Shoes", "Womens Shoes"],
-        }
-
+        """Per-category price statistics."""
+        params: List[Any] = []
         if category:
-            cat_lower = category.lower().strip()
-            mapped = _BROAD_CATEGORIES.get(cat_lower)
-            params = []
-
-            if mapped:
-                placeholders = ", ".join(["%s"] * len(mapped))
-                cat_condition = f"category_name IN ({placeholders})"
-                params.extend(mapped)
-            else:
-                cat_condition = "category_name ILIKE %s"
-                params.append(f"%{category}%")
-
+            cat_condition = "category ILIKE %s"
+            params.append(f"%{category}%")
             query = f"""
                 SELECT
-                    category_name,
+                    category,
                     COUNT(*) as product_count,
                     MIN(price) as min_price,
                     MAX(price) as max_price,
@@ -191,99 +118,58 @@ class BusinessLogic:
                     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) as median_price
                 FROM blaize_bazaar.product_catalog
                 WHERE {cat_condition}
-                  AND quantity > 0
-                GROUP BY category_name
+                GROUP BY category
             """
             results = await self.db.fetch_all(query, *params)
         else:
             query = """
-                SELECT 
-                    category_name,
+                SELECT
+                    category,
                     COUNT(*) as product_count,
                     MIN(price) as min_price,
                     MAX(price) as max_price,
                     AVG(price) as avg_price,
                     PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) as median_price
                 FROM blaize_bazaar.product_catalog
-                WHERE quantity > 0
-                GROUP BY category_name
+                GROUP BY category
                 ORDER BY product_count DESC
                 LIMIT 10
             """
             results = await self.db.fetch_all(query)
-        
+
         categories = [convert_decimals(dict(row)) for row in results]
-        
-        # Calculate overall statistics
+
         overall_query = """
-            SELECT 
+            SELECT
                 COUNT(*) as total_products,
                 MIN(price) as min_price,
                 MAX(price) as max_price,
                 AVG(price) as avg_price,
                 PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) as median_price
             FROM blaize_bazaar.product_catalog
-            WHERE quantity > 0
         """
-        
+
         overall = await self.db.fetch_one(overall_query)
         overall_dict = convert_decimals(dict(overall))
-        
+
         return {
             "status": "success",
             "overall": overall_dict,
             "by_category": categories,
-            "filter": category if category else "all"
+            "filter": category if category else "all",
         }
-    
-    async def restock_product(self, product_id: str, quantity: int) -> Dict[str, Any]:
-        """
-        Add stock to a product.
-        
-        Args:
-            product_id: Product ID to restock
-            quantity: Quantity to add
-            
-        Returns:
-            Dictionary with restock confirmation
-        """
-        # Get current product info
-        product_query = """
-            SELECT "productId", product_description, quantity
-            FROM blaize_bazaar.product_catalog
-            WHERE "productId" = %s
-        """
-        
-        product = await self.db.fetch_one(product_query, product_id)
-        
-        if not product:
-            return {
-                "status": "error",
-                "message": f"Product {product_id} not found"
-            }
-        
-        old_quantity = product['quantity']
-        new_quantity = old_quantity + quantity
-        
-        # Update quantity
-        update_query = """
-            UPDATE blaize_bazaar.product_catalog
-            SET quantity = quantity + %s
-            WHERE "productId" = %s
-        """
-        
-        await self.db.execute_query(update_query, quantity, product_id)
-        
+
+    async def restock_product(self, product_id: int, quantity: int) -> Dict[str, Any]:
+        """Restock is unavailable — boutique catalog has no ``quantity`` column."""
         return {
-            "status": "success",
+            "status": "not_available",
+            "message": (
+                "Stock management isn't part of the boutique catalog — "
+                "use the admin tools on the underlying catalog-enrichment system."
+            ),
             "product_id": product_id,
-            "product_name": product['product_description'],
-            "old_quantity": old_quantity,
-            "added_quantity": quantity,
-            "new_quantity": new_quantity,
-            "message": f"✅ Added {quantity} units to {product['product_description']}"
         }
-    
+
     async def search_products(
         self,
         query: str,
@@ -291,127 +177,51 @@ class BusinessLogic:
         min_rating: float = 0.0,
         category: str = None,
         min_similarity: float = 0.1,
-        limit: int = 5
+        limit: int = 5,
     ) -> Dict[str, Any]:
-        """
-        TODO (Module 2): Implement filtered semantic search with pgvector.
-
-        Combine vector similarity with business filters (price, rating, category)
-        in a single SQL query. This is the function that powers the storefront's
-        "smart search" — when you implement it, natural language queries like
-        "budget laptop for college" will return relevant results.
-
-        Steps:
-            1. Import EmbeddingService from services.embeddings
-            2. Generate the query embedding:
-               - Create/reuse an EmbeddingService instance
-               - Call embed_query(query) to get a 1024-dim vector
-            3. Build dynamic WHERE clauses:
-               - Always include: quantity > 0
-               - If max_price: add "price <= %s"
-               - If min_rating: add "stars >= %s"
-               - If category: add "category_name ILIKE %s" with f"%{category}%"
-            4. Build the SQL query using a CTE for the embedding:
-               - WITH query_embedding AS (SELECT %s::vector as emb)
-               - SELECT productId, product_description, price, stars, reviews,
-                 category_name, quantity, "imgUrl", "productURL" as product_url, similarity
-               - Similarity = 1 - (embedding <=> (SELECT emb FROM query_embedding))
-               - ORDER BY embedding <=> (SELECT emb FROM query_embedding)
-               - LIMIT %s
-            5. Execute with self.db.fetch_all(query, *params)
-            6. Convert results with convert_decimals()
-            7. Filter out results below min_similarity
-            8. Return dict with status, query, count, products, filters
-
-        Hints:
-            - First param in params list is str(query_embedding) for the CTE
-            - Use f-string for the WHERE clause: f"WHERE {where_clause}"
-            - The embedding appears once (in the CTE), referenced twice in the query
-            - params order: [embedding, ...filters..., limit]
-
-        Args:
-            query: Natural language search query
-            max_price: Optional maximum price filter
-            min_rating: Minimum star rating (default: 0.0)
-            category: Optional category filter (partial match)
-            min_similarity: Minimum similarity threshold (default: 0.1)
-            limit: Number of results (default: 5)
-
-        Returns:
-            Dict with products list and metadata
-
-        ⏩ SHORT ON TIME? Run:
-           cp solutions/module2/services/business_logic.py blaize-bazaar/backend/services/business_logic.py
-        """
+        """Filtered semantic search with pgvector against the boutique schema."""
         from services.embeddings import EmbeddingService
         import time
 
-        # Generate query embedding with timing
         start_time = time.time()
-        if not hasattr(self, '_embedding_service'):
+        if not hasattr(self, "_embedding_service"):
             self._embedding_service = EmbeddingService()
         query_embedding = self._embedding_service.embed_query(query)
         embedding_time_ms = (time.time() - start_time) * 1000
 
-        # Auto-detect category from query if not explicitly provided
-        if not category:
-            query_lower = query.lower()
-            category_map = {
-                'fragrance': 'Fragrances', 'perfume': 'Fragrances', 'cologne': 'Fragrances',
-                'laptop': 'Laptops', 'macbook': 'Laptops', 'notebook': 'Laptops',
-                'phone': 'Smartphones', 'smartphone': 'Smartphones', 'iphone': 'Smartphones', 'samsung galaxy': 'Smartphones',
-                'watch': 'Watches', 'rolex': 'Watches', 'timepiece': 'Watches',
-                'shoe': 'Shoes', 'sneaker': 'Shoes', 'nike': 'Shoes', 'jordan': 'Shoes',
-                'furniture': 'Furniture', 'sofa': 'Furniture', 'bed': 'Furniture', 'table': 'Furniture',
-                'kitchen': 'Kitchen Accessories', 'pan': 'Kitchen Accessories', 'knife': 'Kitchen Accessories',
-                'sunglasses': 'Sunglasses', 'shades': 'Sunglasses',
-                'bag': 'Bags', 'handbag': 'Bags', 'backpack': 'Bags',
-                'dress': 'Dresses', 'gown': 'Dresses',
-                'shirt': 'Shirts', 'tshirt': 'Shirts',
-                'sports': 'Sports Accessories', 'football': 'Sports Accessories', 'basketball': 'Sports Accessories',
-                'tablet': 'Tablets', 'ipad': 'Tablets',
-                'beauty': 'Beauty', 'mascara': 'Beauty', 'lipstick': 'Beauty',
-                'skin care': 'Skin Care', 'lotion': 'Skin Care',
-                'motorcycle': 'Motorcycle',
-                'jewel': 'Jewellery', 'earring': 'Jewellery',
-            }
-            for keyword, cat_name in category_map.items():
-                if keyword in query_lower:
-                    category = cat_name
-                    break
-
-        # Build SQL with filters - embedding first, then filters, then limit
-        conditions = ["quantity > 0"]
-        params = [str(query_embedding)]  # Embedding as first param
+        conditions = ['"imgUrl" IS NOT NULL']
+        params: List[Any] = [str(query_embedding)]
 
         if max_price:
             conditions.append("price <= %s")
             params.append(max_price)
 
         if min_rating:
-            conditions.append("stars >= %s")
+            conditions.append("rating >= %s")
             params.append(min_rating)
 
         if category:
-            conditions.append("category_name ILIKE %s")
+            conditions.append("category ILIKE %s")
             params.append(f"%{category}%")
 
-        params.append(limit)  # Limit as last param
+        params.append(limit)
         where_clause = " AND ".join(conditions)
 
-        # Use CTE to define embedding once and reuse it
         search_query = f"""
             WITH query_embedding AS (SELECT %s::vector as emb)
             SELECT
                 "productId",
-                product_description,
+                name,
+                brand,
+                color,
+                description,
                 price,
-                stars,
+                rating,
                 reviews,
-                category_name,
-                quantity,
+                category,
                 "imgUrl",
-                "productURL" as product_url,
+                badge,
+                tags,
                 1 - (embedding <=> (SELECT emb FROM query_embedding)) as similarity
             FROM blaize_bazaar.product_catalog
             WHERE {where_clause}
@@ -419,14 +229,12 @@ class BusinessLogic:
             LIMIT %s
         """
 
-        # Execute query with timing
         db_start = time.time()
         results = await self.db.fetch_all(search_query, *params)
         db_time_ms = (time.time() - db_start) * 1000
 
         products = [convert_decimals(dict(row)) for row in results]
 
-        # Filter out low-relevance results
         if min_similarity > 0:
             products = [p for p in products if p.get("similarity", 0) >= min_similarity]
 
@@ -439,67 +247,61 @@ class BusinessLogic:
                 "max_price": max_price,
                 "min_rating": min_rating,
                 "category": category,
-                "min_similarity": min_similarity
+                "min_similarity": min_similarity,
             },
             "performance": {
                 "bedrock_embedding_ms": round(embedding_time_ms, 2),
                 "database_query_ms": round(db_time_ms, 2),
-                "total_ms": round(embedding_time_ms + db_time_ms, 2)
+                "total_ms": round(embedding_time_ms + db_time_ms, 2),
             },
             "sql_query": search_query.replace("%s", "?"),
-            "note": "⚠️ This is a Blaize Bazaar workshop tool for educational purposes"
+            "note": "⚠️ This is a Blaize Bazaar workshop tool for educational purposes",
         }
-    
+
     async def get_products_by_category(
         self,
         category: str,
         min_rating: float = 4.0,
         max_price: float = None,
-        limit: int = 5
+        limit: int = 5,
     ) -> Dict[str, Any]:
-        """
-        Get products by category with filters.
-        
-        Args:
-            category: Product category
-            min_rating: Minimum star rating
-            max_price: Maximum price
-            limit: Number of results
-        """
-        conditions = ["category_name ILIKE %s", "quantity > 0"]
-        params = [f"%{category}%"]
-        
+        """Browse products by category with rating and price filters."""
+        conditions = ["category ILIKE %s", '"imgUrl" IS NOT NULL']
+        params: List[Any] = [f"%{category}%"]
+
         if min_rating:
-            conditions.append("stars >= %s")
+            conditions.append("rating >= %s")
             params.append(min_rating)
-        
+
         if max_price:
             conditions.append("price <= %s")
             params.append(max_price)
-        
+
         params.append(limit)
         where_clause = " AND ".join(conditions)
-        
+
         query = f"""
-            SELECT 
+            SELECT
                 "productId",
-                product_description,
+                name,
+                brand,
+                color,
                 price,
-                stars,
+                rating,
                 reviews,
-                category_name,
-                quantity,
+                category,
                 "imgUrl",
-                "productURL" as product_url
+                badge,
+                tags
             FROM blaize_bazaar.product_catalog
             WHERE {where_clause}
-            ORDER BY stars DESC, reviews DESC
+            ORDER BY rating DESC, reviews::int DESC
             LIMIT %s
         """
-        
+
         results = await self.db.fetch_all(query, *params)
         products = [convert_decimals(dict(row)) for row in results]
-        
+
         return {
             "status": "success",
             "category": category,
@@ -507,69 +309,21 @@ class BusinessLogic:
             "products": products,
             "filters": {
                 "min_rating": min_rating,
-                "max_price": max_price
-            }
+                "max_price": max_price,
+            },
         }
-    
+
     async def get_low_stock_products(self, limit: int = 5) -> Dict[str, Any]:
-        """
-        Get products with low stock (0 < quantity <= 15) prioritized by demand.
-        Excludes out-of-stock items (quantity = 0) — those are already gone.
+        """Low-stock lookup is unavailable — boutique catalog has no ``quantity`` column."""
+        return {**_NOT_AVAILABLE_ENVELOPE, "limit": limit}
 
-        Args:
-            limit: Number of products to return
-
-        Returns:
-            Dictionary with low-stock products
-        """
-        query = """
-            SELECT
-                "productId",
-                product_description,
-                price,
-                stars,
-                reviews,
-                category_name,
-                quantity,
-                "imgUrl",
-                "productURL" as product_url
-            FROM blaize_bazaar.product_catalog
-            WHERE quantity > 0
-              AND quantity <= 15
-              AND stars >= 3.0
-            ORDER BY quantity ASC, reviews DESC, stars DESC
-            LIMIT %s
-        """
-        
-        results = await self.db.fetch_all(query, limit)
-        products = [convert_decimals(dict(row)) for row in results]
-        
-        return {
-            "status": "success",
-            "count": len(products),
-            "products": products
-        }
-    
     async def personalized_search(
         self,
         query: str,
         preferences: Dict[str, Any] = None,
         limit: int = 5,
     ) -> Dict[str, Any]:
-        """
-        Personalized product search with preference-based re-ranking.
-
-        Runs a base semantic search then boosts scores for products
-        matching user preferences (favorite categories, price range).
-
-        Wire It Live: Participants implement the boost formula.
-
-        Args:
-            query: Natural language search query
-            preferences: Dict with keys like 'categories', 'price_range', 'brands'
-            limit: Number of results
-        """
-        # Run base semantic search
+        """Semantic search + preference-based boost re-ranking."""
         base_results = await self.search_products(query, limit=limit * 2)
         products = base_results.get("products", [])
         preferences = preferences or {}
@@ -582,18 +336,14 @@ class BusinessLogic:
         for product in products:
             reasons: List[str] = []
             boost = 0.0
-            category = (product.get("category_name") or "").lower()
+            category = (product.get("category") or "").lower()
 
-            # --- Wire It Live: Personalization Boost ---
-            # TODO (Workshop): Implement your own boost formula here.
-            # Hint: boost matching categories by +0.1, matching price range by +0.05
-
-            # Category match
             if preferred_categories and any(pc in category for pc in preferred_categories):
                 boost += 0.1
-                reasons.append(f"Matches your interest in {product.get('category_name', 'this category')}")
+                reasons.append(
+                    f"Matches your interest in {product.get('category', 'this category')}"
+                )
 
-            # Price range match
             price = float(product.get("price", 0))
             if min_price is not None and max_price is not None:
                 if min_price <= price <= max_price:
@@ -603,20 +353,16 @@ class BusinessLogic:
                 boost += 0.05
                 reasons.append(f"Under your ${max_price} budget")
 
-            # High rating boost
-            stars = float(product.get("stars", 0))
-            if stars >= 4.5:
+            rating = float(product.get("rating", 0))
+            if rating >= 4.5:
                 boost += 0.03
                 reasons.append("Highly rated by customers")
-
-            # --- End Wire It Live ---
 
             product["personalization_boost"] = round(boost, 3)
             product["recommendation_reasons"] = reasons
             original_sim = product.get("similarity", 0)
             product["personalized_score"] = round(original_sim + boost, 4)
 
-        # Re-rank by personalized score
         products.sort(key=lambda p: p.get("personalized_score", 0), reverse=True)
         products = products[:limit]
 
@@ -628,20 +374,3 @@ class BusinessLogic:
             "preferences_applied": preferences,
             "personalization": True,
         }
-
-    def _generate_inventory_alerts(self, stats: Dict) -> List[str]:
-        """Generate inventory alerts based on statistics"""
-        alerts = []
-        
-        if stats['out_of_stock'] > 0:
-            alerts.append(f"🚨 {stats['out_of_stock']} products out of stock")
-        
-        if stats['low_stock'] > 100:
-            alerts.append(f"⚠️ {stats['low_stock']} products low stock (≤15 units)")
-        elif stats['low_stock'] > 0:
-            alerts.append(f"⚠️ {stats['low_stock']} products need monitoring")
-        
-        if not alerts:
-            alerts.append("✅ Inventory healthy")
-        
-        return alerts

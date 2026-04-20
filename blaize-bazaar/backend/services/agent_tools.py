@@ -75,22 +75,22 @@ def get_trending_products(limit: int = 5, category: str = None) -> str:
 
     Returns:
         JSON string with trending products
+
+    ⏩ SHORT ON TIME? Run:
+       cp solutions/module2/services/agent_tools.py blaize-bazaar/backend/services/agent_tools.py
     """
-    # === CHALLENGE 2: @tool Function — START ===
-    # TODO: Implement get_trending_products following the get_inventory_health() pattern above
-    #
-    # Steps:
-    #   1. Check _db_service is available (return error JSON if not)
-    #   2. Import BusinessLogic: from services.business_logic import BusinessLogic
-    #   3. Create instance: logic = BusinessLogic(_db_service)
-    #   4. Call: result = _run_async(logic.get_trending_products(limit, category))
-    #   5. Return: json.dumps(result, indent=2)
-    #   6. Wrap in try/except, return error JSON on failure
-    #
-    # ⏩ SHORT ON TIME? Run:
-    #    cp solutions/module2/services/agent_tools.py blaize-bazaar/backend/services/agent_tools.py
-    return json.dumps({"error": "get_trending_products not implemented yet — complete Challenge 2"})
-    # === CHALLENGE 2: @tool Function — END ===
+    # === CHALLENGE 2: START ===
+    if not _db_service:
+        return json.dumps({"error": "Database service not initialized"})
+
+    try:
+        from services.business_logic import BusinessLogic
+        logic = BusinessLogic(_db_service)
+        result = _run_async(logic.get_trending_products(limit, category))
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+    # === CHALLENGE 2: END ===
 
 @tool
 def get_price_analysis(category: str = None) -> str:
@@ -107,8 +107,13 @@ def get_price_analysis(category: str = None) -> str:
         return json.dumps({"error": str(e)})
 
 @tool
-def restock_product(product_id: str, quantity: int) -> str:
-    """Restock a specific product by adding inventory quantity. Use when an inventory manager needs to replenish stock for a product ID."""
+def restock_product(product_id: int, quantity: int) -> str:
+    """Restock a specific product by adding inventory quantity. Use when an inventory manager needs to replenish stock for a product ID.
+
+    Args:
+        product_id: Integer productId (1-92 in the boutique catalog).
+        quantity: Units to add to current stock.
+    """
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
     
@@ -205,26 +210,34 @@ def search_products(
                 limit=pool_size,
             ))
 
-        # Normalize field names and apply filters
+        # Normalize field names and apply filters.
         products = result.get("results", [])
         normalized = []
         for p in products:
+            reviews_raw = p.get("reviews")
+            try:
+                reviews_int = int(reviews_raw) if reviews_raw is not None else 0
+            except (TypeError, ValueError):
+                reviews_int = 0
             product = {
-                "productId": p.get("product_id", ""),
-                "product_description": p.get("product_description", ""),
+                "productId": p.get("product_id"),
+                "name": p.get("name", ""),
+                "brand": p.get("brand", ""),
+                "color": p.get("color", ""),
+                "description": p.get("description", ""),
                 "price": float(p["price"]) if hasattr(p.get("price"), '__float__') else p.get("price", 0),
-                "stars": float(p["rating"]) if hasattr(p.get("rating"), '__float__') else p.get("rating", 0),
-                "reviews": p.get("reviews", 0),
-                "category_name": p.get("category_name", ""),
-                "quantity": p.get("quantity", 0),
+                "rating": float(p["rating"]) if hasattr(p.get("rating"), '__float__') else p.get("rating", 0),
+                "reviews": reviews_int,
+                "category": p.get("category", ""),
                 "imgUrl": p.get("img_url", ""),
-                "productURL": p.get("product_url", ""),
+                "badge": p.get("badge"),
+                "tags": list(p.get("tags") or []),
             }
             if max_price and product["price"] > max_price:
                 continue
-            if min_rating and product["stars"] < min_rating:
+            if min_rating and product["rating"] < min_rating:
                 continue
-            if category and category.lower() not in product["category_name"].lower():
+            if category and category.lower() not in product["category"].lower():
                 continue
             normalized.append(product)
 
@@ -291,20 +304,20 @@ def get_low_stock_products(limit: int = 5) -> str:
 
 # === WIRE IT LIVE (Lab 2) ===
 @tool
-def compare_products(product_id_1: str, product_id_2: str) -> str:
+def compare_products(product_id_1: int, product_id_2: int) -> str:
     """Compare two products side by side by their product IDs. Use when customers want to see differences in price, rating, and features.
 
     Args:
-        product_id_1: First product ID to compare
-        product_id_2: Second product ID to compare
+        product_id_1: First integer productId to compare (1-92 in the boutique catalog).
+        product_id_2: Second integer productId to compare (1-92 in the boutique catalog).
     """
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
 
     try:
         query = """
-            SELECT "productId", product_description, price, stars, reviews,
-                   category_name, quantity, "imgUrl", "productURL"
+            SELECT "productId", name, brand, color, description, price,
+                   rating, reviews, category, "imgUrl", badge, tags
             FROM blaize_bazaar.product_catalog
             WHERE "productId" = %s
         """
@@ -318,15 +331,22 @@ def compare_products(product_id_1: str, product_id_2: str) -> str:
             return json.dumps({"error": f"Product(s) not found: {', '.join(missing)}"})
 
         def fmt(row):
+            reviews_raw = row.get("reviews")
+            try:
+                reviews_int = int(reviews_raw) if reviews_raw is not None else 0
+            except (TypeError, ValueError):
+                reviews_int = 0
             return {
-                "productId": row.get("productId", ""),
-                "name": row.get("product_description", "").split(" — ")[0].split(" - ")[0],
+                "productId": row.get("productId"),
+                "name": row.get("name", ""),
+                "brand": row.get("brand", ""),
+                "color": row.get("color", ""),
                 "price": float(row.get("price", 0)),
-                "stars": float(row.get("stars", 0)),
-                "reviews": int(row.get("reviews", 0)),
-                "category": row.get("category_name", ""),
-                "inStock": int(row.get("quantity", 0)) > 0,
-                "quantity": int(row.get("quantity", 0)),
+                "rating": float(row.get("rating", 0)),
+                "reviews": reviews_int,
+                "category": row.get("category", ""),
+                "badge": row.get("badge"),
+                "tags": list(row.get("tags") or []),
             }
 
         product_1 = fmt(p1)
@@ -335,7 +355,7 @@ def compare_products(product_id_1: str, product_id_2: str) -> str:
         # Determine winner for each metric
         comparison = {
             "price_winner": product_1["productId"] if product_1["price"] <= product_2["price"] else product_2["productId"],
-            "rating_winner": product_1["productId"] if product_1["stars"] >= product_2["stars"] else product_2["productId"],
+            "rating_winner": product_1["productId"] if product_1["rating"] >= product_2["rating"] else product_2["productId"],
             "reviews_winner": product_1["productId"] if product_1["reviews"] >= product_2["reviews"] else product_2["productId"],
             "price_difference": abs(product_1["price"] - product_2["price"]),
         }
