@@ -10,6 +10,15 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Storefront palette (storefront.md - cream/ink/terracotta).
+        'cream': '#fbf4e8',
+        'cream-warm': '#f5e8d3',
+        'ink': '#2d1810',
+        'ink-soft': '#6b4a35',
+        'ink-quiet': '#a68668',
+        'accent': '#c44536',
+        'dusk': '#3d2518',
+
         // Theme-aware via CSS variables
         'bg-primary': 'var(--bg-primary)',
         'bg-secondary': 'var(--bg-secondary)',
@@ -24,6 +33,28 @@ export default {
         // Utility
         'success': '#4ade80',
         'warning': '#fbbf24',
+
+        // Warm-tinted hairline (ink-soft at 8% alpha). Used as card border
+        // and hero-ticker top divider for premium warm depth.
+        'warm': 'rgba(107, 74, 53, 0.08)',
+      },
+      borderColor: {
+        'cream': '#fbf4e8',
+        'cream-warm': '#f5e8d3',
+        'ink': '#2d1810',
+        'ink-soft': '#6b4a35',
+        'ink-quiet': '#a68668',
+        'accent': '#c44536',
+        'dusk': '#3d2518',
+        'warm': 'rgba(107, 74, 53, 0.08)',
+      },
+      boxShadow: {
+        // Warm-tinted shadows (ink-soft at low alpha) — the single biggest
+        // contributor to the storefront "premium feel" vs cold grey drops.
+        'warm':
+          '0 2px 8px rgba(107, 74, 53, 0.06), 0 1px 3px rgba(107, 74, 53, 0.04)',
+        'warm-lg':
+          '0 8px 24px rgba(107, 74, 53, 0.10), 0 4px 8px rgba(107, 74, 53, 0.06)',
       },
       fontWeight: {
         'light': '300',
