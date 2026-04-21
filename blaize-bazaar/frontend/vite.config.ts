@@ -1,8 +1,19 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // Configuration for AWS Workshop Studio with CloudFront + VSCode Server
 export default defineConfig({
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test-setup.ts'],
+    css: false,
+    // The `.mjs` scanner in src/__tests__/copy.test.mjs is a standalone
+    // Node script, not a vitest suite. It's invoked directly via
+    // `node src/__tests__/copy.test.mjs` (see package.json / CI).
+    exclude: ['**/node_modules/**', '**/dist/**', '**/*.test.mjs'],
+  },
   // CRITICAL: Set base path for production builds to work with CloudFront /ports/5173/ routing
   base: process.env.NODE_ENV === 'production' ? '/ports/5173/' : '/',
   

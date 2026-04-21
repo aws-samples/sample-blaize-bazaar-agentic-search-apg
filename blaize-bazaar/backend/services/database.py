@@ -19,6 +19,22 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
+async def _configure_connection(conn: AsyncConnection) -> None:
+    """Pool configure callback — runs on every new connection from the pool.
+
+    Sets hnsw.iterative_scan = 'relaxed_order' so filtered vector search
+    (e.g., 'linen shirts under $100') returns complete result sets instead
+    of fewer-than-LIMIT rows. See pgvector 0.7+ iterative_scan docs.
+
+    The catalog loader sets this at database level via ALTER DATABASE, but
+    that only applies to NEW connections — existing pool connections need
+    this configure callback to pick up the setting.
+    """
+    async with conn.cursor() as cur:
+        await cur.execute("SET hnsw.iterative_scan = 'relaxed_order'")
+    await conn.commit()
+
+
 class DatabaseService:
     """
     Database connection pool manager for PostgreSQL.
@@ -57,20 +73,22 @@ class DatabaseService:
                 max_size=settings.DB_POOL_MAX_SIZE,
                 timeout=settings.DB_POOL_TIMEOUT,
                 open=False,  # Open manually after configuration
+                configure=_configure_connection,
                 kwargs={
                     "row_factory": dict_row,  # Return rows as dictionaries
                     "autocommit": False,  # Explicit transaction control
                 },
             )
-            
+
             # Open the pool
             await self._pool.open()
-            
+
             # Mark as connected before testing
             self._is_connected = True
-            
+
             # Test connection
             await self._test_connection()
+            await self._verify_iterative_scan()
             logger.info(
                 f"✅ Database pool initialized "
                 f"(min={settings.DB_POOL_MIN_SIZE}, max={settings.DB_POOL_MAX_SIZE})"
@@ -133,7 +151,36 @@ class DatabaseService:
         except Exception as e:
             logger.error(f"Connection test failed: {e}")
             raise
-    
+
+    async def _verify_iterative_scan(self) -> None:
+        """Confirm pgvector iterative_scan is active on backend connections.
+
+        Logs at INFO if 'relaxed_order'. Logs at WARNING for anything else,
+        including 'off' (the pgvector default that causes filtered vector
+        search to return incomplete results).
+        """
+        try:
+            async with self.get_connection() as conn:
+                async with conn.cursor() as cur:
+                    await cur.execute("SHOW hnsw.iterative_scan")
+                    result = await cur.fetchone()
+                    value = (
+                        result.get("hnsw.iterative_scan")
+                        if isinstance(result, dict)
+                        else (result[0] if result else "unknown")
+                    )
+                    if value == "relaxed_order":
+                        logger.info(f"✅ pgvector iterative_scan = {value}")
+                    else:
+                        logger.warning(
+                            f"⚠️ pgvector iterative_scan = '{value}', "
+                            f"expected 'relaxed_order'. Filtered vector search "
+                            f"may return incomplete results. Check connection "
+                            f"pool configure callback."
+                        )
+        except Exception as e:
+            logger.warning(f"Could not verify iterative_scan setting: {e}")
+
     async def disconnect(self) -> None:
         """
         Close database connection pool.
@@ -177,6 +224,11 @@ class DatabaseService:
                 # Register pgvector for this connection (async version)
                 from pgvector.psycopg import register_vector_async
                 await register_vector_async(conn)
+                # Defense in depth: re-assert iterative_scan on every acquire
+                # in case the pool configure callback didn't run (invalidated
+                # connection replay, future refactor, etc.)
+                async with conn.cursor() as cur:
+                    await cur.execute("SET hnsw.iterative_scan = 'relaxed_order'")
                 yield conn
             except Exception as e:
                 # Rollback on error

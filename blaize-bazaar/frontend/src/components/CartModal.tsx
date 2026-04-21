@@ -8,8 +8,8 @@ interface CartModalProps {
   isOpen: boolean
   onClose: () => void
   cart: ChatProduct[]
-  onUpdateQuantity: (productId: string, delta: number) => void
-  onRemove: (productId: string) => void
+  onUpdateQuantity: (productId: number, delta: number) => void
+  onRemove: (productId: number) => void
   onCheckout: () => void
 }
 
@@ -19,7 +19,7 @@ const CartModal = ({ isOpen, onClose, cart, onUpdateQuantity, onRemove, onChecko
   const quantities = cart.reduce((acc, item) => {
     acc[item.id] = (acc[item.id] || 0) + 1
     return acc
-  }, {} as Record<string, number>)
+  }, {} as Record<number, number>)
 
   const uniqueItems = Array.from(new Set(cart.map(item => item.id)))
     .map(id => cart.find(item => item.id === id)!)

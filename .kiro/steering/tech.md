@@ -10,7 +10,7 @@ inclusion: always
 - Strands Agents SDK — `@tool` decorator, `Agent` class, `BedrockModel`
 - psycopg 3 (async) with connection pooling
 - Amazon Bedrock: Claude Sonnet 4.6 (agents), Claude Haiku 4.5 (orchestrator), Cohere Embed v4 (embeddings), Cohere Rerank v3.5
-- Amazon Aurora PostgreSQL 17.5 Serverless v2 with pgvector 0.8.0
+- Amazon Aurora PostgreSQL (latest available at workshop time; currently 17.7) Serverless v2 with pgvector (latest version)
 - bedrock-agentcore SDK for Memory, Gateway, Policy, Runtime
 
 ## Frontend

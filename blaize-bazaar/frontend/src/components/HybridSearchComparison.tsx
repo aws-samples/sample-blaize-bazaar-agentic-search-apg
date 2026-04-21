@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { X, Search, Zap, TrendingUp, BarChart3, CheckCircle, XCircle, Trophy } from 'lucide-react';
 
 interface SearchResult {
-  product_id: string;
+  product_id: number;
   product_description: string;
   img_url: string;
   product_url: string;

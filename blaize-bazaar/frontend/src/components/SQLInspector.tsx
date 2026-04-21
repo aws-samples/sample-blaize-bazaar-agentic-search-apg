@@ -37,7 +37,7 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [expandedQuery, setExpandedQuery] = useState<number | null>(null);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const intervalRef = useRef<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;

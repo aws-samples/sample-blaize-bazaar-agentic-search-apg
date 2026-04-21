@@ -10,7 +10,7 @@ import { useLayout, type WorkshopMode } from './LayoutContext'
 export type CartItemOrigin = 'manual' | 'search-quick-add' | 'chat' | 'bundle' | 'memory'
 
 export interface CartItem {
-  productId: string
+  productId: number
   name: string
   price: number
   quantity: number
@@ -44,10 +44,10 @@ interface CartContextValue {
   showToast: boolean
   toastMessage: string
   dismissToast: () => void
-  addToCart: (product: { productId: string; name: string; price: number; image?: string; origin: CartItemOrigin }) => void
-  addAllToCart: (products: Array<{ productId: string; name: string; price: number; image?: string }>, origin: CartItemOrigin) => void
-  updateQuantity: (productId: string, quantity: number) => void
-  removeFromCart: (productId: string) => void
+  addToCart: (product: { productId: number; name: string; price: number; image?: string; origin: CartItemOrigin }) => void
+  addAllToCart: (products: Array<{ productId: number; name: string; price: number; image?: string }>, origin: CartItemOrigin) => void
+  updateQuantity: (productId: number, quantity: number) => void
+  removeFromCart: (productId: number) => void
   clearCart: () => void
   handleCheckout: () => void
   incrementSearch: () => void
@@ -74,7 +74,7 @@ function hydrateItems(): CartItem[] {
     if (saved) {
       const parsed = JSON.parse(saved) as Array<Partial<CartItem>>
       return parsed.map(item => ({
-        productId: item.productId ?? '',
+        productId: item.productId ?? 0,
         name: item.name ?? '',
         price: item.price ?? 0,
         quantity: item.quantity ?? 1,
@@ -147,7 +147,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setShowToast(false)
   }, [])
 
-  const addToCart = useCallback((product: { productId: string; name: string; price: number; image?: string; origin: CartItemOrigin }) => {
+  const addToCart = useCallback((product: { productId: number; name: string; price: number; image?: string; origin: CartItemOrigin }) => {
     const now = Date.now()
     setItems(prev => {
       const existing = prev.find(i => i.productId === product.productId)
@@ -177,7 +177,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCartOpen(true)
   }, [toast])
 
-  const addAllToCart = useCallback((products: Array<{ productId: string; name: string; price: number; image?: string }>, origin: CartItemOrigin) => {
+  const addAllToCart = useCallback((products: Array<{ productId: number; name: string; price: number; image?: string }>, origin: CartItemOrigin) => {
     const now = Date.now()
     setItems(prev => {
       let updated = [...prev]
@@ -210,7 +210,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCartOpen(true)
   }, [toast])
 
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
+  const updateQuantity = useCallback((productId: number, quantity: number) => {
     if (quantity <= 0) {
       setItems(prev => prev.filter(item => item.productId !== productId))
     } else {
@@ -222,7 +222,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const removeFromCart = useCallback((productId: string) => {
+  const removeFromCart = useCallback((productId: number) => {
     setItems(prev => prev.filter(item => item.productId !== productId))
   }, [])
 

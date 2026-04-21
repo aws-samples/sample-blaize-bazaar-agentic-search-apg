@@ -1,0 +1,141 @@
+# E2E workflow: Playwright against a dedicated Cognito dev pool.
+#
+# Design contract: .kiro/specs/blaize-bazaar-storefront/design.md — Testing
+# Strategy, "E2E (Playwright against a dedicated Cognito dev pool)".
+#
+# The dev pool is separate from the workshop infrastructure and is
+# email/password-only. Google and Apple IdP flows are validated via manual
+# workshop dry-runs, not here.
+#
+# Required GitHub Actions secrets (configure at repo or org level):
+#
+#   E2E_COGNITO_POOL_ID       - id of the dedicated dev pool
+#                               (must NOT contain "prod"/"production"/"prd")
+#   E2E_COGNITO_CLIENT_ID     - email-only app client id
+#   E2E_TEST_USER_EMAIL       - email for the test user
+#   E2E_TEST_USER_PASSWORD    - password meeting the pool's policy
+#   E2E_AWS_REGION            - region of the pool (e.g. us-west-2)
+#   E2E_AWS_ROLE_ARN          - CI-scoped admin role assumed via OIDC;
+#                               has least-privilege cognito-idp permissions
+#                               (AdminCreateUser, AdminSetUserPassword,
+#                                AdminDeleteUser) on the dev pool only.
+
+name: e2e
+
+on:
+  pull_request:
+    branches: [mainline, main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright against Cognito dev pool
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # OIDC is used to assume the CI-scoped admin role; no long-lived AWS
+    # keys ever touch the runner.
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      E2E_COGNITO_POOL_ID: ${{ secrets.E2E_COGNITO_POOL_ID }}
+      E2E_COGNITO_CLIENT_ID: ${{ secrets.E2E_COGNITO_CLIENT_ID }}
+      E2E_TEST_USER_EMAIL: ${{ secrets.E2E_TEST_USER_EMAIL }}
+      E2E_TEST_USER_PASSWORD: ${{ secrets.E2E_TEST_USER_PASSWORD }}
+      E2E_AWS_REGION: ${{ secrets.E2E_AWS_REGION }}
+      E2E_BASE_URL: http://localhost:5173
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.E2E_AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.E2E_AWS_REGION }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Python deps
+        run: pip install boto3
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend deps
+        working-directory: blaize-bazaar/frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: blaize-bazaar/frontend
+        run: npx playwright install --with-deps chromium
+
+      # Bootstrap BEFORE starting the app so that any AWS error fails fast
+      # without leaving a running dev server behind.
+      - name: Bootstrap Cognito dev pool test user
+        run: python tests/e2e/bootstrap_cognito_dev_pool.py
+
+      - name: Start backend
+        working-directory: blaize-bazaar/backend
+        run: |
+          pip install -r requirements.txt
+          nohup uvicorn app:app --host 0.0.0.0 --port 8000 >/tmp/backend.log 2>&1 &
+          # Wait for /healthz (or /) to respond before moving on.
+          for i in $(seq 1 30); do
+            if curl -sSf http://localhost:8000/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo "backend did not start in time" >&2
+          cat /tmp/backend.log >&2
+          exit 1
+
+      - name: Start frontend
+        working-directory: blaize-bazaar/frontend
+        run: |
+          nohup npm run dev -- --host 0.0.0.0 --port 5173 >/tmp/frontend.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sSf http://localhost:5173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo "frontend did not start in time" >&2
+          cat /tmp/frontend.log >&2
+          exit 1
+
+      - name: Run Playwright
+        working-directory: blaize-bazaar/frontend
+        # All four E2E specs per Task 7.3. The three specs beyond the
+        # happy path are scaffolding - they skip when env vars are not
+        # set (e.g. during a local dry-run) and run green against the
+        # dedicated dev pool in nightly CI.
+        run: |
+          npx playwright test \
+            ../../tests/e2e/auth-happy-path.spec.ts \
+            ../../tests/e2e/auth-refresh.spec.ts \
+            ../../tests/e2e/auth-refresh-fail.spec.ts \
+            ../../tests/e2e/anon-to-auth.spec.ts
+
+      # Teardown runs even on failure so the dev pool stays tidy. A missing
+      # user is treated as success by the script.
+      - name: Tear down Cognito dev pool test user
+        if: always()
+        run: python tests/e2e/teardown_cognito_dev_pool.py
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: blaize-bazaar/frontend/playwright-report
+          if-no-files-found: ignore

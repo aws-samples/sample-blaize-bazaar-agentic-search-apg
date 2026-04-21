@@ -1,0 +1,644 @@
+/**
+ * ConciergeModal — single chat surface for the storefront and workshop.
+ *
+ * Shell: centered cream rounded-3xl card with glass backdrop-blur, per
+ * storefront.md §"Global UI elements". Open/close is coordinated through
+ * UIContext.activeModal === 'concierge'. Cmd+K / Escape handled globally
+ * in UIProvider.
+ *
+ * Content: driven entirely by `useAgentChat`. ConciergeModal owns only
+ * rendering — scroll, animations, badge layout, Under the Hood block.
+ *
+ * Mode selection via useLocation():
+ *   - pathname.startsWith('/workshop') → instrumentation mode. Agent
+ *     badges render, "Under the Hood" expandable shows tool calls,
+ *     guardrails, context stats. Trace-ID footer links to
+ *     /inspector?session={id}.
+ *   - otherwise (storefront, /discover, /storyboard) → clean chat. No
+ *     badges, no Under the Hood affordance, no trace footer.
+ */
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useLocation, Link } from 'react-router-dom'
+import { Send, X, GitCompare, AlertCircle } from 'lucide-react'
+import { useUI } from '../contexts/UIContext'
+import { useLayout } from '../contexts/LayoutContext'
+import { useCart } from '../contexts/CartContext'
+import { useAgentChat, type AgentBadge, type AgentChatMessage } from '../hooks/useAgentChat'
+import { AGENT_IDENTITIES, type AgentType } from '../utils/agentIdentity'
+import ProductCardCompact from './ProductCardCompact'
+import MarkdownMessage from './MarkdownMessage'
+
+// Warm palette from storefront.md §"Design tokens".
+const CREAM = '#fbf4e8'
+const INK = '#2d1810'
+const INK_SOFT = '#6b4a35'
+const INK_QUIET = '#a68668'
+const ACCENT = '#c44536'
+const CREAM_WARM = '#f5e8d3'
+
+const WELCOME_STOREFRONT =
+  "Tell me what you're after. Linen for a slow Sunday, a piece that travels, a gift that lands."
+const WELCOME_WORKSHOP =
+  "Workshop mode: every response includes agent routing, tool calls, and timings. Open Under the Hood on any reply."
+
+const SUGGESTIONS_STOREFRONT = [
+  'something for long summer walks',
+  'a linen piece that earns its golden hour',
+  'pieces that travel well',
+]
+const SUGGESTIONS_WORKSHOP = [
+  'Find me the best linen shirt under $150',
+  'What is low on stock right now?',
+  'Compare the Sundress and the Cardigan',
+]
+
+// Session id read from the same localStorage key the chat service writes.
+function useSessionId(): string | null {
+  const [id, setId] = useState<string | null>(() => localStorage.getItem('blaize-session-id'))
+  useEffect(() => {
+    const t = setInterval(() => {
+      const current = localStorage.getItem('blaize-session-id')
+      if (current && current !== id) setId(current)
+    }, 1000)
+    return () => clearInterval(t)
+  }, [id])
+  return id
+}
+
+// Badge color map — covers all six specialist variants (storefront palette).
+const BADGE_COLORS: Record<string, { bg: string; text: string }> = {
+  orchestrator: { bg: 'rgba(168, 85, 247, 0.18)', text: '#7e22ce' },
+  search: { bg: 'rgba(59, 130, 246, 0.18)', text: '#1d4ed8' },
+  pricing: { bg: 'rgba(245, 158, 11, 0.18)', text: '#b45309' },
+  recommendation: { bg: 'rgba(234, 179, 8, 0.18)', text: '#a16207' },
+  inventory: { bg: 'rgba(16, 185, 129, 0.18)', text: '#047857' },
+  support: { bg: 'rgba(20, 184, 166, 0.18)', text: '#0f766e' },
+}
+
+// Map raw step.agent names emitted by the orchestrator into AgentBadge keys
+// so rendering logic has one shape to deal with.
+function normalizeStepAgent(raw: string): AgentBadge {
+  const n = raw.toLowerCase()
+  if (n.includes('search')) return 'search'
+  if (n.includes('price') || n.includes('pricing')) return 'pricing'
+  if (n.includes('recommend')) return 'recommendation'
+  if (n.includes('inventory')) return 'inventory'
+  if (n.includes('support') || n.includes('customer')) return 'support'
+  return 'orchestrator'
+}
+
+function AgentBadgePill({ kind }: { kind: AgentBadge }) {
+  const colors = BADGE_COLORS[kind] || BADGE_COLORS.orchestrator
+  const name = AGENT_IDENTITIES[kind as AgentType]?.name || 'Agent'
+  return (
+    <span
+      data-testid={`agent-badge-${kind}`}
+      className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+      style={{ background: colors.bg, color: colors.text }}
+    >
+      {name}
+    </span>
+  )
+}
+
+function AgentBadgeRow({ message }: { message: AgentChatMessage }) {
+  // Multi-specialist fan-out from orchestrator: show each specialist that ran.
+  if (message.agent === 'orchestrator' && message.agentExecution?.agent_steps?.length) {
+    const specialists = message.agentExecution.agent_steps
+      .filter(s => s.agent !== 'Orchestrator' && s.agent !== 'Aggregator')
+      .map(s => normalizeStepAgent(s.agent))
+    if (specialists.length === 0) {
+      return (
+        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+          <AgentBadgePill kind="orchestrator" />
+        </div>
+      )
+    }
+    const seen = new Set<string>()
+    const unique = specialists.filter(s => (seen.has(s) ? false : (seen.add(s), true)))
+    return (
+      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+        {unique.map((kind, i) => <AgentBadgePill key={i} kind={kind} />)}
+      </div>
+    )
+  }
+  if (!message.agent) return null
+  return (
+    <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+      <AgentBadgePill kind={message.agent} />
+    </div>
+  )
+}
+
+interface UnderTheHoodProps {
+  index: number
+  message: AgentChatMessage
+  expanded: boolean
+  onToggle: () => void
+  guardrailsEnabled: boolean
+}
+
+function UnderTheHood({ index, message, expanded, onToggle, guardrailsEnabled }: UnderTheHoodProps) {
+  const toolCount = message.agentExecution?.tool_calls?.length ?? 0
+  const agentName = message.agent
+    ? AGENT_IDENTITIES[message.agent as AgentType]?.name || 'Agent'
+    : 'Agent'
+
+  return (
+    <div className="mt-1" data-testid={`under-the-hood-${index}`}>
+      <button
+        onClick={onToggle}
+        className="flex items-center gap-1.5 text-[10px] w-full text-left px-2 py-1 rounded-md transition-colors"
+        style={{
+          color: INK_SOFT,
+          background: expanded ? 'rgba(45, 24, 16, 0.04)' : 'transparent',
+        }}
+      >
+        <svg
+          className="h-3 w-3 flex-shrink-0 transition-transform"
+          style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+        <span className="font-medium" style={{ color: INK }}>Under the Hood</span>
+        {message.agent && (
+          <span
+            className="px-1.5 py-0.5 rounded text-[9px] font-medium"
+            style={{ background: 'rgba(45, 24, 16, 0.04)', color: INK_SOFT }}
+          >
+            {agentName}
+          </span>
+        )}
+        {toolCount > 0 && (
+          <span
+            className="px-1.5 py-0.5 rounded text-[9px]"
+            style={{ background: 'rgba(45, 24, 16, 0.04)', color: INK_SOFT }}
+          >
+            {toolCount} tool{toolCount !== 1 ? 's' : ''}
+          </span>
+        )}
+        {guardrailsEnabled && (
+          <span
+            className="px-1.5 py-0.5 rounded text-[9px]"
+            style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#047857' }}
+          >
+            Guarded
+          </span>
+        )}
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            className="px-3 py-2 mt-1 rounded-lg text-[11px] space-y-1.5"
+            style={{
+              background: 'rgba(45, 24, 16, 0.03)',
+              border: '1px solid rgba(45, 24, 16, 0.06)',
+            }}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            {message.agent && (
+              <div>
+                <span className="font-semibold" style={{ color: INK_SOFT }}>Agent: </span>
+                <span style={{ color: INK }}>{agentName}</span>
+                <span className="ml-1" style={{ color: INK_QUIET }}>
+                  {message.agent === 'search' && '- finds products via semantic search and filters'}
+                  {message.agent === 'pricing' && '- analyzes price trends, deals, and budget options'}
+                  {message.agent === 'recommendation' && '- suggests products based on preferences'}
+                  {message.agent === 'orchestrator' && '- coordinates multiple agents for complex queries'}
+                  {message.agent === 'inventory' && '- checks stock and restock requests'}
+                  {message.agent === 'support' && '- handles returns, warranties, and policy questions'}
+                </span>
+              </div>
+            )}
+
+            {message.agentExecution?.tool_calls && message.agentExecution.tool_calls.length > 0 && (
+              <div>
+                <span className="font-semibold" style={{ color: INK_SOFT }}>Tools called: </span>
+                <span className="inline-flex flex-wrap gap-1 ml-1">
+                  {message.agentExecution.tool_calls.map((tc, i) => (
+                    <span
+                      key={i}
+                      className="px-1.5 py-0.5 rounded text-[10px]"
+                      style={{
+                        background: tc.status === 'success' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                        color: tc.status === 'success' ? '#047857' : '#b91c1c',
+                      }}
+                    >
+                      {tc.tool}
+                      {tc.duration_ms ? ` (${tc.duration_ms}ms)` : ''}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            )}
+
+            {guardrailsEnabled && (
+              <div>
+                <span className="font-semibold" style={{ color: INK_SOFT }}>Guardrails: </span>
+                <span style={{ color: '#047857' }}>Passed</span>
+                <span className="ml-1" style={{ color: INK_QUIET }}>(content safety + PII check)</span>
+              </div>
+            )}
+
+            {index >= 4 && (
+              <div>
+                <span className="font-semibold" style={{ color: INK_SOFT }}>Context: </span>
+                <span style={{ color: INK }}>
+                  {Math.floor((index - 1) / 2)} prior{' '}
+                  {Math.floor((index - 1) / 2) === 1 ? 'exchange' : 'exchanges'} in window
+                </span>
+                <span className="ml-1" style={{ color: INK_QUIET }}>
+                  (more context = better answers, higher cost)
+                </span>
+              </div>
+            )}
+
+            {message.agentExecution?.total_duration_ms ? (
+              <div>
+                <span className="font-semibold" style={{ color: INK_SOFT }}>Response time: </span>
+                <span style={{ color: INK }}>{message.agentExecution.total_duration_ms}ms</span>
+              </div>
+            ) : null}
+
+            <div
+              className="pt-1.5 mt-1"
+              style={{ borderTop: '1px solid rgba(45, 24, 16, 0.06)' }}
+            >
+              <p className="italic" style={{ color: INK_QUIET }}>
+                The orchestrator picked which specialists to involve based on your query. Open{' '}
+                <span style={{ color: ACCENT }}>/inspector</span> to see the full waterfall.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+export default function ConciergeModal() {
+  const { activeModal, closeModal, openComparison } = useUI()
+  const { workshopMode, guardrailsEnabled } = useLayout()
+  const { addToCart } = useCart()
+  const location = useLocation()
+  const sessionId = useSessionId()
+
+  const isOpen = activeModal === 'concierge'
+  const isWorkshopRoute = location.pathname.startsWith('/workshop')
+  const mode = isWorkshopRoute ? 'workshop' : 'storefront'
+
+  // Initial welcome — per route mode, only used on first mount of this session.
+  const initialMessages = useMemo<AgentChatMessage[]>(
+    () => [
+      {
+        role: 'assistant',
+        content: isWorkshopRoute ? WELCOME_WORKSHOP : WELCOME_STOREFRONT,
+        timestamp: new Date(),
+        suggestions: isWorkshopRoute ? SUGGESTIONS_WORKSHOP : SUGGESTIONS_STOREFRONT,
+      },
+    ],
+    [isWorkshopRoute],
+  )
+
+  const {
+    messages,
+    inputValue,
+    setInputValue,
+    isLoading,
+    backendOnline,
+    sendMessage,
+    clearChat,
+  } = useAgentChat({
+    mode,
+    workshopMode,
+    guardrailsEnabled,
+    initialMessages,
+    persistKey: `blaize-concierge-${mode}`,
+  })
+
+  const [expandedHoods, setExpandedHoods] = useState<Set<number>>(new Set())
+  const toggleHood = (idx: number) => {
+    setExpandedHoods(prev => {
+      const next = new Set(prev)
+      next.has(idx) ? next.delete(idx) : next.add(idx)
+      return next
+    })
+  }
+
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!isOpen) return
+    const t = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, 50)
+    return () => clearTimeout(t)
+  }, [messages, isOpen])
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+          style={{ background: 'rgba(45, 24, 16, 0.25)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={closeModal}
+        >
+          <motion.div
+            role="dialog"
+            aria-label="Ask Blaize"
+            data-testid="concierge-modal"
+            className="relative flex flex-col w-full max-w-[560px] h-[min(680px,calc(100vh-4rem))] rounded-3xl overflow-hidden shadow-2xl"
+            style={{
+              background: CREAM,
+              border: '1px solid rgba(45, 24, 16, 0.08)',
+            }}
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              className="px-5 py-4 flex items-center justify-between flex-shrink-0"
+              style={{ borderBottom: '1px solid rgba(45, 24, 16, 0.08)' }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  aria-hidden="true"
+                  className="inline-flex items-center justify-center rounded-full font-semibold"
+                  style={{ width: 32, height: 32, background: INK, color: CREAM, fontFamily: 'Fraunces, serif', fontSize: 15 }}
+                >
+                  B
+                </div>
+                <div>
+                  <div style={{ fontFamily: 'Fraunces, serif', fontSize: 17, color: INK, fontWeight: 500 }}>
+                    Ask Blaize
+                  </div>
+                  <div className="text-[11px] flex items-center gap-1.5 mt-0.5">
+                    {isLoading ? (
+                      <span className="flex items-center gap-1.5" style={{ color: INK_SOFT }}>
+                        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: INK_SOFT }} />
+                        Thinking...
+                      </span>
+                    ) : !backendOnline ? (
+                      <span className="flex items-center gap-1.5" style={{ color: ACCENT }}>
+                        <AlertCircle className="h-3 w-3" />
+                        Offline
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5" style={{ color: INK_SOFT }}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#047857' }} />
+                        {mode === 'workshop' ? 'Workshop mode · instrumentation on' : 'Concierge ready'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    clearChat(initialMessages)
+                    setExpandedHoods(new Set())
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-[11px] transition-colors"
+                  style={{ color: INK_SOFT }}
+                  onMouseEnter={e => (e.currentTarget.style.background = CREAM_WARM)}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  title="Reset conversation"
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={closeModal}
+                  aria-label="Close"
+                  className="p-2 rounded-lg transition-colors"
+                  onMouseEnter={e => (e.currentTarget.style.background = CREAM_WARM)}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  <X className="h-4 w-4" style={{ color: INK_SOFT }} />
+                </button>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
+              <AnimatePresence initial={false}>
+                {messages.map((message, index) => (
+                  <motion.div
+                    key={`${index}-${message.timestamp.getTime()}`}
+                    className="flex flex-col gap-2.5"
+                    initial={{ opacity: 0, x: message.role === 'user' ? 16 : -16 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  >
+                    {!(message.products && message.products.length > 0) && (
+                      <div className={message.role === 'assistant' ? 'self-start max-w-[90%]' : 'self-end max-w-[85%]'}>
+                        <div
+                          className={`px-4 py-3 text-[14px] leading-relaxed ${
+                            message.role === 'user' ? 'rounded-2xl rounded-br-sm' : 'rounded-2xl rounded-bl-sm'
+                          }`}
+                          style={{
+                            background: message.role === 'user' ? INK : CREAM_WARM,
+                            color: message.role === 'user' ? CREAM : INK,
+                            border: message.role === 'assistant' ? '1px solid rgba(45, 24, 16, 0.06)' : 'none',
+                          }}
+                        >
+                          {mode === 'workshop' && message.role === 'assistant' && message.agent && message.agentStatus !== 'thinking' && (
+                            <AgentBadgeRow message={message} />
+                          )}
+                          {message.agentStatus === 'thinking' && !message.content ? (
+                            <div className="flex items-center gap-2 py-1">
+                              <div className="flex gap-1">
+                                <motion.span className="w-2 h-2 rounded-full" style={{ background: INK_QUIET }} animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: 0 }} />
+                                <motion.span className="w-2 h-2 rounded-full" style={{ background: INK_QUIET }} animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: 0.2 }} />
+                                <motion.span className="w-2 h-2 rounded-full" style={{ background: INK_QUIET }} animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1.2, repeat: Infinity, delay: 0.4 }} />
+                              </div>
+                              <span className="text-[13px]" style={{ color: INK_SOFT }}>Thinking...</span>
+                            </div>
+                          ) : message.role === 'assistant' ? (
+                            <>
+                              <MarkdownMessage content={message.content} />
+                              {message.agentStatus === 'streaming' && (
+                                <motion.span
+                                  className="inline-block w-2 h-4 ml-0.5 align-middle rounded-sm"
+                                  style={{ background: ACCENT }}
+                                  animate={{ opacity: [1, 0] }}
+                                  transition={{ duration: 0.6, repeat: Infinity, repeatType: 'reverse' }}
+                                />
+                              )}
+                            </>
+                          ) : (
+                            <span style={{ whiteSpace: 'pre-wrap' }}>{message.content}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {message.products && message.products.length > 0 && (
+                      <div className="flex flex-col gap-2.5 w-full">
+                        {mode === 'workshop' && message.agent && <AgentBadgeRow message={message} />}
+                        {message.content && (
+                          <div style={{ color: INK_SOFT }} className="text-sm font-light leading-relaxed">
+                            <MarkdownMessage content={message.content} />
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-2">
+                          {message.products.map((product, pIdx) => (
+                            <motion.div
+                              key={product.id || pIdx}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: pIdx * 0.08, type: 'spring', stiffness: 400, damping: 25 }}
+                            >
+                              <ProductCardCompact
+                                product={product}
+                                agentSource={message.agent as AgentType}
+                                onAddToCart={() => {
+                                  addToCart({
+                                    productId: product.id,
+                                    name: product.name,
+                                    price: product.price,
+                                    image: product.image || '',
+                                    origin: 'chat',
+                                  })
+                                }}
+                              />
+                            </motion.div>
+                          ))}
+                        </div>
+                        {message.products.length >= 2 && (
+                          <motion.button
+                            onClick={() => openComparison(message.products!)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium self-start"
+                            style={{
+                              background: CREAM_WARM,
+                              border: `1px solid ${INK_QUIET}`,
+                              color: INK,
+                            }}
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                          >
+                            <GitCompare className="h-3 w-3" />
+                            Compare {message.products.length} pieces
+                          </motion.button>
+                        )}
+                      </div>
+                    )}
+
+                    {mode === 'workshop' &&
+                      message.role === 'assistant' &&
+                      message.agentStatus === 'complete' &&
+                      (message.agent || message.agentExecution) && (
+                        <UnderTheHood
+                          index={index}
+                          message={message}
+                          expanded={expandedHoods.has(index)}
+                          onToggle={() => toggleHood(index)}
+                          guardrailsEnabled={guardrailsEnabled}
+                        />
+                      )}
+
+                    {message.suggestions && message.suggestions.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {message.suggestions.map((suggestion, i) => (
+                          <motion.button
+                            key={i}
+                            onClick={() => sendMessage(suggestion)}
+                            disabled={isLoading}
+                            className="px-3.5 py-2 rounded-full text-[13px] font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                            style={{ background: CREAM_WARM, border: `1px solid rgba(45, 24, 16, 0.08)`, color: INK }}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: i * 0.06, type: 'spring', stiffness: 400, damping: 25 }}
+                            whileHover={{ scale: 1.04 }}
+                            whileTap={{ scale: 0.96 }}
+                          >
+                            {suggestion}
+                          </motion.button>
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input */}
+            <div className="px-5 py-4 flex-shrink-0" style={{ borderTop: '1px solid rgba(45, 24, 16, 0.08)' }}>
+              <div className="flex gap-2.5">
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={e => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={
+                    isLoading
+                      ? 'Thinking...'
+                      : mode === 'workshop'
+                        ? 'Ask something that exercises the specialists'
+                        : "Tell Blaize what you're looking for..."
+                  }
+                  disabled={isLoading}
+                  className="flex-1 px-4 py-3 rounded-xl text-sm disabled:opacity-40 focus:outline-none"
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid rgba(45, 24, 16, 0.12)',
+                    color: INK,
+                  }}
+                />
+                <motion.button
+                  onClick={() => sendMessage()}
+                  disabled={!inputValue.trim() || isLoading}
+                  aria-label="Send"
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{ background: inputValue.trim() && !isLoading ? INK : 'rgba(45, 24, 16, 0.08)' }}
+                  whileHover={inputValue.trim() && !isLoading ? { scale: 1.05 } : {}}
+                  whileTap={inputValue.trim() && !isLoading ? { scale: 0.95 } : {}}
+                >
+                  {isLoading ? (
+                    <div className="w-4 h-4 border-2 border-cream/30 border-t-cream rounded-full animate-spin" style={{ borderColor: 'rgba(251, 244, 232, 0.3)', borderTopColor: CREAM }} />
+                  ) : (
+                    <Send className="h-4 w-4" style={{ color: CREAM }} />
+                  )}
+                </motion.button>
+              </div>
+
+              {/* Trace-ID footer — workshop route only */}
+              {mode === 'workshop' && sessionId && (
+                <div className="mt-3 flex items-center justify-between text-[10px]" style={{ fontFamily: 'ui-monospace, monospace', color: INK_QUIET }}>
+                  <span>session {sessionId.slice(0, 18)}...</span>
+                  <Link
+                    to={`/inspector?session=${encodeURIComponent(sessionId)}`}
+                    onClick={closeModal}
+                    style={{ color: ACCENT, textDecoration: 'none' }}
+                  >
+                    open in inspector →
+                  </Link>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}

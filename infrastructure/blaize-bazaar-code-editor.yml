@@ -1,0 +1,290 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: >
+  Blaize Bazaar - VS Code Server (code-server) on c6g.2xlarge Graviton,
+  fronted by CloudFront. Pre-clones repo to /home/workshop/blaize-bazaar
+  and runs bootstrap-environment.sh + bootstrap-labs.sh via user data.
+
+Metadata:
+  cfn-lint:
+    config:
+      ignore_checks:
+        - W3037
+
+Parameters:
+  WorkshopId:
+    Type: String
+    AllowedPattern: ^[a-z0-9][a-z0-9-]{2,40}$
+
+  PublicSubnetId:
+    Type: AWS::EC2::Subnet::Id
+
+  CodeEditorSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+
+  RepoUrl:
+    Type: String
+    Default: https://github.com/aws-samples/sample-blaize-bazaar-agentic-search-apg.git
+
+  InstanceType:
+    Type: String
+    Default: c6g.2xlarge
+    AllowedValues:
+      - c6g.xlarge
+      - c6g.2xlarge
+      - c6g.4xlarge
+      - t4g.large
+      - t4g.xlarge
+
+  VolumeSize:
+    Type: Number
+    Default: 100
+    MinValue: 40
+    MaxValue: 500
+
+  DBSecretArn:
+    Type: String
+    Description: Aurora master secret ARN.
+
+  DBClusterEndpoint:
+    Type: String
+
+  UserPoolId:
+    Type: String
+
+  UserPoolClientId:
+    Type: String
+
+  UserPoolClientSecretArn:
+    Type: String
+
+  UserPoolDomain:
+    Type: String
+
+  HostedUiUrl:
+    Type: String
+
+  TestUserCredentialsSecretArn:
+    Type: String
+
+  CodeEditorUser:
+    Type: String
+    Default: workshop
+
+  HomeFolder:
+    Type: String
+    Default: /home/workshop
+
+  # Amazon Linux 2023 (arm64) SSM parameter
+  AmiParameter:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64
+
+Resources:
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: blaize-bazaar-instance-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: BedrockModelAccess
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource:
+                  - !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/global.anthropic.claude-sonnet-4-6
+                  - !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/global.anthropic.claude-haiku-4-5-20251001-v1:0
+                  - !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/us.cohere.embed-v4:0
+                  - !Sub arn:aws:bedrock:${AWS::Region}::foundation-model/cohere.rerank-v3-5:0
+              - Sid: AgentCoreAccess
+                Effect: Allow
+                Action:
+                  - bedrock-agentcore:CreateRuntime
+                  - bedrock-agentcore:InvokeRuntime
+                  - bedrock-agentcore:GetSession
+                  - bedrock-agentcore:PutSessionMemory
+                  - bedrock-agentcore:GetSessionMemory
+                  - bedrock-agentcore:InvokeGateway
+                  - bedrock-agentcore:GetIdentity
+                  - bedrock-agentcore-control:CreateMemory
+                  - bedrock-agentcore-control:GetMemory
+                  - bedrock-agentcore-control:ListMemories
+                Resource: "*"
+              - Sid: AuroraDataAccess
+                Effect: Allow
+                Action:
+                  - rds-db:connect
+                Resource: !Sub arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:*/blaize_app
+              - Sid: CognitoAdminActions
+                Effect: Allow
+                Action:
+                  - cognito-idp:AdminCreateUser
+                  - cognito-idp:AdminSetUserPassword
+                  - cognito-idp:AdminAddUserToGroup
+                  - cognito-idp:AdminInitiateAuth
+                  - cognito-idp:AdminGetUser
+                  - cognito-idp:ListUsers
+                Resource: !Sub arn:aws:cognito-idp:${AWS::Region}:${AWS::AccountId}:userpool/${UserPoolId}
+              - Sid: SecretsManagerRead
+                Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:DescribeSecret
+                Resource:
+                  - !Ref DBSecretArn
+                  - !Ref UserPoolClientSecretArn
+                  - !Ref TestUserCredentialsSecretArn
+                  - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:blaize-bazaar/google-oauth-*
+                  - !Sub arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:blaize-bazaar/apple-oauth-*
+              - Sid: CloudWatchLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/blaize-bazaar/*
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  WaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  WaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    Properties:
+      Handle: !Ref WaitHandle
+      Timeout: "1800"
+      Count: 1
+
+  CodeEditorInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiParameter
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref InstanceProfile
+      SubnetId: !Ref PublicSubnetId
+      SecurityGroupIds:
+        - !Ref CodeEditorSecurityGroupId
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: !Ref VolumeSize
+            VolumeType: gp3
+            Encrypted: true
+      Tags:
+        - Key: Name
+          Value: !Sub blaize-bazaar-${WorkshopId}-editor
+        - Key: Project
+          Value: blaize-bazaar
+        - Key: "re:Invent"
+          Value: "2026"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -eux
+          exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+
+          # --- Core packages ---
+          dnf update -y
+          dnf install -y git jq unzip tar gzip python3.13 python3.13-pip nodejs20 npm \
+              postgresql17 aws-cfn-bootstrap || true
+
+          # --- Create workshop user ---
+          if ! id "${CodeEditorUser}" &>/dev/null; then
+            useradd -m -d ${HomeFolder} -s /bin/bash ${CodeEditorUser}
+          fi
+          chown -R ${CodeEditorUser}:${CodeEditorUser} ${HomeFolder}
+
+          # --- Clone repo ---
+          cd ${HomeFolder}
+          if [ ! -d blaize-bazaar ]; then
+            sudo -u ${CodeEditorUser} git clone ${RepoUrl} blaize-bazaar
+          fi
+
+          # --- Export env vars so bootstrap scripts can read them ---
+          cat > ${HomeFolder}/.blaize-env << EOF
+          export WORKSHOP_ID="${WorkshopId}"
+          export AWS_REGION="${AWS::Region}"
+          export AWS_DEFAULT_REGION="${AWS::Region}"
+          export DB_SECRET_ARN="${DBSecretArn}"
+          export DB_HOST="${DBClusterEndpoint}"
+          export COGNITO_USER_POOL_ID="${UserPoolId}"
+          export COGNITO_CLIENT_ID="${UserPoolClientId}"
+          export COGNITO_CLIENT_SECRET_ARN="${UserPoolClientSecretArn}"
+          export COGNITO_DOMAIN="${UserPoolDomain}"
+          export COGNITO_HOSTED_UI_URL="${HostedUiUrl}"
+          export COGNITO_TEST_CREDENTIALS_SECRET_ARN="${TestUserCredentialsSecretArn}"
+          export CODE_EDITOR_USER="${CodeEditorUser}"
+          export HOME_FOLDER="${HomeFolder}"
+          EOF
+          chown ${CodeEditorUser}:${CodeEditorUser} ${HomeFolder}/.blaize-env
+          chmod 600 ${HomeFolder}/.blaize-env
+
+          # --- Run bootstrap scripts ---
+          cd ${HomeFolder}/blaize-bazaar
+          set -a; source ${HomeFolder}/.blaize-env; set +a
+
+          bash scripts/bootstrap-environment.sh 2>&1 | tee /var/log/bootstrap-environment.log || true
+          bash scripts/bootstrap-labs.sh 2>&1 | tee /var/log/bootstrap-labs.log || true
+
+          # --- Signal CloudFormation ---
+          /opt/aws/bin/cfn-signal -s true '${WaitHandle}' || true
+
+  # --------------------------------------------------------------------------
+  # CloudFront distribution fronting the Code Editor (port 8080 by default
+  # for code-server). Uses AllViewer managed policy so Cognito hosted UI
+  # callback traffic is forwarded transparently.
+  # --------------------------------------------------------------------------
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub Blaize Bazaar Code Editor (${WorkshopId})
+        PriceClass: PriceClass_100
+        DefaultCacheBehavior:
+          TargetOriginId: code-editor-origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+          CachedMethods: [GET, HEAD]
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
+          OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3
+        Origins:
+          - Id: code-editor-origin
+            DomainName: !GetAtt CodeEditorInstance.PublicDnsName
+            CustomOriginConfig:
+              OriginProtocolPolicy: http-only
+              HTTPPort: 8080
+
+Outputs:
+  InstanceId:
+    Value: !Ref CodeEditorInstance
+    Export:
+      Name: !Sub ${AWS::StackName}-InstanceId
+  PublicDnsName:
+    Value: !GetAtt CodeEditorInstance.PublicDnsName
+    Export:
+      Name: !Sub ${AWS::StackName}-PublicDnsName
+  CloudFrontUrl:
+    Value: !Sub https://${CloudFrontDistribution.DomainName}
+    Export:
+      Name: !Sub ${AWS::StackName}-CloudFrontUrl
+  WorkshopReady:
+    Value: !Join ["", [!Ref WaitCondition]]
+    Description: Signals from bootstrap completion

@@ -119,9 +119,19 @@ export default function ProductCard({
       return
     }
 
-    // Defense 2: safety force-reveal. Runs regardless of observer state.
+    // Defense 2: safety force-reveal. Guards against the stuck-invisible
+    // bug for cards that SHOULD be on screen at mount but the observer
+    // missed. Cards that are below the fold at 500ms get left alone so
+    // the observer can fire naturally when the user scrolls to them —
+    // otherwise every card below the fold reveals at 500ms and there's
+    // no parallax left for the scroll-in.
     const safetyTimeout = window.setTimeout(() => {
-      setIsVisible(true)
+      const rect = node.getBoundingClientRect()
+      const viewportH = window.innerHeight || document.documentElement.clientHeight
+      const isAtOrNearViewport = rect.top < viewportH && rect.bottom > 0
+      if (isAtOrNearViewport) {
+        setIsVisible(true)
+      }
     }, SAFETY_TIMEOUT_MS)
 
     // No IntersectionObserver (old jsdom, SSR) — lean on the safety timeout

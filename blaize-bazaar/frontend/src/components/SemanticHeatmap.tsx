@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { X, Star } from 'lucide-react'
 
 interface HeatmapProduct {
-  productId: string
+  productId: number
   product_description: string
   price: number
   stars?: number
@@ -41,7 +41,7 @@ function getCategoryColor(category?: string): string {
 }
 
 const SemanticHeatmap = ({ results, onClose }: SemanticHeatmapProps) => {
-  const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [hoveredId, setHoveredId] = useState<number | null>(null)
 
   if (results.length === 0) return null
 

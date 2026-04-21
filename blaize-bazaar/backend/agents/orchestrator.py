@@ -8,33 +8,39 @@ from .recommendation_agent import product_recommendation_agent
 from .pricing_agent import price_optimization_agent
 from .customer_support_agent import customer_support_agent
 from .search_agent import search_agent
+from storefront_copy import ORCHESTRATOR_SYSTEM_PROMPT
 
 
 # === CHALLENGE 4: Multi-Agent Orchestrator — START ===
-# TODO: Define ORCHESTRATOR_PROMPT and implement create_orchestrator()
-#
-# Steps:
-#   1. Write ORCHESTRATOR_PROMPT with routing rules for 5 specialist agents:
-#      - price_optimization_agent: pricing, deals, budget queries
-#      - inventory_restock_agent: stock, inventory queries
-#      - customer_support_agent: returns, refunds, support queries
-#      - search_agent: product search, comparison queries
-#      - product_recommendation_agent: trending, recommendation queries (default)
-#   2. Implement create_orchestrator() returning an Agent with:
-#      - model=BedrockModel(model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0", max_tokens=4096, temperature=0.0)
-#      - system_prompt=ORCHESTRATOR_PROMPT
-#      - tools=[all 5 specialist agents]
+# Requirements 2.4.6-2.4.8, 4.3.1. Routes every shopper query to exactly
+# one specialist using the Strands "Agents as Tools" pattern. Uses Haiku
+# 4.5 at temperature 0.0 for deterministic routing. Priority order
+# (pricing > inventory > support > search > recommendation) is enforced
+# by the system prompt in storefront_copy.ORCHESTRATOR_SYSTEM_PROMPT.
 #
 # ⏩ SHORT ON TIME? Run:
 #    cp solutions/module2/agents/orchestrator.py blaize-bazaar/backend/agents/orchestrator.py
 
-ORCHESTRATOR_PROMPT = """You are the Blaize Bazaar shopping assistant. Route queries to the correct specialist agent."""
+ORCHESTRATOR_PROMPT = ORCHESTRATOR_SYSTEM_PROMPT
 
 
 def create_orchestrator():
     """Create the orchestrator agent with all specialized agents as tools"""
-    # TODO: Return an Agent with BedrockModel, ORCHESTRATOR_PROMPT, and all 5 specialist tools
-    return None
+    return Agent(
+        model=BedrockModel(
+            model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
+            max_tokens=4096,
+            temperature=0.0,
+        ),
+        system_prompt=ORCHESTRATOR_PROMPT,
+        tools=[
+            search_agent,
+            product_recommendation_agent,
+            price_optimization_agent,
+            inventory_restock_agent,
+            customer_support_agent,
+        ],
+    )
 # === CHALLENGE 4: Multi-Agent Orchestrator — END ===
 
 
@@ -57,9 +63,15 @@ def create_guarded_orchestrator():
         model=BedrockModel(
             model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
             max_tokens=4096,
-            temperature=0.0
+            temperature=0.0,
         ),
         system_prompt=ORCHESTRATOR_PROMPT + GUARDRAILS_PROMPT_SUFFIX,
-        tools=[product_recommendation_agent, price_optimization_agent, inventory_restock_agent, customer_support_agent, search_agent]
+        tools=[
+            search_agent,
+            product_recommendation_agent,
+            price_optimization_agent,
+            inventory_restock_agent,
+            customer_support_agent,
+        ],
     )
 # === END WIRE IT LIVE ===

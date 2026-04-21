@@ -6,7 +6,15 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'plugin:react-hooks/recommended',
   ],
-  ignorePatterns: ['dist', '.eslintrc.cjs'],
+  ignorePatterns: [
+    'dist',
+    '.eslintrc.cjs',
+    // Visual regression scaffolding (task 7.2). Story files import from
+    // `@storybook/react` which is intentionally not installed until a
+    // team wires Chromatic up. See tests/visual-regression/README.md.
+    'src/stories',
+    '.storybook',
+  ],
   parser: '@typescript-eslint/parser',
   plugins: ['react-refresh'],
   rules: {

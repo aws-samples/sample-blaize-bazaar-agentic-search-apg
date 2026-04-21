@@ -85,6 +85,14 @@ AWS_REGION=$AWS_REGION
 AWS_DEFAULT_REGION=$AWS_REGION
 BEDROCK_EMBEDDING_MODEL=${BEDROCK_EMBEDDING_MODEL:-amazon.titan-embed-text-v2:0}
 BEDROCK_CHAT_MODEL=${BEDROCK_CHAT_MODEL:-global.anthropic.claude-sonnet-4-6}
+COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID:-}
+COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID:-}
+COGNITO_CLIENT_SECRET_ARN=${COGNITO_CLIENT_SECRET_ARN:-}
+COGNITO_DOMAIN=${COGNITO_DOMAIN:-}
+COGNITO_HOSTED_UI_URL=${COGNITO_HOSTED_UI_URL:-}
+COGNITO_TEST_CREDENTIALS_SECRET_ARN=${COGNITO_TEST_CREDENTIALS_SECRET_ARN:-}
+WORKSHOP_ID=${WORKSHOP_ID:-}
+WORKSHOP_FORMAT=${WORKSHOP_FORMAT:-workshop}
 EOF
     
     chmod 600 "$REPO_PATH/.env"
@@ -235,11 +243,16 @@ setup_frontend() {
 }
 
 setup_database() {
-    if [ -n "$DB_HOST" ] && [ -f "$REPO_PATH/scripts/seed-database.sh" ]; then
+    if [ -n "$DB_HOST" ] && [ -f "$REPO_PATH/scripts/load_catalog.py" ]; then
         cd "$REPO_PATH"
         export DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD AWS_REGION
         export ASSETS_BUCKET_NAME ASSETS_BUCKET_PREFIX
-        bash scripts/seed-database.sh 2>&1 | tee /var/log/database-setup.log
+        export DATABASE_URL="postgresql://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME"
+        # Boutique catalog loader (92 products with pre-computed Cohere
+        # Embed v4 embeddings). Replaces the legacy seed-database.sh path,
+        # which loaded the 444-product product-catalog-cohere-v4.csv.
+        python3 scripts/load_catalog.py --yes --quiet --json \
+            2>&1 | tee /var/log/database-setup.log
         return ${PIPESTATUS[0]}
     fi
     return 1
@@ -249,9 +262,9 @@ setup_frontend & PID_FE=$!
 setup_database & PID_DB=$!
 wait $PID_FE && log "✅ Frontend dependencies installed" || warn "Frontend install issues"
 if wait $PID_DB; then
-    log "✅ Database setup complete (~444 products with indexes)"
+    log "✅ Database setup complete (92 boutique products, HNSW index, iterative_scan configured)"
 else
-    warn "Database setup had issues - check /var/log/database-setup.log"
+    warn "Database setup had issues - check /var/log/database-setup.log and logs/load_catalog_audit.log"
 fi
 
 # ============================================================================
@@ -551,6 +564,67 @@ cat > /tmp/workshop-ready.json << EOF
 EOF
 chmod 644 /tmp/workshop-ready.json
 log "✅ Status marker created"
+
+# ============================================================================
+# STEP 16: BUILDERS FORMAT - Pre-complete challenges 3-9 with solution files
+# ============================================================================
+if [ "${WORKSHOP_FORMAT:-workshop}" = "builders" ]; then
+    log "=========================================="
+    log "Builders Session: pre-completing challenges 3-9"
+    log "=========================================="
+
+    copy_solution() {
+        local src="$1" dest="$2" label="$3"
+        if [ -f "$REPO_PATH/$src" ]; then
+            cp "$REPO_PATH/$src" "$REPO_PATH/$dest" && \
+                log "  builders: $label" || warn "  builders: $label copy failed"
+        fi
+    }
+
+    copy_solution "solutions/module2/agents/recommendation_agent.py" \
+                  "blaize-bazaar/backend/agents/recommendation_agent.py" "C3 recommendation_agent.py"
+    copy_solution "solutions/module2/agents/orchestrator.py" \
+                  "blaize-bazaar/backend/agents/orchestrator.py" "C4 orchestrator.py"
+    copy_solution "solutions/module3/services/agentcore_runtime.py" \
+                  "blaize-bazaar/backend/agentcore_runtime.py" "C5 agentcore_runtime.py"
+    copy_solution "solutions/module3/services/agentcore_memory.py" \
+                  "blaize-bazaar/backend/services/agentcore_memory.py" "C6 agentcore_memory.py"
+    copy_solution "solutions/module3/services/agentcore_gateway.py" \
+                  "blaize-bazaar/backend/services/agentcore_gateway.py" "C7 agentcore_gateway.py"
+    copy_solution "solutions/module3/services/otel_trace_extractor.py" \
+                  "blaize-bazaar/backend/services/otel_trace_extractor.py" "C8 otel_trace_extractor.py"
+    copy_solution "solutions/module3/frontend/agentIdentity.ts" \
+                  "blaize-bazaar/frontend/src/utils/agentIdentity.ts" "C9 agentIdentity.ts"
+
+    chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH/blaize-bazaar/"
+    systemctl restart blaize-backend 2>/dev/null || true
+    sleep 3
+    systemctl restart blaize-frontend 2>/dev/null || true
+    log "✅ Builders solutions applied and services restarted"
+fi
+
+# ============================================================================
+# STEP 17: WRITE TEST CREDENTIALS FILE
+# ============================================================================
+if [ -n "${COGNITO_TEST_CREDENTIALS_SECRET_ARN:-}" ] && [ -x "$REPO_PATH/scripts/write-test-credentials.sh" ]; then
+    log "Writing test credentials file..."
+    export COGNITO_TEST_CREDENTIALS_SECRET_ARN COGNITO_HOSTED_UI_URL AWS_REGION \
+           CODE_EDITOR_USER HOME_FOLDER
+    bash "$REPO_PATH/scripts/write-test-credentials.sh" 2>&1 | tee /var/log/blaize-write-credentials.log || \
+        warn "write-test-credentials.sh reported issues"
+fi
+
+# ============================================================================
+# STEP 18: SEED SAMPLE PREFERENCES (users 1-3)
+# ============================================================================
+if [ -n "${COGNITO_USER_POOL_ID:-}" ] && [ -x "$REPO_PATH/scripts/seed-sample-preferences.sh" ]; then
+    log "Seeding sample preferences for test users 1-3..."
+    export COGNITO_USER_POOL_ID COGNITO_CLIENT_ID COGNITO_CLIENT_SECRET_ARN \
+           COGNITO_TEST_CREDENTIALS_SECRET_ARN AWS_REGION
+    export BACKEND_URL="${BACKEND_URL:-http://localhost:8000}"
+    bash "$REPO_PATH/scripts/seed-sample-preferences.sh" 2>&1 | tee /var/log/blaize-seed-preferences.log || \
+        warn "seed-sample-preferences.sh reported issues"
+fi
 
 # ============================================================================
 # SUMMARY

@@ -4,7 +4,7 @@
 
 // Product Types
 export interface Product {
-  productId: string
+  productId: number
   product_description: string
   imgurl?: string
   producturl?: string
@@ -59,7 +59,7 @@ export interface InventoryAnalysis {
 
 // Recommendation Types
 export interface RecommendationRequest {
-  product_id: string
+  product_id: number
   limit?: number
 }
 
@@ -82,3 +82,98 @@ export interface ApiError {
   error: string
   status_code: number
 }
+
+// === STOREFRONT TYPES (Requirement 1.2 / Design Data Models) ===
+//
+// The legacy `Product`, `ProductSearchResult`, `SearchResponse`, etc. above
+// wrap the Aurora column layout used by existing components and the current
+// `/api/search` endpoint (snake_case plus camelCase, matching the backend's
+// historical column names).
+//
+// The storefront types below are the editorial façade consumed by the new
+// home page and the personalization endpoints (`/api/products?personalized=…`
+// and the personalized `SearchResponse` shape from design.md). They are named
+// with a `Storefront` prefix so they never collide with the legacy types.
+// The legacy `/api/search` endpoint keeps its current `SearchResponse` shape;
+// personalization endpoints use `StorefrontSearchResponse`.
+
+import type { Intent as StorefrontIntent } from '../copy'
+export type { StorefrontIntent }
+
+export type ReasoningStyle = 'picked' | 'matched' | 'pricing' | 'context'
+
+export interface ReasoningChip {
+  style: ReasoningStyle
+  text: string
+  urgentClause?: string
+}
+
+export type StorefrontCategory =
+  | 'Linen'
+  | 'Dresses'
+  | 'Accessories'
+  | 'Outerwear'
+  | 'Footwear'
+  | 'Home'
+
+export type StorefrontBadge = 'EDITORS_PICK' | 'BESTSELLER' | 'JUST_IN'
+
+export interface StorefrontProduct {
+  id: number
+  brand: string
+  name: string
+  color: string
+  price: number
+  rating: number
+  reviewCount: number
+  category: StorefrontCategory
+  imageUrl: string
+  badge?: StorefrontBadge
+  tags: string[]
+  reasoning?: ReasoningChip
+}
+
+export interface User {
+  userId: string
+  email: string
+  givenName: string
+}
+
+export type VibeTag =
+  | 'minimal'
+  | 'bold'
+  | 'serene'
+  | 'adventurous'
+  | 'creative'
+  | 'classic'
+export type ColorTag = 'warm' | 'neutral' | 'earth' | 'soft' | 'moody'
+export type OccasionTag =
+  | 'everyday'
+  | 'travel'
+  | 'evening'
+  | 'outdoor'
+  | 'slow'
+  | 'work'
+export type CategoryTag =
+  | 'linen'
+  | 'footwear'
+  | 'outerwear'
+  | 'accessories'
+  | 'home'
+  | 'dresses'
+
+export interface Preferences {
+  vibe: VibeTag[]
+  colors: ColorTag[]
+  occasions: OccasionTag[]
+  categories: CategoryTag[]
+}
+
+export interface StorefrontSearchResponse {
+  products: StorefrontProduct[]
+  queryEmbeddingMs: number
+  searchMs: number
+  totalMs: number
+}
+
+export type StorefrontSearchResult = StorefrontSearchResponse

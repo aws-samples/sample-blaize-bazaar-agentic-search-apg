@@ -67,15 +67,22 @@ def get_inventory_health() -> str:
 
 @tool
 def get_trending_products(limit: int = 5, category: str = None) -> str:
-    """Get trending products with live data from database.
+    """Get the most popular and trending products, optionally filtered by category. Use when customers ask about bestsellers, what's hot, or popular items.
 
     Args:
         limit: Maximum number of products to return (default: 5)
         category: Optional category filter (e.g. "Electronics", "Shoes")
+
+    Returns:
+        JSON string with trending products
+
+    ⏩ SHORT ON TIME? Run:
+       cp solutions/module2/services/agent_tools.py blaize-bazaar/backend/services/agent_tools.py
     """
+    # === CHALLENGE 2: START ===
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
-    
+
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
@@ -83,6 +90,7 @@ def get_trending_products(limit: int = 5, category: str = None) -> str:
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
+    # === CHALLENGE 2: END ===
 
 @tool
 def get_price_analysis(category: str = None) -> str:

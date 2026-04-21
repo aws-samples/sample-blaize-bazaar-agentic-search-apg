@@ -1,321 +1,253 @@
-import { useState, useEffect, useRef } from 'react'
-import { useTheme } from '../App'
-import { useLayout, type WorkshopMode } from '../contexts/LayoutContext'
+/**
+ * Header — Storefront sticky header.
+ *
+ * Renders exactly five nav items (Home, Shop, Storyboard, Discover, Account),
+ * a centered "Blaize Bazaar" wordmark with a circular B logo, and the right
+ * actions: "Ask Blaize" text link (hidden below 768px), Account state button,
+ * and a Bag icon with a live count badge.
+ *
+ * Validates Requirements 1.1.3, 1.2.1 through 1.2.5.
+ *
+ * Copy comes from `copy.ts`. No legacy About/Journal items; About content
+ * lives in the Footer per `storefront.md`.
+ */
+import { Link } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
-import ImageSearchModal from './ImageSearchModal'
-import { Camera, Sun, Moon, Check, Compass, Wrench } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { NAV, ACCOUNT_LABEL_SIGNED_OUT, accountLabelSignedIn } from '../copy'
+import { ShoppingBag, User as UserIcon } from 'lucide-react'
+
+// Warm palette from `storefront.md`. Kept inline as hex until a design-token
+// stylesheet lands workspace-wide.
+const CREAM = '#fbf4e8'
+const INK = '#2d1810'
+const INK_SOFT = '#6b4a35'
+
+export type NavItem = 'home' | 'shop' | 'storyboard' | 'discover' | 'account'
 
 interface HeaderProps {
-  activeSection?: 'shop' | 'collections'
-  onNavigate?: (section: 'shop' | 'collections') => void
-  onSearch?: (query: string) => void
-  onPlaygroundClick?: () => void
-  loginSlot?: React.ReactNode
-  completedModules?: Set<string>
-  onModeSwitch?: () => void
+  /** Which nav item is the current page — gets the ink highlight. Defaults to 'home'. */
+  current?: NavItem
+  /** Optional click handler fired when any nav link is activated. */
+  onNavigate?: (item: NavItem) => void
+  /** Optional click handler for the "Ask Blaize" text link. */
+  onAskBlaize?: () => void
+  /** Optional click handler for the Account button. Default opens the auth modal. */
+  onAccountClick?: () => void
 }
 
-const WORKSHOP_STEPS: { key: WorkshopMode; label: string }[] = [
-  { key: 'legacy', label: 'Keyword Search' },
-  { key: 'search', label: 'Smart Search' },
-  { key: 'agentic', label: 'Agentic AI' },
-  { key: 'production', label: 'Production' },
-]
-const MODE_ORDER: WorkshopMode[] = ['legacy', 'search', 'agentic', 'production']
+/**
+ * AccountButton — toggles label based on `useAuth().user`.
+ *
+ * Signed out: icon + "Account" (copy.ACCOUNT_LABEL_SIGNED_OUT).
+ * Signed in:  icon + "Hi, {givenName}" via copy.accountLabelSignedIn().
+ *
+ * The user's `givenName` comes from the Cognito `given_name` claim. If the
+ * auth payload only carries an email (pre-C9 state), we fall back to the
+ * email's local-part so the "signed in" branch remains truthful rather than
+ * silently showing the signed-out label.
+ */
+function AccountButton({ onClick }: { onClick?: () => void }) {
+  const auth = useAuth()
+  const user = auth.user as
+    | (typeof auth.user & { givenName?: string; given_name?: string; email?: string })
+    | null
 
-const Header = ({ onSearch, onPlaygroundClick, loginSlot, completedModules, onModeSwitch }: HeaderProps) => {
-  const { items: cartItems, setCartOpen } = useCart()
-  const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [suggestions, setSuggestions] = useState<Array<{text: string, category: string}>>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const [placeholderIndex, setPlaceholderIndex] = useState(0)
-  const [showImageSearch, setShowImageSearch] = useState(false)
-  const { theme, toggleTheme } = useTheme()
-  const { workshopMode, setWorkshopMode, startTour, resetWorkshop } = useLayout()
-  const searchRef = useRef<HTMLDivElement>(null)
-  const currentModeIdx = MODE_ORDER.indexOf(workshopMode)
+  const signedIn = Boolean(user)
+  const givenName =
+    (user && (user.givenName || user.given_name)) ||
+    (user?.email ? user.email.split('@')[0] : undefined)
 
-  const placeholders = [
-    'Chanel perfume',
-    'comfortable shoes for standing all day',
-    'luxury watch for a gift',
-    'best laptop for college',
-    'something to make my skin glow'
-  ]
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length)
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [])
-
-
-  const fetchSuggestions = async (query: string) => {
-    if (query.length < 2) {
-      setSuggestions([])
-      setShowSuggestions(false)
-      return
-    }
-    try {
-      const response = await fetch(`/api/autocomplete?q=${encodeURIComponent(query)}&limit=5`)
-      const data = await response.json()
-      setSuggestions(data.suggestions || [])
-      setShowSuggestions(data.suggestions && data.suggestions.length > 0)
-    } catch (error) {
-      setSuggestions([])
-      setShowSuggestions(false)
-    }
-  }
-
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value)
-    fetchSuggestions(value)
-  }
-
-  const handleSuggestionSelect = (text: string) => {
-    setSearchQuery(text)
-    setShowSuggestions(false)
-    if (onSearch) onSearch(text)
-  }
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && searchQuery.trim() && onSearch) {
-      onSearch(searchQuery)
-      setShowSuggestions(false)
-    }
-  }
+  const label = signedIn && givenName
+    ? accountLabelSignedIn(givenName)
+    : ACCOUNT_LABEL_SIGNED_OUT
 
   return (
-    <>
-      <header 
-        className="fixed top-0 left-0 right-0 z-50 border-b"
-        style={{
-          background: theme === 'dark' 
-            ? 'rgba(0, 0, 0, 0.85)' 
-            : 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(40px)',
-          WebkitBackdropFilter: 'blur(40px)',
-          borderColor: theme === 'dark' 
-            ? 'rgba(255, 255, 255, 0.08)' 
-            : 'rgba(0, 0, 0, 0.1)'
-        }}
-      >
-        <nav className="h-[72px] px-4 md:px-6 lg:px-8 xl:px-12">
-          <div className="h-full max-w-[1920px] mx-auto flex items-center justify-between gap-3">
-            {/* Left: Logo + Playground */}
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <div 
-                className="text-xl sm:text-2xl cursor-pointer whitespace-nowrap select-none"
-                style={{ fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                onDoubleClick={() => {
-                  resetWorkshop()
-                  window.scrollTo({ top: 0, behavior: 'smooth' })
-                }}
-                title="Double-click to reset workshop"
-              >
-                Blaize Bazaar
-              </div>
-
-              {/* Playground Button */}
-              <button
-                onClick={onPlaygroundClick}
-                className="hidden md:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 hover:opacity-90"
-                data-tour="dev-tools-tab"
-                style={{
-                  background: '#0071e3',
-                  color: '#ffffff',
-                }}
-                title="Open Playground (⌘⇧D)"
-              >
-                <Wrench className="h-3.5 w-3.5" />
-                Playground
-              </button>
-            </div>
-
-            {/* Center: Workshop Progress Pills */}
-            <div className="hidden md:flex items-center gap-1 flex-shrink-0" data-tour="workshop-pills">
-              {WORKSHOP_STEPS.map((step, idx) => {
-                const isCurrent = step.key === workshopMode
-                const isCompleted = completedModules?.has(step.key) || idx < currentModeIdx
-                return (
-                  <button
-                    key={step.key}
-                    onClick={() => { setWorkshopMode(step.key); onModeSwitch?.() }}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 hover:opacity-90"
-                    style={{
-                      background: isCurrent ? '#0071e3' : 'rgba(255, 255, 255, 0.08)',
-                      color: isCurrent ? '#ffffff' : isCompleted ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.4)',
-                    }}
-                    title={`Switch to ${step.label}`}
-                  >
-                    {isCompleted && !isCurrent ? (
-                      <Check className="h-3 w-3" style={{ color: 'rgba(52, 211, 153, 0.9)' }} />
-                    ) : null}
-                    {step.label}
-                  </button>
-                )
-              })}
-              <button
-                onClick={() => startTour(workshopMode)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 ml-1 hover:opacity-90"
-                style={{
-                  background: '#0071e3',
-                  color: '#ffffff',
-                }}
-                title="Start guided tour"
-              >
-                <Compass className="h-3 w-3" />
-                Tour
-              </button>
-            </div>
-
-            {/* Right Side - Search (Lab 2/3 only), Cart & GitHub */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Search Section — only visible in tools/full (Lab 2 & 3) */}
-              {(workshopMode === 'agentic' || workshopMode === 'production') && (
-              <div className="flex items-center gap-2">
-                <div className="relative w-[280px] sm:w-[320px] md:w-[360px] lg:w-[380px] xl:w-[420px] group" ref={searchRef} data-tour="search-bar">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    onKeyDown={handleSearchKeyDown}
-                    onFocus={() => searchQuery.length >= 2 && setShowSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                    placeholder={`Try: "${placeholders[placeholderIndex]}"`}
-                    className="w-full px-3 py-2 pr-20 text-sm input-field rounded-lg overflow-hidden text-ellipsis whitespace-nowrap"
-                  />
-                  {showSuggestions && suggestions.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-2 glass-strong rounded-xl overflow-hidden shadow-xl max-h-80 overflow-y-auto z-50" style={{ border: '1px solid var(--border-color)' }}>
-                      {suggestions.map((suggestion, idx) => (
-                        <div
-                          key={idx}
-                          onClick={() => handleSuggestionSelect(suggestion.text)}
-                          className="px-4 py-3 cursor-pointer transition-colors last:border-b-0"
-                          style={{ borderBottom: '1px solid var(--border-color)' }}
-                          onMouseEnter={e => (e.currentTarget.style.background = 'var(--input-bg)')}
-                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                        >
-                          <div className="text-sm text-text-primary font-medium">{suggestion.text}</div>
-                          <div className="text-xs text-text-secondary mt-1">{suggestion.category}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Camera Icon for Image Search */}
-                  <button
-                    onClick={() => setShowImageSearch(true)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg transition-all duration-300 group/camera z-10"
-                    style={{ background: 'transparent' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'var(--input-bg)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                    title="Search by image - AI-powered visual search"
-                  >
-                    <Camera className="h-4 w-4 text-text-secondary group-hover/camera:text-text-primary transition-colors" />
-                  </button>
-
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-10 top-1/2 transform -translate-y-1/2 text-text-secondary hover:text-text-primary text-lg leading-none"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-                <button
-                  onClick={() => searchQuery.trim() && onSearch?.(searchQuery)}
-                  disabled={!searchQuery.trim()}
-                  className="hidden sm:block px-3 md:px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-                  style={{
-                    background: searchQuery.trim() ? 'var(--link-color)' : 'var(--input-bg)',
-                    color: searchQuery.trim() ? '#ffffff' : 'var(--text-secondary)'
-                  }}
-                >
-                  Search
-                </button>
-              </div>
-              )}
-
-              {/* Shopping Cart Icon */}
-              <button
-                  onClick={() => setCartOpen(true)}
-                  className="relative p-2 rounded-lg transition-all duration-300 group flex-shrink-0"
-                  style={{ background: 'transparent' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--input-bg)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  aria-label="Shopping Cart"
-                  title="View shopping cart"
-                >
-                  <span className="text-lg leading-none">🛒</span>
-                  {cartItemCount > 0 && (
-                    <span className="absolute -top-1 -right-1 text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse"
-                      style={{ background: 'var(--link-color)', color: '#fff' }}>
-                      {cartItemCount}
-                    </span>
-                  )}
-                </button>
-
-              {/* Login (Lab 4) */}
-              {loginSlot}
-
-              {/* Theme Toggle */}
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg transition-all duration-300 group flex-shrink-0"
-                style={{ background: 'transparent' }}
-                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              >
-                {theme === 'dark' ? (
-                  <Sun className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
-                ) : (
-                  <Moon className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" />
-                )}
-              </button>
-
-              {/* GitHub Link */}
-              <a
-                href="https://github.com/aws-samples/sample-blaize-bazaar-agentic-search-apg"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 rounded-lg transition-all duration-300 group flex-shrink-0"
-                style={{ background: 'transparent' }}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--input-bg)'}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                aria-label="View on GitHub"
-                title="View source code on GitHub"
-              >
-                <svg 
-                  className="w-5 h-5 text-text-secondary group-hover:text-text-primary transition-colors" 
-                  fill="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                </svg>
-              </a>
-            </div>
-          </div>
-        </nav>
-      </header>
-
-      {/* Image Search Modal */}
-      <ImageSearchModal
-        isOpen={showImageSearch}
-        onClose={() => setShowImageSearch(false)}
-        onSearch={(data) => {
-          setShowImageSearch(false);
-          if (onSearch) {
-            onSearch(data.query);
-          }
-        }}
-      />
-    </>
+    <button
+      type="button"
+      onClick={onClick}
+      data-testid="account-button"
+      aria-label={label}
+      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-opacity hover:opacity-80"
+      style={{ color: INK, background: 'transparent' }}
+    >
+      <UserIcon className="w-4 h-4" aria-hidden="true" />
+      <span>{label}</span>
+    </button>
   )
 }
 
-export default Header
+/**
+ * Wordmark — centered "Blaize Bazaar" with a small circular B logo.
+ */
+function Wordmark() {
+  return (
+    <a
+      href="/"
+      data-testid="wordmark"
+      aria-label={NAV.WORDMARK}
+      className="flex items-center gap-2 select-none"
+      style={{ color: INK }}
+    >
+      <span
+        aria-hidden="true"
+        className="inline-flex items-center justify-center rounded-full font-semibold"
+        style={{
+          width: 28,
+          height: 28,
+          background: INK,
+          color: CREAM,
+          fontSize: 14,
+          fontFamily: 'Fraunces, serif',
+        }}
+      >
+        B
+      </span>
+      <span
+        style={{
+          fontFamily: 'Fraunces, serif',
+          fontWeight: 500,
+          fontSize: 20,
+          letterSpacing: '-0.01em',
+        }}
+      >
+        {NAV.WORDMARK}
+      </span>
+    </a>
+  )
+}
+
+interface NavLinkProps {
+  item: NavItem
+  label: string
+  current: NavItem
+  onClick?: (item: NavItem) => void
+}
+
+function NavLink({ item, label, current, onClick }: NavLinkProps) {
+  const isCurrent = current === item
+  return (
+    <button
+      type="button"
+      data-nav-item={item}
+      data-current={isCurrent ? 'true' : 'false'}
+      aria-current={isCurrent ? 'page' : undefined}
+      onClick={() => onClick?.(item)}
+      className="text-[14px] transition-opacity hover:opacity-70"
+      style={{
+        color: isCurrent ? INK : INK_SOFT,
+        fontWeight: isCurrent ? 600 : 400,
+        background: 'transparent',
+        padding: '6px 0',
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
+export default function Header({
+  current = 'home',
+  onNavigate,
+  onAskBlaize,
+  onAccountClick,
+}: HeaderProps = {}) {
+  const { items: cartItems, setCartOpen } = useCart()
+  const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
+
+  return (
+    <header
+      role="banner"
+      data-testid="sticky-header"
+      className="sticky top-0 z-40 w-full border-b backdrop-blur-md"
+      style={{
+        background: 'rgba(251, 244, 232, 0.9)',
+        borderColor: 'rgba(45, 24, 16, 0.08)',
+        WebkitBackdropFilter: 'blur(12px)',
+        backdropFilter: 'blur(12px)',
+      }}
+    >
+      <nav
+        aria-label="Primary"
+        className="relative h-[64px] px-4 md:px-6 lg:px-8"
+      >
+        <div className="h-full max-w-[1440px] mx-auto flex items-center justify-between gap-4">
+          {/* Left: four text nav items (Home | Shop | Storyboard | Discover).
+              Account is grouped with the right-side actions per the storefront.md spec. */}
+          <div className="flex items-center gap-6 flex-shrink-0">
+            <NavLink item="home" label={NAV.HOME} current={current} onClick={onNavigate} />
+            <NavLink item="shop" label={NAV.SHOP} current={current} onClick={onNavigate} />
+            <NavLink
+              item="storyboard"
+              label={NAV.STORYBOARD}
+              current={current}
+              onClick={onNavigate}
+            />
+            <NavLink
+              item="discover"
+              label={NAV.DISCOVER}
+              current={current}
+              onClick={onNavigate}
+            />
+          </div>
+
+          {/* Center: wordmark, absolutely positioned so right/left alignment is
+              unaffected by responsive width changes. */}
+          <div
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
+            data-testid="wordmark-wrapper"
+          >
+            <Wordmark />
+          </div>
+
+          {/* Right: Ask Blaize text link (hidden <768px), Workshop link, Account, Bag */}
+          <div className="flex items-center gap-4 flex-shrink-0">
+            <button
+              type="button"
+              onClick={onAskBlaize}
+              data-testid="ask-blaize-link"
+              className="hidden md:inline text-[14px] transition-opacity hover:opacity-70"
+              style={{ color: INK, background: 'transparent' }}
+            >
+              {NAV.ASK_BLAIZE}
+            </button>
+
+            {/* Secondary text link to the DAT406 workshop surface. Hidden below 768px
+                alongside "Ask Blaize" so the mobile header stays compact. */}
+            <Link
+              to="/workshop"
+              data-testid="workshop-link"
+              className="hidden md:inline text-[14px] transition-opacity hover:opacity-70"
+              style={{ color: INK_SOFT, background: 'transparent' }}
+            >
+              Workshop
+            </Link>
+
+            {/* Account button — nav item #5. Its label swaps on auth state. */}
+            <AccountButton onClick={onAccountClick} />
+
+            <button
+              type="button"
+              onClick={() => setCartOpen(true)}
+              aria-label="Bag"
+              data-testid="bag-button"
+              className="relative p-2 rounded-full transition-opacity hover:opacity-80"
+              style={{ color: INK, background: 'transparent' }}
+            >
+              <ShoppingBag className="w-5 h-5" aria-hidden="true" />
+              {cartItemCount > 0 && (
+                <span
+                  data-testid="bag-count"
+                  className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[10px] font-semibold"
+                  style={{ background: INK, color: CREAM }}
+                >
+                  {cartItemCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      </nav>
+    </header>
+  )
+}

@@ -11,7 +11,7 @@ interface PersonalizationDemoProps {
 }
 
 interface Product {
-  productId: string
+  productId: number
   product_description: string
   price: number
   stars: number

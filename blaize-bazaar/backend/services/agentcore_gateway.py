@@ -1,9 +1,17 @@
 """
 AgentCore Gateway — MCP Tool Discovery via Bedrock AgentCore Gateway.
 
-Wire It Live: Participants implement create_gateway_orchestrator() using
-Strands SDK's MCPClient with streamable HTTP transport to discover tools
-dynamically from an MCP server instead of hard-coding tool imports.
+This module has two sides:
+
+1. **Server side (Challenge 7)** — exposes the 9 `agent_tools.py` tools via
+   the MCP streamable HTTP transport so external agent clients can discover
+   and invoke them over the wire. Signatures and JSON envelopes are
+   identical to the in-process `@tool` functions.
+
+2. **Client side** — creates a Strands `Agent` that connects *back* to a
+   Gateway URL and discovers tools dynamically via `MCPClient`. Used when
+   migrating the orchestrator from hard-coded tool imports to MCP-based
+   discovery.
 """
 import logging
 from typing import Optional, List, Dict, Any
@@ -13,59 +21,142 @@ from config import settings
 logger = logging.getLogger(__name__)
 
 
+# === CHALLENGE 7: START ===
+# Expose the 9 Strands @tool functions via MCP streamable HTTP so an external
+# agent client (or the AgentCore Gateway) can discover and invoke them with
+# the same signatures and JSON envelopes used by the in-process orchestrator.
+#
+# The 9 tools come from workshop-content.md steering and MUST be registered
+# under these exact names (Req 2.2.3):
+#   search_products, get_trending_products, get_price_analysis,
+#   get_product_by_category, get_inventory_health, get_low_stock_products,
+#   restock_product, compare_products, get_return_policy
+#
+# ⏩ SHORT ON TIME? Run:
+#    cp solutions/module3/services/agentcore_gateway.py blaize-bazaar/backend/services/agentcore_gateway.py
+
+# The 9 tool names exposed by the gateway, in stable order. Tests assert
+# discovery returns exactly this set by exact name (workshop-content.md).
+GATEWAY_TOOL_NAMES: List[str] = [
+    "search_products",
+    "get_trending_products",
+    "get_price_analysis",
+    "get_product_by_category",
+    "get_inventory_health",
+    "get_low_stock_products",
+    "restock_product",
+    "compare_products",
+    "get_return_policy",
+]
+
+
+def _unwrap_strands_tool(strands_tool: Any) -> Any:
+    """Return the plain Python callable underneath a Strands `@tool` wrapper.
+
+    Strands' `@tool` produces a `DecoratedFunctionTool` whose original
+    callable is exposed via the standard `__wrapped__` attribute. FastMCP
+    needs the underlying function (with its signature and docstring) to
+    derive the MCP input schema, so we reach through the decorator here.
+    """
+    return getattr(strands_tool, "__wrapped__", strands_tool)
+
+
+def build_mcp_server(name: str = "blaize-bazaar-gateway") -> Any:
+    """Build a FastMCP server registering the 9 agent tools.
+
+    Each registered MCP tool is a thin wrapper that delegates to the
+    corresponding `@tool` function in `services.agent_tools`. Wrappers
+    return the same JSON-serialized string the in-process tool returns so
+    MCP clients observe an identical envelope.
+
+    Raises:
+        ImportError: if the `mcp` package is not installed.
+    """
+    from mcp.server.fastmcp import FastMCP
+    import services.agent_tools as agent_tools
+
+    mcp_server = FastMCP(name=name)
+
+    # Register each of the 9 tools by name. We pass the unwrapped function
+    # (not the Strands DecoratedFunctionTool) so FastMCP can introspect the
+    # signature and docstring to generate the MCP input schema.
+    for tool_name in GATEWAY_TOOL_NAMES:
+        strands_tool = getattr(agent_tools, tool_name)
+        fn = _unwrap_strands_tool(strands_tool)
+        # Preserve the exact public tool name — FastMCP defaults to the
+        # function's __name__ but we pin it explicitly for Req 2.2.3.
+        mcp_server.add_tool(fn, name=tool_name, description=fn.__doc__ or "")
+
+    return mcp_server
+
+
+def get_streamable_http_app(name: str = "blaize-bazaar-gateway") -> Any:
+    """Return the Starlette ASGI app that serves the MCP streamable HTTP
+    transport. Mount under `/mcp` in FastAPI (or run standalone with uvicorn)
+    so external clients can discover tools via POST /mcp and invoke them.
+
+    Raises:
+        ImportError: if the `mcp` package is not installed.
+    """
+    mcp_server = build_mcp_server(name=name)
+    return mcp_server.streamable_http_app()
+
+
 def create_gateway_orchestrator():
+    """Create a Strands Agent that discovers tools via an MCP Gateway URL.
+
+    When `settings.AGENTCORE_GATEWAY_URL` is unset, returns None so callers
+    can fall back to the in-process tool imports. When set, the returned
+    agent pulls tools from the remote Gateway using streamable HTTP, which
+    is how the orchestrator migrates from hard-coded tool lists to
+    managed, discoverable tools.
     """
-    TODO (Module 4): Create an orchestrator that discovers tools via MCP Gateway.
+    if not settings.AGENTCORE_GATEWAY_URL:
+        logger.info("AGENTCORE_GATEWAY_URL not set — gateway disabled")
+        return None
 
-    Instead of importing tool functions directly, this connects to an
-    AgentCore Gateway MCP server which exposes tools as MCP resources.
-    The agent dynamically discovers available tools at runtime.
+    try:
+        from strands import Agent
+        from strands.models import BedrockModel
+        from strands.tools.mcp.mcp_client import MCPClient
+        from mcp.client.streamable_http import streamablehttp_client
 
-    Steps:
-        1. Check if settings.AGENTCORE_GATEWAY_URL is set (return None if not)
-        2. Import required modules:
-           - from strands import Agent
-           - from strands.models import BedrockModel
-           - from strands.tools.mcp.mcp_client import MCPClient
-           - from mcp.client.streamable_http import streamablehttp_client
-        3. Create a transport function:
-           def _create_transport():
-               return streamablehttp_client(settings.AGENTCORE_GATEWAY_URL,
-                                            headers={"x-api-key": settings.AGENTCORE_GATEWAY_API_KEY})
-        4. Create mcp_client = MCPClient(_create_transport)
-        5. Create orchestrator = Agent(
-               model=BedrockModel(model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
-                                  max_tokens=4096, temperature=0.0),
-               system_prompt="You are the Blaize Bazaar shopping assistant. "
-                   "Use the available tools to help users find products, "
-                   "check prices, and get recommendations.",
-               tools=[mcp_client],
-           )
-        6. Return orchestrator
-        7. Handle ImportError and general exceptions
+        def _create_transport():
+            return streamablehttp_client(
+                settings.AGENTCORE_GATEWAY_URL,
+                headers={"x-api-key": settings.AGENTCORE_GATEWAY_API_KEY},
+            )
 
-    Returns:
-        Strands Agent with MCP-discovered tools, or None if not configured
+        mcp_client = MCPClient(_create_transport)
 
-    ⏩ SHORT ON TIME? Run:
-       cp solutions/module3/services/agentcore_gateway.py blaize-bazaar/backend/services/agentcore_gateway.py
-    """
-    # === CHALLENGE 7: MCP Gateway — START ===
-    # TODO: Implement AgentCore Gateway orchestrator with MCP tool discovery
-    #
-    # Steps:
-    #   1. Check settings.AGENTCORE_GATEWAY_URL is set (return None if not)
-    #   2. Import MCPClient and streamablehttp_client
-    #   3. Create transport function pointing to Gateway URL
-    #   4. Create MCPClient with the transport
-    #   5. Create Agent with model, system_prompt, and tools=[mcp_client]
-    #   6. Return the agent
-    #   7. Handle ImportError and general exceptions
-    #
-    # ⏩ SHORT ON TIME? Run:
-    #    cp solutions/module3/services/agentcore_gateway.py blaize-bazaar/backend/services/agentcore_gateway.py
-    return None
-    # === CHALLENGE 7: MCP Gateway — END ===
+        orchestrator = Agent(
+            model=BedrockModel(
+                model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
+                max_tokens=4096,
+                temperature=0.0,
+            ),
+            system_prompt=(
+                "You are the Blaize Bazaar shopping assistant. "
+                "Use the available tools to help users find products, "
+                "check prices, and get recommendations. "
+                "Always be helpful and concise."
+            ),
+            tools=[mcp_client],
+        )
+
+        logger.info(
+            "✅ Gateway orchestrator created (url=%s)",
+            settings.AGENTCORE_GATEWAY_URL,
+        )
+        return orchestrator
+
+    except ImportError as e:
+        logger.warning("MCP dependencies not installed: %s", e)
+        return None
+    except Exception as e:
+        logger.warning("Gateway orchestrator setup failed: %s", e)
+        return None
+# === CHALLENGE 7: END ===
 
 
 def create_gateway_orchestrator_with_semantic_search():

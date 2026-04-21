@@ -89,15 +89,18 @@ class SearchEvalService:
         from services.hybrid_search import HybridSearchService
         hybrid_svc = HybridSearchService(self.db_service)
 
-        golden: Dict[str, List[str]] = {}
+        golden: Dict[str, List[int]] = {}
         for item in EVAL_QUERIES:
             query = item["query"]
             try:
                 embedding = self.embedding_service.generate_embedding(query)
                 # High ef_search for exhaustive, high-quality baseline
                 results = await hybrid_svc._vector_search(embedding, k, ef_search=400)
-                ids = [r.get("product_id", r.get("productId", "")) for r in results]
-                golden[query] = ids
+                ids = [
+                    r.get("product_id") if r.get("product_id") is not None else r.get("productId")
+                    for r in results
+                ]
+                golden[query] = [i for i in ids if i is not None]
             except Exception as e:
                 logger.warning(f"Golden dataset build failed for '{query}': {e}")
                 golden[query] = []
@@ -155,7 +158,11 @@ class SearchEvalService:
                 else:
                     # Default ef_search (40) — lower quality than golden baseline (400)
                     results = await hybrid_svc._vector_search(embedding, k, ef_search=40)
-                retrieved_ids = [r.get("product_id", r.get("productId", "")) for r in results]
+                retrieved_ids = [
+                    r.get("product_id") if r.get("product_id") is not None else r.get("productId")
+                    for r in results
+                ]
+                retrieved_ids = [i for i in retrieved_ids if i is not None]
 
                 p_at_k = self.precision_at_k(retrieved_ids, expected_ids, k)
                 n_at_k = self.ndcg_at_k(retrieved_ids, expected_ids, k)

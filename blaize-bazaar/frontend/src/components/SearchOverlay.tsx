@@ -10,7 +10,7 @@ import { useLayout } from '../contexts/LayoutContext'
 import { useTheme } from '../App'
 
 interface SearchResult {
-  id: string
+  id: number
   name: string
   category: string
   price: number
@@ -161,7 +161,7 @@ const SearchOverlay = ({
       const transformedResults: SearchResult[] = response.results.map((r: any) => {
         const product = r.product || r
         return {
-          id: product.productId || product.id || '',
+          id: product.productId ?? product.id ?? 0,
           name: product.product_description || product.name || '',
           category: product.category_name || product.category || 'General',
           price: product.price || 0,
@@ -187,7 +187,7 @@ const SearchOverlay = ({
     return response.results.map((r: any) => {
       const product = r.product || r
       return {
-        id: product.productId || product.id || '',
+        id: product.productId ?? product.id ?? 0,
         name: product.product_description || product.name || '',
         category: product.category_name || product.category || 'General',
         price: product.price || 0,

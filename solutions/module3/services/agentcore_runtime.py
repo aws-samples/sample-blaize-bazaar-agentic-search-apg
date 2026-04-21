@@ -1,63 +1,183 @@
 """
-AgentCore Runtime — Lambda deployment entrypoint for Lab 4e.
+AgentCore Runtime migration — Challenge 5.
 
-Wire It Live: Participants create the @app.entrypoint handler that wraps
-the orchestrator for execution in an AgentCore Runtime Lambda microVM.
+Migrates the orchestrator from in-process Strands execution to AgentCore
+Runtime. When ``settings.USE_AGENTCORE_RUNTIME`` is ``False`` (the
+default), every request stays on the local Strands orchestrator from
+Challenge 4. When flipped to ``True``, the same request is forwarded to
+the AgentCore Runtime via ``run_agent_on_runtime`` with no other code
+changes — the route handler calls :func:`run_agent` which routes based
+on the flag (see Design "Runtime selection switch").
 
-Deploy with:
-    agentcore configure
-    agentcore launch
+Two public entry points:
+
+    run_agent(message, session_id, user_id)
+        Dispatcher called by the ``/api/agent/chat`` route (Task 3.5)
+        and by the legacy ``/api/agents/query`` endpoint in ``app.py``.
+        Branches on ``settings.USE_AGENTCORE_RUNTIME``.
+
+    run_agent_on_runtime(message, session_id, user_id)
+        Challenge 5 implementation. Invokes AgentCore Runtime via the
+        ``bedrock-agentcore`` SDK and streams/returns the response.
+
+The in-process path stays routed through Challenge 4's
+``create_orchestrator`` so participants can watch the request move
+from local execution to managed runtime by flipping one env var.
 """
+
+from __future__ import annotations
+
+import asyncio
+import json
 import logging
+from typing import Any, Optional
+
+from config import settings
 
 logger = logging.getLogger(__name__)
 
 
-# === WIRE IT LIVE (Lab 4e) ===
-try:
-    from bedrock_agentcore.runtime import BedrockAgentCoreApp
+async def _run_orchestrator_inprocess(
+    message: str,
+    session_id: str,
+    user_id: Optional[str],
+) -> str:
+    """Run the Challenge 4 orchestrator in-process (the pre-C5 path).
 
-    app = BedrockAgentCoreApp()
+    ``create_orchestrator`` builds a Strands :class:`Agent` whose
+    ``__call__`` is blocking, so the invocation is offloaded to a
+    worker thread to avoid stalling the event loop.
+    """
+    from agents.orchestrator import create_orchestrator
 
-    @app.entrypoint
-    def invoke(payload):
-        """
-        AgentCore Runtime entrypoint.
+    orchestrator = create_orchestrator()
+    if orchestrator is None:
+        return (
+            "The orchestrator isn't wired up yet. Complete Challenge 4 "
+            "to enable multi-agent routing."
+        )
 
-        Receives a payload from the AgentCore Runtime service and
-        runs the orchestrator agent to produce a response.
-
-        Args:
-            payload: dict with keys like {"prompt": "...", "session_id": "..."}
-
-        Returns:
-            dict with {"response": "...", "products": [...]}
-        """
-        from agents.orchestrator import create_orchestrator
-
-        prompt = payload.get("prompt", "Hello")
-        session_id = payload.get("session_id", "runtime-session")
-
-        orchestrator = create_orchestrator()
-        if orchestrator is None:
-            return {"response": "Orchestrator not implemented yet — complete Module 3b", "products": []}
+    # Attach trace attributes so the otel_trace_extractor (C8) can tag
+    # spans with session + user context from the same dispatcher the
+    # runtime path uses.
+    try:
         orchestrator.trace_attributes = {
             "session.id": session_id,
-            "runtime": "agentcore-lambda",
+            "user.id": user_id or "anonymous",
+            "runtime": "in-process",
             "workshop": "blaize-bazaar",
         }
+    except Exception:  # pragma: no cover - defensive
+        pass
 
-        response = orchestrator(prompt)
-        return {"response": str(response), "products": []}
-
-except ImportError:
-    logger.info("bedrock-agentcore not installed — Runtime entrypoint disabled")
-    app = None
-# === END WIRE IT LIVE ===
+    response = await asyncio.to_thread(orchestrator, message)
+    return str(response)
 
 
-if __name__ == "__main__":
-    if app:
-        app.run()
-    else:
-        print("Install bedrock-agentcore to run: pip install bedrock-agentcore")
+# === CHALLENGE 5: AgentCore Runtime — START ===
+# Requirement 2.5.1 and Design "Runtime selection switch". Participants
+# replace this body to invoke the AgentCore Runtime SDK. When the
+# feature flag ``USE_AGENTCORE_RUNTIME`` is ``True``, the ``/api/agent/
+# chat`` route (Task 3.5) and the legacy ``/api/agents/query`` endpoint
+# forward every request here instead of running Strands locally.
+#
+# The runtime contract is a JSON payload ``{"prompt", "session_id",
+# "user_id"}``; the Runtime container unpacks it in the ``@app.entry
+# point`` handler at ``blaize-bazaar/backend/agentcore_runtime.py``.
+#
+# ⏩ SHORT ON TIME? Run:
+#    cp solutions/module3/services/agentcore_runtime.py blaize-bazaar/backend/services/agentcore_runtime.py
+async def run_agent_on_runtime(
+    message: str,
+    session_id: str,
+    user_id: Optional[str] = None,
+) -> str:
+    """Invoke the AgentCore Runtime with ``message`` and return the
+    response text.
+
+    Args:
+        message: Shopper prompt (one turn).
+        session_id: Session identifier for STM continuity (C6).
+        user_id: Verified Cognito ``sub`` when the caller is signed
+            in; ``None`` for anonymous shoppers.
+
+    Returns:
+        The orchestrator's reply as a string. Errors are logged and
+        returned as a user-safe envelope.
+    """
+    endpoint = settings.AGENTCORE_RUNTIME_ENDPOINT
+    if not endpoint:
+        logger.warning(
+            "USE_AGENTCORE_RUNTIME=true but AGENTCORE_RUNTIME_ENDPOINT is "
+            "unset; falling back to in-process orchestrator"
+        )
+        return await _run_orchestrator_inprocess(message, session_id, user_id)
+
+    payload = {
+        "prompt": message,
+        "session_id": session_id,
+        "user_id": user_id or "anonymous",
+    }
+
+    try:
+        import boto3
+
+        client = boto3.client(
+            "bedrock-agentcore",
+            region_name=settings.aws_region_resolved,
+        )
+
+        def _invoke() -> dict[str, Any]:
+            return client.invoke_agent_runtime(
+                agentRuntimeArn=endpoint,
+                payload=json.dumps(payload).encode("utf-8"),
+                runtimeSessionId=session_id,
+            )
+
+        response = await asyncio.to_thread(_invoke)
+
+        body = response.get("response") or response.get("payload")
+        if hasattr(body, "read"):
+            body = body.read()
+        if isinstance(body, (bytes, bytearray)):
+            body = body.decode("utf-8")
+        if isinstance(body, str):
+            try:
+                parsed = json.loads(body)
+                if isinstance(parsed, dict) and "response" in parsed:
+                    return str(parsed["response"])
+                return body
+            except json.JSONDecodeError:
+                return body
+        return str(body)
+
+    except ImportError:
+        logger.warning(
+            "bedrock-agentcore / boto3 not installed — falling back to "
+            "in-process orchestrator"
+        )
+        return await _run_orchestrator_inprocess(message, session_id, user_id)
+    except Exception as exc:  # pragma: no cover - SDK error path
+        logger.error("AgentCore Runtime invocation failed: %s", exc)
+        return json.dumps({"error": "runtime_unavailable"})
+# === CHALLENGE 5: AgentCore Runtime — END ===
+
+
+async def run_agent(
+    message: str,
+    session_id: str,
+    user_id: Optional[str] = None,
+) -> str:
+    """Route a chat request through either the in-process Strands
+    orchestrator or the AgentCore Runtime, based on
+    ``settings.USE_AGENTCORE_RUNTIME``.
+
+    This is the single entry point used by the route handler for
+    ``/api/agent/chat`` (Task 3.5) and the legacy ``/api/agents/query``
+    endpoint in ``app.py``. Flipping ``USE_AGENTCORE_RUNTIME=true`` in
+    ``backend/.env`` and restarting is the only change participants need
+    to make to migrate from local execution to managed runtime.
+    """
+    if settings.USE_AGENTCORE_RUNTIME:
+        return await run_agent_on_runtime(message, session_id, user_id)
+    return await _run_orchestrator_inprocess(message, session_id, user_id)

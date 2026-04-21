@@ -8,7 +8,7 @@ import { X, Zap, BookOpen, Search, ChevronDown, ChevronUp } from 'lucide-react'
 import ProductCardCompact from './ProductCardCompact'
 
 interface RAGProduct {
-  id: string
+  id: number
   name: string
   price: number
   rating: number

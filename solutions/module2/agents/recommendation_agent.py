@@ -7,7 +7,13 @@ import re
 from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
-from services.agent_tools import get_trending_products, get_product_by_category
+from services.agent_tools import (
+    search_products,
+    get_trending_products,
+    compare_products,
+    get_product_by_category,
+)
+from storefront_copy import RECOMMENDATION_SYSTEM_PROMPT
 
 
 def _ensure_products_in_output(text: str, tool_results: list) -> str:
@@ -41,35 +47,29 @@ def product_recommendation_agent(query: str) -> str:
 
     Returns:
         Agent response with product recommendations
+
+    ⏩ SHORT ON TIME? Run:
+       cp solutions/module2/agents/recommendation_agent.py blaize-bazaar/backend/agents/recommendation_agent.py
     """
     try:
         tool_results = []
 
+        # === CHALLENGE 3: START ===
         agent = Agent(
             model=BedrockModel(
                 model_id=settings.BEDROCK_CHAT_MODEL,
                 max_tokens=4096,
                 temperature=0.2,
             ),
-            system_prompt=(
-                "You are Blaize Bazaar's Product Recommendation Specialist. "
-                "<tools>"
-                "- get_trending_products: Use when the user asks about trending, popular, or best-selling items. "
-                "Pass the category parameter if they mention a specific category (e.g. 'trending electronics', "
-                "'popular shoes'). "
-                "- get_product_by_category: Use for browsing a specific product category to surface curated picks. "
-                "</tools>"
-                "<output-rules>"
-                "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
-                "After receiving tool results, write 1-2 short sentences as a conversational intro. "
-                "Products render as visual cards automatically — do not list them in text. "
-                "If the tool returns zero products or an error, say what went wrong briefly "
-                "(e.g. 'No trending products found in that category right now.'). "
-                "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
-                "</output-rules>"
-            ),
-            tools=[get_trending_products, get_product_by_category],
+            system_prompt=RECOMMENDATION_SYSTEM_PROMPT,
+            tools=[
+                search_products,
+                get_trending_products,
+                compare_products,
+                get_product_by_category,
+            ],
         )
+        # === CHALLENGE 3: END ===
 
         # Capture inner tool results so we can guarantee product data in output
         try:

@@ -4,7 +4,7 @@ import { addRecentlyViewed } from '../utils/recentlyViewed'
 import { type AgentType } from '../utils/agentIdentity'
 
 interface Product {
-  id: string
+  id: number
   name: string
   price: number
   rating?: number
@@ -54,7 +54,7 @@ const renderStars = (rating: number) => {
 const ProductCardCompact = ({ product, onAddToCart, similarityScore, recommendationReasons }: ProductCardCompactProps) => {
   const [showReasons, setShowReasons] = useState(false)
   // Construct Amazon URL from product ID if url is missing
-  const amazonUrl = product.url || `https://www.amazon.com/dp/${product.id}`
+  const amazonUrl = product.url || ''
 
   // Check if image is a valid URL or emoji
   const isImageUrl = product.image && (product.image.startsWith('http') || product.image.startsWith('data:'))
