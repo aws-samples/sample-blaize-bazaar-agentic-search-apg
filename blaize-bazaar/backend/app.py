@@ -43,6 +43,7 @@ from routes import (
     products_router,
     search_router,
     user_router,
+    workshop_router,
 )
 
 # Lab 2 agents use Strands SDK function pattern (not class-based)
@@ -273,6 +274,12 @@ app.include_router(agent_router)
 # routes/products.py and routes/search.py instead.
 app.include_router(products_router)
 app.include_router(search_router)
+
+# DAT406 /workshop telemetry surface (Week 1) — returns flat
+# {session_id, events: list[dict]} payloads for the panel renderer.
+# Intentionally separate from /api/agent/chat so the storefront SSE
+# stream isn't reshaped for the workshop's replay needs.
+app.include_router(workshop_router)
 
 
 # Dependency injection
