@@ -30,7 +30,7 @@ A file is "dead" if no import path reaches it from `app.py` or its transitive de
 | `index_performance.py` | `app.py` top-level | HNSW vs seq scan comparison | Active — feeds 5 `/api/performance/*` endpoints |
 | `image_search.py` | `app.py` top-level | Claude Vision image search | Active — feeds `/api/search/image` |
 | `otel_trace_extractor.py` | `app.py` lifespan + `chat.py` | OpenTelemetry span capture | Active — feeds `/api/traces/waterfall` |
-| `aurora_session_manager.py` | `chat.py` (lazy) | Local PostgreSQL session persistence | Active — fallback when AgentCore Memory not configured |
+| `aurora_session_manager.py` | _none_ | Local PostgreSQL session persistence | Removed — deleted during STM migration to AgentCore Memory (see `seed-database.sh:266` comment). Session state now managed by AgentCore. |
 
 ## Services — Active but workshop-gated (keep)
 

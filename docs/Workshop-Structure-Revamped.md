@@ -693,7 +693,7 @@ blaize-bazaar/
 │       ├── utils/
 │       │   └── agentIdentity.ts       ← Challenge 9: agent identity UI
 │       └── components/
-│           ├── AIAssistant.tsx         (pre-built, chat UI)
+│           ├── ConciergeModal.tsx      (pre-built, chat UI)
 │           ├── AgentReasoningTraces.tsx (pre-built, trace visualization)
 │           ├── MemoryDashboard.tsx     (pre-built, memory viewer)
 │           ├── ObservabilityPanel.tsx  (pre-built, OTEL waterfall)
