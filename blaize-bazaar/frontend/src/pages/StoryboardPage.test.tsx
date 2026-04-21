@@ -19,6 +19,8 @@
  * rather than the full provider chain.
  */
 import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // --- Mocks --------------------------------------------------------------
@@ -68,6 +70,15 @@ vi.mock('../contexts/UIContext', () => ({
 import StoryboardPage from './StoryboardPage'
 import { STORYBOARD_PAGE_COMING_SOON, STORYBOARD_TEASERS } from '../copy'
 
+/**
+ * StoryboardPage nests `<Header>` which renders a `<Link to="/workshop">`,
+ * so every render needs a router ancestor. MemoryRouter is the minimal
+ * wrapper — the test doesn't care about navigation behavior.
+ */
+function renderStoryboard(ui: ReactElement = <StoryboardPage />) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>)
+}
+
 beforeEach(() => {
   toggleConcierge.mockClear()
 })
@@ -76,7 +87,7 @@ beforeEach(() => {
 
 describe('StoryboardPage - header current-page state (Req 1.13.4)', () => {
   it('renders the sticky header with Storyboard in the current-page ink state', () => {
-    render(<StoryboardPage />)
+    renderStoryboard()
 
     const storyboardNav = screen.getByRole('button', { name: 'Storyboard' })
     expect(storyboardNav).toHaveAttribute('data-current', 'true')
@@ -96,7 +107,7 @@ describe('StoryboardPage - header current-page state (Req 1.13.4)', () => {
 
 describe('StoryboardPage - 3-card storyboard grid (Req 1.13.1)', () => {
   it('renders the reused StoryboardTeaser with all 3 cards', () => {
-    render(<StoryboardPage />)
+    renderStoryboard()
 
     // The teaser section is present.
     const teaser = screen.getByTestId('storyboard-teaser')
@@ -119,7 +130,7 @@ describe('StoryboardPage - 3-card storyboard grid (Req 1.13.1)', () => {
 
 describe('StoryboardPage - Coming soon editorial line (Req 1.13.1, 1.13.3)', () => {
   it('renders the italic Fraunces coming-soon line with the exact copy from copy.ts', () => {
-    render(<StoryboardPage />)
+    renderStoryboard()
 
     const line = screen.getByTestId('storyboard-coming-soon')
     expect(line).toBeInTheDocument()
@@ -136,7 +147,7 @@ describe('StoryboardPage - Coming soon editorial line (Req 1.13.1, 1.13.3)', () 
 
 describe('StoryboardPage - site chrome (Req 1.13.1)', () => {
   it('renders the Footer and floating CommandPill alongside the header', () => {
-    render(<StoryboardPage />)
+    renderStoryboard()
 
     expect(screen.getByTestId('sticky-header')).toBeInTheDocument()
     expect(screen.getByTestId('footer')).toBeInTheDocument()

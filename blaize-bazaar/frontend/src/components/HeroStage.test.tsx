@@ -63,7 +63,12 @@ describe('HeroStage — intent rotation (Req 1.3.1)', () => {
 describe('HeroStage — productOverride for intent 2 (Req 1.3.3)', () => {
   it('renders the Featherweight Trail Runner when intent 2 is active', () => {
     render(<HeroStage />)
+    // The image src/alt lag activeIndex by a 250ms crossfade midpoint
+    // (see HeroStage.tsx: displayedIndex/setImageOpacity effect). Advance
+    // one full cycle to flip activeIndex, then an additional beat so the
+    // crossfade midpoint timer fires and displayedIndex catches up.
     advance(CYCLE_MS + 100)
+    advance(300)
     // Intent 2 is `a thoughtful gift for someone who runs`.
     expect(screen.getByTestId('intent-query')).toHaveTextContent(
       'a thoughtful gift for someone who runs',

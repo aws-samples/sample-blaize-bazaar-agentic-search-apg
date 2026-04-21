@@ -16,6 +16,8 @@
  *     as the single source of truth (Req 1.13.3).
  */
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // --- Mocks --------------------------------------------------------------
@@ -70,6 +72,15 @@ vi.mock('../contexts/UIContext', () => ({
 import DiscoverPage from './DiscoverPage'
 import { DISCOVER_PAGE_COMING_SOON, DISCOVER_PAGE_SIGNED_OUT } from '../copy'
 
+/**
+ * DiscoverPage nests `<Header>` which renders a `<Link to="/workshop">`,
+ * so every render needs a router ancestor. MemoryRouter is the minimal
+ * wrapper — the test doesn't care about navigation behavior.
+ */
+function renderDiscover(ui: ReactElement = <DiscoverPage />) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>)
+}
+
 beforeEach(() => {
   mockAuth = {
     user: null,
@@ -83,7 +94,7 @@ beforeEach(() => {
 describe('DiscoverPage - header current-page state (Req 1.13.4)', () => {
   it('marks Discover as the current page in both auth states', () => {
     // Signed out.
-    const { unmount } = render(<DiscoverPage />)
+    const { unmount } = renderDiscover()
     expect(screen.getByRole('button', { name: 'Discover' })).toHaveAttribute(
       'data-current',
       'true',
@@ -96,7 +107,7 @@ describe('DiscoverPage - header current-page state (Req 1.13.4)', () => {
       isAuthenticated: true,
       login: vi.fn(),
     }
-    render(<DiscoverPage />)
+    renderDiscover()
     expect(screen.getByRole('button', { name: 'Discover' })).toHaveAttribute(
       'data-current',
       'true',
@@ -106,7 +117,7 @@ describe('DiscoverPage - header current-page state (Req 1.13.4)', () => {
 
 describe('DiscoverPage - signed out variant (Req 1.13.2)', () => {
   it('renders the sign-in prompt with the exact copy from copy.ts', () => {
-    render(<DiscoverPage />)
+    renderDiscover()
 
     const prompt = screen.getByTestId('discover-signin-prompt')
     expect(prompt).toBeInTheDocument()
@@ -119,7 +130,7 @@ describe('DiscoverPage - signed out variant (Req 1.13.2)', () => {
   })
 
   it('does not render the personalized product grid when signed out', () => {
-    render(<DiscoverPage />)
+    renderDiscover()
     expect(screen.queryByTestId('product-grid')).not.toBeInTheDocument()
     expect(screen.queryByTestId('discover-coming-soon')).not.toBeInTheDocument()
   })
@@ -128,7 +139,7 @@ describe('DiscoverPage - signed out variant (Req 1.13.2)', () => {
     const login = vi.fn()
     mockAuth = { user: null, isAuthenticated: false, login }
 
-    render(<DiscoverPage />)
+    renderDiscover()
 
     const cta = screen.getByTestId('discover-signin-cta')
     cta.click()
@@ -146,7 +157,7 @@ describe('DiscoverPage - signed in variant (Req 1.13.2, 1.13.3)', () => {
   })
 
   it('renders the personalized product grid plus the coming-soon line', () => {
-    render(<DiscoverPage />)
+    renderDiscover()
 
     // ProductGrid mounts in the signed-in branch.
     expect(screen.getByTestId('product-grid')).toBeInTheDocument()
@@ -166,7 +177,7 @@ describe('DiscoverPage - signed in variant (Req 1.13.2, 1.13.3)', () => {
 describe('DiscoverPage - site chrome (Req 1.13.2)', () => {
   it('renders the header, footer, and CommandPill in both auth states', () => {
     // Signed out.
-    const { unmount } = render(<DiscoverPage />)
+    const { unmount } = renderDiscover()
     expect(screen.getByTestId('sticky-header')).toBeInTheDocument()
     expect(screen.getByTestId('footer')).toBeInTheDocument()
     expect(screen.getByTestId('command-pill')).toBeInTheDocument()
@@ -178,7 +189,7 @@ describe('DiscoverPage - site chrome (Req 1.13.2)', () => {
       isAuthenticated: true,
       login: vi.fn(),
     }
-    render(<DiscoverPage />)
+    renderDiscover()
     expect(screen.getByTestId('sticky-header')).toBeInTheDocument()
     expect(screen.getByTestId('footer')).toBeInTheDocument()
     expect(screen.getByTestId('command-pill')).toBeInTheDocument()
