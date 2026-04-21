@@ -4,10 +4,11 @@ Guardrails Service — Bedrock Guardrails API integration for responsible AI.
 Wire It Live: Participants implement check_input() and check_output() using
 the Bedrock Guardrails ApplyGuardrail API.
 """
-import os
 import re
 import logging
 from typing import Dict, Any
+
+from config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +17,9 @@ class GuardrailsService:
     """Bedrock Guardrails integration for input/output safety checks."""
 
     def __init__(self):
-        self.guardrail_id = os.environ.get("BEDROCK_GUARDRAIL_ID", "")
-        self.guardrail_version = os.environ.get("BEDROCK_GUARDRAIL_VERSION", "DRAFT")
+        settings = get_settings()
+        self.guardrail_id = settings.BEDROCK_GUARDRAIL_ID or ""
+        self.guardrail_version = settings.BEDROCK_GUARDRAIL_VERSION
         self._client = None
 
         if self.guardrail_id:
