@@ -116,12 +116,32 @@ class Settings(BaseSettings):
     BEDROCK_GUARDRAIL_VERSION: str = "DRAFT"
 
     # ========================================
+    # External API Keys (optional integrations)
+    # ========================================
+    # Exa web search for the customer support agent's MCP tool chain.
+    # Leave unset to run with local tools only (get_return_policy,
+    # search_products); the agent skips Exa wiring if this is empty.
+    EXA_API_KEY: Optional[str] = None
+
+    # ========================================
     # AgentCore Configuration (Lab 4)
     # ========================================
     # 4a — Identity (Cognito)
+    #
+    # Historical name was COGNITO_USER_POOL_ID (Lab 4 "wire it live" demo).
+    # The storefront spec (Req 4.1, 4.2, Challenge 9.1) standardises on
+    # COGNITO_POOL_ID. Both are accepted; `cognito_pool_id_resolved` picks
+    # whichever is set so existing .env files keep working.
     COGNITO_USER_POOL_ID: Optional[str] = None
+    COGNITO_POOL_ID: Optional[str] = None
+    COGNITO_REGION: Optional[str] = None  # defaults to AWS_REGION if unset
     COGNITO_CLIENT_ID: Optional[str] = None
+    COGNITO_CLIENT_SECRET: Optional[str] = None
     COGNITO_DOMAIN: Optional[str] = None  # e.g. "blaize-bazaar.auth.us-west-2.amazoncognito.com"
+
+    # Storefront origin + OAuth callback (Req 3.1.1, 3.1.2, 7.2.3)
+    APP_BASE_URL: Optional[str] = None  # e.g. "http://localhost:5173"
+    OAUTH_REDIRECT_URI: Optional[str] = None  # e.g. "http://localhost:8000/api/auth/callback"
 
     # 4b — Memory
     AGENTCORE_MEMORY_ID: Optional[str] = None
@@ -136,6 +156,14 @@ class Settings(BaseSettings):
 
     # 4e — Runtime
     AGENTCORE_RUNTIME_ENDPOINT: Optional[str] = None
+
+    # Challenge 5 feature flag. When False (default) the `/api/agent/chat`
+    # and `/api/agents/query` endpoints run the in-process Strands
+    # orchestrator from Challenge 4. When True the same endpoints forward
+    # every request through `services.agentcore_runtime.run_agent_on_runtime`
+    # so participants can migrate from local execution to managed runtime
+    # by flipping this single env var in `backend/.env`.
+    USE_AGENTCORE_RUNTIME: bool = False
 
     # ========================================
     # Development & Debugging
@@ -184,6 +212,26 @@ class Settings(BaseSettings):
             str: AWS region name
         """
         return self.AWS_REGION or self.AWS_DEFAULT_REGION or "us-west-2"
+
+    @property
+    def cognito_pool_id_resolved(self) -> Optional[str]:
+        """Return the Cognito User Pool id regardless of env var name used.
+
+        The storefront spec standardises on ``COGNITO_POOL_ID`` while older
+        demo code used ``COGNITO_USER_POOL_ID``. Prefer the new name when
+        both are set.
+        """
+        return self.COGNITO_POOL_ID or self.COGNITO_USER_POOL_ID
+
+    @property
+    def cognito_region_resolved(self) -> str:
+        """Return the region the Cognito User Pool lives in.
+
+        Defaults to the application AWS region when ``COGNITO_REGION`` is
+        unset — Cognito pools are regional and the workshop provisions the
+        pool in the same region as the rest of the stack.
+        """
+        return self.COGNITO_REGION or self.aws_region_resolved
     
     @property
     def is_production(self) -> bool:

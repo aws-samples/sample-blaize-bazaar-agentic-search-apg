@@ -5,7 +5,6 @@ Wire It Live: Participants implement verify_cognito_token() to decode and
 validate JWTs from Amazon Cognito, then wire get_current_user() as a
 FastAPI dependency.
 """
-import os
 import logging
 import time
 from typing import Optional, Dict, Any
@@ -13,6 +12,8 @@ from typing import Optional, Dict, Any
 import jwt
 import requests
 from fastapi import Header, HTTPException
+
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +55,9 @@ def verify_cognito_token(token: str) -> Dict[str, Any]:
     Returns:
         dict with keys: sub, email, token_use, etc.
     """
-    user_pool_id = os.environ.get("COGNITO_USER_POOL_ID", "")
-    client_id = os.environ.get("COGNITO_CLIENT_ID", "")
-    region = os.environ.get("AWS_REGION", "us-west-2")
+    user_pool_id = settings.cognito_pool_id_resolved or ""
+    client_id = settings.COGNITO_CLIENT_ID or ""
+    region = settings.cognito_region_resolved
 
     if not user_pool_id or not client_id:
         raise HTTPException(status_code=503, detail="Cognito not configured")

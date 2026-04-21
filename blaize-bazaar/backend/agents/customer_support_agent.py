@@ -53,11 +53,10 @@ def customer_support_agent(query: str) -> str:
         # by default workshop bootstrap scripts).
         exa_client = None
         try:
-            import os
             from strands.tools.mcp import MCPClient
             from mcp import StdioServerParameters
 
-            exa_api_key = os.environ.get("EXA_API_KEY")
+            exa_api_key = settings.EXA_API_KEY
             if exa_api_key:
                 exa_client = MCPClient(
                     lambda: StdioServerParameters(
