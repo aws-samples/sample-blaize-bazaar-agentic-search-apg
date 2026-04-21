@@ -5,7 +5,7 @@
  * Auto-opens during agent execution and collapses when done.
  */
 import { useState, useEffect } from 'react';
-import { X, Brain, Zap, Database, CheckCircle, AlertCircle, Clock, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Brain, Zap, Database, CheckCircle, AlertCircle, Clock, ArrowRight, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { resolveAgentType, AGENT_IDENTITIES } from '../utils/agentIdentity';
 
 interface AgentStep {
@@ -44,10 +44,14 @@ interface WaterfallSpan {
 
 const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReasoningTracesProps) => {
   const [traces, setTraces] = useState<AgentStep[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [traceMode, setTraceMode] = useState<'demo' | 'live'>('demo');
   const [activeTab, setActiveTab] = useState<'timeline' | 'waterfall'>('timeline');
   const [waterfallData, setWaterfallData] = useState<WaterfallSpan[]>([]);
+  // Fail-loud state: when the backend reports otel_enabled=false the UI
+  // renders an amber banner and disables the waterfall, rather than
+  // falling back to synthetic "Simulate" spans (Bug 3 audit). The
+  // reason string is rendered verbatim and must match the backend's
+  // guidance copy.
+  const [otelFailure, setOtelFailure] = useState<string | null>(null);
 
   // Auto-open on agent execution events
   useEffect(() => {
@@ -56,7 +60,16 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
     };
 
     const handleAgentExecution = (event: CustomEvent) => {
-      const { agent_steps, tool_calls, waterfall } = event.detail;
+      const { agent_steps, tool_calls, waterfall, otel_enabled, reason } = event.detail;
+
+      if (otel_enabled === false) {
+        setOtelFailure(reason || 'Telemetry unavailable — see docs/troubleshooting-otel.md.');
+        setTraces([]);
+        setWaterfallData([]);
+        return;
+      }
+      setOtelFailure(null);
+
       if (!agent_steps || agent_steps.length === 0) return;
 
       const steps: AgentStep[] = agent_steps.map((step: any, idx: number) => ({
@@ -74,9 +87,7 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
       }));
 
       setTraces(steps);
-      setTraceMode('live');
 
-      // Capture waterfall data if available
       if (waterfall && waterfall.length > 0) {
         setWaterfallData(waterfall);
       }
@@ -89,41 +100,6 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
       window.removeEventListener('agent-execution-complete' as any, handleAgentExecution);
     };
   }, [mode, onExpand]);
-
-  const simulateAgentExecution = (e?: React.MouseEvent) => {
-    if (e) { e.preventDefault(); e.stopPropagation(); }
-    setIsRecording(true);
-    setTraces([]);
-
-    const steps: AgentStep[] = [
-      { id: '1', agent: 'Orchestrator', action: 'Analyzing user query and routing to specialists', status: 'in_progress', timestamp: Date.now() },
-      { id: '2', agent: 'Orchestrator', action: 'Query classified as product search → Routing to Search Agent', status: 'pending', timestamp: Date.now() + 500 },
-      { id: '3', agent: 'Search Agent', action: 'Generating semantic embedding for query', status: 'pending', timestamp: Date.now() + 1000, tool_calls: [{ tool: 'generate_embedding', params: { query: 'luxury watch' } }] },
-      { id: '4', agent: 'Search Agent', action: 'Executing pgvector similarity search', status: 'pending', timestamp: Date.now() + 1500, tool_calls: [{ tool: 'search_products', params: { limit: 5, ef_search: 40 } }] },
-      { id: '5', agent: 'Search Agent', action: 'Found 5 matching products', status: 'pending', timestamp: Date.now() + 2000, result: '5 products with avg similarity 0.87' },
-      { id: '6', agent: 'Orchestrator', action: 'Synthesizing final response', status: 'pending', timestamp: Date.now() + 2500 },
-    ];
-
-    steps.forEach((step, index) => {
-      setTimeout(() => {
-        setTraces((prev) => {
-          const updated = [...prev];
-          if (index > 0) updated[index - 1] = { ...updated[index - 1], status: 'completed', duration_ms: 450 };
-          return [...updated, { ...step, status: index === 0 ? 'in_progress' : 'pending' }];
-        });
-        if (index === steps.length - 1) {
-          setTimeout(() => {
-            setTraces((prev) => {
-              const final = [...prev];
-              final[final.length - 1] = { ...final[final.length - 1], status: 'completed', duration_ms: 320 };
-              return final;
-            });
-            setIsRecording(false);
-          }, 500);
-        }
-      }, index * 600);
-    });
-  };
 
   const getStatusIcon = (status: AgentStep['status']) => {
     switch (status) {
@@ -187,7 +163,15 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
           <div>
             <h2 className="text-sm font-semibold text-text-primary">Agent Traces</h2>
             <p className="text-[10px] text-text-secondary">
-              <span className="inline-flex items-center gap-1">{traceMode === 'live' ? <><span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" /> Live</> : <><span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" /> Demo</>}</span> · {traces.length} steps
+              <span className="inline-flex items-center gap-1">
+                {otelFailure ? (
+                  <><span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse inline-block" /> Telemetry unavailable</>
+                ) : traces.length > 0 ? (
+                  <><span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" /> Live</>
+                ) : (
+                  <><span className="w-1.5 h-1.5 rounded-full bg-white/30 inline-block" /> Idle</>
+                )}
+              </span> · {traces.length} steps
             </p>
           </div>
         </div>
@@ -222,26 +206,34 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
           ))}
         </div>
         <div className="flex-1" />
-        {traceMode !== 'live' && (
+        {(traces.length > 0 || waterfallData.length > 0 || otelFailure) && (
           <button
             type="button"
-            onClick={(e) => simulateAgentExecution(e)}
-            disabled={isRecording}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
-            style={{
-              background: isRecording ? 'rgba(255, 255, 255, 0.06)' : 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.10) 100%)',
-              color: 'white',
-            }}
+            onClick={() => { setTraces([]); setWaterfallData([]); setOtelFailure(null); }}
+            className="text-[10px] text-text-secondary hover:text-text-primary"
           >
-            {isRecording ? 'Recording...' : 'Simulate'}
-          </button>
-        )}
-        {traces.length > 0 && (
-          <button type="button" onClick={() => { setTraces([]); setWaterfallData([]); setTraceMode('demo'); }} className="text-[10px] text-text-secondary hover:text-text-primary">
             Clear
           </button>
         )}
       </div>
+
+      {/* Fail-loud banner — amber when OTEL isn't SDK-backed. Copy is
+          rendered verbatim from the backend's `reason` field so the
+          troubleshooting guidance stays authoritative. */}
+      {otelFailure && (
+        <div
+          className="mx-4 mt-3 px-3 py-2 rounded-lg flex items-start gap-2"
+          style={{
+            background: 'rgba(245, 158, 11, 0.12)',
+            border: '1px solid rgba(245, 158, 11, 0.35)',
+          }}
+        >
+          <AlertTriangle className="h-4 w-4 text-amber-400 flex-shrink-0 mt-0.5" />
+          <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(253, 230, 138, 0.95)' }}>
+            {otelFailure}
+          </p>
+        </div>
+      )}
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 search-scroll">
@@ -250,7 +242,11 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
           traces.length === 0 ? (
             <div className="text-center py-12">
               <Brain className="h-12 w-12 text-white/20 mx-auto mb-3" />
-              <p className="text-xs text-text-secondary">No traces yet. Use AI Assistant or click Simulate.</p>
+              <p className="text-xs text-text-secondary">
+                {otelFailure
+                  ? 'Trace timeline disabled while telemetry is unavailable.'
+                  : 'No traces yet. Send a chat query to capture real OTEL spans.'}
+              </p>
             </div>
           ) : (
             traces.map((step, index) => (
@@ -310,7 +306,11 @@ const AgentReasoningTraces = ({ mode, onCollapse, onClose, onExpand }: AgentReas
           waterfallData.length === 0 ? (
             <div className="text-center py-12">
               <Brain className="h-12 w-12 text-white/20 mx-auto mb-3" />
-              <p className="text-xs text-text-secondary">No waterfall data yet. Send a chat query to capture real OTEL spans.</p>
+              <p className="text-xs text-text-secondary">
+                {otelFailure
+                  ? 'Waterfall disabled while telemetry is unavailable.'
+                  : 'No waterfall data yet. Send a chat query to capture real OTEL spans.'}
+              </p>
             </div>
           ) : (
             <div className="space-y-1">

@@ -37,7 +37,7 @@ export interface ChatMessage {
 }
 
 export interface ChatProduct {
-  id: string
+  id: number
   name: string
   price: number
   image: string
@@ -58,6 +58,12 @@ export interface AgentExecution {
   reasoning_steps: Array<{step: string, content: string, timestamp: number}>
   total_duration_ms: number
   success_rate: number
+  /** False when Strands' TracerProvider isn't SDK-backed. UI renders a
+   * banner and disables the waterfall instead of synthesizing spans. */
+  otel_enabled?: boolean
+  /** Actionable failure string from the backend when otel_enabled is
+   * false. Rendered verbatim. */
+  reason?: string
 }
 
 export interface ChatResponse {
@@ -183,14 +189,14 @@ export async function sendChatMessage(query: string, conversationHistory: ChatMe
     
     // Backend already returns formatted products
     const chatProducts: ChatProduct[] = (data.products || []).map((p: any) => ({
-        id: p.id || p.productId || '',
+        id: p.id ?? p.productId ?? 0,
         name: p.name || p.product_description || '',
         price: p.price || 0,
         image: p.image || p.imgUrl || p.imgurl || '',
         category: p.category || p.category_name,
         rating: p.stars || p.rating,
         reviews: p.reviews,
-        url: p.url || p.producturl || `https://www.amazon.com/dp/${p.id || p.productId}`
+        url: p.url || p.producturl
       }
     ))
 

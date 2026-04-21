@@ -393,19 +393,21 @@ CURRENT REQUEST: {message}"""
             logger.info(f"✅ Orchestrator completed with agent chain")
             logger.info(f"📝 Final response length: {len(response_text)} chars")
             
-            # Extract agent execution from OpenTelemetry traces
-            from services.otel_trace_extractor import extract_agent_execution_from_otel, infer_agent_from_query
-            
+            # Extract agent execution from OpenTelemetry traces. When
+            # OTEL isn't wired correctly the payload carries
+            # otel_enabled=False + reason; the frontend renders a banner
+            # instead of synthesizing fake spans (see Bug 3 audit note).
+            from services.otel_trace_extractor import extract_agent_execution_from_otel
+
             agent_execution = extract_agent_execution_from_otel()
-            
-            # Log OTEL trace info if available
+
             if agent_execution.get("otel_enabled") and agent_execution.get("trace_id"):
                 logger.info(f"✨ OpenTelemetry trace_id: {agent_execution['trace_id']}")
-            
-            # Fallback to inference if OTEL not available
-            if not agent_execution.get("otel_enabled"):
-                agent_execution = infer_agent_from_query(message, start_time)
-                logger.info("📊 Using inferred agent execution (OTEL not active)")
+            elif not agent_execution.get("otel_enabled"):
+                logger.error(
+                    f"📊 OTEL telemetry unavailable — reason: "
+                    f"{agent_execution.get('reason', 'unknown')}"
+                )
             
             # Extract structured data from response
             parsed = await self._parse_agent_response(response_text, message, conversation_history)
@@ -1324,17 +1326,22 @@ CURRENT REQUEST: {message}"""
                 }
             products_sent = parsed["products"]
 
-        # OTEL extraction
+        # OTEL extraction. On failure the payload carries otel_enabled=False
+        # + reason so the frontend banner fires (Bug 3); we do NOT
+        # synthesize agent_steps.
         try:
-            from services.otel_trace_extractor import extract_agent_execution_from_otel, infer_agent_from_query
+            from services.otel_trace_extractor import extract_agent_execution_from_otel
             agent_execution = extract_agent_execution_from_otel()
-            if not agent_execution.get("otel_enabled"):
-                agent_execution = infer_agent_from_query(message, start_time)
-        except Exception:
+        except Exception as e:
+            logger.error(f"OTEL extraction raised: {e}")
             agent_execution = {
                 "agent_steps": [], "tool_calls": [], "reasoning_steps": [],
+                "waterfall": [], "spans": [], "totalMs": 0,
+                "specialistRoute": "",
                 "total_duration_ms": int((time.time() - start_time) * 1000),
-                "success_rate": 1.0
+                "success_rate": 0,
+                "otel_enabled": False,
+                "reason": f"OTEL extraction raised: {e}",
             }
 
         # Cost estimation

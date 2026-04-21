@@ -1341,12 +1341,30 @@ async def get_tracing_status():
 
 @app.get("/api/traces/waterfall")
 async def get_trace_waterfall():
-    """Get waterfall timing data from captured OTEL spans"""
+    """Get waterfall timing data from captured OTEL spans.
+
+    Always returns HTTP 200 with a structured payload. When OTEL is not
+    wired correctly the payload carries ``otel_enabled: False`` plus a
+    ``reason`` string — the frontend renders a banner instead of the
+    waterfall. See docs/troubleshooting-otel.md.
+    """
     try:
         from services.otel_trace_extractor import get_waterfall_data
         return get_waterfall_data()
     except Exception as e:
-        return {"waterfall": [], "span_count": 0, "error": str(e)}
+        logger.error(f"get_waterfall_data raised: {e}")
+        return {
+            "spans": [],
+            "totalMs": 0,
+            "specialistRoute": "",
+            "waterfall": [],
+            "span_count": 0,
+            "otel_enabled": False,
+            "reason": (
+                f"Telemetry unavailable: extractor raised {type(e).__name__}. "
+                f"See docs/troubleshooting-otel.md."
+            ),
+        }
 
 
 @app.get("/api/traces/info")
