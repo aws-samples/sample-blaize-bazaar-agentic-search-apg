@@ -99,10 +99,10 @@ def semantic_search(query: str, limit: int = 5, max_price: float = None, min_rat
         SET hnsw.iterative_scan = 'relaxed_order';
         SELECT "productId", product_description, price, stars, reviews,
                category_name, quantity, "imgUrl",
-               1 - (product_description_embeddings <=> :embedding::vector) AS similarity
+               1 - (embedding <=> :embedding::vector) AS similarity
         FROM {SCHEMA}.product_catalog
         WHERE {where_sql}
-        ORDER BY product_description_embeddings <=> :embedding::vector
+        ORDER BY embedding <=> :embedding::vector
         LIMIT :lim;
     """
     rows = _execute_sql(sql, parameters)

@@ -88,11 +88,11 @@ def find_deals(query: str, max_price: float = None, limit: int = 5) -> dict:
         SET hnsw.iterative_scan = 'relaxed_order';
         SELECT "productId", product_description, price, stars, reviews,
                category_name, quantity, "imgUrl",
-               1 - (product_description_embeddings <=> :embedding::vector) AS similarity,
+               1 - (embedding <=> :embedding::vector) AS similarity,
                CASE WHEN price > 0 THEN stars / price * 100 ELSE 0 END AS value_score
         FROM {SCHEMA}.product_catalog
         WHERE quantity > 0 AND stars >= 3.5 {price_filter}
-        ORDER BY product_description_embeddings <=> :embedding::vector
+        ORDER BY embedding <=> :embedding::vector
         LIMIT :lim;
     """
     rows = _execute_sql(sql, parameters)
