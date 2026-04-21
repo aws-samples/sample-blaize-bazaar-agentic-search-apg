@@ -86,3 +86,11 @@ small latent surface area.
 schema end-to-end and cached agent output has aged out. At that point,
 search-and-destroy on the legacy fallbacks and delete the corresponding
 backfill branches in `_normalize()`.
+
+## AuthModal solutions/module3 parity drift
+
+- **Issue:** `solutions/module3/frontend/components/AuthModal.tsx` missing `const DUSK = '#3d2518'` that exists in `blaize-bazaar/frontend/src/components/AuthModal.tsx`
+- **Surface:** `test_solutions_parity[9.4-AuthModal]` fails on baseline
+- **Risk:** Low — pre-existing, attendees replacing solutions files won't encounter the drift unless they inspect
+- **Fix:** Copy `DUSK` constant from live file to solutions file (or determine intended value for the module3 variant and sync)
+- **Discovered:** during Bug 1-4 pre-telemetry fixes
