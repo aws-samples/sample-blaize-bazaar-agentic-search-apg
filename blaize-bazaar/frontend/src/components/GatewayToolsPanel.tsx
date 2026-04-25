@@ -124,7 +124,7 @@ export default function GatewayToolsPanel({ onClose }: { onClose: () => void }) 
           <div>
             <h2
               className="text-base font-semibold"
-              style={{ color: INK, fontFamily: "'Fraunces', serif" }}
+              style={{ color: INK, fontFamily: "'Instrument Serif', Georgia, serif" }}
             >
               Tool Registry · Gateway
             </h2>

@@ -95,6 +95,43 @@
     margin: 0;
   }
 
+  /* Monospace defaults — every ``.font-mono`` utility and every raw
+     <code> / <pre> / <kbd> picks up JetBrains Mono with programming
+     ligatures enabled. That's what turns the pgvector ``<=>`` into the
+     double-arrow glyph you see in the Coffee Roastery reference
+     screenshots; without ``font-feature-settings: 'calt'`` it stays as
+     three separate characters. */
+  code,
+  kbd,
+  pre,
+  samp,
+  .font-mono {
+    font-family:
+      'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+      'Liberation Mono', 'Courier New', monospace;
+    font-feature-settings: 'calt' 1, 'liga' 1;
+    font-variant-ligatures: contextual common-ligatures;
+  }
+
+  /* /workshop surface — Coffee Roastery font stack scoped to the
+     telemetry route so the storefront's Fraunces + Inter pairing stays
+     unchanged. Applied on WorkshopPage's root via className. Headings
+     with explicit inline ``font-family`` still win (react styles beat
+     cascade) — the inline values inside /workshop components are
+     switched to Instrument Serif to match. */
+  .workshop-surface {
+    font-family:
+      'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      'Helvetica Neue', sans-serif;
+  }
+  .workshop-surface h1,
+  .workshop-surface h2,
+  .workshop-surface h3,
+  .workshop-surface .workshop-display {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-weight: 400;
+  }
+
   @media (min-width: 1024px) {
     .product-name {
       font-size: 22px;

@@ -161,7 +161,7 @@ function ArchitectureCard({
           <ProvenancePill kind={card.provenance} />
           <span
             className="text-[15px] font-semibold"
-            style={{ color: INK, fontFamily: "'Fraunces', serif" }}
+            style={{ color: INK, fontFamily: "'Instrument Serif', Georgia, serif" }}
           >
             {card.title}
           </span>
@@ -365,7 +365,7 @@ function WorkshopContent() {
 
   return (
     <div
-      className="min-h-screen flex flex-col"
+      className="workshop-surface min-h-screen flex flex-col"
       style={{ background: CREAM, color: INK }}
     >
       {/* Top chrome — back-to-storefront + title + subtitle */}
@@ -392,7 +392,7 @@ function WorkshopContent() {
           </p>
           <h1
             className="text-2xl md:text-3xl"
-            style={{ fontFamily: "'Fraunces', serif", color: INK }}
+            style={{ fontFamily: "'Instrument Serif', Georgia, serif", color: INK }}
           >
             Workshop · agentic telemetry
           </h1>

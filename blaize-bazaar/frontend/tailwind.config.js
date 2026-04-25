@@ -56,6 +56,42 @@ export default {
         'warm-lg':
           '0 8px 24px rgba(107, 74, 53, 0.10), 0 4px 8px rgba(107, 74, 53, 0.06)',
       },
+      fontFamily: {
+        // Default body sans — Inter is loaded globally for the storefront
+        // via ``body { font-family }`` in index.css. ``font-sans`` as a
+        // Tailwind utility mirrors that stack so opt-in calls are safe.
+        // /workshop scopes its own Instrument Sans stack via the
+        // ``.workshop-surface`` class — the storefront pairing is
+        // untouched.
+        sans: [
+          'Inter',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'Roboto',
+          '"Helvetica Neue"',
+          'sans-serif',
+        ],
+        // Telemetry SQL + table monospace. Default browser mono (Menlo /
+        // Courier fallback) reads too thin in the /workshop trace panels;
+        // JetBrains Mono is the reference Coffee Roastery feel — crisp,
+        // ligature-friendly on the pgvector ``<=>`` operator, and
+        // legible at small sizes.
+        mono: [
+          '"JetBrains Mono"',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Monaco',
+          'Consolas',
+          '"Liberation Mono"',
+          '"Courier New"',
+          'monospace',
+        ],
+        // Storefront display italic face. Used via ``font-display`` or
+        // inline ``fontFamily`` on product titles.
+        display: ['Fraunces', 'Georgia', 'serif'],
+      },
       fontWeight: {
         'light': '300',
         'normal': '400',
