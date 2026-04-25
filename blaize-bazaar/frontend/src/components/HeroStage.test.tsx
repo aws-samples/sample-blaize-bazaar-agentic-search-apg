@@ -13,6 +13,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import HeroStage, { matchIntent } from './HeroStage'
 import { INTENTS } from '../copy'
 
+// HeroStage reads `useUI()` to route the SearchPill submission into the
+// concierge modal. The real provider lives behind the full app context tree,
+// so stub it out with a no-op seed function — these tests cover hero
+// rotation / ticker behavior, not concierge wiring.
+const mockOpenConciergeWithQuery = vi.fn()
+vi.mock('../contexts/UIContext', () => ({
+  useUI: () => ({ openConciergeWithQuery: mockOpenConciergeWithQuery }),
+}))
+
 const CYCLE_MS = 7500
 
 // Small helper so act() + timer advance always pair up - Testing Library

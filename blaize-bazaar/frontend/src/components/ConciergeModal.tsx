@@ -26,7 +26,7 @@ import { useLayout } from '../contexts/LayoutContext'
 import { useCart } from '../contexts/CartContext'
 import { useAgentChat, type AgentBadge, type AgentChatMessage } from '../hooks/useAgentChat'
 import { AGENT_IDENTITIES, type AgentType } from '../utils/agentIdentity'
-import ProductCardCompact from './ProductCardCompact'
+import ProductCardConcierge from './ProductCardConcierge'
 import MarkdownMessage from './MarkdownMessage'
 
 // Warm palette from storefront.md §"Design tokens".
@@ -285,7 +285,7 @@ function UnderTheHood({ index, message, expanded, onToggle, guardrailsEnabled }:
 }
 
 export default function ConciergeModal() {
-  const { activeModal, closeModal, openComparison } = useUI()
+  const { activeModal, closeModal, openComparison, consumePendingQuery } = useUI()
   const { workshopMode, guardrailsEnabled } = useLayout()
   const { addToCart } = useCart()
   const location = useLocation()
@@ -341,6 +341,17 @@ export default function ConciergeModal() {
     }, 50)
     return () => clearTimeout(t)
   }, [messages, isOpen])
+
+  // When the modal opens with a seeded query (from the hero pill), dispatch
+  // it as the first user message. `consumePendingQuery` clears the buffer so
+  // re-opens don't re-fire the same query.
+  useEffect(() => {
+    if (!isOpen) return
+    const seeded = consumePendingQuery()
+    if (seeded) {
+      void sendMessage(seeded)
+    }
+  }, [isOpen, consumePendingQuery, sendMessage])
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
@@ -508,7 +519,7 @@ export default function ConciergeModal() {
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: pIdx * 0.08, type: 'spring', stiffness: 400, damping: 25 }}
                             >
-                              <ProductCardCompact
+                              <ProductCardConcierge
                                 product={product}
                                 agentSource={message.agent as AgentType}
                                 onAddToCart={() => {

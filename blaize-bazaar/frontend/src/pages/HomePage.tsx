@@ -47,7 +47,7 @@ const NAV_ROUTES: Record<NavItem, string> = {
 
 export default function HomePage() {
   const { prefsVersion } = useAuth()
-  const { openModal, toggleConcierge } = useUI()
+  const { openModal } = useUI()
   const navigate = useNavigate()
 
   const handleNavigate = (item: NavItem) => {
@@ -65,7 +65,6 @@ export default function HomePage() {
       <Header
         current="home"
         onNavigate={handleNavigate}
-        onAskBlaize={toggleConcierge}
         onAccountClick={() => openModal('auth')}
       />
       <main>

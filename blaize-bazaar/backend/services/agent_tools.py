@@ -192,23 +192,14 @@ def search_products(
 
         hybrid = HybridSearchService(_db_service)
 
-        # Fetch more candidates so post-filtering still yields enough results
+        # Concierge uses pure pgvector semantic search (Module 1 teaching surface).
+        # Hybrid + rerank stays reserved for /api/search/hybrid-rerank and the
+        # HybridSearchComparison demo panel where the contrast is the point.
         pool_size = 30 if category else 20
-
-        if _rerank_service:
-            result = _run_async(hybrid.search_with_rerank(
-                query=query,
-                embedding=query_embedding,
-                rerank_service=_rerank_service,
-                limit=pool_size,
-                candidate_pool_size=pool_size,
-            ))
-        else:
-            result = _run_async(hybrid.search(
-                query=query,
-                embedding=query_embedding,
-                limit=pool_size,
-            ))
+        rows = _run_async(
+            hybrid._vector_search(query_embedding, pool_size, ef_search=40)
+        )
+        result = {"results": rows, "method": "semantic"}
 
         # Normalize field names and apply filters.
         products = result.get("results", [])

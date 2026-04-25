@@ -29,6 +29,7 @@ import {
   type Intent,
 } from '../copy'
 import { SHOWCASE_PRODUCTS } from '../data/showcaseProducts'
+import { useUI } from '../contexts/UIContext'
 
 // Rotation cadence (Req 1.3.1).
 const INTENT_INTERVAL_MS = 7500
@@ -426,12 +427,20 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
     setProgressPercent(0)
   }, [intents.length])
 
+  const { openConciergeWithQuery } = useUI()
+
+  // Hero pill now routes every submission to the concierge so there is one
+  // chat surface on the page. We still nudge the ticker to the matching
+  // intent so the stage feels responsive while the modal opens.
   const handleSearchSubmit = useCallback(
     (query: string) => {
-      const idx = matchIntent(query, intents)
+      const trimmed = query.trim()
+      if (!trimmed) return
+      const idx = matchIntent(trimmed, intents)
       if (idx >= 0) jumpTo(idx)
+      openConciergeWithQuery(trimmed)
     },
-    [intents, jumpTo],
+    [intents, jumpTo, openConciergeWithQuery],
   )
 
   const activeIntent = intents[activeIndex]

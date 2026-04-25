@@ -1208,8 +1208,19 @@ CURRENT REQUEST: {message}"""
             "status": "in_progress"
         }
 
+        # --- Per-turn telemetry bookkeeping ---
+        # tool_starts stashes wall-clock start of each active tool so the
+        # AfterToolCall log line can report latency without relying on the
+        # Strands SDK's own cycle timers (which aren't always exposed).
+        tool_starts: Dict[str, float] = {}
+        tool_trace: List[Dict[str, Any]] = []
+
         # --- Run orchestrator in background thread ---
         start_time = time.time()
+        logger.info(
+            f"📨 chat_stream | intent={intent} → {intent_hint} "
+            f"| session={session_id or 'anon'} | msg={message[:80]!r}"
+        )
         orchestrator_result = [None]
         orchestrator_error = [None]
 
@@ -1242,6 +1253,8 @@ CURRENT REQUEST: {message}"""
             # Tool started (from BeforeToolCallEvent hook)
             if "_tool_start" in event:
                 tool_name = event["_tool_start"]
+                tool_starts[tool_name] = time.time()
+                logger.info(f"🔧 tool_start | {tool_name}")
                 if tool_name != current_tool:
                     current_tool = tool_name
                     agent_name = self._tool_to_agent_name(tool_name)
@@ -1255,10 +1268,13 @@ CURRENT REQUEST: {message}"""
 
             # Tool completed (from AfterToolCallEvent hook) — buffer products for later
             elif "_tool_done" in event:
+                tool_name = event.get("_tool_done", "")
                 result_str = event.get("_result", "")
+                result_count = 0
                 if result_str:
                     raw_products = ProductExtractor.extract(result_str)
                     if raw_products:
+                        result_count = len(raw_products)
                         formatted = await self._format_products(raw_products)
                         # Enforce price limit from user query as safety net
                         if price_limit:
@@ -1273,7 +1289,17 @@ CURRENT REQUEST: {message}"""
                         ]
                         products_buffered.extend(new_products)
 
-                agent_name = self._tool_to_agent_name(event.get("_tool_done", ""))
+                tool_ms = int(
+                    (time.time() - tool_starts.pop(tool_name, time.time())) * 1000
+                )
+                tool_trace.append(
+                    {"tool": tool_name, "ms": tool_ms, "results": result_count}
+                )
+                logger.info(
+                    f"✅ tool_done  | {tool_name:<30} | {tool_ms:>5}ms | results={result_count}"
+                )
+
+                agent_name = self._tool_to_agent_name(tool_name)
                 yield {
                     "type": "agent_step",
                     "agent": agent_name,
@@ -1346,7 +1372,19 @@ CURRENT REQUEST: {message}"""
 
         # Cost estimation
         token_count, estimated_cost, cost_breakdown = self._estimate_cost(response_text)
-        self._track_query(products_count=len(products_sent), duration_ms=int((time.time() - start_time) * 1000), agent_type="Orchestrator")
+        total_ms = int((time.time() - start_time) * 1000)
+        self._track_query(products_count=len(products_sent), duration_ms=total_ms, agent_type="Orchestrator")
+
+        # End-of-turn telemetry: total latency, product count, tool waterfall.
+        # Compact one-liner so the workshop terminal stays legible without
+        # tail -f tricks.
+        tool_summary = " → ".join(
+            f"{t['tool']}({t['ms']}ms,{t['results']})" for t in tool_trace
+        ) or "no-tools"
+        logger.info(
+            f"📤 chat_stream done | {total_ms}ms | products={len(products_sent)} "
+            f"| tokens={token_count} | {tool_summary}"
+        )
 
         # Complete event with full response payload
         try:

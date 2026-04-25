@@ -1,11 +1,12 @@
 /**
  * Header tests — storefront sticky header.
  *
- * Validates Requirements 1.1.3, 1.2.1, 1.2.2, 1.2.3, 1.2.4, 1.2.5.
+ * Validates Requirements 1.1.3, 1.2.1, 1.2.2, 1.2.3, 1.2.4.
  *
  * Design goals:
  *  - renders exactly 5 nav items (Home, Shop, Storyboard, Discover, Account)
- *  - hides the "Ask Blaize" text link below 768px (1.2.5)
+ *  - does NOT render an "Ask Blaize" link (superseded by the hero SearchPill
+ *    and floating CommandPill — three entry points was noise on one page)
  *  - swaps the Account label based on `useAuth().user` (1.2.2, 1.2.3)
  *  - carries no legacy About/Journal items (1.2.4)
  *
@@ -124,18 +125,12 @@ describe('Header — 5 nav items', () => {
   })
 })
 
-describe('Header — "Ask Blaize" text link responsive visibility (Req 1.2.5)', () => {
-  it('renders the Ask Blaize text link marked hidden below 768px via `hidden md:inline`', () => {
+describe('Header — concierge entry point consolidation', () => {
+  it('does NOT render an "Ask Blaize" link in the header', () => {
+    // The hero SearchPill and floating CommandPill are the two concierge
+    // entry points. A third link in the header was redundant.
     renderHeader()
-    const askBlaize = screen.getByTestId('ask-blaize-link')
-    expect(askBlaize).toHaveTextContent('Ask Blaize')
-
-    // Tailwind's `hidden md:inline` is the contract: `hidden` by default,
-    // visible at the `md` (768px) breakpoint. Asserting on these classes is
-    // the stable way to validate responsive behavior in jsdom where layout
-    // isn't computed from CSS media queries.
-    expect(askBlaize).toHaveClass('hidden')
-    expect(askBlaize).toHaveClass('md:inline')
+    expect(screen.queryByTestId('ask-blaize-link')).not.toBeInTheDocument()
   })
 
   it('keeps the centered wordmark visible regardless of breakpoint', () => {

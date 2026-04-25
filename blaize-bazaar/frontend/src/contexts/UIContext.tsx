@@ -60,6 +60,14 @@ interface UIContextValue {
   closeModal: () => void
   toggleConcierge: () => void
 
+  // Pending concierge query — the hero search pill seeds this when the
+  // user submits, then ConciergeModal consumes it on open (and clears it
+  // via `consumePendingQuery`). Keeps the handoff one-way so the hero
+  // form doesn't also need to hold onto the value.
+  pendingConciergeQuery: string | null
+  openConciergeWithQuery: (text: string) => void
+  consumePendingQuery: () => string | null
+
   // Comparison payload — set when opening the comparison modal so the
   // receiver can render the product list without prop-drilling. The concierge
   // closes, comparison opens with this payload, and when the user dismisses
@@ -87,6 +95,9 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const [comparisonProducts, setComparisonProducts] = useState<
     ComparisonProduct[]
   >([])
+  const [pendingConciergeQuery, setPendingConciergeQuery] = useState<
+    string | null
+  >(null)
 
   const openModal = useCallback((name: ModalName) => {
     // Opening any modal closes the previous one first (Req 1.11.4).
@@ -111,6 +122,24 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const openComparison = useCallback((products: ComparisonProduct[]) => {
     setComparisonProducts(products)
     setActiveModal('comparison')
+  }, [])
+
+  const openConciergeWithQuery = useCallback((text: string) => {
+    const trimmed = text.trim()
+    if (!trimmed) return
+    setPendingConciergeQuery(trimmed)
+    setActiveModal('concierge')
+  }, [])
+
+  // Read-and-clear so the concierge only dispatches the seeded query once,
+  // even across re-renders.
+  const consumePendingQuery = useCallback(() => {
+    let value: string | null = null
+    setPendingConciergeQuery(prev => {
+      value = prev
+      return null
+    })
+    return value
   }, [])
 
   // Global keyboard shortcuts (Req 1.11.2, 1.11.3, 1.11.5).
@@ -164,6 +193,9 @@ export function UIProvider({ children }: { children: ReactNode }) {
       openModal,
       closeModal,
       toggleConcierge,
+      pendingConciergeQuery,
+      openConciergeWithQuery,
+      consumePendingQuery,
       comparisonProducts,
       openComparison,
       openChat,
@@ -175,6 +207,9 @@ export function UIProvider({ children }: { children: ReactNode }) {
       openModal,
       closeModal,
       toggleConcierge,
+      pendingConciergeQuery,
+      openConciergeWithQuery,
+      consumePendingQuery,
       comparisonProducts,
       openComparison,
       openChat,

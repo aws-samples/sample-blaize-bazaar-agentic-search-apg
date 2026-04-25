@@ -3,10 +3,12 @@
  *
  * Renders exactly five nav items (Home, Shop, Storyboard, Discover, Account),
  * a centered "Blaize Bazaar" wordmark with a circular B logo, and the right
- * actions: "Ask Blaize" text link (hidden below 768px), Account state button,
- * and a Bag icon with a live count badge.
+ * actions: Workshop link (hidden below 768px), Account state button, and a
+ * Bag icon with a live count badge. The concierge is not duplicated here —
+ * the hero SearchPill and the floating CommandPill are the two entry points
+ * so the header stays uncluttered.
  *
- * Validates Requirements 1.1.3, 1.2.1 through 1.2.5.
+ * Validates Requirements 1.1.3, 1.2.1 through 1.2.4.
  *
  * Copy comes from `copy.ts`. No legacy About/Journal items; About content
  * lives in the Footer per `storefront.md`.
@@ -30,8 +32,6 @@ interface HeaderProps {
   current?: NavItem
   /** Optional click handler fired when any nav link is activated. */
   onNavigate?: (item: NavItem) => void
-  /** Optional click handler for the "Ask Blaize" text link. */
-  onAskBlaize?: () => void
   /** Optional click handler for the Account button. Default opens the auth modal. */
   onAccountClick?: () => void
 }
@@ -149,7 +149,6 @@ function NavLink({ item, label, current, onClick }: NavLinkProps) {
 export default function Header({
   current = 'home',
   onNavigate,
-  onAskBlaize,
   onAccountClick,
 }: HeaderProps = {}) {
   const { items: cartItems, setCartOpen } = useCart()
@@ -200,20 +199,11 @@ export default function Header({
             <Wordmark />
           </div>
 
-          {/* Right: Ask Blaize text link (hidden <768px), Workshop link, Account, Bag */}
+          {/* Right: Workshop link (hidden <768px), Account, Bag. The
+              concierge entry points are the hero SearchPill and the
+              floating CommandPill; duplicating them here would give three
+              identical surfaces on one page. */}
           <div className="flex items-center gap-4 flex-shrink-0">
-            <button
-              type="button"
-              onClick={onAskBlaize}
-              data-testid="ask-blaize-link"
-              className="hidden md:inline text-[14px] transition-opacity hover:opacity-70"
-              style={{ color: INK, background: 'transparent' }}
-            >
-              {NAV.ASK_BLAIZE}
-            </button>
-
-            {/* Secondary text link to the DAT406 workshop surface. Hidden below 768px
-                alongside "Ask Blaize" so the mobile header stays compact. */}
             <Link
               to="/workshop"
               data-testid="workshop-link"

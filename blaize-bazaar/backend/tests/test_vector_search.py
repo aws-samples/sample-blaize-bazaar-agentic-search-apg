@@ -164,26 +164,37 @@ def test_uses_cosine_distance_and_similarity_formula(
 # ---------------------------------------------------------------------------
 
 
-def test_sets_ef_search_with_parameterized_value(embedding: List[float]) -> None:
-    """SET LOCAL hnsw.ef_search SHALL use parameterized placeholder."""
+def test_sets_ef_search_with_validated_int(embedding: List[float]) -> None:
+    """SET LOCAL hnsw.ef_search SHALL interpolate a validated int.
+
+    PostgreSQL disallows bind parameters on utility statements, so the
+    value is coerced with ``int()`` and placed directly in the SQL — safe
+    because the coercion rejects anything that isn't an integer before it
+    reaches the server.
+    """
     db, _ = _call(embedding, ef_search=64)
 
     # The first execute is SET LOCAL hnsw.ef_search.
     first_sql, first_params = db.cursor.calls[0]
     assert "SET LOCAL hnsw.ef_search" in first_sql
-    assert "%s" in first_sql  # parameterized, not interpolated
-    assert first_params == (64,)
+    assert "%s" not in first_sql, "ef_search must not be bound (Postgres rejects)"
+    assert first_sql.strip().endswith("= 64")
 
 
 def test_iterative_scan_true_sets_relaxed_order(embedding: List[float]) -> None:
-    """When iterative_scan=True SHALL call SET LOCAL hnsw.iterative_scan."""
+    """When iterative_scan=True SHALL issue SET LOCAL hnsw.iterative_scan.
+
+    Postgres disallows bind parameters on utility statements, so the value
+    is a hardcoded literal (``'relaxed_order'``) — no external input ever
+    reaches this SQL string.
+    """
     db, _ = _call(embedding, iterative_scan=True)
 
     iterative_calls = [c for c in db.cursor.calls if "iterative_scan" in c[0]]
     assert len(iterative_calls) == 1
-    sql, params = iterative_calls[0]
+    sql, _params = iterative_calls[0]
     assert "SET LOCAL hnsw.iterative_scan" in sql
-    assert params == ("relaxed_order",)
+    assert "'relaxed_order'" in sql
 
 
 def test_iterative_scan_false_skips_set_local(embedding: List[float]) -> None:
@@ -223,11 +234,10 @@ def test_all_executes_use_parameterized_placeholders(
     db, _ = _call(embedding)
 
     for sql, params in db.cursor.calls:
-        # No SQL string should contain the embedding value or the literal limit.
+        # The embedding itself — always parameterized.
         assert "0.01" not in sql, f"Embedding value leaked into SQL: {sql[:120]}"
-        # 40 (ef_search) must never appear directly in the SQL text.
-        assert " 40" not in sql, f"ef_search value leaked into SQL: {sql[:120]}"
-        # Every SET LOCAL or query that carries a value MUST carry it via params.
+        # Every SELECT / utility statement with a %s MUST carry its values
+        # via params. (SET LOCAL lines have no %s — Postgres rejects them.)
         if "%s" in sql:
             assert params is not None and len(list(params)) > 0, sql
 

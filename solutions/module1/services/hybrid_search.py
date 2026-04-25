@@ -122,7 +122,8 @@ class HybridSearchService:
             - CTE: WITH query_embedding AS (SELECT %s::vector as emb)
             - Cosine distance operator: <=> (lower = more similar)
             - Similarity: 1 - (embedding <=> emb)  (higher = more similar)
-            - HNSW tuning: SET LOCAL hnsw.ef_search = %s  (per-query accuracy knob)
+            - HNSW tuning: SET LOCAL hnsw.ef_search = {int}  (per-query accuracy knob;
+              Postgres disallows binds on utility statements — value coerced to int first)
             - Iterative scan: SET LOCAL hnsw.iterative_scan = 'relaxed_order'
               (pgvector 0.8.0 — prevents overfiltering when WHERE clauses are strict)
             - In-stock filter: quantity > 0
@@ -169,19 +170,20 @@ class HybridSearchService:
         """
         params: List[Any] = [embedding, limit]
 
+        # PostgreSQL disallows bind parameters on utility statements like SET,
+        # so HNSW tuning values are interpolated directly. Inputs are coerced
+        # (int for ef_search, whitelisted literal for iterative_scan) — no
+        # user-supplied strings reach the SQL.
+        ef_search_sql = int(ef_search)
         start_time = time.time()
         async with self.db.get_connection() as conn:
             async with conn.cursor() as cur:
-                # Per-query HNSW tuning (transaction-scoped via SET LOCAL).
                 await cur.execute(
-                    "SET LOCAL hnsw.ef_search = %s", (ef_search,)
+                    f"SET LOCAL hnsw.ef_search = {ef_search_sql}"
                 )
-                # Iterative scan keeps HNSW returning enough candidates even
-                # when the WHERE clause filters many matches out.
                 if iterative_scan:
                     await cur.execute(
-                        "SET LOCAL hnsw.iterative_scan = %s",
-                        ("relaxed_order",),
+                        "SET LOCAL hnsw.iterative_scan = 'relaxed_order'"
                     )
 
                 await cur.execute(sql, params)
