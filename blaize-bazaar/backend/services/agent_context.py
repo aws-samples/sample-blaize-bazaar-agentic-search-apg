@@ -9,7 +9,13 @@ panels stream in, response closes).
 Contract is frozen — matches the Coffee Roastery reference
 (``conferences/2026-postgresconf-agentic-ai/agents.py``) so the frontend
 renderer ports 1:1. See ``docs/blaize-bazaar-telemetry-audit.md`` Section 4
-for the 11-tag Blaize Bazaar panel plan.
+for the Blaize Bazaar panel plan: 13 panels on the standard showcase
+query, 14 on the approval-gated path (adds ``GUARDRAIL · APPROVAL``).
+Query-shape-dependent — a lightweight "linen pieces" query emits ~6,
+while the headline cohort-overlap query emits the full 13. MEMORY ·
+CONFIDENCE is a deterministic panel computed from upstream panel row
+coverage (no LLM introspection) and emits between GROUNDING and
+LLM · OPUS · SYNTHESIZE.
 
 Not every turn emits every event type. Minimum wire shape is
 ``{session_id, events: [{type: "response", ...}]}`` — i.e., a bare response
