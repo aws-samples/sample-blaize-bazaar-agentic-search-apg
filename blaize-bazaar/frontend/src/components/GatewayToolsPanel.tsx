@@ -1,24 +1,34 @@
 /**
  * GatewayToolsPanel — Card 7 "Tool Registry · Gateway".
  *
- * Week 2 rewrite: dual-ranking view.
- *   Left column  — Aurora pgvector top-K for the demo query (teaching).
- *   Right column — AgentCore Gateway full tool list (production primitive).
+ * Week 2 dual-ranking view (Aurora pgvector teaching vs AgentCore
+ * Gateway production), re-skinned in the pre-Week-3 layout pass to the
+ * boutique cream/ink palette and rendered inline inside the /workshop
+ * detail slot (artifact pattern) rather than a full-screen modal.
  *
- * When AGENTCORE_GATEWAY_URL is unset, the right column shows a
- * deliberately-loud "Gateway not configured" state so attendees can tell
- * at a glance whether they're looking at dual rankings or Aurora-only
- * single-source. The banner at the top of the modal makes the same call
- * even more prominently.
- *
- * Data source: POST /api/workshop/tool-registry. The modal takes a demo
- * query (pre-filled) and re-runs on submit so attendees can explore how
- * the Aurora ranking changes with different phrasings.
+ * Key UX rules preserved from Week 2:
+ *   - Gateway-unset banner is deliberately loud (amber warning at the
+ *     top, not a greyed footer). Attendees tell dual-rank vs single-
+ *     source at a glance.
+ *   - Interactive query input re-fetches ranking.
+ *   - Both columns render even when one side is empty/unconfigured.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Wrench, RefreshCw, Database, Globe, AlertTriangle } from 'lucide-react'
+import { Wrench, RefreshCw, Database, Globe, AlertTriangle, X } from 'lucide-react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || ''
+
+const CREAM = '#fbf4e8'
+const CREAM_WARM = '#f5e8d3'
+const INK = '#2d1810'
+const INK_SOFT = '#6b4a35'
+const INK_QUIET = '#a68668'
+const ACCENT = '#c44536'
+const AMBER_FG = '#b45309'
+const AMBER_BG = '#fef3c7'
+const AMBER_BORDER = '#fcd34d'
+const CYAN_FG = '#0369a1'
+const CYAN_BORDER = '#7dd3fc'
 
 interface PgvectorRow {
   tool_id: string
@@ -94,210 +104,313 @@ export default function GatewayToolsPanel({ onClose }: { onClose: () => void }) 
   const gatewayConfigured = data?.gateway.configured ?? false
 
   return (
-    <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
+    <section
+      data-testid="card-7-panel"
+      className="h-full flex flex-col overflow-hidden rounded-2xl"
+      style={{ background: CREAM, border: `1px solid ${INK_QUIET}30` }}
     >
-      <div
-        className="w-full max-w-5xl max-h-[88vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0a0a0f]/95 shadow-2xl p-6"
-        onClick={(e) => e.stopPropagation()}
-        data-testid="card-7-modal"
+      {/* Header */}
+      <header
+        className="flex items-center justify-between px-5 py-4"
+        style={{ borderBottom: `1px solid ${INK_QUIET}25`, background: CREAM_WARM }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 flex items-center justify-center">
-              <Wrench className="w-5 h-5 text-cyan-400" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">Tool Registry · Gateway</h2>
-              <p className="text-xs text-white/40">
-                Aurora pgvector (teaching) vs AgentCore Gateway (production)
-              </p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: `${ACCENT}15`, border: `1px solid ${ACCENT}40` }}
+          >
+            <Wrench className="w-5 h-5" style={{ color: ACCENT }} />
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => fetchRanking(query)}
-              className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors"
-              aria-label="refresh"
+          <div>
+            <h2
+              className="text-base font-semibold"
+              style={{ color: INK, fontFamily: "'Fraunces', serif" }}
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors text-xl leading-none"
-              aria-label="close"
-            >
-              &times;
-            </button>
+              Tool Registry · Gateway
+            </h2>
+            <p className="text-xs" style={{ color: INK_QUIET }}>
+              Aurora pgvector (teaching) vs AgentCore Gateway (production)
+            </p>
           </div>
         </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            aria-label="refresh rankings"
+            onClick={() => fetchRanking(query)}
+            className="p-1.5 rounded-lg transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+            style={{ color: INK_QUIET }}
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            type="button"
+            aria-label="close tool registry panel"
+            onClick={onClose}
+            className="p-1.5 rounded-lg transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+            style={{ color: INK_QUIET }}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
 
-        {/* Gateway-not-configured banner — deliberately loud */}
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
+        {/* Gateway-unset banner — loud and boutique-palette. */}
         {data && !gatewayConfigured && (
           <div
             data-testid="gateway-unset-banner"
-            className="mb-5 p-4 rounded-xl border-2 border-amber-400/50 bg-amber-400/10 flex gap-3"
+            className="rounded-xl p-3.5 flex gap-3"
+            style={{
+              background: AMBER_BG,
+              border: `2px solid ${AMBER_BORDER}`,
+            }}
           >
-            <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <AlertTriangle
+              className="w-5 h-5 flex-shrink-0 mt-0.5"
+              style={{ color: AMBER_FG }}
+            />
             <div className="flex-1">
-              <p className="text-sm font-semibold text-amber-100">
+              <p className="text-sm font-semibold" style={{ color: AMBER_FG }}>
                 Gateway not configured — showing Aurora ranking only
               </p>
-              <p className="text-xs text-amber-200/70 mt-1">
-                Set <code className="font-mono px-1 rounded bg-black/30">AGENTCORE_GATEWAY_URL</code>{' '}
-                in <code className="font-mono px-1 rounded bg-black/30">blaize-bazaar/backend/.env</code>{' '}
-                to see the side-by-side dual-ranking (Aurora teaching ↔ Gateway production).
+              <p className="text-[12px] mt-1 leading-[1.5]" style={{ color: AMBER_FG }}>
+                Set{' '}
+                <code
+                  className="font-mono px-1 py-0.5 rounded text-[11px]"
+                  style={{ background: 'rgba(0,0,0,0.06)', color: INK }}
+                >
+                  AGENTCORE_GATEWAY_URL
+                </code>{' '}
+                in{' '}
+                <code
+                  className="font-mono px-1 py-0.5 rounded text-[11px]"
+                  style={{ background: 'rgba(0,0,0,0.06)', color: INK }}
+                >
+                  blaize-bazaar/backend/.env
+                </code>{' '}
+                to see the side-by-side dual ranking.
               </p>
             </div>
           </div>
         )}
 
         {/* Query input */}
-        <form onSubmit={onSubmit} className="mb-4 flex gap-2">
+        <form onSubmit={onSubmit} className="flex gap-2">
           <input
+            data-testid="card-7-query-input"
             type="text"
             value={pendingQuery}
             onChange={(e) => setPendingQuery(e.target.value)}
             placeholder="Demo query…"
-            className="flex-1 px-4 py-2 rounded-lg bg-white/[0.03] border border-white/10 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-400/50"
-            data-testid="card-7-query-input"
+            className="flex-1 px-3.5 py-2 rounded-lg text-sm focus:outline-none"
+            style={{
+              background: 'rgba(255,255,255,0.75)',
+              border: `1px solid ${INK_QUIET}40`,
+              color: INK,
+            }}
           />
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 rounded-lg bg-cyan-500/20 border border-cyan-400/40 text-cyan-100 text-sm hover:bg-cyan-500/30 transition-colors disabled:opacity-40"
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-opacity disabled:opacity-40 hover:opacity-85"
+            style={{ background: INK, color: CREAM }}
           >
             Rank
           </button>
         </form>
 
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-200">
+          <div
+            className="px-3.5 py-2.5 rounded-lg text-[13px]"
+            style={{
+              background: '#fee2e2',
+              border: `1px solid #fca5a5`,
+              color: '#991b1b',
+            }}
+          >
             Failed to load rankings: {error}
           </div>
         )}
 
         {/* Dual column body */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Left: Aurora pgvector */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          {/* Left: Aurora pgvector (teaching) */}
           <section
             data-testid="card-7-pgvector-column"
-            className="rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-4"
+            className="rounded-xl p-4"
+            style={{
+              background: 'rgba(255,255,255,0.7)',
+              border: `1px solid ${INK_QUIET}30`,
+            }}
           >
             <header className="flex items-center gap-2 mb-3">
-              <Database className="w-4 h-4 text-cyan-400" />
-              <span className="text-sm font-semibold text-white">Aurora pgvector</span>
-              <span className="font-mono text-[9.5px] tracking-[1.5px] uppercase px-1.5 py-0.5 rounded bg-amber-400/10 border border-amber-400/30 text-amber-300">
-                TEACHING
+              <Database className="w-4 h-4" style={{ color: CYAN_FG }} />
+              <span className="text-sm font-semibold" style={{ color: INK }}>
+                Aurora pgvector
+              </span>
+              <span
+                className="font-mono text-[9.5px] tracking-[1.5px] uppercase px-1.5 py-0.5 rounded"
+                style={{
+                  color: AMBER_FG,
+                  background: AMBER_BG,
+                  border: `1px solid ${AMBER_BORDER}`,
+                }}
+              >
+                Teaching
               </span>
             </header>
-            <p className="text-[11px] text-white/40 mb-3 leading-relaxed">
-              Top-K by cosine similarity on <code className="font-mono">tools.description_emb</code>.
-              The same primitive Gateway provides, implemented directly on your table so you can see
-              what the managed service does for you.
+            <p className="text-[11.5px] leading-[1.55] mb-3" style={{ color: INK_SOFT }}>
+              Top-K by cosine similarity on{' '}
+              <code
+                className="font-mono px-1 rounded text-[10.5px]"
+                style={{ background: 'rgba(0,0,0,0.05)', color: INK }}
+              >
+                tools.description_emb
+              </code>
+              . The same primitive Gateway provides, implemented directly on your table.
             </p>
             {data?.pgvector.rows.length ? (
-              <ol className="space-y-2">
+              <ol className="flex flex-col gap-2">
                 {data.pgvector.rows.map((r, i) => (
                   <li
                     key={r.tool_id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/5"
+                    className="flex items-start gap-3 p-2.5 rounded-lg"
+                    style={{ background: CREAM_WARM }}
                   >
-                    <span className="font-mono text-[10px] text-white/30 pt-0.5">
+                    <span className="font-mono text-[10px] pt-0.5" style={{ color: INK_QUIET }}>
                       {String(i + 1).padStart(2, '0')}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-mono text-cyan-200 truncate">{r.name}</p>
-                      <p className="text-[11px] text-white/40 mt-0.5 line-clamp-2">{r.description}</p>
+                      <p
+                        className="text-[13px] font-mono truncate"
+                        style={{ color: INK }}
+                      >
+                        {r.name}
+                      </p>
+                      <p
+                        className="text-[11.5px] mt-0.5 line-clamp-2"
+                        style={{ color: INK_SOFT }}
+                      >
+                        {r.description}
+                      </p>
                     </div>
-                    <span className="font-mono text-[10px] text-white/50 pt-1">
+                    <span
+                      className="font-mono text-[11px] pt-0.5"
+                      style={{ color: INK_SOFT }}
+                    >
                       {r.similarity.toFixed(3)}
                     </span>
                   </li>
                 ))}
               </ol>
             ) : (
-              <div className="text-xs text-white/30 py-6 text-center">
-                {data?.pgvector.error ? (
-                  <>error: {data.pgvector.error}</>
-                ) : (
-                  <>
-                    {data?.pgvector.total_count === 0
-                      ? 'No tools indexed yet. Run scripts/seed_tool_registry.py.'
-                      : 'Loading…'}
-                  </>
-                )}
+              <div className="text-[12px] py-6 text-center" style={{ color: INK_QUIET }}>
+                {data?.pgvector.error
+                  ? `error: ${data.pgvector.error}`
+                  : data?.pgvector.total_count === 0
+                  ? 'No tools indexed yet. Run scripts/seed_tool_registry.py.'
+                  : 'Loading…'}
               </div>
             )}
             {data && (
-              <footer className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] text-white/30 font-mono">
+              <footer
+                className="mt-3 pt-3 flex items-center justify-between text-[10.5px] font-mono"
+                style={{
+                  borderTop: `1px solid ${INK_QUIET}25`,
+                  color: INK_QUIET,
+                }}
+              >
                 <span>{data.pgvector.total_count} tool(s) indexed</span>
                 <span>{data.pgvector.duration_ms}ms</span>
               </footer>
             )}
           </section>
 
-          {/* Right: AgentCore Gateway */}
+          {/* Right: AgentCore Gateway (production) */}
           <section
             data-testid="card-7-gateway-column"
-            className={`rounded-xl border p-4 ${
-              gatewayConfigured
-                ? 'border-violet-400/20 bg-violet-500/5'
-                : 'border-white/5 bg-white/[0.02]'
-            }`}
+            className="rounded-xl p-4"
+            style={{
+              background: gatewayConfigured ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.4)',
+              border: `1px solid ${INK_QUIET}30`,
+            }}
           >
             <header className="flex items-center gap-2 mb-3">
               <Globe
-                className={`w-4 h-4 ${gatewayConfigured ? 'text-violet-400' : 'text-white/20'}`}
+                className="w-4 h-4"
+                style={{ color: gatewayConfigured ? ACCENT : INK_QUIET }}
               />
-              <span className="text-sm font-semibold text-white">AgentCore Gateway</span>
+              <span className="text-sm font-semibold" style={{ color: INK }}>
+                AgentCore Gateway
+              </span>
               <span
-                className={`font-mono text-[9.5px] tracking-[1.5px] uppercase px-1.5 py-0.5 rounded border ${
+                className="font-mono text-[9.5px] tracking-[1.5px] uppercase px-1.5 py-0.5 rounded"
+                style={
                   gatewayConfigured
-                    ? 'bg-cyan-400/10 border-cyan-400/30 text-cyan-300'
-                    : 'bg-white/5 border-white/10 text-white/30'
-                }`}
+                    ? {
+                        color: CYAN_FG,
+                        background: 'rgba(125,211,252,0.15)',
+                        border: `1px solid ${CYAN_BORDER}`,
+                      }
+                    : {
+                        color: INK_QUIET,
+                        background: 'rgba(0,0,0,0.04)',
+                        border: `1px solid ${INK_QUIET}40`,
+                      }
+                }
               >
-                {gatewayConfigured ? 'PRODUCTION' : 'NOT CONFIGURED'}
+                {gatewayConfigured ? 'Production' : 'Not Configured'}
               </span>
             </header>
-            <p className="text-[11px] text-white/40 mb-3 leading-relaxed">
-              Full tool catalog published via MCP streamable-http. The managed primitive: auth,
-              schema validation, and discovery are Gateway's job, not yours.
+            <p className="text-[11.5px] leading-[1.55] mb-3" style={{ color: INK_SOFT }}>
+              Full tool catalog published via MCP streamable-http. Auth, schema validation, and
+              discovery are Gateway's job, not yours.
             </p>
             {gatewayConfigured ? (
               data?.gateway.tools.length ? (
-                <ul className="space-y-2">
+                <ul className="flex flex-col gap-2">
                   {data.gateway.tools.slice(0, 9).map((t) => (
                     <li
                       key={t.name}
-                      className="p-3 rounded-lg bg-white/[0.03] border border-white/5"
+                      className="p-2.5 rounded-lg"
+                      style={{ background: CREAM_WARM }}
                     >
-                      <p className="text-sm font-mono text-violet-200 truncate">{t.name}</p>
-                      <p className="text-[11px] text-white/40 mt-0.5 line-clamp-2">
+                      <p className="text-[13px] font-mono truncate" style={{ color: INK }}>
+                        {t.name}
+                      </p>
+                      <p
+                        className="text-[11.5px] mt-0.5 line-clamp-2"
+                        style={{ color: INK_SOFT }}
+                      >
                         {t.description}
                       </p>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <div className="text-xs text-white/30 py-6 text-center">
-                  {data?.gateway.error ? <>error: {data.gateway.error}</> : 'Loading…'}
+                <div className="text-[12px] py-6 text-center" style={{ color: INK_QUIET }}>
+                  {data?.gateway.error ? `error: ${data.gateway.error}` : 'Loading…'}
                 </div>
               )
             ) : (
-              <div className="text-center py-8">
-                <Globe className="w-8 h-8 text-white/10 mx-auto mb-2" />
-                <p className="text-xs text-white/30 leading-relaxed max-w-xs mx-auto">
+              <div className="text-center py-6 flex flex-col items-center gap-2">
+                <Globe className="w-7 h-7" style={{ color: INK_QUIET }} />
+                <p
+                  className="text-[12px] leading-[1.55] max-w-xs"
+                  style={{ color: INK_QUIET }}
+                >
                   Gateway is the production tool-discovery primitive. See the banner above for
                   configuration.
                 </p>
               </div>
             )}
             {data && gatewayConfigured && (
-              <footer className="mt-3 pt-3 border-t border-white/5 text-[10px] text-white/30 font-mono">
+              <footer
+                className="mt-3 pt-3 text-[10.5px] font-mono"
+                style={{ borderTop: `1px solid ${INK_QUIET}25`, color: INK_QUIET }}
+              >
                 {data.gateway.tools.length} tool(s) via MCP
               </footer>
             )}
@@ -305,13 +418,23 @@ export default function GatewayToolsPanel({ onClose }: { onClose: () => void }) 
         </div>
 
         {/* Teaching footer */}
-        <div className="mt-5 p-3 rounded-lg border border-white/5 bg-white/[0.02] text-[11px] text-white/40 leading-relaxed">
-          <span className="font-semibold text-white/70">Teaching moment:</span> both columns rank
-          the same 9 tools. Aurora shows you <em>how</em> similarity search picks tools; Gateway
-          abstracts that away behind a managed MCP endpoint. In production you'd use Gateway; this
-          card exists to demystify what Gateway does for you.
+        <div
+          className="rounded-xl p-3.5 text-[12px] leading-[1.6]"
+          style={{
+            background: CREAM_WARM,
+            border: `1px dashed ${INK_QUIET}50`,
+            color: INK_SOFT,
+          }}
+        >
+          <span className="font-semibold" style={{ color: INK }}>
+            Teaching moment:
+          </span>{' '}
+          both columns rank the same 9 tools. Aurora shows{' '}
+          <em>how</em> similarity search picks tools; Gateway abstracts that away behind a managed
+          MCP endpoint. In production you'd use Gateway; this card exists to demystify what Gateway
+          does for you.
         </div>
       </div>
-    </div>
+    </section>
   )
 }

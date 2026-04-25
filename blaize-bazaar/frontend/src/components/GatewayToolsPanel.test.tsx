@@ -89,14 +89,14 @@ describe('GatewayToolsPanel — Gateway unset (banner + single-source)', () => {
     expect(banner.textContent).toContain('AGENTCORE_GATEWAY_URL')
   })
 
-  it('renders the Gateway column with a "NOT CONFIGURED" label, not an empty state', async () => {
+  it('renders the Gateway column with a "Not Configured" label, not an empty state', async () => {
     vi.stubGlobal('fetch', mockFetch(BASE))
     render(<GatewayToolsPanel onClose={() => {}} />)
     await waitFor(() =>
       expect(screen.getByTestId('card-7-gateway-column')).toBeInTheDocument(),
     )
     const gatewayCol = screen.getByTestId('card-7-gateway-column')
-    expect(gatewayCol.textContent).toContain('NOT CONFIGURED')
+    expect(gatewayCol.textContent).toContain('Not Configured')
   })
 
   it('still renders the Aurora pgvector ranking in single-source mode', async () => {
@@ -143,7 +143,7 @@ describe('GatewayToolsPanel — Gateway configured (dual-rank)', () => {
     // Gateway column shows both catalog tools.
     expect(gwCol.textContent).toContain('search_products')
     expect(gwCol.textContent).toContain('restock_product')
-    expect(gwCol.textContent).toContain('PRODUCTION')
+    expect(gwCol.textContent).toContain('Production')
   })
 })
 
@@ -158,7 +158,7 @@ describe('GatewayToolsPanel — query input re-fetches', () => {
     const input = screen.getByTestId('card-7-query-input') as HTMLInputElement
     await user.clear(input)
     await user.type(input, 'warm oversized cashmere')
-    await user.click(screen.getByRole('button', { name: /rank/i }))
+    await user.click(screen.getByRole('button', { name: /^rank$/i }))
 
     await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
     const secondCall = fetchSpy.mock.calls[1]

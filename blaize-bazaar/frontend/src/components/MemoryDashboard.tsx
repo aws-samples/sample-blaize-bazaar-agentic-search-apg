@@ -1,11 +1,28 @@
 /**
- * MemoryDashboard — Shows stored user preferences from AgentCore Memory (Lab 4b).
- * Displays extracted preferences, conversation summaries, and semantic facts.
+ * MemoryDashboard — AgentCore Memory read-out for /workshop card 1.
+ *
+ * Renders as inline content inside the /workshop detail slot (artifact
+ * pattern), not a full-screen modal. No fixed/inset wrapper — the parent
+ * owns positioning. Own close button in the header matches the
+ * detail-pane chrome so the layout reads consistently regardless of
+ * which card is open.
+ *
+ * Boutique palette: cream `#fbf4e8` background, ink `#2d1810` text,
+ * terracotta accent `#c44536`. No dark backgrounds, no violet/pink
+ * gradients — those were re:Invent-era leftovers that fought the
+ * storefront look. Matches the architecture card visual language.
  */
-import { useState, useEffect } from 'react'
-import { Brain, RefreshCw, User } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { Brain, RefreshCw, User, X } from 'lucide-react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || ''
+
+const CREAM = '#fbf4e8'
+const CREAM_WARM = '#f5e8d3'
+const INK = '#2d1810'
+const INK_SOFT = '#6b4a35'
+const INK_QUIET = '#a68668'
+const ACCENT = '#c44536'
 
 interface Memory {
   id: string
@@ -15,17 +32,25 @@ interface Memory {
   metadata: Record<string, unknown>
 }
 
+// Preference / summary / fact types map to cream-warm pills with
+// boutique accent text — keeps the "source of truth" quiet so the
+// content itself reads as the foreground.
+const TYPE_LABELS: Record<string, { label: string; color: string }> = {
+  preference: { label: 'PREFERENCE', color: '#047857' },
+  summary: { label: 'SUMMARY', color: '#b45309' },
+  fact: { label: 'FACT', color: '#0369a1' },
+}
+
 export default function MemoryDashboard({ onClose }: { onClose: () => void }) {
   const [memories, setMemories] = useState<Memory[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchMemories = async () => {
+  const fetchMemories = useCallback(async () => {
     setLoading(true)
     try {
       const token = localStorage.getItem('blaize-access-token')
       const headers: Record<string, string> = {}
       if (token) headers['Authorization'] = `Bearer ${token}`
-
       const res = await fetch(`${API_BASE_URL}/api/agentcore/memories`, { headers })
       if (res.ok) {
         const data = await res.json()
@@ -36,82 +61,136 @@ export default function MemoryDashboard({ onClose }: { onClose: () => void }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  useEffect(() => { fetchMemories() }, [])
-
-  const typeColors: Record<string, string> = {
-    preference: 'from-emerald-500/20 to-green-500/20 border-emerald-500/20 text-emerald-400',
-    summary: 'from-blue-500/20 to-cyan-500/20 border-blue-500/20 text-blue-400',
-    fact: 'from-amber-500/20 to-orange-500/20 border-amber-500/20 text-amber-400',
-    unknown: 'from-gray-500/20 to-slate-500/20 border-gray-500/20 text-gray-400',
-  }
+  useEffect(() => {
+    fetchMemories()
+  }, [fetchMemories])
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-2xl border border-white/10 bg-[#0a0a0f]/95 shadow-2xl p-6"
-        onClick={e => e.stopPropagation()}
+    <section
+      data-testid="memory-dashboard"
+      className="h-full flex flex-col overflow-hidden rounded-2xl"
+      style={{ background: CREAM, border: `1px solid ${INK_QUIET}30` }}
+    >
+      {/* Header — matches WorkshopChat/WorkshopTelemetry chrome */}
+      <header
+        className="flex items-center justify-between px-5 py-4"
+        style={{ borderBottom: `1px solid ${INK_QUIET}25`, background: CREAM_WARM }}
       >
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 flex items-center justify-center">
-              <Brain className="w-5 h-5 text-pink-400" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">AgentCore Memory</h2>
-              <p className="text-xs text-white/40">Persistent user preferences</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: `${ACCENT}15`, border: `1px solid ${ACCENT}40` }}
+          >
+            <Brain className="w-5 h-5" style={{ color: ACCENT }} />
           </div>
-          <div className="flex items-center gap-2">
-            <button onClick={fetchMemories} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors">
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors text-xl leading-none">&times;</button>
+          <div>
+            <h2
+              className="text-base font-semibold"
+              style={{ color: INK, fontFamily: "'Fraunces', serif" }}
+            >
+              AgentCore Memory
+            </h2>
+            <p className="text-xs" style={{ color: INK_QUIET }}>
+              Persistent user preferences · short-term + long-term
+            </p>
           </div>
         </div>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={fetchMemories}
+            aria-label="refresh memories"
+            className="p-1.5 rounded-lg transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+            style={{ color: INK_QUIET }}
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="close memory dashboard"
+            className="p-1.5 rounded-lg transition-colors hover:bg-[rgba(0,0,0,0.04)]"
+            style={{ color: INK_QUIET }}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </header>
 
-        {/* How it works */}
-        <div className="mb-5 p-4 rounded-xl border border-white/5 bg-white/[0.02]">
-          <p className="text-xs text-white/50 mb-2 font-medium">How AgentCore Memory Works</p>
-          <div className="flex items-center gap-3 text-[10px] text-white/40 font-mono">
-            <div className="px-2 py-1 rounded bg-pink-500/10 border border-pink-500/20 text-pink-400">Chat</div>
-            <span>&rarr;</span>
-            <div className="px-2 py-1 rounded bg-violet-500/10 border border-violet-500/20 text-violet-400">Extract</div>
-            <span>&rarr;</span>
-            <div className="px-2 py-1 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400">Store</div>
-            <span>&rarr;</span>
-            <div className="px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">Recall</div>
-          </div>
-          <p className="text-[10px] text-white/30 mt-2">Preferences are automatically extracted from conversations and recalled in future sessions.</p>
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
+        {/* Flow strip — keeps the Chat → Extract → Store → Recall lesson
+            visible without the cartoon gradient pills. */}
+        <div
+          className="rounded-xl p-3 flex items-center gap-2 text-[11px] font-mono"
+          style={{
+            background: 'rgba(255,255,255,0.65)',
+            border: `1px dashed ${INK_QUIET}40`,
+            color: INK_SOFT,
+          }}
+        >
+          <span className="font-semibold uppercase tracking-[1.2px]" style={{ color: INK_QUIET }}>
+            Flow
+          </span>
+          <span>chat</span>
+          <span style={{ color: INK_QUIET }}>→</span>
+          <span>extract</span>
+          <span style={{ color: INK_QUIET }}>→</span>
+          <span>store</span>
+          <span style={{ color: INK_QUIET }}>→</span>
+          <span>recall</span>
         </div>
 
-        {/* Memories List */}
         {memories.length > 0 ? (
-          <div className="space-y-3">
+          <ol className="flex flex-col gap-2">
             {memories.map((mem, i) => {
-              const colorClass = typeColors[mem.type] || typeColors.unknown
+              const meta = TYPE_LABELS[mem.type] || { label: mem.type.toUpperCase(), color: INK_SOFT }
               return (
-                <div key={i} className="p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-gradient-to-r border ${colorClass}`}>
-                      {mem.type}
+                <li
+                  key={i}
+                  className="rounded-xl p-3"
+                  style={{
+                    background: 'rgba(255,255,255,0.7)',
+                    border: `1px solid ${INK_QUIET}25`,
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span
+                      className="font-mono text-[9.5px] font-semibold tracking-[1.5px] uppercase px-1.5 py-0.5 rounded"
+                      style={{
+                        color: meta.color,
+                        border: `1px solid ${meta.color}40`,
+                        background: `${meta.color}10`,
+                      }}
+                    >
+                      {meta.label}
                     </span>
-                    <span className="text-[10px] text-white/20">{new Date(mem.created_at).toLocaleDateString()}</span>
+                    <span className="text-[10px] font-mono" style={{ color: INK_QUIET }}>
+                      {new Date(mem.created_at).toLocaleDateString()}
+                    </span>
                   </div>
-                  <p className="text-sm text-white/70">{mem.content}</p>
-                </div>
+                  <p className="text-[13.5px] leading-[1.55]" style={{ color: INK }}>
+                    {mem.content}
+                  </p>
+                </li>
               )
             })}
-          </div>
+          </ol>
         ) : (
-          <div className="text-center py-12">
-            <User className="w-10 h-10 text-white/10 mx-auto mb-3" />
-            <p className="text-sm text-white/30 mb-1">No memories stored yet</p>
-            <p className="text-xs text-white/20">Chat with the agent to build preferences. Try: "I love running shoes under $100"</p>
+          <div className="text-center py-10 flex flex-col items-center gap-2.5">
+            <User className="w-8 h-8" style={{ color: INK_QUIET }} />
+            <p className="text-sm font-medium" style={{ color: INK_SOFT }}>
+              No memories stored yet
+            </p>
+            <p className="text-[12.5px] leading-[1.55] max-w-sm" style={{ color: INK_QUIET }}>
+              Chat with the agent to build preferences. Try:{' '}
+              <em style={{ color: INK }}>"I love running shoes under $100"</em>
+            </p>
           </div>
         )}
       </div>
-    </div>
+    </section>
   )
 }
