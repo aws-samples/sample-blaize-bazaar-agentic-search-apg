@@ -15,7 +15,7 @@ Items to address before the workshop goes live.
 - [x] 6 new production features implemented (iterative scan, quantization, semantic search, episodic memory, NL policy, code interpreter)
 - [x] Tool renamed: `get_category_price_analysis` → `get_price_analysis`
 - [x] Server names renamed: `bazaar-*` → `blaize-*`
-- [x] Model IDs verified: Sonnet for specialists, Haiku for orchestrator
+- [x] Model IDs verified: Opus for specialists, Haiku for orchestrator
 - [x] IAM policy updated: Cohere Embed v4, Cohere Rerank, Haiku added; Titan removed
 - [x] Keyword placeholders verified against dataset (MacBook Air, Samsung Galaxy, iPhone 15)
 
@@ -64,7 +64,7 @@ These files live in `lab-content/.../assets/` and `lab-content/.../static/`. The
 
 ### `static/iam_policy.json` (Participant IAM permissions)
 
-- [x] Already updated with Cohere Embed v4, Cohere Rerank, Haiku, Sonnet ARN patterns.
+- [x] Already updated with Cohere Embed v4, Cohere Rerank, Haiku, Opus ARN patterns.
 - [ ] **Verify AgentCore permissions** — `bedrock-agentcore:*` is present. Confirm this covers Policy, Evaluations, and Code Interpreter APIs.
 
 ### `contentspec.yaml` (Workshop Studio config)

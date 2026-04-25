@@ -101,7 +101,7 @@ lab-content/ # Workshop Studio content (2 formats)
 | Layer | Technologies |
 |-------|-------------|
 | Database | Aurora PostgreSQL Serverless v2 (0-16 ACU), pgvector 0.8.0 (HNSW) |
-| AI/ML | Amazon Bedrock — Claude Sonnet 4.6, Cohere Embed v4, Cohere Rerank v3.5 |
+| AI/ML | Amazon Bedrock — Claude Opus 4.6, Cohere Embed v4, Cohere Rerank v3.5 |
 | Agent Infra | Amazon Bedrock AgentCore — Gateway, Memory, Observability, Runtime |
 | Agent Framework | Strands Agents SDK |
 | Backend | FastAPI, Python 3.13, psycopg3, boto3 |

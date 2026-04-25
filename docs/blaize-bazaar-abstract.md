@@ -4,7 +4,7 @@
 
 Shoppers don't search in keywords anymore — they search in sentences. "Something for long summer walks." "A thoughtful gift for someone who runs." Traditional product search breaks on queries like these. In this hands-on workshop, you'll build an agentic AI storefront that understands intent, reasons about it, and recommends with taste — all grounded in your own product catalog in Amazon Aurora PostgreSQL.
 
-You'll start with a working e-commerce application (Blaize Bazaar) and progressively layer in agentic capabilities: vector search with pgvector and Cohere Embed v4, a multi-agent system built with the Strands Agents SDK and Claude Sonnet 4.6, and production-grade deployment with Amazon Bedrock AgentCore — including managed runtime, short-term memory for multi-turn conversations, a tool gateway over MCP, and OpenTelemetry-based observability.
+You'll start with a working e-commerce application (Blaize Bazaar) and progressively layer in agentic capabilities: vector search with pgvector and Cohere Embed v4, a multi-agent system built with the Strands Agents SDK and Claude Opus 4.6, and production-grade deployment with Amazon Bedrock AgentCore — including managed runtime, short-term memory for multi-turn conversations, a tool gateway over MCP, and OpenTelemetry-based observability.
 
 By the end, you'll have built a system that doesn't just return products — it explains *why* it chose them, remembers what you've said, and runs in production. Leave with a reference implementation, architectural patterns you can apply to your own catalogs, and a concrete answer to the question: *what does agentic AI actually mean for the products you ship?*
 

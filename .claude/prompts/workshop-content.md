@@ -16,7 +16,7 @@
 **Prerequisites:** Repo-wide conventions live in `.kiro/steering/`. Read them first:
 
 - `project.md` — 3-module structure, challenge numbering
-- `tech.md` — Python 3.13, model IDs (Sonnet 4.6 + Haiku 4.5 + Cohere Embed v4 + Rerank v3.5)
+- `tech.md` — Python 3.13, model IDs (Opus 4.6 + Haiku 4.5 + Cohere Embed v4 + Rerank v3.5)
 - `coding-standards.md` — `@tool` patterns, error handling, temperature values, agent names
 - `database.md` — pgvector query patterns, CTE embedding, HNSW tuning
 - `workshop-content.md` — lab content writing guidelines, exact tool and agent names
@@ -143,7 +143,7 @@ Expected: top 3 results are linen pieces (Italian Linen Camp Shirt, Wide-Leg Lin
 
 ##### Challenge 2: A Tool That Agents Can Call
 
-> **Concept:** Raw vector search is useful, but agents need _tools_ — functions they can call to gather information. The `@tool` decorator from Strands Agents SDK turns any Python function into something Claude Sonnet 4.6 can invoke during reasoning.
+> **Concept:** Raw vector search is useful, but agents need _tools_ — functions they can call to gather information. The `@tool` decorator from Strands Agents SDK turns any Python function into something Claude Opus 4.6 can invoke during reasoning.
 
 - **File:** `blaize-bazaar/backend/services/agent_tools.py`
 - **Goal:** Implement `get_trending_products()` as a `@tool`-decorated function that returns top-N products by recent review count.
@@ -167,7 +167,7 @@ cd blaize-bazaar/backend && pytest tests/test_agent_tools.py::test_get_trending_
 
 ##### Challenge 3: A Specialist Agent
 
-> **Concept:** Tools are building blocks. Agents are what use them. The `product_recommendation_agent` wraps Claude Sonnet 4.6 with tools and a system prompt that shapes its voice. This is the "picked because you mentioned warm evenings" agent.
+> **Concept:** Tools are building blocks. Agents are what use them. The `product_recommendation_agent` wraps Claude Opus 4.6 with tools and a system prompt that shapes its voice. This is the "picked because you mentioned warm evenings" agent.
 
 - **File:** `blaize-bazaar/backend/agents/recommendation_agent.py`
 - **Goal:** Build a Strands agent that takes a user query and returns a recommendation with reasoning.
@@ -175,7 +175,7 @@ cd blaize-bazaar/backend && pytest tests/test_agent_tools.py::test_get_trending_
 **Hints** (per `coding-standards.md`):
 
 - Import `Agent` and `BedrockModel` from `strands`
-- Model: `BedrockModel(model_id=settings.BEDROCK_CHAT_MODEL)` — resolves to `global.anthropic.claude-sonnet-4-6`
+- Model: `BedrockModel(model_id=settings.BEDROCK_CHAT_MODEL)` — resolves to `global.anthropic.claude-opus-4-6-v1`
 - **Temperature: 0.2** (specialist default per coding-standards)
 - Tools: `[search_products, get_trending_products, compare_products, get_product_by_category]`
 - System prompt: warm, editorial, catalog-style reasoning — never tech jargon. Ground every recommendation in at least one specific attribute.
@@ -429,7 +429,7 @@ prerequisites:
     - "Basic understanding of LLMs and embeddings"
     - "React/TypeScript experience (for C9 frontend)"
   technical:
-    - "Bedrock model access: Claude Sonnet 4.6, Claude Haiku 4.5, Cohere Embed v4, Cohere Rerank v3.5"
+    - "Bedrock model access: Claude Opus 4.6, Claude Haiku 4.5, Cohere Embed v4, Cohere Rerank v3.5"
     - "Cognito-supported AWS region"
 ```
 
@@ -462,7 +462,7 @@ Instructor notes (in file comments):
 - [ ] Solutions directory has `module1/`, `module2/`, `module3/` (no old structure)
 - [ ] Tool names match `workshop-content.md` exactly: `search_products`, `get_trending_products`, `get_price_analysis`, `get_product_by_category`, `get_inventory_health`, `get_low_stock_products`, `restock_product`, `compare_products`, `get_return_policy`
 - [ ] Agent names match: `search_agent`, `product_recommendation_agent`, `price_optimization_agent`, `inventory_restock_agent`, `customer_support_agent`
-- [ ] Model IDs correct: Sonnet 4.6 for specialists (temp 0.2), Haiku 4.5 for orchestrator (temp 0.0)
+- [ ] Model IDs correct: Opus 4.6 for specialists (temp 0.2), Haiku 4.5 for orchestrator (temp 0.0)
 - [ ] Python version: 3.13
 - [ ] No emojis, no em dashes, no customer-facing tech jargon in lab guides (steering rule)
 - [ ] Workshop Studio markdown syntax used (`:::alert`, `::::expand`, `:::::tabs`)

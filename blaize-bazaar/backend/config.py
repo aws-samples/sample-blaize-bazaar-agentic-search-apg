@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     BEDROCK_RERANK_MODEL: str = "cohere.rerank-v3-5:0"
 
     # Chat model for conversational features
-    BEDROCK_CHAT_MODEL: str = "global.anthropic.claude-sonnet-4-6"
+    BEDROCK_CHAT_MODEL: str = "global.anthropic.claude-opus-4-6-v1"
     
     # ========================================
     # Application Configuration

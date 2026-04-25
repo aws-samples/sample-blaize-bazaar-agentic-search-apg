@@ -253,7 +253,7 @@ def test_bedrock_model_ids_have_spec_defaults(
 ) -> None:
     """Task 6.1 keeps the existing Bedrock model IDs. Defaults SHALL
     match ``tech.md``: Cohere Embed v4, Cohere Rerank v3.5, Claude
-    Sonnet 4.6."""
+    Opus 4.6."""
     from config import Settings
 
     _clear_env(
@@ -267,7 +267,7 @@ def test_bedrock_model_ids_have_spec_defaults(
 
     assert s.BEDROCK_EMBEDDING_MODEL == "us.cohere.embed-v4:0"
     assert s.BEDROCK_RERANK_MODEL == "cohere.rerank-v3-5:0"
-    assert s.BEDROCK_CHAT_MODEL == "global.anthropic.claude-sonnet-4-6"
+    assert s.BEDROCK_CHAT_MODEL == "global.anthropic.claude-opus-4-6-v1"
 
 
 # ---------------------------------------------------------------------------

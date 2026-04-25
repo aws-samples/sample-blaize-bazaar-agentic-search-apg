@@ -99,7 +99,7 @@ Outline (for instructor reference):
 
 1. Why keyword search fails on "something for long summer walks" (2 min)
 2. Hero stage demo — show intent rotation (2 min)
-3. Architecture diagram: Cognito → FastAPI → AgentCore (Identity + Runtime + Memory + Gateway) → Aurora pgvector → Bedrock (Sonnet 4.6 + Haiku 4.5 + Cohere Embed v4 + Rerank v3.5) (4 min)
+3. Architecture diagram: Cognito → FastAPI → AgentCore (Identity + Runtime + Memory + Gateway) → Aurora pgvector → Bedrock (Opus 4.6 + Haiku 4.5 + Cohere Embed v4 + Rerank v3.5) (4 min)
 4. What you'll build vs read today (2 min)
 
 #### `10-module1-smart-search.en.md` (15 min, 1 BUILD challenge)
@@ -307,7 +307,7 @@ prerequisites:
     - "Familiarity with PostgreSQL and vector databases"
     - "Basic understanding of LLMs and embeddings"
   technical:
-    - "Bedrock model access: Claude Sonnet 4.6, Claude Haiku 4.5, Cohere Embed v4, Cohere Rerank v3.5"
+    - "Bedrock model access: Claude Opus 4.6, Claude Haiku 4.5, Cohere Embed v4, Cohere Rerank v3.5"
     - "Cognito-supported AWS region"
 ```
 
@@ -358,7 +358,7 @@ Builders is not a degraded Workshop — it's a different product.
 - [ ] Instructor presentation block marked as non-interactive
 - [ ] Tool names match `workshop-content.md` exactly
 - [ ] Agent names match: `search_agent`, `product_recommendation_agent`, `price_optimization_agent`, `inventory_restock_agent`, `customer_support_agent`
-- [ ] Model IDs: Sonnet 4.6 (specialists, temp 0.2), Haiku 4.5 (orchestrator, temp 0.0)
+- [ ] Model IDs: Opus 4.6 (specialists, temp 0.2), Haiku 4.5 (orchestrator, temp 0.0)
 - [ ] Python 3.13
 - [ ] `contentspec.yaml` validates
 - [ ] Timeline checkpoints add up to 60 min

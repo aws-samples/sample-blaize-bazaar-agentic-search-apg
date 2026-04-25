@@ -46,7 +46,7 @@ const MODULE_INFO: Record<ModuleKey, ModuleInfo> = {
       { icon: '\u{1f3af}', label: 'Orchestrator routing live', detail: 'Queries routed to the right specialist automatically' },
       { icon: '\u{1f91d}', label: 'Agent-as-tool pattern', detail: '5 specialist agents collaborate: search, pricing, inventory, recommendation, support' },
     ],
-    techDetail: 'Strands SDK @tool + agent-as-tool pattern + orchestrator (Claude Haiku 4.5) + 5 specialists (Sonnet 4.6)',
+    techDetail: 'Strands SDK @tool + agent-as-tool pattern + orchestrator (Claude Haiku 4.5) + 5 specialists (Opus 4.6)',
     accentColor: '#7c3aed',
     Icon: Network,
   },

@@ -1,6 +1,6 @@
 """
 Image Search Service - Multi-Modal Semantic Search
-Uses Claude Sonnet 4.6 vision to analyze product images and find similar items.
+Uses Claude Opus 4.6 vision to analyze product images and find similar items.
 """
 import logging
 import json
@@ -22,7 +22,7 @@ class ImageSearchService:
             service_name="bedrock-runtime",
             region_name=settings.AWS_REGION
         )
-        # Claude Sonnet 4 supports vision
+        # Claude Opus 4 supports vision
         self.vision_model = settings.BEDROCK_CHAT_MODEL
         logger.info(f"Initialized ImageSearchService with model: {self.vision_model}")
     
@@ -32,7 +32,7 @@ class ImageSearchService:
         mime_type: str = "image/jpeg"
     ) -> Optional[Dict[str, Any]]:
         """
-        Analyze product image using Claude Sonnet 4 vision
+        Analyze product image using Claude Opus 4 vision
         
         Args:
             image_data: Raw image bytes
@@ -96,8 +96,8 @@ Focus on attributes like: type, color, style, material, brand indicators, use ca
                 ]
             }
             
-            # Invoke Claude Sonnet 4
-            logger.info("📸 Analyzing image with Claude Sonnet 4 vision...")
+            # Invoke Claude Opus 4
+            logger.info("📸 Analyzing image with Claude Opus 4 vision...")
             response = self.bedrock_client.invoke_model(
                 modelId=self.vision_model,
                 body=json.dumps(body),

@@ -286,20 +286,20 @@ In the streaming handler, products come from the hook capture, not from parsing 
 | Layer                | Model            | Temperature   |
 | -------------------- | ---------------- | ------------- |
 | Orchestrator         | Claude Haiku 4.5 | 0.0           |
-| Recommendation agent | Claude Sonnet 4  | default (1.0) |
-| Pricing agent        | Claude Sonnet 4  | default (1.0) |
-| Inventory agent      | Claude Sonnet 4  | default (1.0) |
-| Single agent         | Claude Sonnet 4  | default (1.0) |
+| Recommendation agent | Claude Opus 4  | default (1.0) |
+| Pricing agent        | Claude Opus 4  | default (1.0) |
+| Inventory agent      | Claude Opus 4  | default (1.0) |
+| Single agent         | Claude Opus 4  | default (1.0) |
 
 ### Recommended settings
 
 | Layer                | Model            | Temperature | Rationale                                                     |
 | -------------------- | ---------------- | ----------- | ------------------------------------------------------------- |
 | Orchestrator         | Claude Haiku 4.5 | 0.0         | Routing must be deterministic                                 |
-| Recommendation agent | Claude Sonnet 4  | 0.2         | Low creativity for tool selection, slight variation for prose |
-| Pricing agent        | Claude Sonnet 4  | 0.2         | Same                                                          |
-| Inventory agent      | Claude Sonnet 4  | 0.2         | Same                                                          |
-| Single agent         | Claude Sonnet 4  | 0.2         | Same                                                          |
+| Recommendation agent | Claude Opus 4  | 0.2         | Low creativity for tool selection, slight variation for prose |
+| Pricing agent        | Claude Opus 4  | 0.2         | Same                                                          |
+| Inventory agent      | Claude Opus 4  | 0.2         | Same                                                          |
+| Single agent         | Claude Opus 4  | 0.2         | Same                                                          |
 | Gateway orchestrator | Claude Haiku 4.5 | 0.0         | Same as local orchestrator                                    |
 
 Setting specialists to 0.2 (not 0.0) allows slight natural language variation in the intro sentences while keeping tool selection deterministic. At 0.0, the prose reads robotic with identical responses every time. At 1.0 (current default), tool selection occasionally hallucinates.

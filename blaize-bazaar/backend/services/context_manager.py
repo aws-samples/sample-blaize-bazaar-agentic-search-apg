@@ -58,7 +58,7 @@ class ContextManager:
     """
     Production-Grade Context Window Management
     
-    Manages Claude Sonnet 4's 200K context window for multi-agent systems.
+    Manages Claude Opus 4's 200K context window for multi-agent systems.
     Demonstrates expert-level patterns for token optimization, context pruning,
     and conversation state management.
     
@@ -397,13 +397,13 @@ class ContextManager:
         """
         Estimate cost for current context
         
-        Based on Claude Sonnet 4 pricing (as of Dec 2024):
+        Based on Claude Opus 4 pricing (as of Dec 2024):
         - Input: $3.00 per 1M tokens
         - Output: $15.00 per 1M tokens
         
         This calculates INPUT cost only (context window)
         """
-        cost_per_million = 3.00  # Claude Sonnet 4 input pricing
+        cost_per_million = 3.00  # Claude Opus 4 input pricing
         return (tokens / 1_000_000) * cost_per_million
     
     def _calculate_efficiency_score(self) -> float:

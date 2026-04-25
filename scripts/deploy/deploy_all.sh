@@ -131,7 +131,7 @@ echo "=== [6/7] Launching AgentCore Runtime (this takes ~5 minutes) ==="
 uv run agentcore launch \
   --agent blaize_orchestrator \
   --env MCP_GATEWAY_URL="$MCP_GATEWAY_URL" \
-  --env AGENT_MODEL_ID="global.anthropic.claude-sonnet-4-6"
+  --env AGENT_MODEL_ID="global.anthropic.claude-opus-4-6-v1"
 
 echo "  ✅ Agent deployed!"
 

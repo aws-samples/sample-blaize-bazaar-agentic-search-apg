@@ -48,7 +48,7 @@ graph TB
     MW[cognito_auth middleware]
     ACID[agentcore_identity]
     ORCH[orchestrator Haiku 4.5 @ 0.0]
-    SPEC[5 specialists Sonnet 4.6 @ 0.2]
+    SPEC[5 specialists Opus 4.6 @ 0.2]
     TOOLS[agent_tools @tool fns]
     HS[HybridSearchService]
     EMB[EmbeddingService Cohere Embed v4]
@@ -156,7 +156,7 @@ sequenceDiagram
   participant API as POST /api/agent/chat
   participant ID as AgentCoreIdentity
   participant O as Orchestrator (Haiku @ 0.0)
-  participant S as product_recommendation_agent (Sonnet @ 0.2)
+  participant S as product_recommendation_agent (Opus @ 0.2)
   participant T as get_trending_products
   participant DB as Aurora
   participant MEM as AgentCore Memory
@@ -523,7 +523,7 @@ Tools (names per `workshop-content.md`):
 
 ```python
 product_recommendation_agent = Agent(
-    model=BedrockModel(model_id=settings.BEDROCK_CHAT_MODEL),  # Sonnet 4.6
+    model=BedrockModel(model_id=settings.BEDROCK_CHAT_MODEL),  # Opus 4.6
     temperature=0.2,
     tools=[search_products, get_trending_products, compare_products, get_product_by_category],
     system_prompt=copy.RECOMMENDATION_SYSTEM_PROMPT,

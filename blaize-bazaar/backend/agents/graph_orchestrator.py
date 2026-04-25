@@ -42,35 +42,35 @@ def get_graph_structure() -> Dict[str, Any]:
             "label": "Product Recommendation",
             "type": "agent",
             "description": "Trending products, personalized recommendations, and gift suggestions",
-            "model": "Claude Sonnet 4.6",
+            "model": "Claude Opus 4.6",
         },
         {
             "id": "pricing",
             "label": "Price Optimization",
             "type": "agent",
             "description": "Price analysis, deals, and discount finder",
-            "model": "Claude Sonnet 4.6",
+            "model": "Claude Opus 4.6",
         },
         {
             "id": "inventory",
             "label": "Inventory & Restock",
             "type": "agent",
             "description": "Stock levels, restocking, and availability",
-            "model": "Claude Sonnet 4.6",
+            "model": "Claude Opus 4.6",
         },
         {
             "id": "support",
             "label": "Customer Support",
             "type": "agent",
             "description": "Return policies, troubleshooting, and general support",
-            "model": "Claude Sonnet 4.6",
+            "model": "Claude Opus 4.6",
         },
         {
             "id": "search",
             "label": "Product Search",
             "type": "agent",
             "description": "Product search, category browsing, and product comparison",
-            "model": "Claude Sonnet 4.6",
+            "model": "Claude Opus 4.6",
         },
     ]
 
@@ -91,6 +91,6 @@ def get_graph_structure() -> Dict[str, Any]:
             "The orchestrator routes each user query to one specialist agent. "
             "The Orchestrator (Haiku 4.5) classifies intent and dispatches to "
             "Recommendation, Pricing, Inventory, Customer Support, or Search "
-            "(each running Sonnet 4.6)."
+            "(each running Opus 4.6)."
         ),
     }

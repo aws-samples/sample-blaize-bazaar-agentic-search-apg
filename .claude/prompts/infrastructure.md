@@ -53,7 +53,7 @@ Before doing anything, confirm:
 - `blaize-bazaar/frontend/src/utils/auth.ts` exists
 - `blaize-bazaar/frontend/src/components/AuthModal.tsx` and `PreferencesModal.tsx` exist
 - Database schema is `blaize_bazaar` with `product_catalog` (~444 rows, 1024-dim Cohere Embed v4 embeddings, `tags text[]` column) and `return_policies` (21 rows)
-- Model IDs per `tech.md`: Claude Sonnet 4.6 for specialists, Claude Haiku 4.5 for orchestrator, Cohere Embed v4 for embeddings, Cohere Rerank v3.5 for reranking
+- Model IDs per `tech.md`: Claude Opus 4.6 for specialists, Claude Haiku 4.5 for orchestrator, Cohere Embed v4 for embeddings, Cohere Rerank v3.5 for reranking
 
 If any core auth files are missing, stop and surface the gap.
 
@@ -323,7 +323,7 @@ Update `infrastructure/iam_policy.json`. Scoped to workshop role:
       "Effect": "Allow",
       "Action": "bedrock:InvokeModel",
       "Resource": [
-        "arn:aws:bedrock:us-west-2::foundation-model/global.anthropic.claude-sonnet-4-6",
+        "arn:aws:bedrock:us-west-2::foundation-model/global.anthropic.claude-opus-4-6-v1",
         "arn:aws:bedrock:us-west-2::foundation-model/global.anthropic.claude-haiku-4-5-20251001-v1:0",
         "arn:aws:bedrock:us-west-2::foundation-model/us.cohere.embed-v4:0",
         "arn:aws:bedrock:us-west-2::foundation-model/cohere.rerank-v3-5:0"
@@ -441,7 +441,7 @@ No wildcards on actions or resources except where AWS APIs require them (documen
 ### IAM
 
 - [ ] Every action scoped to specific resources
-- [ ] All four models explicitly listed: Sonnet 4.6, Haiku 4.5, Cohere Embed v4, Cohere Rerank v3.5
+- [ ] All four models explicitly listed: Opus 4.6, Haiku 4.5, Cohere Embed v4, Cohere Rerank v3.5
 - [ ] Cognito admin actions scoped to the workshop user pool ARN
 - [ ] Secrets Manager scoped to `blaize-bazaar/*` and `blaize-bazaar-*` namespaces
 

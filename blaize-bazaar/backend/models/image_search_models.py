@@ -10,7 +10,7 @@ class ImageSearchResponse(BaseModel):
     
     query_type: str = "image"
     analysis: Dict[str, Any] = Field(
-        description="Claude Sonnet 4 vision analysis of the uploaded image"
+        description="Claude Opus 4 vision analysis of the uploaded image"
     )
     search_query: str = Field(
         description="Generated search query from image analysis"
@@ -27,7 +27,7 @@ class ImageSearchResponse(BaseModel):
 
 
 class ImageAnalysis(BaseModel):
-    """Structured image analysis from Claude Sonnet 4"""
+    """Structured image analysis from Claude Opus 4"""
     
     description: str = Field(
         description="Detailed product description"

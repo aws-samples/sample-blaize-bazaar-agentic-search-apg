@@ -445,7 +445,7 @@ async def image_search(
     """
     Multi-Modal Image Search Endpoint
     
-    Upload a product image to find similar products using Claude Sonnet 4 vision
+    Upload a product image to find similar products using Claude Opus 4 vision
     and pgvector semantic search.
     """
     import time
@@ -473,8 +473,8 @@ async def image_search(
                 detail=f"Image too large: {image_size_mb:.2f}MB. Maximum is 5MB"
             )
         
-        # Analyze with Claude Sonnet 4
-        logger.info("🤖 Analyzing image with Claude Sonnet 4 vision...")
+        # Analyze with Claude Opus 4
+        logger.info("🤖 Analyzing image with Claude Opus 4 vision...")
         analysis = await image_search.analyze_image(
             image_data=image_data,
             mime_type=file.content_type
@@ -835,7 +835,7 @@ async def agent_query(
     Args:
         query: User query
         agent_type: Type of agent (orchestrator, inventory, recommendation, pricing)
-        enable_thinking: Enable Claude Sonnet 4's extended thinking (default: False)
+        enable_thinking: Enable Claude Opus 4's extended thinking (default: False)
     """
     try:
         from agents.orchestrator import create_orchestrator
@@ -996,7 +996,7 @@ async def get_context_stats(session_id: Optional[str] = Query(default=None)):
     Get context statistics for monitoring
     
     Returns comprehensive metrics for token usage, efficiency, and costs.
-    Demonstrates enterprise-grade context window management for Claude Sonnet 4.
+    Demonstrates enterprise-grade context window management for Claude Opus 4.
     
     Args:
         session_id: Optional session ID for session-specific stats

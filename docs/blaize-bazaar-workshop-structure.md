@@ -249,7 +249,7 @@ def product_recommendation_agent(query: str) -> str:
     try:
         agent = Agent(
             model=BedrockModel(
-                model_id="global.anthropic.claude-sonnet-4-6",
+                model_id="global.anthropic.claude-opus-4-6-v1",
                 max_tokens=4096,
                 temperature=0.2
             ),
@@ -311,7 +311,7 @@ def create_orchestrator():
     """Create the orchestrator agent with all specialized agents as tools"""
     return Agent(
         model=BedrockModel(
-            model_id="global.anthropic.claude-sonnet-4-6",
+            model_id="global.anthropic.claude-opus-4-6-v1",
             max_tokens=4096,
             temperature=0.3
         ),
@@ -615,7 +615,7 @@ These resources MUST be ready before participants open VS Code:
 - MCP Gateway endpoint
 - Backend (uvicorn --reload) and frontend (Vite dev HMR) running as a systemd service
 - VS Code with Python, Jupyter, Tailwind CSS extensions
-- Amazon Bedrock model access: Claude Sonnet 4 (`global.anthropic.claude-sonnet-4-6`), Cohere Embed v4
+- Amazon Bedrock model access: Claude Opus 4 (`global.anthropic.claude-opus-4-6-v1`), Cohere Embed v4
 
 ### Environment Variables (in .env)
 
@@ -629,7 +629,7 @@ DB_PASSWORD=<from-secrets-manager>
 
 # Bedrock
 AWS_REGION=us-west-2
-BEDROCK_CHAT_MODEL=global.anthropic.claude-sonnet-4-6
+BEDROCK_CHAT_MODEL=global.anthropic.claude-opus-4-6-v1
 BEDROCK_EMBEDDING_MODEL=us.cohere.embed-v4:0
 
 # AgentCore (pre-provisioned)

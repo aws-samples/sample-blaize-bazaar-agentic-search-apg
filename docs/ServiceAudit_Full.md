@@ -71,7 +71,7 @@ These are only reached when specific workshop modules are complete or AgentCore 
 
 | File | Imported by | Concern | Recommendation |
 |------|-----------|---------|----------------|
-| `graph_orchestrator.py` | `app.py` `/api/agents/graph` endpoint (line 1711) | Returns a static DAG structure for the frontend `GraphVisualization` component. **But the DAG is wrong** — it shows parallel fan-out with an Aggregator node that doesn't exist in the actual architecture. The model labels are also incorrect (says Haiku for specialists that use Sonnet). | **Fix or delete.** If the frontend graph visualization is a feature you're shipping, fix the node structure and labels to match reality (sequential: Router → one specialist → response, no Aggregator). If the frontend doesn't render it, delete both the file and the endpoint. |
+| `graph_orchestrator.py` | `app.py` `/api/agents/graph` endpoint (line 1711) | Returns a static DAG structure for the frontend `GraphVisualization` component. **But the DAG is wrong** — it shows parallel fan-out with an Aggregator node that doesn't exist in the actual architecture. The model labels are also incorrect (says Haiku for specialists that use Opus). | **Fix or delete.** If the frontend graph visualization is a feature you're shipping, fix the node structure and labels to match reality (sequential: Router → one specialist → response, no Aggregator). If the frontend doesn't render it, delete both the file and the endpoint. |
 
 ---
 
@@ -133,7 +133,7 @@ These are only reached when specific workshop modules are complete or AgentCore 
 
 | File | What |
 |------|------|
-| `graph_orchestrator.py` | Fix model labels (specialists = Sonnet 4, not Haiku), remove fictional Aggregator node, or delete if frontend doesn't render it |
+| `graph_orchestrator.py` | Fix model labels (specialists = Opus 4, not Haiku), remove fictional Aggregator node, or delete if frontend doesn't render it |
 | `app.py` line 609 | Change `$1` to `%s` in `get_product()` for consistency with psycopg3 |
 
 ### Keep as-is (21 files)
