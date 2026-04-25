@@ -54,6 +54,98 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/workshop", tags=["workshop"])
 
 
+# ----- /api/workshop/tool-registry ---------------------------------------
+# Card 7 dual-ranking fetch. The frontend opens Card 7, passes a demo
+# query (defaulted if omitted), and gets back { pgvector_rows, gateway }
+# so the modal renders Aurora and Gateway side-by-side. Gateway-unset is
+# a first-class response shape — ``gateway.configured = false`` — rather
+# than a quiet empty list, because the teaching point is *seeing* the
+# single-source fallback, not guessing why it's empty.
+
+
+class ToolRegistryQuery(BaseModel):
+    query: str = Field(
+        default="show me something for long summer walks",
+        description="Demo query for the Card 7 dual-ranking fetch. Workshop "
+        "attendees can override via the Card 7 input field.",
+        min_length=1,
+    )
+    limit: int = Field(default=3, ge=1, le=9)
+
+
+@router.post("/tool-registry")
+async def tool_registry(payload: ToolRegistryQuery) -> dict[str, Any]:
+    """Dual-rank tool discovery for Card 7.
+
+    Returns:
+        {
+          "query": str,
+          "pgvector": {
+            "rows": [ {name, description, similarity}, ... ],
+            "duration_ms": int,
+            "total_count": int,
+            "error": str | None,
+          },
+          "gateway": {
+            "configured": bool,
+            "url": str | None,
+            "tools": [ {name, description, input_schema}, ... ],
+            "error": str | None,
+          }
+        }
+    """
+    from services.embeddings import EmbeddingService
+    from services.tool_registry import discover_tools
+    from app import db_service  # lifespan-initialised
+
+    if db_service is None:
+        raise HTTPException(status_code=503, detail="Database not ready")  # copy-allow: http-error-detail
+
+    # Aurora side — always runs.
+    pgvector_block: dict[str, Any]
+    try:
+        emb = EmbeddingService().embed_query(payload.query)
+        pgv = await discover_tools(db_service, emb, limit=payload.limit)
+        pgvector_block = {
+            "rows": pgv["rows"],
+            "duration_ms": pgv["duration_ms"],
+            "total_count": pgv["total_count"],
+            "error": pgv.get("error"),
+        }
+    except Exception as exc:
+        logger.warning("Card 7 pgvector fetch failed: %s", exc)
+        pgvector_block = {
+            "rows": [],
+            "duration_ms": 0,
+            "total_count": 0,
+            "error": str(exc),
+        }
+
+    # Gateway side — reports "not configured" as a first-class state.
+    from config import settings
+
+    gateway_block: dict[str, Any] = {
+        "configured": bool(settings.AGENTCORE_GATEWAY_URL),
+        "url": settings.AGENTCORE_GATEWAY_URL,
+        "tools": [],
+        "error": None,
+    }
+    if gateway_block["configured"]:
+        try:
+            from services.agentcore_gateway import list_gateway_tools
+
+            gateway_block["tools"] = list_gateway_tools()
+        except Exception as exc:
+            gateway_block["error"] = str(exc)
+            logger.warning("Card 7 gateway list failed: %s", exc)
+
+    return {
+        "query": payload.query,
+        "pgvector": pgvector_block,
+        "gateway": gateway_block,
+    }
+
+
 class WorkshopQueryRequest(BaseModel):
     """Body of ``POST /api/workshop/query``.
 
@@ -134,6 +226,31 @@ async def query(payload: WorkshopQueryRequest) -> WorkshopQueryResponse:
 
         if db_service is None:
             raise RuntimeError("Database service not initialised")
+
+        # --- Week 2: Card 7 shadow-mode discovery panels -----------------
+        # Embed the turn once, run Tool Registry (Aurora) + Gateway panel
+        # emitters against the same vector / prompt. Failures here are
+        # logged and swallowed — discovery is a teaching overlay, it must
+        # never break the user-facing turn.
+        try:
+            from services.embeddings import EmbeddingService
+            from services.workshop_panels import (
+                emit_gateway_panel,
+                emit_tool_registry_panel,
+            )
+
+            emb_service = EmbeddingService()
+            # EmbeddingService.embed_query is sync; it's cached and small,
+            # so a direct call from the async handler is fine. Wrapping
+            # in to_thread would add latency without an ergonomic win.
+            turn_embedding = emb_service.embed_query(ctx.query)
+            await emit_tool_registry_panel(
+                ctx, db_service=db_service, query_embedding=turn_embedding
+            )
+            emit_gateway_panel(ctx, query_text=ctx.query)
+        except Exception as panel_exc:  # pragma: no cover - teaching overlay
+            logger.warning("Card 7 panel emission failed: %s", panel_exc)
+        # -----------------------------------------------------------------
 
         chat_service = ChatService(db_service=db_service)
         result = await chat_service.generate_response(
