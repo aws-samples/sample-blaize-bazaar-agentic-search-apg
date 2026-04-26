@@ -123,17 +123,13 @@ def score_response(text: str, products: list, latency_ms: int, query: str) -> di
 
 # ── DB bootstrap ────────────────────────────────────────────────────────
 async def bootstrap():
-    """Connect to Aurora and wire services into agent_tools."""
+    """Connect to Aurora and wire the database service into agent_tools."""
     from services.database import DatabaseService
-    from services.rerank import RerankService
-    from services.agent_tools import set_db_service, set_rerank_service
+    from services.agent_tools import set_db_service
 
     db = DatabaseService()
     await db.connect()
-
-    rerank = RerankService()
     set_db_service(db)
-    set_rerank_service(rerank)
 
     # Verify connectivity
     row = await db.fetch_one(

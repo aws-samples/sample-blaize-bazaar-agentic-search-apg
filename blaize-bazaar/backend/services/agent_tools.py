@@ -1,7 +1,9 @@
 """
 Strands SDK Tools for Agents
 Provides @tool decorated functions for agent use with live database access.
-Uses hybrid search (vector + keyword + Cohere Rerank) for maximum relevance.
+Uses pgvector semantic search (Module 1 teaching surface) — the hybrid +
+Cohere Rerank pipeline was removed when the concierge switched to pure
+semantic retrieval.
 """
 from strands import tool
 import json
@@ -9,18 +11,12 @@ import asyncio
 
 # Global service references
 _db_service = None
-_rerank_service = None
 _main_loop = None
 
 def set_db_service(db_service):
     """Set the database service instance"""
     global _db_service
     _db_service = db_service
-
-def set_rerank_service(rerank_service):
-    """Set the rerank service instance for hybrid search"""
-    global _rerank_service
-    _rerank_service = rerank_service
 
 def set_main_loop(loop):
     """Store reference to the main uvicorn event loop for cross-thread dispatch"""
@@ -192,9 +188,9 @@ def search_products(
 
         hybrid = HybridSearchService(_db_service)
 
-        # Concierge uses pure pgvector semantic search (Module 1 teaching surface).
-        # Hybrid + rerank stays reserved for /api/search/hybrid-rerank and the
-        # HybridSearchComparison demo panel where the contrast is the point.
+        # Concierge uses pure pgvector semantic search (Module 1 teaching
+        # surface). The hybrid + rerank pipeline was removed — only
+        # ``_vector_search`` survives on ``HybridSearchService`` today.
         pool_size = 30 if category else 20
         rows = _run_async(
             hybrid._vector_search(query_embedding, pool_size, ef_search=40)

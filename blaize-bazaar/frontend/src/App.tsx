@@ -10,11 +10,11 @@
  * to preserve the Cognito-configured / not-configured branching.
  *
  * useTheme / ThemeContext remain exported for a small set of orphan
- * components (SearchOverlay, DemoChatCarousel, RecentlyViewed,
- * ProactiveSuggestions, AgentWorkflowVisualizer). Those components are
- * no longer reachable from any route after AppContent's removal, so no
- * ThemeProvider is mounted. The export exists solely to keep `tsc`
- * green until the orphans are deleted in a follow-up cleanup.
+ * components (DemoChatCarousel, RecentlyViewed, ProactiveSuggestions,
+ * AgentWorkflowVisualizer). Those components are no longer reachable
+ * from any route after AppContent's removal, so no ThemeProvider is
+ * mounted. The export exists solely to keep `tsc` green until the
+ * orphans are deleted in a follow-up cleanup.
  */
 import { createContext, useContext, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'

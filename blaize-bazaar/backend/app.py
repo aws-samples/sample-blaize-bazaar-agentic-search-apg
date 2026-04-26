@@ -35,7 +35,6 @@ from datetime import datetime
 from services.sql_query_logger import init_query_logger, get_query_logger, QueryLog
 from services.index_performance import get_index_performance_service
 from services.hybrid_search import HybridSearchService
-from services.rerank import RerankService
 from services.cache import init_cache, get_cache
 from routes import (
     agent_router,
@@ -88,7 +87,6 @@ chat_service: ChatService = None
 image_search_service: ImageSearchService = None
 query_logger = None
 index_performance_service = None
-rerank_service: RerankService = None
 
 # Lab 2 agents use function pattern - no global instances needed
 
@@ -102,7 +100,7 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Blaize Bazaar Workshop API...")
     
-    global db_service, embedding_service, chat_service, image_search_service, query_logger, index_performance_service, rerank_service
+    global db_service, embedding_service, chat_service, image_search_service, query_logger, index_performance_service
     
     try:
         # Initialize Strands OpenTelemetry tracing
@@ -178,9 +176,6 @@ async def lifespan(app: FastAPI):
         embedding_service = EmbeddingService()
         logger.info("✅ Embedding service initialized (Cohere Embed v4)")
 
-        rerank_service = RerankService()
-        logger.info("✅ Rerank service initialized (Cohere Rerank v3.5)")
-
         # Initialize Valkey cache (graceful fallback to in-memory)
         cache_svc = init_cache(
             valkey_url=settings.VALKEY_URL,
@@ -207,12 +202,14 @@ async def lifespan(app: FastAPI):
         # Set chat service logger to INFO
         logging.getLogger('services.chat').setLevel(logging.INFO)
         
-        # Initialize agent tools with database + rerank services (hybrid search)
-        from services.agent_tools import set_db_service, set_rerank_service, set_main_loop
+        # Initialize agent tools. The concierge uses pure pgvector
+        # semantic search (``HybridSearchService._vector_search``); the
+        # hybrid + rerank pipeline was removed when the concierge
+        # switched to the Module 1 teaching surface.
+        from services.agent_tools import set_db_service, set_main_loop
         set_db_service(db_service)
-        set_rerank_service(rerank_service)
         set_main_loop(asyncio.get_event_loop())
-        logger.info("✅ Agent tools initialized with hybrid search (vector + keyword + rerank)")
+        logger.info("✅ Agent tools initialized with pgvector semantic search")
         
         # Lab 2 agents use Strands SDK function pattern
         logger.info("✅ Lab 2 agents available via /api/agents/query")
@@ -315,13 +312,6 @@ def get_image_search_service_dep():
     return image_search_service
 
 
-async def get_rerank_service() -> RerankService:
-    """Get rerank service instance"""
-    if not rerank_service:
-        raise HTTPException(status_code=503, detail="Rerank service not initialized")
-    return rerank_service
-
-
 # ============================================================================
 # HEALTH CHECK ENDPOINTS
 # ============================================================================
@@ -385,59 +375,6 @@ async def health_check(
 # POST /api/search is authoritative on routes/search.py (StorefrontSearchResponse
 # wire shape). The legacy semantic_search handler that used to live here has
 # been removed — don't re-add it; the router owns that path.
-
-
-@app.post("/api/search/hybrid-rerank")
-async def hybrid_rerank_search(
-    request: SearchRequest,
-    db: DatabaseService = Depends(get_db_service),
-    embeddings: EmbeddingService = Depends(get_embedding_service),
-    reranker: RerankService = Depends(get_rerank_service),
-):
-    """
-    LAB 1: Hybrid search with Cohere Rerank
-
-    Pipeline:
-      1. Generate query embedding (Cohere Embed v4)
-      2. Run keyword + vector search in parallel
-      3. Merge unique candidates
-      4. Re-rank with Cohere Rerank v3.5
-      5. Return top results with relevance scores
-    """
-    start_time = time.time()
-
-    try:
-        # Generate query embedding
-        embed_start = time.time()
-        query_embedding = embeddings.embed_query(request.query)
-        embed_time_ms = (time.time() - embed_start) * 1000
-
-        # Hybrid search + rerank
-        hybrid_service = HybridSearchService(db)
-        result = await hybrid_service.search_with_rerank(
-            query=request.query,
-            embedding=query_embedding,
-            rerank_service=reranker,
-            limit=request.limit,
-            candidate_pool_size=20,
-        )
-
-        total_time_ms = (time.time() - start_time) * 1000
-
-        # Add embed time to timing
-        result["timing"]["embed_time_ms"] = round(embed_time_ms, 2)
-        result["timing"]["total_time_ms"] = round(total_time_ms, 2)
-
-        logger.info(
-            f"🏆 Hybrid+Rerank: '{request.query}' → {result['total']} results "
-            f"({total_time_ms:.0f}ms total)"
-        )
-
-        return result
-
-    except Exception as e:
-        logger.error(f"❌ Hybrid rerank search failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
 @app.post("/api/search/image", response_model=ImageSearchResponse)
@@ -1153,106 +1090,6 @@ async def personalized_search(
     preferences = body.get("preferences", {})
     limit = body.get("limit", 5)
     return await logic.personalized_search(query, preferences, limit)
-
-
-# ============================================================================
-# SEARCH EVALUATION ENDPOINT
-# ============================================================================
-
-@app.get("/api/search/eval")
-async def evaluate_search(method: str = Query("vector"), k: int = Query(5)):
-    """Evaluate search quality using Precision@k and NDCG@k against golden dataset"""
-    from services.search_eval import SearchEvalService
-    eval_service = SearchEvalService(db_service=db_service, embedding_service=embedding_service)
-    return await eval_service.evaluate_search(method=method, k=k)
-
-
-# In-memory leaderboard for search eval tuning competition — resets on restart
-_leaderboard: list[dict] = []
-
-
-@app.post("/api/search/eval/tune")
-async def tune_search_weights(request: Request):
-    """Run NDCG/Precision evaluation with custom RRF weights and record score."""
-    body = await request.json()
-    vector_weight = max(0.0, min(1.0, float(body.get("vector_weight", 0.6))))
-    fulltext_weight = max(0.0, min(1.0, float(body.get("fulltext_weight", 0.4))))
-    k = int(body.get("k", 10))
-    name = str(body.get("participant_name", "Anonymous"))[:20].strip() or "Anonymous"
-
-    # Normalize so they sum to 1.0
-    total = vector_weight + fulltext_weight
-    if total == 0:
-        vector_weight, fulltext_weight = 0.5, 0.5
-    else:
-        vector_weight = round(vector_weight / total, 4)
-        fulltext_weight = round(fulltext_weight / total, 4)
-
-    from services.search_eval import SearchEvalService, EVAL_QUERIES
-    from services.hybrid_search import HybridSearchService
-
-    eval_svc = SearchEvalService(db_service=db_service, embedding_service=embedding_service)
-    golden = await eval_svc._build_golden_dataset(k)
-    hybrid_svc = HybridSearchService(db_service)
-
-    total_ndcg = 0.0
-    total_precision = 0.0
-    evaluated = 0
-
-    for item in EVAL_QUERIES:
-        query_text = item["query"]
-        expected_ids = golden.get(query_text, [])
-        if not expected_ids:
-            continue
-        try:
-            embedding = embedding_service.generate_embedding(query_text)
-            response = await hybrid_svc.search(
-                query_text, embedding, limit=k,
-                vector_weight=vector_weight,
-                fulltext_weight=fulltext_weight,
-            )
-            results = response.get("results", [])
-            retrieved_ids = [
-                r.get("product_id") if r.get("product_id") is not None else r.get("productId")
-                for r in results
-            ]
-            retrieved_ids = [i for i in retrieved_ids if i is not None]
-            total_ndcg += eval_svc.ndcg_at_k(retrieved_ids, expected_ids, k)
-            total_precision += eval_svc.precision_at_k(retrieved_ids, expected_ids, k)
-            evaluated += 1
-        except Exception as e:
-            logger.warning(f"Tune eval failed for '{query_text}': {e}")
-
-    avg_ndcg = round(total_ndcg / evaluated, 4) if evaluated else 0.0
-    avg_precision = round(total_precision / evaluated, 4) if evaluated else 0.0
-
-    entry = {
-        "name": name, "ndcg": avg_ndcg, "precision": avg_precision,
-        "vector_w": vector_weight, "fulltext_w": fulltext_weight,
-        "k": k, "ts": time.strftime("%H:%M:%S"), "evaluated": evaluated,
-    }
-    _leaderboard.append(entry)
-    _leaderboard.sort(key=lambda x: x["ndcg"], reverse=True)
-    while len(_leaderboard) > 50:
-        _leaderboard.pop()
-
-    rank = next(
-        (i + 1 for i, e in enumerate(_leaderboard) if e["ts"] == entry["ts"] and e["ndcg"] == avg_ndcg),
-        len(_leaderboard),
-    )
-
-    return {
-        "ndcg_at_k": avg_ndcg, "precision_at_k": avg_precision, "k": k,
-        "vector_weight": vector_weight, "fulltext_weight": fulltext_weight,
-        "evaluated_queries": evaluated, "rank": rank,
-        "leaderboard": _leaderboard[:10],
-    }
-
-
-@app.get("/api/search/eval/leaderboard")
-async def get_leaderboard():
-    """Get current search-tuning leaderboard (top 10 by NDCG)."""
-    return {"leaderboard": _leaderboard[:10], "total_submissions": len(_leaderboard)}
 
 
 # ============================================================================
