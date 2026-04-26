@@ -29,8 +29,6 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'react-resizable-panels'
-import { ArrowLeft } from 'lucide-react'
-import { Link } from 'react-router-dom'
 import Footer from '../components/Footer'
 import { AuthGate } from '../App'
 import WorkshopChat from '../components/WorkshopChat'
@@ -331,7 +329,7 @@ function WorkshopContent() {
               className="font-mono text-[10px] uppercase tracking-[1.5px] font-semibold mb-2"
               style={{ color: INK_QUIET }}
             >
-              Coming in Week 7.5
+              In progress
             </div>
             <p style={{ color: INK }}>
               Performance surface: runtime cold-start benchmarks, per-panel p50/p95 latency,
@@ -368,41 +366,25 @@ function WorkshopContent() {
       className="workshop-surface min-h-screen flex flex-col"
       style={{ background: CREAM, color: INK }}
     >
-      {/* Top chrome — back-to-storefront + title + subtitle */}
+      {/* Top chrome — title + subtitle. Surface switching is handled
+          globally by the Header's SurfaceToggle, so the back-to-
+          storefront link + DAT406 kicker are gone. */}
       <header
         className="px-6 py-5 flex items-start gap-4"
         style={{ borderBottom: `1px solid ${INK_QUIET}30` }}
       >
-        <Link
-          to="/"
-          data-testid="back-to-storefront"
-          aria-label="Back to Blaize Bazaar storefront"
-          className="flex items-center gap-2 mt-1 px-3 py-1.5 rounded-full text-[12.5px] font-medium transition-colors hover:bg-[rgba(0,0,0,0.04)]"
-          style={{ color: INK_SOFT, border: `1px solid ${INK_QUIET}30` }}
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Blaize Bazaar
-        </Link>
         <div className="flex-1 min-w-0">
-          <p
-            className="text-[11px] uppercase tracking-[0.18em] mb-1"
-            style={{ color: INK_QUIET }}
-          >
-            DAT406 · Builders Session
-          </p>
           <h1
             className="text-2xl md:text-3xl"
             style={{ fontFamily: "'Instrument Serif', Georgia, serif", color: INK }}
           >
-            Workshop · agentic telemetry
+            The Atelier
           </h1>
           <p
             className="text-[13.5px] mt-1 max-w-3xl"
             style={{ color: INK_SOFT }}
           >
-            Use AgentCore for solved primitives. Use Aurora for domain state you own. Chat on the
-            left, watch the plan → panels → response trail replay in the middle, dig into
-            dashboards on the right.
+            Where Blaize works. Chat on the left, live trace in the middle, dashboards on the right.
           </p>
         </div>
       </header>

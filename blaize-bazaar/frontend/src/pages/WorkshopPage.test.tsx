@@ -1,16 +1,17 @@
 /**
- * WorkshopPage tests — pre-Week-3 layout redesign coverage.
+ * WorkshopPage tests — /workshop ("The Atelier") coverage.
  *
- * The layout redesign replaces the old modal pattern with an artifact-
- * style docked detail slot (react-resizable-panels on ≥ 1280px, overlay
- * on 1024-1280, stacked on < 1024). These tests lock down:
+ * Surface-switching moved to the global SurfaceToggle in Header, so
+ * these tests no longer assert on a back-to-storefront pill or the
+ * DAT406 kicker. They lock down:
  *
- *   1. Back-to-storefront link is present and points to `/`.
- *   2. Architecture cards render as single-column widened cards.
- *   3. Clicking an architecture card action opens the matching detail
- *      panel inline (not as a modal overlay) on desktop.
- *   4. Closing the detail panel returns to the two-zone default.
- *   5. Responsive breakpoints select the correct layout variant via
+ *   1. Chrome renders the Atelier title + subtitle and drops the old
+ *      DAT406 / "Workshop · agentic telemetry" / back-to-storefront
+ *      elements.
+ *   2. Architecture cards render and open detail panels inline (not
+ *      as modals) on desktop.
+ *   3. Closing the detail panel returns to the two-zone default.
+ *   4. Responsive breakpoints select the correct layout variant via
  *      matchMedia — three-zone, tablet-overlay, vertical-stack.
  */
 import { render, screen, waitFor } from '@testing-library/react'
@@ -136,18 +137,24 @@ afterEach(() => {
 // --- Tests ------------------------------------------------------------
 
 describe('WorkshopPage — chrome', () => {
-  it('renders the back-to-storefront link pointing at "/"', () => {
+  it('renders "The Atelier" title with the new subtitle', () => {
     renderPage()
-    const back = screen.getByTestId('back-to-storefront')
-    expect(back).toBeInTheDocument()
-    expect(back.getAttribute('href')).toBe('/')
-    expect(back.getAttribute('aria-label')).toContain('storefront')
+    expect(screen.getByText(/^The Atelier$/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Where Blaize works/i),
+    ).toBeInTheDocument()
   })
 
-  it('renders the DAT406 title + subtitle', () => {
+  it('no longer renders the DAT406 kicker or the old back-to-storefront pill', () => {
     renderPage()
-    expect(screen.getByText(/DAT406 · Builders Session/)).toBeInTheDocument()
-    expect(screen.getByText(/Workshop · agentic telemetry/)).toBeInTheDocument()
+    expect(screen.queryByTestId('back-to-storefront')).not.toBeInTheDocument()
+    expect(screen.queryByText(/DAT406/)).not.toBeInTheDocument()
+    // The old "Workshop · agentic telemetry" title must not leak into
+    // the new chrome — surface-switching is the global SurfaceToggle's
+    // job now, and the page owns only the Atelier title + subtitle.
+    expect(
+      screen.queryByText(/Workshop · agentic telemetry/),
+    ).not.toBeInTheDocument()
   })
 })
 

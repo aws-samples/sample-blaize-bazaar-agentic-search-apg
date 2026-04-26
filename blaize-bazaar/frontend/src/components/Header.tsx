@@ -3,21 +3,21 @@
  *
  * Renders exactly five nav items (Home, Shop, Storyboard, Discover, Account),
  * a centered "Blaize Bazaar" wordmark with a circular B logo, and the right
- * actions: Workshop link (hidden below 768px), Account state button, and a
- * Bag icon with a live count badge. The concierge is not duplicated here —
- * the hero SearchPill and the floating CommandPill are the two entry points
- * so the header stays uncluttered.
+ * actions: Storefront ↔ Atelier surface toggle (see SurfaceToggle), Account
+ * state button, and a Bag icon with a live count badge. The concierge is not
+ * duplicated here — the hero SearchPill and the floating CommandPill are the
+ * two entry points so the header stays uncluttered.
  *
  * Validates Requirements 1.1.3, 1.2.1 through 1.2.4.
  *
  * Copy comes from `copy.ts`. No legacy About/Journal items; About content
  * lives in the Footer per `storefront.md`.
  */
-import { Link } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
 import { NAV, ACCOUNT_LABEL_SIGNED_OUT, accountLabelSignedIn } from '../copy'
 import { ShoppingBag, User as UserIcon } from 'lucide-react'
+import SurfaceToggle from './SurfaceToggle'
 
 // Warm palette from `storefront.md`. Kept inline as hex until a design-token
 // stylesheet lands workspace-wide.
@@ -199,19 +199,15 @@ export default function Header({
             <Wordmark />
           </div>
 
-          {/* Right: Workshop link (hidden <768px), Account, Bag. The
-              concierge entry points are the hero SearchPill and the
-              floating CommandPill; duplicating them here would give three
+          {/* Right: Storefront ↔ Atelier surface toggle (hidden <640px
+              to avoid crowding mobile), Account, Bag. The concierge
+              entry points are the hero SearchPill and the floating
+              CommandPill; duplicating them here would give three
               identical surfaces on one page. */}
           <div className="flex items-center gap-4 flex-shrink-0">
-            <Link
-              to="/workshop"
-              data-testid="workshop-link"
-              className="hidden md:inline text-[14px] transition-opacity hover:opacity-70"
-              style={{ color: INK_SOFT, background: 'transparent' }}
-            >
-              Workshop
-            </Link>
+            <div className="hidden sm:block">
+              <SurfaceToggle />
+            </div>
 
             {/* Account button — nav item #5. Its label swaps on auth state. */}
             <AccountButton onClick={onAccountClick} />

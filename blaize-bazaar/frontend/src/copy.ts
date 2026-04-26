@@ -28,6 +28,17 @@ export const NAV = {
   WORDMARK: "Blaize Bazaar",
 } as const;
 
+// Global surface toggle (Header). Replaces the standalone Workshop
+// link with a segmented control that flips between the shopper-facing
+// storefront and the operator-facing /workshop surface. Labels
+// deliberately pair boutique register (Storefront) with editorial /
+// atelier register (Atelier) instead of operator jargon.
+export const SURFACE_TOGGLE = {
+  ARIA_LABEL: "Switch surface",
+  STOREFRONT: "Storefront",
+  ATELIER: "Atelier",
+} as const;
+
 // Account button labels (Requirement 1.2.2, 1.2.3)
 export const ACCOUNT_LABEL_SIGNED_OUT = "Account";
 export const accountLabelSignedIn = (givenName: string): string =>

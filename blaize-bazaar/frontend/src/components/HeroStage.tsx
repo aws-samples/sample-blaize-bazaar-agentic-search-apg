@@ -472,9 +472,15 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
             'radial-gradient(120% 120% at 50% 50%, rgba(245,232,211,0) 0%, rgba(245,232,211,0.85) 70%, rgba(245,232,211,1) 100%), #f5e8d3',
         }}
       >
+        {/* The image panel must clip its own contents — the Ken Burns
+            zoom animates the <img> from scale 1.02 → 1.08, and without
+            ``overflow-hidden`` here the scaled image bleeds DOWN onto
+            the "Others are asking" ticker strip that sits as a sibling
+            inside the same hero-frame. The hero-frame's overflow-
+            hidden handles the outer edge but not sibling overlap. */}
         <div
           data-testid="hero-stage-image-panel"
-          className="relative aspect-[4/3] md:aspect-[21/9]"
+          className="relative aspect-[4/3] md:aspect-[21/9] overflow-hidden"
         >
           {/* Mobile-only dark glass breadcrumb top-left (Req 1.3.10) */}
           <div
