@@ -21,6 +21,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactElement } from 'react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { TEST_ROUTER_FUTURE_FLAGS } from '../test-utils'
 
 // --- Mocks -------------------------------------------------------------
 
@@ -60,7 +61,7 @@ import Header from './Header'
  * the link renders, so MemoryRouter is the minimal wrapper.
  */
 function renderHeader(ui: ReactElement = <Header />) {
-  return render(<MemoryRouter>{ui}</MemoryRouter>)
+  return render(<MemoryRouter future={TEST_ROUTER_FUTURE_FLAGS}>{ui}</MemoryRouter>)
 }
 
 beforeEach(() => {

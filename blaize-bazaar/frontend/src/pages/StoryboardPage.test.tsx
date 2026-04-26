@@ -21,6 +21,7 @@
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactElement } from 'react'
+import { TEST_ROUTER_FUTURE_FLAGS } from '../test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // --- Mocks --------------------------------------------------------------
@@ -76,7 +77,7 @@ import { STORYBOARD_PAGE_COMING_SOON, STORYBOARD_TEASERS } from '../copy'
  * wrapper — the test doesn't care about navigation behavior.
  */
 function renderStoryboard(ui: ReactElement = <StoryboardPage />) {
-  return render(<MemoryRouter>{ui}</MemoryRouter>)
+  return render(<MemoryRouter future={TEST_ROUTER_FUTURE_FLAGS}>{ui}</MemoryRouter>)
 }
 
 beforeEach(() => {

@@ -17,6 +17,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
+import { TEST_ROUTER_FUTURE_FLAGS } from '../test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // --- Mocks -----------------------------------------------------------
@@ -119,7 +120,7 @@ import WorkshopPage from './WorkshopPage'
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={['/workshop']}>
+    <MemoryRouter initialEntries={['/workshop']} future={TEST_ROUTER_FUTURE_FLAGS}>
       <WorkshopPage />
     </MemoryRouter>,
   )
