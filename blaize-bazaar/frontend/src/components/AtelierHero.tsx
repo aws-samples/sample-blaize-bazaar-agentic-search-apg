@@ -23,7 +23,7 @@ export default function AtelierHero({ editionNumber = 6 }: { editionNumber?: num
   return (
     <section
       data-testid="atelier-hero"
-      className="px-6 py-8 text-center"
+      className="px-6 pt-6 pb-8 text-center"
     >
       <p
         className="font-mono text-[11px] font-medium uppercase mb-5 flex items-center justify-center gap-2"

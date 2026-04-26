@@ -29,7 +29,7 @@ export default function PlanPreviewChip({
     <div
       data-testid="plan-preview-chip"
       className="inline-flex items-center gap-2 px-[11px] py-[6px] mb-4 rounded-full text-[11px]"
-      style={{ background: 'rgba(181, 212, 244, 0.4)' }}
+      style={{ background: 'rgba(195, 213, 244, 0.4)' }}
     >
       <span
         className="font-mono text-[9px] font-medium px-[7px] py-[1px] rounded uppercase"

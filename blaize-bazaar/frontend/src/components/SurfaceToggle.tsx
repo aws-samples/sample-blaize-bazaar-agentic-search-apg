@@ -24,7 +24,6 @@ const INK = '#2d1810'
 const INK_SOFT = '#6b4a35'
 const INK_QUIET = '#a68668'
 const CREAM = '#fbf4e8'
-const CREAM_WARM = '#f5e8d3'
 
 type Surface = 'storefront' | 'atelier'
 
@@ -57,9 +56,9 @@ export default function SurfaceToggle() {
       data-testid="surface-toggle"
       role="group"
       aria-label={SURFACE_TOGGLE.ARIA_LABEL}
-      className="inline-flex items-center rounded-full p-0.5"
+      className="inline-flex items-center rounded-full p-[3px]"
       style={{
-        background: CREAM_WARM,
+        background: 'rgba(45, 24, 16, 0.06)',
         border: `1px solid ${INK_QUIET}35`,
       }}
     >

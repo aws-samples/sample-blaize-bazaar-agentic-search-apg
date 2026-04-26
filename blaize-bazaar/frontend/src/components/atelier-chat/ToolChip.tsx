@@ -106,7 +106,7 @@ export default function ToolChip({
         <div className="px-[13px] py-[11px]">
           {panel.sql && (
             <pre
-              className="font-mono text-[11px] leading-[1.7] rounded-md overflow-hidden whitespace-pre-wrap break-words"
+              className="font-mono text-[11px] leading-[1.7] rounded-[5px] overflow-hidden whitespace-pre-wrap break-words"
               style={{
                 background: CREAM_WARM,
                 color: INK,
