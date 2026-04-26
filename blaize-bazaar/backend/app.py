@@ -42,6 +42,7 @@ from routes import (
     auth_router,
     products_router,
     search_router,
+    storefront_router,
     user_router,
     workshop_router,
 )
@@ -280,6 +281,12 @@ app.include_router(search_router)
 # Intentionally separate from /api/agent/chat so the storefront SSE
 # stream isn't reshaped for the workshop's replay needs.
 app.include_router(workshop_router)
+
+# Pre-Week-3 storefront ambient chrome — briefing (concierge empty
+# state) + pulse (4 live metrics above the hero). Both endpoints are
+# contract-typed via Pydantic and degrade gracefully; they are never
+# allowed to 5xx the homepage.
+app.include_router(storefront_router)
 
 
 # Dependency injection
