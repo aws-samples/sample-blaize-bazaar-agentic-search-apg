@@ -113,13 +113,25 @@ class FakeDB:
 
 @pytest.fixture
 def fake_db_full() -> FakeDB:
+    """Fake DB keyed on the live boutique catalog column names.
+
+    The catalog uses ``name``, ``description``, ``category``,
+    ``badge``, ``rating``, ``reviews``. Legacy columns (``category_name``,
+    ``"isBestSeller"``, ``product_description``, ``stars``) no longer
+    exist — asserting on those is how we caught the production schema
+    mismatch that broke the first ship.
+    """
     return FakeDB(
         {
             "COUNT(*)": {"n": 92, "c": 6},
-            "isBestSeller": {
+            # Bestseller-pick query matches on ``ORDER BY rating`` — keep
+            # the fixture key narrow so it doesn't collide with the count.
+            "ORDER BY": {
                 "productId": "PSPRT0044",
-                "product_description": "Ethiopia Guji Natural, light roast, floral",
-                "category_name": "Beans",
+                "name": "Ethiopia Guji Natural",
+                "description": "Light roast, floral, natural process",
+                "category": "Beans",
+                "badge": "Bestseller",
             },
             "preferences_summary": {
                 "preferences_summary": "Prefers cold-brew-friendly beans. Browses linen."
@@ -230,6 +242,32 @@ async def test_pulse_returns_four_metrics_with_valid_source_tags(
     cost = next(m for m in resp.metrics if m.id == "cost")
     assert cost.source == "partial"
     assert "process-scoped" in cost.secondary.lower()
+
+
+@pytest.mark.asyncio
+async def test_catalog_snapshot_uses_live_column_names_not_legacy(
+    monkeypatch: pytest.MonkeyPatch, fake_db_full: FakeDB
+) -> None:
+    """Regression test for the first-ship bug: the catalog snapshot was
+    written against the legacy column names (``category_name``,
+    ``"isBestSeller"``, ``product_description``, ``stars``) which no
+    longer exist on the boutique catalog. The snapshot SHALL query only
+    columns that live in ``services/business_logic.py``'s documented
+    schema: ``name``, ``category``, ``description``, ``badge``,
+    ``rating``, ``reviews``."""
+    monkeypatch.setattr("app.db_service", fake_db_full, raising=False)
+    await storefront._catalog_snapshot(fake_db_full)
+
+    joined_sql = " ".join(fake_db_full.calls).lower()
+    # Legacy columns — SHALL NOT appear.
+    assert "category_name" not in joined_sql
+    assert "isbestseller" not in joined_sql
+    assert "product_description" not in joined_sql
+    assert " stars" not in joined_sql  # leading space avoids matching SQL *
+    # Live columns — SHALL appear.
+    assert "category" in joined_sql
+    assert "badge" in joined_sql
+    assert "rating" in joined_sql
 
 
 @pytest.mark.asyncio

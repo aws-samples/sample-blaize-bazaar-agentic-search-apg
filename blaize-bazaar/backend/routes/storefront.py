@@ -141,6 +141,12 @@ async def _catalog_snapshot(db_service: Any) -> dict[str, Any]:
     (dict or None). All safe under the "never 5xx" contract — any
     failure returns a zeros-shape payload with an ``error`` key so
     callers can still render and log.
+
+    Column names match the live boutique catalog (see
+    ``services/business_logic.py`` header): ``name``, ``category``,
+    ``description``, ``badge``, ``rating``, ``reviews``. Legacy
+    columns (``category_name``, ``"isBestSeller"``,
+    ``product_description``, ``stars``) no longer exist.
     """
     fallback = {
         "product_count": 0,
@@ -150,24 +156,38 @@ async def _catalog_snapshot(db_service: Any) -> dict[str, Any]:
     }
     try:
         row = await db_service.fetch_one(
-            "SELECT COUNT(*) AS n, COUNT(DISTINCT category_name) AS c "
+            "SELECT COUNT(*) AS n, COUNT(DISTINCT category) AS c "
             "FROM blaize_bazaar.product_catalog"
         )
         fallback["product_count"] = int(row["n"] or 0) if row else 0
         fallback["category_count"] = int(row["c"] or 0) if row else 0
 
+        # Bestseller pick: no ``isBestSeller`` column on the boutique
+        # schema. Approximate with the ``badge`` column (values like
+        # "Bestseller", "Staff Pick"), falling back to the highest-
+        # rated / most-reviewed row when no badge is set.
         pick = await db_service.fetch_one(
-            'SELECT "productId", product_description, category_name '
+            'SELECT "productId", name, description, category, badge '
             "FROM blaize_bazaar.product_catalog "
-            'WHERE "isBestSeller" = true '
-            "ORDER BY stars DESC NULLS LAST, reviews DESC NULLS LAST "
+            'WHERE "imgUrl" IS NOT NULL '
+            "ORDER BY "
+            "  CASE WHEN badge IS NOT NULL AND badge <> '' THEN 0 ELSE 1 END, "
+            "  rating DESC NULLS LAST, "
+            "  reviews::int DESC NULLS LAST "
             "LIMIT 1"
         )
         if pick:
+            # ``name`` is the short display name on the boutique catalog;
+            # ``description`` is the long-form. Prefer name for the chip,
+            # fall back to first clause of description if name is empty.
+            display = (pick.get("name") or "").strip()
+            if not display:
+                desc = (pick.get("description") or "").strip()
+                display = desc.split(",", 1)[0].strip() if desc else ""
             fallback["bestseller_pick"] = {
                 "product_id": str(pick["productId"]).strip(),
-                "description": str(pick["product_description"]).strip(),
-                "category": str(pick["category_name"]).strip(),
+                "description": display,
+                "category": str(pick.get("category") or "").strip(),
             }
     except Exception as exc:
         fallback["error"] = str(exc)
@@ -246,14 +266,13 @@ async def briefing(
         line_parts.append("I've been watching the boutique.")
 
     pick = snapshot.get("bestseller_pick")
-    if pick:
-        short_name = pick["description"].split(",", 1)[0].strip()
+    if pick and pick.get("description"):
+        short_name = pick["description"].strip()
         # Keep the chip label short enough to sit inline.
         if len(short_name) > 48:
             short_name = short_name[:45].rstrip() + "…"
-        line_parts.append(
-            f"Today's standout: {short_name} in {pick['category']}."
-        )
+        category = pick.get("category", "") or "the catalog"
+        line_parts.append(f"Today's standout: {short_name} in {category}.")
         chips.append(
             BriefingChip(
                 label=short_name,
