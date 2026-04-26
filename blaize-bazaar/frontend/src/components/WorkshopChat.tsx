@@ -17,7 +17,7 @@
  *   5. ``AssistantTurn`` composes plan chip + tool chips + text.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Send } from 'lucide-react'
+import { Send, Copy, Check } from 'lucide-react'
 import {
   queryWorkshopStream,
   resumeWorkshop,
@@ -89,6 +89,7 @@ export default function WorkshopChat({
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   // Tracks customer ids we've already auto-resumed so picking
   // someone, resetting, then picking them again doesn't re-fire the
@@ -115,9 +116,26 @@ export default function WorkshopChat({
     setTurns([])
     setError(null)
     onEvents([])
-    // Clear the resume memo so picking the same customer again fires
-    // a fresh welcome-back turn.
     resumedCustomersRef.current.clear()
+  }
+
+  function copyChat() {
+    const text = turns
+      .map((t) => {
+        const parts: string[] = []
+        parts.push(`> ${t.user_text}`)
+        if (t.panels.length > 0) {
+          parts.push(`  [${t.panels.length} panels: ${t.panels.map((p) => p.tag).join(', ')}]`)
+        }
+        if (t.assistant_text) parts.push(t.assistant_text)
+        return parts.join('\n')
+      })
+      .join('\n\n---\n\n')
+    const header = `Session: ${sessionId ?? 'none'} | Customer: ${customer.label}\n\n`
+    navigator.clipboard.writeText(header + text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
   }
 
   // Auto-fire the welcome-back resume turn when the user picks a
@@ -249,6 +267,17 @@ export default function WorkshopChat({
       >
         <span>Atelier / Chat</span>
         <span className="flex-1 h-[1px]" style={{ background: `${INK_QUIET}30` }} />
+        {turns.length > 0 && (
+          <button
+            type="button"
+            onClick={copyChat}
+            title="Copy chat to clipboard"
+            className="transition-opacity hover:opacity-70"
+            style={{ color: copied ? '#27500A' : INK_QUIET }}
+          >
+            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+        )}
       </div>
 
       {/* Scrolling turn list */}

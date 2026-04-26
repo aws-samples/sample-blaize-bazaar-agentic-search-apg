@@ -8,6 +8,7 @@ semantic retrieval.
 from strands import tool
 import json
 import asyncio
+import re
 
 # Global service references
 _db_service = None
@@ -122,36 +123,47 @@ def restock_product(product_id: int, quantity: int) -> str:
         return json.dumps({"error": str(e)})
 
 _CATEGORY_MAP = {
-    'fragrance': 'Fragrances', 'perfume': 'Fragrances', 'cologne': 'Fragrances',
-    'laptop': 'Laptops', 'macbook': 'Laptops', 'notebook': 'Laptops', 'computer': 'Laptops',
-    'phone': 'Smartphones', 'smartphone': 'Smartphones', 'iphone': 'Smartphones', 'samsung galaxy': 'Smartphones',
-    'watch': 'Watches', 'rolex': 'Watches', 'timepiece': 'Watches',
-    'shoe': 'Shoes', 'sneaker': 'Shoes', 'nike': 'Shoes', 'jordan': 'Shoes',
-    'furniture': 'Furniture', 'sofa': 'Furniture', 'bed': 'Furniture', 'table': 'Furniture', 'chair': 'Furniture',
-    'kitchen': 'Kitchen Accessories', 'pan': 'Kitchen Accessories', 'knife': 'Kitchen Accessories', 'cookware': 'Kitchen Accessories', 'spatula': 'Kitchen Accessories',
-    'sunglasses': 'Sunglasses', 'shades': 'Sunglasses',
-    'bag': 'Bags', 'handbag': 'Bags', 'backpack': 'Bags', 'purse': 'Bags',
-    'dress': 'Dresses', 'gown': 'Dresses',
-    'shirt': 'Shirts', 'tshirt': 'Shirts', 'polo': 'Shirts',
-    'top': 'Tops', 'crop top': 'Tops', 'blouse': 'Tops',
-    'sports': 'Sports Accessories', 'football': 'Sports Accessories', 'basketball': 'Sports Accessories', 'yoga': 'Sports Accessories',
-    'tablet': 'Tablets', 'ipad': 'Tablets',
-    'beauty': 'Beauty', 'mascara': 'Beauty', 'lipstick': 'Beauty', 'makeup': 'Beauty',
-    'skin care': 'Skin Care', 'lotion': 'Skin Care', 'moisturizer': 'Skin Care',
-    'motorcycle': 'Motorcycle', 'helmet': 'Motorcycle',
-    'vehicle': 'Vehicle', 'car': 'Vehicle', 'tesla': 'Vehicle',
-    'jewel': 'Jewellery', 'earring': 'Jewellery', 'necklace': 'Jewellery', 'bracelet': 'Jewellery', 'ring': 'Jewellery',
-    'grocer': 'Groceries', 'food': 'Groceries', 'snack': 'Groceries',
-    'mobile': 'Mobile Accessories', 'charger': 'Mobile Accessories', 'power bank': 'Mobile Accessories',
-    'headphone': 'Mobile Accessories', 'headphones': 'Mobile Accessories', 'earbuds': 'Mobile Accessories', 'earphone': 'Mobile Accessories',
-    'candle': 'Home Decoration', 'decor': 'Home Decoration', 'decoration': 'Home Decoration',
+    # Boutique catalog categories (92 products, 9 categories)
+    'linen': 'Linen', 'camp shirt': 'Linen', 'oxford': 'Linen',
+    'dress': 'Dresses', 'gown': 'Dresses', 'sundress': 'Dresses', 'maxi': 'Dresses',
+    'slip dress': 'Dresses', 'kaftan': 'Dresses', 'shirtdress': 'Dresses',
+    'outerwear': 'Outerwear', 'jacket': 'Outerwear', 'cardigan': 'Outerwear',
+    'vest': 'Outerwear', 'sweater': 'Outerwear', 'blazer': 'Outerwear',
+    'trench': 'Outerwear', 'anorak': 'Outerwear', 'puffer': 'Outerwear',
+    'shoe': 'Footwear', 'sneaker': 'Footwear', 'sandal': 'Footwear',
+    'boot': 'Footwear', 'loafer': 'Footwear', 'runner': 'Footwear',
+    'espadrille': 'Footwear', 'mule': 'Footwear', 'derby': 'Footwear',
+    'footwear': 'Footwear', 'trail runner': 'Footwear',
+    'accessory': 'Accessories', 'accessories': 'Accessories', 'hat': 'Accessories',
+    'bracelet': 'Accessories', 'cuff': 'Accessories', 'earring': 'Accessories',
+    'scarf': 'Accessories', 'pocket square': 'Accessories',
+    'bag': 'Bags', 'tote': 'Bags', 'backpack': 'Bags', 'crossbody': 'Bags',
+    'clutch': 'Bags', 'duffle': 'Bags', 'weekender': 'Bags', 'pouch': 'Bags',
+    'handbag': 'Bags', 'purse': 'Bags',
+    'home': 'Home', 'candle': 'Home', 'throw': 'Home', 'blanket': 'Home',
+    'towel': 'Home', 'rug': 'Home', 'vase': 'Home', 'pillow': 'Home',
+    'incense': 'Home', 'tumbler': 'Home', 'napkin': 'Home', 'duvet': 'Home',
+    'pitcher': 'Home',
+    'top': 'Tops', 'tee': 'Tops', 'blouse': 'Tops', 'camisole': 'Tops',
+    'henley': 'Tops', 'polo': 'Tops', 'tank': 'Tops', 'shell': 'Tops',
+    'button-down': 'Tops',
+    'bottom': 'Bottoms', 'bottoms': 'Bottoms', 'trouser': 'Bottoms',
+    'pant': 'Bottoms', 'skirt': 'Bottoms', 'denim': 'Bottoms',
+    'palazzo': 'Bottoms', 'chino': 'Bottoms', 'corduroy': 'Bottoms',
 }
 
 def _detect_category(query: str) -> str | None:
-    """Auto-detect product category from query keywords."""
+    """Auto-detect product category from query keywords.
+    
+    Uses word-boundary matching so "what" doesn't match "hat".
+    Prefers longer (more specific) keyword matches so "linen shirt"
+    maps to Linen, not Tops. Handles common plural forms (s, es).
+    """
     query_lower = query.lower()
-    for keyword, cat_name in _CATEGORY_MAP.items():
-        if keyword in query_lower:
+    for keyword, cat_name in sorted(_CATEGORY_MAP.items(), key=lambda x: -len(x[0])):
+        # Match keyword with optional trailing s/es for plurals
+        pattern = r'(?<![a-z])' + re.escape(keyword) + r'(?:e?s)?(?![a-z])'
+        if re.search(pattern, query_lower):
             return cat_name
     return None
 

@@ -59,14 +59,24 @@ try a different search term."."""
 # ---------------------------------------------------------------------------
 PRICING_KEYWORDS = {"deal", "deals", "cheap", "cheapest", "price", "pricing",
                     "discount", "affordable", "budget", "value", "cost", "save",
-                    "best price", "on sale", "bargain", "under $", "below $",
-                    "less than $", "compare price"}
+                    "best price", "on sale", "bargain", "compare price"}
 INVENTORY_KEYWORDS = {"restock", "inventory", "stock", "out of stock",
                       "low stock", "available", "availability", "in stock",
                       "running low", "sold out", "back in stock"}
 SUPPORT_KEYWORDS = {"return", "refund", "policy", "help", "support", "troubleshoot",
                     "issue", "problem", "warranty", "broken", "defective"}
 SEARCH_KEYWORDS = {"search for", "looking for", "where can I", "compare", "browse"}
+
+# Product-seeking phrases that override pricing keywords. "Find me a
+# linen shirt under $150" is a search with a price filter, not a
+# pricing analysis request.
+PRODUCT_SEEKING_PATTERNS = re.compile(
+    r'\b(find|show|get|give|suggest|recommend|looking for|want|need|buy)\b.*'
+    r'\b(shirt|dress|shoe|bag|jacket|pants|top|linen|cotton|silk|leather|'
+    r'cashmere|wool|sandal|sneaker|boot|tote|candle|throw|towel|hat|cuff|'
+    r'earring|scarf|vest|cardigan|blazer|trench|anorak)\b',
+    re.IGNORECASE,
+)
 
 
 def classify_intent(query: str) -> str:
@@ -75,16 +85,22 @@ def classify_intent(query: str) -> str:
     q = query.lower()
     words = set(re.findall(r'\w+', q))
 
+    # If the query seeks a specific product, route to search even if
+    # price keywords are present. "find me a linen shirt under $150"
+    # is search, not pricing.
+    is_product_seeking = bool(PRODUCT_SEEKING_PATTERNS.search(query))
+
     # Multi-word phrases first (higher specificity)
-    for phrase in PRICING_KEYWORDS:
-        if ' ' in phrase and phrase in q:
-            return "pricing"
+    if not is_product_seeking:
+        for phrase in PRICING_KEYWORDS:
+            if ' ' in phrase and phrase in q:
+                return "pricing"
     for phrase in INVENTORY_KEYWORDS:
         if ' ' in phrase and phrase in q:
             return "inventory"
 
-    # Single-word matches — pricing first, then inventory
-    if words & {w for w in PRICING_KEYWORDS if ' ' not in w}:
+    # Single-word matches — pricing only if not product-seeking
+    if not is_product_seeking and words & {w for w in PRICING_KEYWORDS if ' ' not in w}:
         return "pricing"
     if words & {w for w in INVENTORY_KEYWORDS if ' ' not in w}:
         return "inventory"
@@ -93,11 +109,14 @@ def classify_intent(query: str) -> str:
     if words & SUPPORT_KEYWORDS:
         return "customer_support"
 
+    # Product-seeking queries → search
+    if is_product_seeking:
+        return "search"
+
     # Search keywords (multi-word phrase matching)
     for phrase in SEARCH_KEYWORDS:
         if ' ' in phrase and phrase in q:
             return "search"
-    # Single-word search keywords
     if words & {w for w in SEARCH_KEYWORDS if ' ' not in w}:
         return "search"
 
@@ -385,7 +404,26 @@ CURRENT REQUEST: {message}"""
             logger.info(f"🔄 Invoking orchestrator with query: {message[:100]}...")
             import asyncio
             response = await asyncio.to_thread(orchestrator, full_message)
-            response_text = str(response)
+            # Strands AgentResult.__str__() extracts text from the last
+            # message's content blocks. When the orchestrator's final cycle
+            # is a tool_use (specialist returned but orchestrator didn't
+            # generate a follow-up text), str() is empty. Fall back to
+            # extracting text from tool_result content blocks.
+            response_text = str(response).strip()
+            if not response_text:
+                try:
+                    content = response.message.get("content", [])
+                    for block in content:
+                        if isinstance(block, dict) and "toolResult" in block:
+                            tr = block["toolResult"].get("content", [])
+                            for item in tr:
+                                if isinstance(item, dict) and "text" in item:
+                                    response_text = item["text"]
+                                    break
+                        if response_text:
+                            break
+                except Exception:
+                    pass
             
             # Track assistant response in context manager
             context_manager.add_message("assistant", response_text)

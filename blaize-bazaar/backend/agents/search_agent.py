@@ -55,6 +55,8 @@ def search_agent(query: str) -> str:
                 "<tools>"
                 "- search_products: Use for natural language or intent-based product queries "
                 "(e.g. 'gift for a cook', 'noise-canceling headphones under $200'). "
+                "Extract price limits from the query and pass as max_price. "
+                "Extract category hints and pass as category. "
                 "- get_product_by_category: Use when the user wants to browse a specific category "
                 "(e.g. 'show me all laptops'). "
                 "- compare_products: Use when the user wants a side-by-side comparison of two products. "
