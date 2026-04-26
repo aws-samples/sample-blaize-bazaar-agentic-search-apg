@@ -14,7 +14,7 @@
  * can scroll the telemetry tab to a matching panel. Plan-chip,
  * tool-chip "Open in trace", and inline citation pills all flow
  * through the same callback. The synthesis prompt that emits inline
- * citations is a follow-up (see docs/deferred-backlog.md); the
+ * citations is a follow-up (see docs/backlog.md); the
  * infrastructure is in place.
  */
 import type { Turn, WorkshopPanelEvent } from '../../services/workshop'

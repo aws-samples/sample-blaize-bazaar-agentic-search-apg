@@ -9,7 +9,7 @@
  * emit an ``onCitationClick(ref)`` when clicked. The content of the
  * pill is the ``ref`` (e.g. "trace 7"). The current synthesis system
  * prompt does not yet emit citations — see
- * ``docs/deferred-backlog.md`` for the follow-up task; the pills
+ * ``docs/backlog.md`` for the follow-up task; the pills
  * appear only when the LLM starts emitting inline citation markers.
  *
  * ``citations`` is expected in the shape [{k, ref}] from the

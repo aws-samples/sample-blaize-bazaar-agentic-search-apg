@@ -79,3 +79,56 @@ Files to update:
 - [ ] Cold-start bench data from `docs/perf-baselines/*.json` (Performance tab currently uses hardcoded values)
 - [ ] Row-by-row reveal animation within telemetry panels (~80ms per row)
 - [ ] Coffee Roastery animated transition from empty-state preview rows to live panels
+
+## Schema realignment follow-ups (Apr 2026)
+
+These items were left untouched during the boutique catalog schema
+realignment and still reference the legacy shape (`product_description`,
+`category_name`, `stars`, `productURL`, `quantity`, `category_id`,
+`isBestSeller`, `boughtInLastMonth`).
+
+- [ ] `services/index_performance.py` — HNSW tuning demo, every SQL
+      block selects legacy columns. Mirror the shape in
+      [`hybrid_search.py`](../blaize-bazaar/backend/services/hybrid_search.py)
+      (`name, brand, color, description, category, rating, reviews,
+      badge, tags, "imgUrl"`; filter `"imgUrl" IS NOT NULL`). Reachable
+      only via `/api/performance/*`; pick up before the HNSW demo is
+      used in a session.
+- [ ] `models/product.py` — legacy `Product` Pydantic class declares
+      `product_description`, `stars`, `producturl`, `category_name`.
+      Nothing imports `Product` anymore (shadowed handlers deleted in
+      `59d0f39`); `ProductWithScore` survives but only populates
+      `similarity_score`. Rewrite to match `StorefrontProduct` shape
+      when `ProductWithScore` next needs real product data.
+- [ ] Legacy normalizer fallbacks — `services/chat.py` and
+      `routes/search.py` still do `p.get("name") or
+      p.get("product_description", "")` style guards for old fixtures
+      and cached agent output. Defensive and harmless today; rip out
+      after a workshop cycle rotates fully through the new schema.
+
+## Synthesis prompt — inline citation markers
+
+- [ ] Update `services/chat.py` synthesizer system prompt (and the
+      Runtime-side synthesizer if they diverge in
+      `services/agentcore_runtime.py`) so the model emits each grounded
+      claim with `<cite trace="N">...</cite>` where `N` is the panel's
+      `trace_index`.
+- [ ] Response emitter parses these markers into the existing
+      `WorkshopCitation` shape `{ k: "<source key>", ref: "trace N" }`.
+- Frontend is already wired — `AssistantText` renders `ref` as the
+  pill label and fires `onCitationClick(ref)` → `scrollToTrace`
+  resolves `"trace N"` to the Nth `panel-card-*` in the telemetry
+  tab. Additive — pills show up when the LLM starts emitting, nothing
+  breaks if it doesn't.
+- Discovered during Atelier redesign commit 4, 2026-04-26.
+
+## AuthModal solutions/module3 parity drift
+
+- [ ] `solutions/module3/frontend/components/AuthModal.tsx` is missing
+      `const DUSK = '#3d2518'` that exists in the live
+      `blaize-bazaar/frontend/src/components/AuthModal.tsx`.
+- Surface: `test_solutions_parity[9.4-AuthModal]` fails on baseline.
+- Low risk — attendees only encounter the drift if they inspect both
+  files. Fix by copying the DUSK constant (or determining the
+  module3-intended value) and syncing.
+- Discovered during Bug 1-4 pre-telemetry fixes.
