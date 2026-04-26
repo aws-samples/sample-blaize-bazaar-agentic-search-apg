@@ -40,24 +40,59 @@ export default function AssistantText({
   citations,
   onCitationClick,
 }: AssistantTextProps) {
-  // The LLM isn't emitting citation markers yet, so for now text
-  // flows plain and any citations returned by the response event
-  // render as a trailing row of pills. Once the synthesis prompt
-  // updates to inline ``[trace N]`` markers, we'll split on those
-  // markers here and render the pills inline between the splits.
   const hasCitations = !!citations && citations.length > 0
+  // Build a lookup so inline [trace N] markers can resolve to citation data.
+  const citationByRef = new Map(
+    (citations ?? []).map((c) => [c.ref, c]),
+  )
+
+  // Split text on [trace N] markers for inline rendering.
+  // If no markers found, falls back to trailing pills.
+  const TRACE_RE = /\[trace \d+\]/g
+  const hasInlineMarkers = TRACE_RE.test(text)
+
+  function renderLineWithCitations(line: string, lineIdx: number) {
+    if (!hasInlineMarkers) {
+      return <p key={lineIdx} className="m-0 mb-2 last:mb-0">{line}</p>
+    }
+    const parts = line.split(/(\[trace \d+\])/)
+    return (
+      <p key={lineIdx} className="m-0 mb-2 last:mb-0">
+        {parts.map((part, i) => {
+          const match = part.match(/^\[trace (\d+)\]$/)
+          if (match) {
+            const ref = `trace ${match[1]}`
+            const c = citationByRef.get(ref)
+            return (
+              <button
+                key={i}
+                type="button"
+                data-testid={`citation-pill-${ref}`}
+                onClick={() => onCitationClick?.(ref)}
+                className="font-mono text-[10px] px-[7px] py-[1px] rounded-full transition-opacity hover:opacity-80 mx-1 align-[2px]"
+                style={{ background: CREAM_WARM, color: ACCENT }}
+                title={c?.k ? `Source: ${c.k}` : undefined}
+              >
+                {ref}
+              </button>
+            )
+          }
+          return <span key={i}>{part}</span>
+        })}
+      </p>
+    )
+  }
+
   return (
     <div
       data-testid="assistant-text"
       className="mb-4 text-[14px] leading-[1.75]"
       style={{ color: INK, paddingLeft: 2 }}
     >
-      {text.split('\n').map((line, i) => (
-        <p key={i} className="m-0 mb-2 last:mb-0">
-          {line}
-        </p>
-      ))}
-      {hasCitations && (
+      {text.split('\n').map((line, i) => renderLineWithCitations(line, i))}
+      {/* Trailing pills fallback — shown when citations exist but no
+          inline [trace N] markers were found in the text. */}
+      {hasCitations && !hasInlineMarkers && (
         <div
           className="flex flex-wrap gap-1.5 mt-2"
           data-testid="assistant-text-citations"
@@ -69,18 +104,13 @@ export default function AssistantText({
               data-testid={`citation-pill-${c.ref}`}
               onClick={() => onCitationClick?.(c.ref)}
               className="font-mono text-[10px] px-[7px] py-[1px] rounded-full transition-opacity hover:opacity-80"
-              style={{
-                background: CREAM_WARM,
-                color: ACCENT,
-                verticalAlign: 2,
-              }}
+              style={{ background: CREAM_WARM, color: ACCENT, verticalAlign: 2 }}
               title={c.k ? `Source: ${c.k}` : undefined}
             >
               {c.ref}
             </button>
           ))}
           <span className="text-[10px] italic" style={{ color: INK_SOFT }}>
-            {/* subtle hint while the synthesis prompt isn't inlining markers */}
             click to scroll to the source panel
           </span>
         </div>

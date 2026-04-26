@@ -21,11 +21,11 @@ The frontend's ``WorkshopChat`` + ``TelemetryStream`` components iterate
 the events list with per-type animation beats (see
 ``conferences/2026-postgresconf-agentic-ai/static/index.html`` playEvents()).
 
-**Not an SSE stream.** Week 1 returns one consolidated JSON blob at
-end-of-turn. Once enough specialists emit panels mid-execution
-(Week 5+) this can promote to SSE without changing the event dict shape
-— the client already replays with artificial delays so a true stream is
-transparent.
+**Not an SSE stream.** Returns one consolidated JSON blob at
+end-of-turn. The frontend replays events with variable cadence delays
+(LLM panels slow, Postgres panels fast) to sell the streaming illusion.
+Promote to SSE when per-turn time exceeds ~6s or multiplayer replay is
+needed — the event dict shape is already SSE-compatible.
 
 **Session continuity.** The caller may pass ``session_id`` or let the
 endpoint mint one. The value round-trips to ``AgentContext.session_id``
@@ -40,11 +40,14 @@ as the specialists and orchestrator get instrumented in Weeks 2-6.
 
 from __future__ import annotations
 
+import asyncio
+import json as json_mod
 import logging
 import uuid
-from typing import Any, Optional
+from typing import Any, AsyncGenerator, Optional
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from services.agent_context import AgentContext
@@ -52,6 +55,35 @@ from services.agent_context import AgentContext
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/workshop", tags=["workshop"])
+
+
+def _build_citations(ctx: AgentContext) -> list[dict]:
+    """Build citation dicts from emitted panels.
+
+    Each panel that returned real data (non-empty rows) gets a citation
+    so the chat column renders clickable "trace N" pills that scroll
+    the telemetry tab to the source panel.
+
+    Skipped/error panels (empty rows + error in meta) are excluded —
+    citing a panel that says "no data" is misleading.
+    """
+    citations = []
+    for ev in ctx.events:
+        if ev.get("type") != "panel":
+            continue
+        rows = ev.get("rows") or []
+        meta = ev.get("meta", "")
+        # Skip panels with no data or error states
+        if not rows and ("error" in meta.lower() or "skipped" in meta.lower() or "not set" in meta.lower()):
+            continue
+        trace_idx = ev.get("trace_index")
+        if trace_idx is None:
+            continue
+        citations.append({
+            "k": ev.get("tag", ""),
+            "ref": f"trace {trace_idx}",
+        })
+    return citations
 
 
 # ----- /api/workshop/tool-registry ---------------------------------------
@@ -174,117 +206,141 @@ class WorkshopQueryResponse(BaseModel):
     events: list[dict[str, Any]]
 
 
-@router.post("/query", response_model=WorkshopQueryResponse)
-async def query(payload: WorkshopQueryRequest) -> WorkshopQueryResponse:
-    """Run one workshop turn and return the full event trail.
+@router.post("/query")
+async def query(payload: WorkshopQueryRequest) -> StreamingResponse:
+    """Run one workshop turn, streaming events via SSE as they're emitted.
 
-    Week 1 hand-off is deliberately thin — we construct an ``AgentContext``,
-    emit a canned PLAN decomposing "route → specialist → compose", invoke
-    the existing in-process orchestrator (``services.chat.ChatService``)
-    without further instrumentation, and seal the turn with a ``response``
-    event carrying the orchestrator's final text.
+    Each SSE message is ``data: <json>\\n\\n`` where json is the same
+    event dict shape the blob endpoint used to return. The final message
+    is ``data: [DONE]\\n\\n`` so the client knows the stream is complete.
 
-    The hooks for panels #1-11 are already in place — the AgentContext is
-    threaded through the orchestrator call site in Week 2 so each
-    specialist's DB / LLM / Gateway call produces a real panel event
-    instead of being invisible.
+    The frontend reads via ``fetch()`` + ``ReadableStream`` (POST body,
+    so EventSource won't work). Events push into the same state array
+    the buffered replay used — minimal frontend change.
+
+    Promote to full mid-orchestrator streaming when AgentContext is
+    threaded through the specialist agents. For now, pre-orchestrator
+    events (plan, text, panels) yield immediately, the orchestrator
+    blocks, then post-orchestrator events (steps, response) yield.
     """
     session_id = payload.session_id or f"ws-{uuid.uuid4().hex[:12]}"
     customer_id = payload.customer_id or "anonymous"
 
-    ctx = AgentContext(
-        session_id=session_id,
-        customer_id=customer_id,
-        query=payload.query.strip(),
-    )
+    async def event_stream() -> AsyncGenerator[str, None]:
+        ctx = AgentContext(
+            session_id=session_id,
+            customer_id=customer_id,
+            query=payload.query.strip(),
+        )
+        # Track how many events we've yielded so we can send new ones
+        # as they're emitted by the sync helpers.
+        yielded = 0
 
-    # Week 1 stub plan. The real decomposition lands in Week 4 when the
-    # orchestrator runs a Haiku intent-parse and emits LLM · HAIKU · INTENT
-    # before fanning out to specialists.
-    ctx.emit_plan(
-        steps=[
-            "Parse intent",
-            "Route to specialist",
-            "Compose response",
-        ],
-        duration_ms=0,
-        title="Plan",
-    )
-    ctx.step_active(0)
+        def flush() -> str:
+            """Yield all new events since last flush as SSE messages."""
+            nonlocal yielded
+            out = ""
+            while yielded < len(ctx.events):
+                ev = ctx.events[yielded]
+                out += f"data: {json_mod.dumps(ev)}\n\n"
+                yielded += 1
+            return out
 
-    # Invoke the existing ChatService path. Wrapped in a broad try/except
-    # so Week 1 always returns a valid events list even if the
-    # orchestrator trips over a config gap (missing AGENTCORE_MEMORY_ID,
-    # etc.) — the frontend can then render the error as the response text
-    # instead of a 5xx breaking the replay.
-    try:
-        # Import here rather than at module top so the router can load
-        # even when the chat service's Strands dependencies aren't yet
-        # installed in the test environment.
-        from services.chat import ChatService
-        from app import db_service  # populated by lifespan startup
+        # --- Phase 1: Plan + pre-orchestrator panels (immediate) ---------
+        ctx.emit_plan(
+            steps=["Parse intent", "Route to specialist", "Compose response"],
+            duration_ms=0,
+            title="Plan",
+        )
+        ctx.step_active(0)
+        yield flush()
 
-        if db_service is None:
-            raise RuntimeError("Database service not initialised")
-
-        # --- Week 2: Card 7 shadow-mode discovery panels -----------------
-        # Embed the turn once, run Tool Registry (Aurora) + Gateway panel
-        # emitters against the same vector / prompt. Failures here are
-        # logged and swallowed — discovery is a teaching overlay, it must
-        # never break the user-facing turn.
         try:
-            from services.embeddings import EmbeddingService
-            from services.episodic_memory import emit_memory_episodic_panel
-            from services.workshop_panels import (
-                emit_gateway_panel,
-                emit_tool_registry_panel,
+            from services.chat import EnhancedChatService as ChatService
+            from app import db_service
+
+            if db_service is None:
+                raise RuntimeError("Database service not initialised")
+
+            try:
+                from services.embeddings import EmbeddingService
+                from services.episodic_memory import emit_memory_episodic_panel
+                from services.workshop_panels import (
+                    emit_gateway_panel,
+                    emit_tool_registry_panel,
+                )
+
+                emb_service = EmbeddingService()
+                turn_embedding = emb_service.embed_query(ctx.query)
+
+                ctx.emit_text("Looking through your history and our catalog...")
+                yield flush()
+
+                await emit_memory_episodic_panel(ctx, db_service=db_service)
+                yield flush()
+
+                await emit_tool_registry_panel(
+                    ctx, db_service=db_service, query_embedding=turn_embedding
+                )
+                yield flush()
+
+                ctx.emit_text("Cross-referencing what matches...")
+                yield flush()
+
+                emit_gateway_panel(ctx, query_text=ctx.query)
+                yield flush()
+
+            except Exception as panel_exc:
+                logger.warning("Panel emission failed: %s", panel_exc)
+
+            # --- Phase 2: Orchestrator (blocking) ----------------------------
+            chat_service = ChatService(db_service=db_service)
+
+            ctx.emit_text("Routing to the right specialist...")
+            yield flush()
+
+            result = await chat_service.chat(
+                message=ctx.query,
+                conversation_history=None,
+                session_id=ctx.session_id,
+                guardrails_enabled=False,
             )
 
-            emb_service = EmbeddingService()
-            # EmbeddingService.embed_query is sync; it's cached and small,
-            # so a direct call from the async handler is fine. Wrapping
-            # in to_thread would add latency without an ergonomic win.
-            turn_embedding = emb_service.embed_query(ctx.query)
-            # Episodic panel fires first so MEMORY · EPISODIC anchors
-            # the trace at index 1 — matches the teaching flow
-            # "who are you? → what do we know? → what can we use?".
-            await emit_memory_episodic_panel(ctx, db_service=db_service)
-            await emit_tool_registry_panel(
-                ctx, db_service=db_service, query_embedding=turn_embedding
+            # --- Phase 3: Post-orchestrator (immediate) ----------------------
+            ctx.step_done(0)
+            ctx.step_active(1)
+            ctx.step_done(1)
+            ctx.step_active(2)
+            yield flush()
+
+            response_text = result.get("response") or "(no response)"
+            citations = _build_citations(ctx)
+            ctx.emit_response(
+                text=response_text, citations=citations, confidence=None
             )
-            emit_gateway_panel(ctx, query_text=ctx.query)
-        except Exception as panel_exc:  # pragma: no cover - teaching overlay
-            logger.warning("Card 7 panel emission failed: %s", panel_exc)
-        # -----------------------------------------------------------------
+            ctx.step_done(2)
+            yield flush()
 
-        chat_service = ChatService(db_service=db_service)
-        result = await chat_service.generate_response(
-            message=ctx.query,
-            conversation_history=None,
-            session_id=ctx.session_id,
-            guardrails_enabled=False,
-            use_agents=True,
-        )
+        except Exception as exc:
+            logger.exception("Workshop turn failed: %s", exc)
+            ctx.emit_response(
+                text=f"Workshop turn failed: {exc.__class__.__name__}: {exc}",
+                confidence=None,
+            )
+            yield flush()
 
-        ctx.step_done(0)
-        ctx.step_active(1)
-        ctx.step_done(1)
-        ctx.step_active(2)
+        # Session id as a meta event so the client can persist it.
+        yield f"data: {json_mod.dumps({'type': 'meta', 'session_id': session_id})}\n\n"
+        yield "data: [DONE]\n\n"
 
-        response_text = result.get("response") or "(no response)"
-        ctx.emit_response(text=response_text, confidence=None)
-        ctx.step_done(2)
-
-    except Exception as exc:
-        logger.exception("Workshop turn failed: %s", exc)
-        ctx.emit_response(
-            text=f"Workshop turn failed: {exc.__class__.__name__}: {exc}",
-            confidence=None,
-        )
-
-    return WorkshopQueryResponse(
-        session_id=ctx.session_id,
-        events=ctx.events,
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

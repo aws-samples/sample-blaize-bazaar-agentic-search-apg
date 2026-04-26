@@ -19,7 +19,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Send } from 'lucide-react'
 import {
-  queryWorkshop,
+  queryWorkshopStream,
   resumeWorkshop,
   eventsToTurn,
   type Turn,
@@ -185,16 +185,29 @@ export default function WorkshopChat({
     setIsLoading(true)
 
     try {
-      const res = await queryWorkshop({
-        query: trimmed,
-        session_id: sessionId,
-        customer_id: customerId === 'anonymous' ? null : customerId,
-      })
-      setSessionId(res.session_id)
-      onEvents(res.events)
+      const allEvents: WorkshopEvent[] = []
 
-      // Replace the in-flight turn with the resolved one.
-      const resolved = eventsToTurn(turnId, trimmed, res.events)
+      const { session_id: sid } = await queryWorkshopStream(
+        {
+          query: trimmed,
+          session_id: sessionId,
+          customer_id: customerId === 'anonymous' ? null : customerId,
+        },
+        (ev) => {
+          allEvents.push(ev)
+          // Push incremental events to the telemetry tab
+          onEvents([...allEvents])
+          // Incrementally update the turn so chat chips appear live
+          const partial = eventsToTurn(turnId, trimmed, allEvents)
+          setTurns((prev) =>
+            prev.map((t) => (t.id === turnId ? partial : t)),
+          )
+        },
+      )
+      setSessionId(sid)
+
+      // Final resolved turn with all events
+      const resolved = eventsToTurn(turnId, trimmed, allEvents)
       setTurns((prev) =>
         prev.map((t) => (t.id === turnId ? resolved : t)),
       )

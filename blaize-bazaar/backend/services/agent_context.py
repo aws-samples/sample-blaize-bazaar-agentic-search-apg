@@ -175,6 +175,17 @@ class AgentContext:
             }
         )
 
+    # -- narrative text fragments --------------------------------------------
+    def emit_text(self, text: str) -> None:
+        """Emit a short narrative text fragment that interleaves with panels.
+
+        These are NOT the final response — they're brief status lines
+        ("Looking through your history...") that appear in the chat column
+        between tool chips, giving the replay a conversational cadence.
+        The final composed answer is still ``emit_response()``.
+        """
+        self.emit({"type": "text", "text": text})
+
     # -- final response ------------------------------------------------------
     def emit_response(
         self,
