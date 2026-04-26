@@ -32,6 +32,7 @@ import RefinementPanel from '../components/RefinementPanel'
 import StoryboardTeaser from '../components/StoryboardTeaser'
 import Footer from '../components/Footer'
 import CommandPill from '../components/CommandPill'
+import PulseBar from '../components/PulseBar'
 import { useAuth } from '../contexts/AuthContext'
 import { useUI } from '../contexts/UIContext'
 
@@ -67,6 +68,7 @@ export default function HomePage() {
         onNavigate={handleNavigate}
         onAccountClick={() => openModal('auth')}
       />
+      <PulseBar />
       <main>
         <HeroHeadline />
         <HeroStage />

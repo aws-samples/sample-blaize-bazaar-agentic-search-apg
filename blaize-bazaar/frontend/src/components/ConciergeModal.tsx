@@ -28,6 +28,7 @@ import { useAgentChat, type AgentBadge, type AgentChatMessage } from '../hooks/u
 import { AGENT_IDENTITIES, type AgentType } from '../utils/agentIdentity'
 import ProductCardConcierge from './ProductCardConcierge'
 import MarkdownMessage from './MarkdownMessage'
+import ConciergeBriefing from './ConciergeBriefing'
 
 // Warm palette from storefront.md §"Design tokens".
 const CREAM = '#fbf4e8'
@@ -451,6 +452,18 @@ export default function ConciergeModal() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
+              {/* Briefing: renders until the shopper sends their first
+                  message. Hidden on /workshop mode — that surface has
+                  its own instrumentation chrome. Action clicks dispatch
+                  the pre-composed label as a real concierge query so
+                  the first turn lands in the same pipeline as a typed
+                  message. Session-scoped (no localStorage) per spec. */}
+              {!isWorkshopRoute &&
+                !messages.some((m) => m.role === 'user') && (
+                  <ConciergeBriefing
+                    onAction={(_id, label) => void sendMessage(label)}
+                  />
+                )}
               <AnimatePresence initial={false}>
                 {messages.map((message, index) => (
                   <motion.div
