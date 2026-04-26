@@ -203,17 +203,22 @@ python3.13 -m venv .venv
 source .venv/bin/activate
 pip install -q -r blaize-bazaar/backend/requirements.txt
 
-# Frontend deps
-(cd blaize-bazaar/frontend && npm ci --silent)
+# Frontend deps + production bundle. The workshop runs on the
+# SINGLE-PROCESS model: FastAPI on :8000 serves both the built SPA
+# and /api/*. VITE_BASE_PATH bakes the CloudFront /ports/8000/*
+# prefix into asset URLs so code-server's reverse proxy resolves
+# them correctly.
+(cd blaize-bazaar/frontend && npm ci --silent && VITE_BASE_PATH=/ports/8000/ npm run build)
 
 # Populate .env from CloudFormation outputs
 ./scripts/generate-env-from-cf.sh
 
-# Start services via systemd (matches existing blaize-bazaar.service pattern)
-sudo cp scripts/systemd/blaize-backend.service /etc/systemd/system/
-sudo cp scripts/systemd/blaize-frontend.service /etc/systemd/system/
+# Start the single blaize-bazaar service (uvicorn on :8000). The
+# unit's ExecStartPre rebuilds the SPA on every restart so the
+# latest dist/ is what's served.
+sudo cp scripts/systemd/blaize-bazaar.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now blaize-backend blaize-frontend
+sudo systemctl enable --now blaize-bazaar
 
 # Wait for backend health check
 for i in {1..30}; do
@@ -224,7 +229,7 @@ done
 # Signal CloudFormation
 /opt/aws/bin/cfn-signal -s true "$WAIT_CONDITION_HANDLE"
 
-echo "Environment ready. Backend at :8000, frontend at :5173."
+echo "Environment ready. Blaize Bazaar at :8000 (SPA + /api)."
 ```
 
 #### `scripts/bootstrap-labs.sh` (async, runs after CF signals ready)

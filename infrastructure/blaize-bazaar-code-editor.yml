@@ -248,8 +248,28 @@ Resources:
 
   # --------------------------------------------------------------------------
   # CloudFront distribution fronting the Code Editor (port 8080 by default
-  # for code-server). Uses AllViewer managed policy so Cognito hosted UI
-  # callback traffic is forwarded transparently.
+  # for code-server). All attendee traffic — both the Kiro/Code-Editor UI
+  # AND the Blaize Bazaar app on port 8000 — flows through code-server's
+  # built-in ``/ports/<n>/*`` reverse proxy:
+  #
+  #   https://<cf-domain>/              → Code Editor / Kiro
+  #   https://<cf-domain>/ports/8000/   → Blaize Bazaar (FastAPI serving
+  #                                       the built SPA + /api)
+  #
+  # Two workshop-critical knobs:
+  #
+  #   OriginReadTimeout: 90 — the agentic chat stream can take 60+s on
+  #     an Opus cold start. CloudFront's 30s default would kill the
+  #     stream mid-SSE. 90s gives headroom without hiding real hangs.
+  #
+  #   Compress: false — SSE through a compressed origin ends up buffered
+  #     (gzip has to accumulate bytes before it can emit). The Atelier
+  #     chat depends on tokens streaming visibly, so we turn compression
+  #     off at the CF layer. CachingDisabled is already set, so no CF
+  #     cache is lost by disabling compression.
+  #
+  # AllViewer origin-request policy forwards Authorization + Cookie
+  # headers transparently so Cognito hosted-UI callbacks keep working.
   # --------------------------------------------------------------------------
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
@@ -263,14 +283,17 @@ Resources:
           ViewerProtocolPolicy: redirect-to-https
           AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
           CachedMethods: [GET, HEAD]
-          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad
-          OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled
+          OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3  # AllViewer
+          Compress: false
         Origins:
           - Id: code-editor-origin
             DomainName: !GetAtt CodeEditorInstance.PublicDnsName
             CustomOriginConfig:
               OriginProtocolPolicy: http-only
               HTTPPort: 8080
+              OriginReadTimeout: 90
+              OriginKeepaliveTimeout: 60
 
 Outputs:
   InstanceId:

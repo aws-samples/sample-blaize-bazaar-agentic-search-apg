@@ -55,9 +55,19 @@ fi
 # ============================================================================
 log "Creating environment files..."
 
-# Frontend .env (always create)
+# Frontend .env (always create).
+#
+# Single-process model: FastAPI on :8000 serves BOTH the built SPA
+# and /api, so the browser hits the same origin for both — no
+# separate API base URL is needed. VITE_API_URL stays empty (the
+# chat/search services default to '' → relative URLs).
+#
+# VITE_BASE_PATH is the asset URL prefix baked into the built bundle
+# so CloudFront's /ports/8000/* reverse proxy matches what code-server
+# forwards. Override to "/" for a pure-local prod-build test.
 [ -d "$REPO_PATH/blaize-bazaar/frontend" ] && cat > "$REPO_PATH/blaize-bazaar/frontend/.env" << EOF
-VITE_API_URL=/ports/8000
+VITE_API_URL=
+VITE_BASE_PATH=/ports/8000/
 VITE_AWS_REGION=$AWS_REGION
 VITE_ENABLE_LAB2=true
 EOF
@@ -83,7 +93,7 @@ PGPASSWORD=$DB_PASSWORD
 PGDATABASE=$DB_NAME
 AWS_REGION=$AWS_REGION
 AWS_DEFAULT_REGION=$AWS_REGION
-BEDROCK_EMBEDDING_MODEL=${BEDROCK_EMBEDDING_MODEL:-amazon.titan-embed-text-v2:0}
+BEDROCK_EMBEDDING_MODEL=${BEDROCK_EMBEDDING_MODEL:-us.cohere.embed-v4:0}
 BEDROCK_CHAT_MODEL=${BEDROCK_CHAT_MODEL:-global.anthropic.claude-opus-4-6-v1}
 COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID:-}
 COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID:-}
@@ -335,27 +345,25 @@ fi
 # ============================================================================
 log "Creating start scripts..."
 
+# Single-process model: FastAPI on :8000 serves both /api/* and the
+# built SPA. The legacy start-frontend.sh / http-server on 5173 is
+# gone — attendees point their browser at /ports/8000/* only.
 cat > "$REPO_PATH/blaize-bazaar/start-backend.sh" << 'EOF'
 #!/bin/bash
+# Convenience script for interactive iteration. The workshop's
+# production flow is the blaize-bazaar systemd service (see below).
+# Use this script when you want --reload during local dev.
 cd "$(dirname "$0")/backend"
 export PATH="$HOME/.local/bin:$PATH"
 [ -f "../../.env" ] && export $(grep -v '^#' ../../.env | xargs)
 [ ! -f "../config/mcp-server-config.json" ] && [ -f "generate_mcp_config.py" ] && python3 generate_mcp_config.py 2>/dev/null
-echo "🚀 Starting FastAPI backend on http://localhost:8000"
+echo "🚀 Starting FastAPI backend on http://localhost:8000 (with --reload)"
+echo "   App: http://localhost:8000/ — uvicorn serves the built SPA + /api"
 uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 EOF
 
-cat > "$REPO_PATH/blaize-bazaar/start-frontend.sh" << 'EOF'
-#!/bin/bash
-cd "$(dirname "$0")/frontend"
-[ ! -d "node_modules" ] && npm install
-[ ! -d "dist" ] && npm run build
-echo "🚀 Starting React frontend on http://localhost:5173"
-NO_UPDATE_NOTIFIER=1 npx -y serve -s dist -l 5173 2>&1 | grep -v "xsel"
-EOF
-
-chmod +x "$REPO_PATH/blaize-bazaar/start-backend.sh" "$REPO_PATH/blaize-bazaar/start-frontend.sh"
-chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH/blaize-bazaar/start-backend.sh" "$REPO_PATH/blaize-bazaar/start-frontend.sh"
+chmod +x "$REPO_PATH/blaize-bazaar/start-backend.sh"
+chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH/blaize-bazaar/start-backend.sh"
 log "✅ Start scripts created"
 
 # ============================================================================
@@ -389,9 +397,12 @@ alias blaize-bazaar='cd /workshop/sample-blaize-bazaar-agentic-search-apg/blaize
 alias backend='cd /workshop/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/backend'
 alias frontend='cd /workshop/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/frontend'
 
-# Blaize Bazaar Service Shortcuts
+# Blaize Bazaar Service Shortcuts — single-process model: uvicorn on
+# :8000 serves the built SPA AND /api. Frontend changes require a
+# rebuild (``npm run build`` in blaize-bazaar/frontend/) and are
+# handled automatically by the blaize-bazaar systemd service.
 alias start-backend='/workshop/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/start-backend.sh'
-alias start-frontend='/workshop/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/start-frontend.sh'
+alias rebuild-frontend='cd /workshop/sample-blaize-bazaar-agentic-search-apg/blaize-bazaar/frontend && npm run build && cd - >/dev/null && systemctl restart blaize-bazaar 2>/dev/null || true'
 
 # Database Shortcut (psql uses PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE from .env)
 alias psql='psql'
@@ -433,14 +444,32 @@ else
 fi
 
 # ============================================================================
-# STEP 14: AUTO-START BACKEND & FRONTEND SERVICES
+# STEP 14: AUTO-START BLAIZE BAZAAR SERVICE (single-process, port 8000)
 # ============================================================================
-log "Creating auto-start services for backend and frontend..."
+# Single systemd service. FastAPI serves:
+#   - the built SPA at /, /atelier, /storyboard, /discover, ...
+#   - the API at /api/*
+#   - self-hosted fonts + hashed bundles at /assets/*, /fonts/*
+#
+# One port, one process, one unit to troubleshoot. Drop-in migration
+# from the earlier two/three-service layout: after running this
+# bootstrap on a host that had blaize-{backend,frontend,frontend-watcher}
+# services, those are stopped + disabled below so there's no port-5173
+# collision at restart.
+log "Creating blaize-bazaar auto-start service (single process, port 8000)..."
 
-# --- Backend systemd service (uvicorn with --reload) ---
-cat > /etc/systemd/system/blaize-backend.service << EOF
+# Cleanup of the legacy two/three-service layout. Safe to run
+# unconditionally — absent services return non-zero and we swallow.
+systemctl stop blaize-backend blaize-frontend blaize-frontend-watcher 2>/dev/null || true
+systemctl disable blaize-backend blaize-frontend blaize-frontend-watcher 2>/dev/null || true
+rm -f /etc/systemd/system/blaize-backend.service \
+      /etc/systemd/system/blaize-frontend.service \
+      /etc/systemd/system/blaize-frontend-watcher.service
+
+# --- blaize-bazaar.service: build frontend once, then run uvicorn ---
+cat > /etc/systemd/system/blaize-bazaar.service << EOF
 [Unit]
-Description=Blaize Bazaar Backend (FastAPI + uvicorn)
+Description=Blaize Bazaar (FastAPI + built SPA on :8000)
 After=network.target
 
 [Service]
@@ -451,61 +480,19 @@ WorkingDirectory=$REPO_PATH/blaize-bazaar/backend
 EnvironmentFile=$REPO_PATH/.env
 Environment=PATH=/home/$CODE_EDITOR_USER/.local/bin:/usr/local/bin:/usr/bin:/bin
 Environment=HOME=/home/$CODE_EDITOR_USER
+# VITE_BASE_PATH is baked into the built bundle so asset URLs match
+# the CloudFront /ports/8000/* reverse-proxy prefix.
+Environment=VITE_BASE_PATH=/ports/8000/
+# ExecStartPre runs every restart: regenerate MCP config (cheap) and
+# rebuild the frontend bundle so the latest /src/ lands in dist/. The
+# build is a one-shot vite run — no watcher, no second process.
 ExecStartPre=/bin/bash -c 'cd $REPO_PATH/blaize-bazaar/backend && python3 generate_mcp_config.py 2>/dev/null || true'
-ExecStart=/home/$CODE_EDITOR_USER/.local/bin/uvicorn app:app --reload --host 0.0.0.0 --port 8000 --reload-dir .
-Restart=always
-RestartSec=3
-StandardOutput=append:/tmp/blaize-bazaar/backend.log
-StandardError=append:/tmp/blaize-bazaar/backend.log
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# --- Frontend rebuild watcher + static server ---
-cat > /etc/systemd/system/blaize-frontend.service << EOF
-[Unit]
-Description=Blaize Bazaar Frontend (static server)
-After=network.target
-
-[Service]
-Type=simple
-User=$CODE_EDITOR_USER
-Group=$CODE_EDITOR_USER
-WorkingDirectory=$REPO_PATH/blaize-bazaar/frontend
-Environment=PATH=/home/$CODE_EDITOR_USER/.local/bin:/usr/local/bin:/usr/bin:/bin
-Environment=HOME=/home/$CODE_EDITOR_USER
-Environment=NODE_ENV=production
 ExecStartPre=/bin/bash -c 'cd $REPO_PATH/blaize-bazaar/frontend && npm run build'
-ExecStart=/usr/bin/npx http-server dist -p 5173 --cors -c-1
+ExecStart=/home/$CODE_EDITOR_USER/.local/bin/uvicorn app:app --host 0.0.0.0 --port 8000
 Restart=always
 RestartSec=3
-StandardOutput=append:/tmp/blaize-bazaar/frontend-server.log
-StandardError=append:/tmp/blaize-bazaar/frontend-server.log
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# --- Frontend file watcher (auto-rebuild on .tsx/.ts changes) ---
-cat > /etc/systemd/system/blaize-frontend-watcher.service << EOF
-[Unit]
-Description=Blaize Bazaar Frontend File Watcher (auto-rebuild)
-After=blaize-frontend.service
-
-[Service]
-Type=simple
-User=$CODE_EDITOR_USER
-Group=$CODE_EDITOR_USER
-WorkingDirectory=$REPO_PATH/blaize-bazaar/frontend
-Environment=PATH=/home/$CODE_EDITOR_USER/.local/bin:/usr/local/bin:/usr/bin:/bin
-Environment=HOME=/home/$CODE_EDITOR_USER
-Environment=NODE_ENV=production
-ExecStart=/usr/bin/npx chokidar-cli 'src/**/*.tsx' 'src/**/*.ts' 'src/**/*.css' -c 'npm run build' --debounce 1500
-Restart=always
-RestartSec=5
-StandardOutput=append:/tmp/blaize-bazaar/frontend-watcher.log
-StandardError=append:/tmp/blaize-bazaar/frontend-watcher.log
+StandardOutput=append:/tmp/blaize-bazaar/uvicorn.log
+StandardError=append:/tmp/blaize-bazaar/uvicorn.log
 
 [Install]
 WantedBy=multi-user.target
@@ -515,35 +502,23 @@ EOF
 mkdir -p /tmp/blaize-bazaar
 chown "$CODE_EDITOR_USER:$CODE_EDITOR_USER" /tmp/blaize-bazaar
 
-# Install chokidar-cli globally for the file watcher
-sudo -u "$CODE_EDITOR_USER" npm install -g chokidar-cli 2>/dev/null || true
-
-# Enable and start all services
+# Enable + start the single service
 systemctl daemon-reload
-systemctl enable blaize-backend blaize-frontend blaize-frontend-watcher
-systemctl start blaize-backend
-sleep 5
-systemctl start blaize-frontend
-sleep 3
-systemctl start blaize-frontend-watcher
+systemctl enable blaize-bazaar
+systemctl start blaize-bazaar
 
-# Verify services started
-if systemctl is-active --quiet blaize-backend; then
-    log "✅ Backend service running (port 8000, auto-reload on .py changes)"
+# Verify it started
+sleep 8
+if systemctl is-active --quiet blaize-bazaar; then
+    log "✅ blaize-bazaar service running (port 8000, serves SPA + /api)"
 else
-    warn "Backend service failed to start — check: journalctl -u blaize-backend"
+    warn "blaize-bazaar service failed to start — check: journalctl -u blaize-bazaar"
 fi
 
-if systemctl is-active --quiet blaize-frontend; then
-    log "✅ Frontend service running (port 5173, auto-rebuild on save)"
-else
-    warn "Frontend service failed to start — check: journalctl -u blaize-frontend"
-fi
-
-log "✅ Auto-start services configured"
-log "   App URL: https://<cloudfront>/app/"
-log "   Backend auto-reloads on .py file changes"
-log "   Frontend auto-rebuilds on .tsx/.ts/.css file changes (refresh browser)"
+log "✅ Auto-start service configured"
+log "   App URL (Workshop Studio): https://<cloudfront>/ports/8000/"
+log "   App URL (local):           http://localhost:8000/"
+log "   Frontend rebuild: run 'rebuild-frontend' alias or restart the service"
 
 # ============================================================================
 # STEP 15: STATUS MARKER
@@ -597,10 +572,10 @@ if [ "${WORKSHOP_FORMAT:-workshop}" = "builders" ]; then
                   "blaize-bazaar/frontend/src/utils/agentIdentity.ts" "C9 agentIdentity.ts"
 
     chown -R "$CODE_EDITOR_USER:$CODE_EDITOR_USER" "$REPO_PATH/blaize-bazaar/"
-    systemctl restart blaize-backend 2>/dev/null || true
-    sleep 3
-    systemctl restart blaize-frontend 2>/dev/null || true
-    log "✅ Builders solutions applied and services restarted"
+    # Single-service restart — re-runs the ExecStartPre vite build so
+    # the frontend bundle picks up any C9 solution drop-in too.
+    systemctl restart blaize-bazaar 2>/dev/null || true
+    log "✅ Builders solutions applied and blaize-bazaar service restarted"
 fi
 
 # ============================================================================
@@ -636,19 +611,20 @@ echo ""
 echo "✅ Notebooks (Jupyter) dependencies installed"
 echo "✅ Blaize Bazaar Backend (FastAPI + Strands) installed"
 echo "✅ Blaize Bazaar Frontend (React) dependencies installed"
-echo "✅ Database setup complete (~444 products with indexes)"
+echo "✅ Database setup complete (~92 products with indexes)"
 echo "✅ MCP server configured for Amazon Q"
 echo "✅ Bash environment configured (psql ready)"
-echo "✅ Backend & Frontend auto-started (always running)"
+echo "✅ blaize-bazaar service auto-started (single process on :8000)"
 echo ""
-echo "🌐 App is live at: https://<cloudfront>/app/"
-echo "   Backend auto-reloads on .py changes"
-echo "   Frontend auto-rebuilds on .tsx/.ts/.css changes (refresh browser)"
+echo "🌐 App is live at: https://<cloudfront>/ports/8000/"
+echo "   Frontend + API both served by one uvicorn process."
+echo "   Edits to blaize-bazaar/frontend/src/ require a rebuild:"
+echo "     rebuild-frontend    # alias: npm run build + systemctl restart"
 echo ""
 echo "Quick Commands:"
-echo "  psql            # Connect to database"
-echo "  journalctl -fu blaize-backend   # Backend logs"
-echo "  journalctl -fu blaize-frontend  # Frontend logs"
+echo "  psql                             # Connect to database"
+echo "  journalctl -fu blaize-bazaar     # Service logs"
+echo "  rebuild-frontend                 # Rebuild SPA + restart service"
 echo ""
 log "=========================================="
 

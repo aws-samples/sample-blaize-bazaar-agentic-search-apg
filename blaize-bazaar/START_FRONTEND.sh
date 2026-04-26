@@ -1,38 +1,49 @@
 #!/bin/bash
-# Start Frontend Server for Blaize Bazaar
+# =============================================================================
+# Start Frontend for Blaize Bazaar — single-process model
+# =============================================================================
+# In the current architecture, FastAPI on port 8000 serves BOTH the
+# built SPA and /api. There's no longer a separate Vite/http-server
+# process on port 5173. This script is kept as a convenience wrapper
+# that builds the frontend once and then points the user at
+# workshop-autostart.sh (which runs the single uvicorn process).
+#
+# If you're coming here expecting to start something on port 5173,
+# that's the old two-process model — see workshop-autostart.sh or
+# systemctl start blaize-bazaar instead.
+# =============================================================================
+
+set -euo pipefail
 
 cd "$(dirname "$0")/frontend"
 
-# Load nvm
+# Load nvm (harmless if not installed)
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
 
-# Get CloudFront URL from environment or .env file
-if [ -z "$CLOUDFRONT_URL" ]; then
-    if [ -f .env ]; then
-        export $(grep -v '^#' .env | grep CLOUDFRONT_URL | xargs)
-    fi
-fi
+# VITE_BASE_PATH bakes the asset URL prefix into the built bundle so
+# Workshop Studio's /ports/8000/* reverse-proxy prefix matches. Use
+# "/" for a pure-local prod test; leave as default for workshop runs.
+export VITE_BASE_PATH="${VITE_BASE_PATH:-/ports/8000/}"
 
-echo "🛠️  Building frontend for production..."
-NODE_ENV=production npm run build
+echo "🛠️  Building frontend for production (VITE_BASE_PATH=${VITE_BASE_PATH})..."
+npm run build
 
-if [ $? -ne 0 ]; then
-    echo "❌ Build failed!"
-    exit 1
-fi
-
-echo "✅ Build complete!"
 echo ""
-echo "🚀 Starting frontend server on port 5173..."
-if [ -n "$CLOUDFRONT_URL" ]; then
-    echo "🌐 Access at: ${CLOUDFRONT_URL}/ports/5173/"
+echo "✅ Build complete."
+echo ""
+echo "The built bundle lives in blaize-bazaar/frontend/dist/ and is"
+echo "served by FastAPI on port 8000 alongside /api. To actually run"
+echo "the app, start the backend:"
+echo ""
+echo "  ./blaize-bazaar/START_BACKEND.sh           # interactive dev"
+echo "  or"
+echo "  scripts/workshop-autostart.sh              # workshop-style"
+echo "  or"
+echo "  systemctl start blaize-bazaar              # Workshop Studio"
+echo ""
+if [ -n "${CLOUDFRONT_URL:-}" ]; then
+    echo "🌐 App URL: ${CLOUDFRONT_URL}/ports/8000/"
 else
-    echo "🌐 Access at: http://localhost:5173"
+    echo "🌐 App URL: http://localhost:8000/"
 fi
-echo ""
-
-# Serve with cache control headers:
-# - index.html: no-cache (always check for updates)
-# - assets/*: max-age=31536000 (1 year, safe because filenames have hashes)
-npx http-server dist -p 5173 --cors -c-1

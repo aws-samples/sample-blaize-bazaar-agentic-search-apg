@@ -143,25 +143,41 @@ server {
     listen [::]:80;
     server_name _;
     
-    # API proxy to backend (Blaize Bazaar)
+    # Blaize Bazaar (single-process): FastAPI on :8000 serves BOTH
+    # /api/* AND the built SPA (/, /atelier, /storyboard, /discover,
+    # /assets/*, /fonts/*). Code-server's /ports/<n>/* reverse proxy
+    # (or the standalone /app/ alias below) routes the whole app
+    # there.
+    #
+    # SSE-critical: proxy_buffering off + proxy_read_timeout 300 so
+    # streaming tokens reach the browser as they arrive. gzip off at
+    # the nginx layer so content_delta events aren't collapsed into
+    # a single post-compressed chunk.
     location /api/ {
         proxy_pass http://127.0.0.1:8000/api/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
         proxy_read_timeout 300;
+        gzip off;
     }
 
-    # Blaize Bazaar frontend (static build served on port 5173)
+    # /app/ shortcut for browsers that don't go through
+    # code-server's built-in /ports/<n>/* proxy. Forwards to the
+    # same FastAPI origin that /api/ hits — one process, one port.
     location /app/ {
-        proxy_pass http://127.0.0.1:5173/;
+        proxy_pass http://127.0.0.1:8000/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+        proxy_read_timeout 300;
+        gzip off;
     }
-    
+
     # Frontend/IDE proxy (Code Editor)
     location / {
         proxy_pass http://127.0.0.1:8080/;
@@ -654,7 +670,7 @@ if [ ! -z "${STAGE2_SCRIPT_URL}" ]; then
         export DB_CLUSTER_ENDPOINT='${DB_CLUSTER_ENDPOINT:-}' && \
         export DB_NAME='${DB_NAME:-postgres}' && \
         export AWS_REGION='$AWS_REGION' && \
-        export BEDROCK_EMBEDDING_MODEL='${BEDROCK_EMBEDDING_MODEL:-amazon.titan-embed-text-v2:0}' && \
+        export BEDROCK_EMBEDDING_MODEL='${BEDROCK_EMBEDDING_MODEL:-us.cohere.embed-v4:0}' && \
         export BEDROCK_CHAT_MODEL='${BEDROCK_CHAT_MODEL:-global.anthropic.claude-opus-4-6-v1}' && \
         export ASSETS_BUCKET_NAME='${ASSETS_BUCKET_NAME:-}' && \
         export ASSETS_BUCKET_PREFIX='${ASSETS_BUCKET_PREFIX:-}' && \
