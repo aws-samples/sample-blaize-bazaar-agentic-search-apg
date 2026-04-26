@@ -613,6 +613,16 @@ function WorkshopContent() {
                 >
                   Architecture
                 </h2>
+                <span
+                  style={{
+                    fontFamily: 'Fraunces, Georgia, serif',
+                    fontStyle: 'italic',
+                    fontSize: 15,
+                    color: INK_QUIET,
+                  }}
+                >
+                  — Blaize, disassembled.
+                </span>
               </div>
             </div>
 
