@@ -72,7 +72,7 @@ export default function GatewayToolsPanel({ onClose }: { onClose: () => void }) 
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`${API_BASE_URL}/api/workshop/tool-registry`, {
+      const res = await fetch(`${API_BASE_URL}/api/atelier/tool-registry`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: q, limit: 3 }),

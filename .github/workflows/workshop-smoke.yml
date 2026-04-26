@@ -1,0 +1,111 @@
+# Workshop smoke: production-build E2E on macOS, Windows, and Ubuntu.
+#
+# Goal: catch regressions that would break a re:Invent demo before the
+# room. Unlike e2e.yml (Cognito auth against a dev pool), this runs
+# the PRODUCTION BUILD path — one process, one port, self-hosted
+# fonts, `?reset=1`, triage fast-path — with no AWS secrets required.
+#
+# The triage + font + reset specs run everywhere. The "real query"
+# spec requires Bedrock access and is gated on AWS credentials being
+# configured via OIDC; on runs without creds it's skipped.
+
+name: workshop-smoke
+
+on:
+  pull_request:
+    branches: [mainline, main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: workshop-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: ${{ matrix.os }} production-build smoke
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend deps
+        working-directory: blaize-bazaar/frontend
+        run: npm ci
+
+      - name: Build frontend (production)
+        working-directory: blaize-bazaar/frontend
+        run: npm run build
+
+      - name: Install backend deps
+        working-directory: blaize-bazaar/backend
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        working-directory: blaize-bazaar/frontend
+        run: npx playwright install --with-deps chromium
+
+      # Launch uvicorn in the background. The OS-specific spawn is a
+      # hair different — Windows needs `start /B` via PowerShell, POSIX
+      # can use `nohup ... &`. actions/exec doesn't expose a clean
+      # cross-platform pattern, so we split the step.
+      - name: Start uvicorn (POSIX)
+        if: runner.os != 'Windows'
+        working-directory: blaize-bazaar/backend
+        run: |
+          nohup uvicorn app:app --host 0.0.0.0 --port 8000 > /tmp/uvicorn.log 2>&1 &
+          for i in $(seq 1 40); do
+            if curl -sSf http://localhost:8000/api/health > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          echo "uvicorn did not start"; cat /tmp/uvicorn.log; exit 1
+
+      - name: Start uvicorn (Windows)
+        if: runner.os == 'Windows'
+        working-directory: blaize-bazaar/backend
+        shell: pwsh
+        run: |
+          Start-Process -NoNewWindow -FilePath "uvicorn" `
+            -ArgumentList "app:app", "--host", "0.0.0.0", "--port", "8000" `
+            -RedirectStandardOutput $env:TEMP\uvicorn.log `
+            -RedirectStandardError  $env:TEMP\uvicorn.err
+          for ($i=0; $i -lt 40; $i++) {
+            try {
+              $r = Invoke-WebRequest -Uri http://localhost:8000/api/health -UseBasicParsing -TimeoutSec 2
+              if ($r.StatusCode -eq 200) { exit 0 }
+            } catch {}
+            Start-Sleep -Seconds 1
+          }
+          Write-Host "uvicorn did not start"
+          Get-Content $env:TEMP\uvicorn.log -ErrorAction SilentlyContinue
+          exit 1
+
+      - name: Run Playwright smoke specs
+        working-directory: blaize-bazaar/frontend
+        env:
+          E2E_BASE_URL: http://localhost:8000
+        run: npx playwright test e2e/workshop-smoke.spec.ts
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workshop-smoke-report-${{ matrix.os }}
+          path: blaize-bazaar/frontend/playwright-report
+          if-no-files-found: ignore

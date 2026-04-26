@@ -4,15 +4,19 @@ FastAPI app for the Blaize Bazaar workshop backend.
 """
 
 import asyncio
+import os
 import time
 import logging
 import json
 from contextlib import asynccontextmanager
 from typing import Optional
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Query, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from config import settings
 from models.search import (
@@ -197,6 +201,12 @@ async def lifespan(app: FastAPI):
         set_main_loop(asyncio.get_event_loop())
         logger.info("✅ Agent tools initialized with pgvector semantic search")
 
+        # Load the skill registry once at boot. Per-request cost is zero —
+        # skills are served from memory. See backend/skills/ for the
+        # registry, models, and (Phase 2) the one-call router.
+        from skills import load_registry
+        load_registry()
+
         logger.info("🚀 Blaize Bazaar Workshop API is ready!")
         
     except Exception as e:
@@ -291,13 +301,41 @@ async def get_embedding_service() -> EmbeddingService:
 # HEALTH CHECK ENDPOINTS
 # ============================================================================
 
-@app.get("/", response_model=dict)
+# Root + SPA serving ------------------------------------------------------
+# The workshop runs in "production build" mode: FastAPI owns port 8000
+# and serves the built React SPA from ``../frontend/dist``. No separate
+# Vite dev server on attendee laptops — kills the "npm run dev on
+# Windows" failure modes (port 5173 conflicts, file watcher limits,
+# node_modules install issues behind corporate proxies).
+#
+# Resolution order for the root ``/`` endpoint:
+#   1. If ``FRONTEND_DIST_PATH`` env var is set, use that.
+#   2. Otherwise look for ``../frontend/dist`` relative to backend/.
+#   3. If neither exists (pure API mode / tests), fall back to the
+#      JSON status blob.
+FRONTEND_DIST = Path(
+    os.environ.get("FRONTEND_DIST_PATH")
+    or (Path(__file__).resolve().parent.parent / "frontend" / "dist")
+).resolve()
+
+
+@app.get("/", include_in_schema=False)
 async def root():
-    """Root endpoint"""
-    return {
-        "message": "Blaize Bazaar Workshop API",
-        "version": "1.0.0",
-    }
+    """Serve the SPA's ``index.html`` if built, else return API status."""
+    index_html = FRONTEND_DIST / "index.html"
+    if index_html.is_file():
+        return FileResponse(index_html)
+    return JSONResponse(
+        {
+            "message": "Blaize Bazaar Workshop API",
+            "version": "1.0.0",
+            "note": (
+                "Frontend bundle not found at "
+                f"{FRONTEND_DIST}. Run `npm run build` in blaize-bazaar/frontend/ "
+                "to produce the SPA, or set FRONTEND_DIST_PATH."
+            ),
+        }
+    )
 
 
 @app.get("/api/health", response_model=HealthResponse)
@@ -878,7 +916,7 @@ async def personalized_search(
 # WORKSHOP MODULE STATUS ENDPOINT
 # ============================================================================
 
-@app.get("/api/workshop/status")
+@app.get("/api/atelier/status")
 async def get_workshop_status():
     """Detect which workshop modules have been completed by inspecting stub source code."""
     import inspect
@@ -1241,6 +1279,59 @@ async def analytics_query(request: Request):
     except Exception as e:
         logger.error(f"Analytics query failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# SPA STATIC MOUNT + CLIENT-ROUTE CATCH-ALL
+# ============================================================================
+# Mounted LAST so every @app.get/@app.post above wins on path conflict.
+# The SPA owns ``/`` and every client-side route (``/workshop``,
+# ``/storyboard``, ``/discover``, etc.); ``/api/*`` routes remain
+# API-side.
+#
+# The ``/assets`` mount serves Vite's hashed bundle output with a
+# browser-friendly cache header — hashed filenames make long cache
+# lifetimes safe. ``/fonts`` serves the self-hosted font files we ship
+# from ``public/fonts/`` (no Google Fonts runtime dependency — corporate
+# networks that block fonts.gstatic.com don't break the workshop).
+#
+# The catch-all handler falls back to ``index.html`` for anything that
+# doesn't map to an /api/* path or a real file in dist/. React Router
+# picks up from there.
+
+if FRONTEND_DIST.is_dir():
+    assets_dir = FRONTEND_DIST / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+    fonts_dir = FRONTEND_DIST / "fonts"
+    if fonts_dir.is_dir():
+        app.mount("/fonts", StaticFiles(directory=fonts_dir), name="fonts")
+
+    # Client-route catch-all. Explicitly does NOT match /api/* — those
+    # already resolve against the routers above and a 404 from here
+    # would mask a real routing bug. We also refuse to serve files that
+    # escape dist/ via .. segments.
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str):
+        if full_path.startswith("api/") or full_path.startswith("ws/"):
+            raise HTTPException(status_code=404, detail="Not Found")
+        candidate = (FRONTEND_DIST / full_path).resolve()
+        # Prevent directory traversal — the resolved path must live
+        # inside dist/.
+        try:
+            candidate.relative_to(FRONTEND_DIST)
+        except ValueError:
+            raise HTTPException(status_code=404, detail="Not Found")
+        if candidate.is_file():
+            return FileResponse(candidate)
+        # Anything else → SPA entry. React Router handles the rest.
+        return FileResponse(FRONTEND_DIST / "index.html")
+else:
+    logger.warning(
+        "⚠️  Frontend dist not found at %s — API will run, SPA will 404. "
+        "Run `cd blaize-bazaar/frontend && npm run build` to produce it.",
+        FRONTEND_DIST,
+    )
 
 
 # ============================================================================

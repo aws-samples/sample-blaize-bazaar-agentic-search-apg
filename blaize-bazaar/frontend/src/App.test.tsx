@@ -38,7 +38,7 @@ const mockFetch = vi.fn(async (input: RequestInfo | URL) => {
   if (url.includes('/api/auth/me') || url.includes('/api/user/preferences')) {
     return new Response(null, { status: 401 })
   }
-  if (url.includes('/api/workshop/status')) {
+  if (url.includes('/api/atelier/status')) {
     // useWorkshopStatus reads `data.modules.module{1,2,3}.complete`. Return
     // a well-shaped "nothing complete yet" payload so the hook's useMemo
     // doesn't blow up on missing keys.

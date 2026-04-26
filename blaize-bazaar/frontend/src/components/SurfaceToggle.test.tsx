@@ -4,7 +4,7 @@
  * Covers:
  *   - Both segments render with the correct labels + testids.
  *   - The active segment reflects the current route (/ → storefront,
- *     /workshop → atelier, /workshop/x → atelier).
+ *     /atelier → atelier, /atelier/x → atelier).
  *   - The inactive segment links to the other surface.
  *   - aria-current + data-active are only set on the active segment.
  */
@@ -55,8 +55,8 @@ describe('SurfaceToggle — active state reflects route', () => {
     ).toBe('false')
   })
 
-  it('marks Atelier active on /workshop', () => {
-    renderAt('/workshop')
+  it('marks Atelier active on /atelier', () => {
+    renderAt('/atelier')
     expect(
       screen.getByTestId('surface-toggle-atelier').getAttribute('data-active'),
     ).toBe('true')
@@ -65,8 +65,8 @@ describe('SurfaceToggle — active state reflects route', () => {
     ).toBe('false')
   })
 
-  it('treats /workshop subroutes as atelier', () => {
-    renderAt('/workshop/something-deep')
+  it('treats /atelier subroutes as atelier', () => {
+    renderAt('/atelier/something-deep')
     expect(
       screen.getByTestId('surface-toggle-atelier').getAttribute('data-active'),
     ).toBe('true')
@@ -74,15 +74,15 @@ describe('SurfaceToggle — active state reflects route', () => {
 })
 
 describe('SurfaceToggle — links to the correct target surface', () => {
-  it('atelier segment links to /workshop', () => {
+  it('atelier segment links to /atelier', () => {
     renderAt('/')
     expect(
       screen.getByTestId('surface-toggle-atelier').getAttribute('href'),
-    ).toBe('/workshop')
+    ).toBe('/atelier')
   })
 
   it('storefront segment links to /', () => {
-    renderAt('/workshop')
+    renderAt('/atelier')
     expect(
       screen.getByTestId('surface-toggle-storefront').getAttribute('href'),
     ).toBe('/')

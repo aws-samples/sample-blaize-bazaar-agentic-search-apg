@@ -9,7 +9,7 @@
  *
  * `mode` switches high-level behavior:
  *   - 'storefront' — no agent inference, no agent badges, plain chat
- *   - 'workshop'   — populate agent/agentExecution so instrumentation UI
+ *   - 'atelier'    — populate agent/agentExecution so instrumentation UI
  *                    (badges, Under the Hood) can render
  *
  * `workshopMode` and `guardrailsEnabled` are passed through to the
@@ -24,7 +24,7 @@ import {
 } from '../services/chat'
 import type { WorkshopMode } from '../contexts/LayoutContext'
 
-export type ChatMode = 'storefront' | 'workshop'
+export type ChatMode = 'storefront' | 'atelier'
 
 export interface AgentStep {
   agent: string
@@ -272,8 +272,8 @@ export function useAgentChat(
         return
       }
 
-      // Thinking placeholder — only populate agentExecution when workshop mode
-      const showInstrumentation = mode === 'workshop'
+      // Thinking placeholder — only populate agentExecution when atelier mode
+      const showInstrumentation = mode === 'atelier'
       const thinkingAgentName =
         workshopMode === 'production'
           ? 'AgentCore'
@@ -412,7 +412,9 @@ export function useAgentChat(
               })
             }
           },
-          workshopMode,
+          // Storefront mode always gets full chat access regardless of
+          // which workshop module the participant has completed.
+          mode === 'storefront' ? undefined : workshopMode,
           guardrailsEnabled,
         )
 
@@ -437,7 +439,17 @@ export function useAgentChat(
         setMessages(prev => {
           const updated = [...prev]
           const lastMsg = updated[updated.length - 1]
-          if (response.response) lastMsg.content = response.response
+          if (response.response) {
+            lastMsg.content = response.response
+          } else if (!lastMsg.content) {
+            // Defense in depth: the backend synthesizes a fallback
+            // line when the orchestrator returns empty, but if
+            // something slips through (older backend, mid-stream
+            // reconnect) don't leave the user staring at a blank
+            // bubble.
+            lastMsg.content =
+              "I couldn't land on a clear answer — try rephrasing or narrowing the ask."
+          }
           if (response.products?.length) {
             lastMsg.products = response.products.map(mapProduct)
           }

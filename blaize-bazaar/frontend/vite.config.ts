@@ -12,10 +12,19 @@ export default defineConfig({
     // The `.mjs` scanner in src/__tests__/copy.test.mjs is a standalone
     // Node script, not a vitest suite. It's invoked directly via
     // `node src/__tests__/copy.test.mjs` (see package.json / CI).
-    exclude: ['**/node_modules/**', '**/dist/**', '**/*.test.mjs'],
+    //
+    // e2e/ holds Playwright specs (different runner, different imports).
+    exclude: ['**/node_modules/**', '**/dist/**', '**/*.test.mjs', 'e2e/**'],
   },
-  // CRITICAL: Set base path for production builds to work with CloudFront /ports/5173/ routing
-  base: process.env.NODE_ENV === 'production' ? '/ports/5173/' : '/',
+  // Base path strategy:
+  //   - local prod build served by FastAPI on port 8000 → root-relative "/".
+  //   - Workshop Studio / CloudFront deployments set VITE_BASE_PATH
+  //     explicitly via the CFN so the built bundle matches whatever
+  //     prefix CloudFront forwards to the origin (e.g. "/ports/8000/").
+  // Keeping this flag-driven (instead of a hardcoded "/ports/5173/")
+  // means dev + local prod + Workshop Studio all read from the same
+  // vite config without a conditional NODE_ENV branch.
+  base: process.env.VITE_BASE_PATH || '/',
   
   plugins: [react()],
   

@@ -1,5 +1,5 @@
 /**
- * useWorkshopStatus — polls /api/workshop/status to detect module completion.
+ * useWorkshopStatus — polls /api/atelier/status to detect module completion.
  * Polls every 30 seconds. Tracks newly completed modules for celebration modal.
  */
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
@@ -37,7 +37,7 @@ export function useWorkshopStatus() {
   const fetchStatus = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/workshop/status')
+      const res = await fetch('/api/atelier/status')
       if (!res.ok) return
       const data: WorkshopStatus = await res.json()
 

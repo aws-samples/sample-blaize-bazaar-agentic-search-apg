@@ -126,7 +126,7 @@ import WorkshopPage from './WorkshopPage'
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={['/workshop']} future={TEST_ROUTER_FUTURE_FLAGS}>
+    <MemoryRouter initialEntries={['/atelier']} future={TEST_ROUTER_FUTURE_FLAGS}>
       <WorkshopPage />
     </MemoryRouter>,
   )

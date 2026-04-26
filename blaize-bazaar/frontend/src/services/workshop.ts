@@ -1,7 +1,7 @@
 /**
  * Workshop telemetry API client.
  *
- * Thin fetch wrapper around `POST /api/workshop/query`. Intentionally
+ * Thin fetch wrapper around `POST /api/atelier/query`. Intentionally
  * separate from `services/chat.ts` (ConciergeModal's SSE path) because
  * the shapes don't overlap — workshop returns a flat
  * `{session_id, events: WorkshopEvent[]}` payload, chat streams SSE
@@ -149,7 +149,7 @@ const RECOMMENDATION_TAG_RE = /^RECOMMENDATION /
  * Turn the raw events of a single submit into a Turn.
  *
  * Pure function — pass it the user's prompt text and the events
- * returned by /api/workshop/query for that prompt. Safe to call from
+ * returned by /api/atelier/query for that prompt. Safe to call from
  * ``useMemo``; idempotent for the same inputs.
  */
 export function eventsToTurn(
@@ -268,7 +268,7 @@ export async function queryWorkshopStream(
   req: WorkshopQueryRequest,
   onEvent: (ev: WorkshopEvent) => void,
 ): Promise<{ session_id: string }> {
-  const res = await fetch(`${API_BASE_URL}/api/workshop/query`, {
+  const res = await fetch(`${API_BASE_URL}/api/atelier/query`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -359,7 +359,7 @@ export interface WorkshopResumeRequest {
 export async function resumeWorkshop(
   req: WorkshopResumeRequest,
 ): Promise<WorkshopQueryResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/workshop/resume`, {
+  const res = await fetch(`${API_BASE_URL}/api/atelier/resume`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

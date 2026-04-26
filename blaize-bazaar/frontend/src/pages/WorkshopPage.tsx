@@ -46,6 +46,7 @@ import ObservabilityPanel from '../components/ObservabilityPanel'
 import RuntimeStatusPanel from '../components/RuntimeStatusPanel'
 import IndexPerformanceDashboard from '../components/IndexPerformanceDashboard'
 import AtelierHero from '../components/AtelierHero'
+import AtelierSpotlight from '../components/AtelierSpotlight'
 import AtmosphereStrip from '../components/AtmosphereStrip'
 import MetricsRow from '../components/MetricsRow'
 import { useScrollAndFlash } from '../hooks/useScrollAndFlash'
@@ -892,6 +893,8 @@ function WorkshopContent() {
       className="workshop-surface min-h-screen flex flex-col"
       style={{ background: CREAM, color: INK }}
     >
+      <AtelierSpotlight />
+
       {/* Global header chrome — wordmark + SurfaceToggle (Storefront /
           Atelier) + Account + Bag. Mounted on every route, including
           ``/workshop``, so the top navigation stays consistent and

@@ -27,7 +27,7 @@ import PreferencesModal from './components/PreferencesModal'
 import ConciergeModal from './components/ConciergeModal'
 import ComparisonHost from './components/ComparisonHost'
 import SignInPage from './components/SignInPage'
-import HomePage from './pages/HomePage'
+import StorefrontPage from './pages/StorefrontPage'
 import WorkshopPage from './pages/WorkshopPage'
 import InspectorPage from './pages/InspectorPage'
 import StoryboardPage from './pages/StoryboardPage'
@@ -115,15 +115,15 @@ function App() {
               <ComparisonHost />
               <Routes>
                 {/*
-                 *   /           → HomePage (storefront shell)
-                 *   /workshop   → WorkshopPage (instrumentation, gated by AuthGate)
+                 *   /           → StorefrontPage (storefront shell)
+                 *   /atelier    → WorkshopPage (instrumentation, gated by AuthGate)
                  *   /inspector  → InspectorPage (frozen session-scoped trace view)
                  *   /storyboard → StoryboardPage
                  *   /discover   → DiscoverPage
                  *   *           → redirect to /
                  */}
-                <Route path="/" element={<HomePage />} />
-                <Route path="/workshop" element={<WorkshopPage />} />
+                <Route path="/" element={<StorefrontPage />} />
+                <Route path="/atelier" element={<WorkshopPage />} />
                 <Route path="/inspector" element={<InspectorPage />} />
                 <Route path="/storyboard" element={<StoryboardPage />} />
                 <Route path="/discover" element={<DiscoverPage />} />

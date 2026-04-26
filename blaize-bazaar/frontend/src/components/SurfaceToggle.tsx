@@ -29,11 +29,11 @@ type Surface = 'storefront' | 'atelier'
 
 const SEGMENTS: Array<{ key: Surface; label: string; path: string }> = [
   { key: 'storefront', label: SURFACE_TOGGLE.STOREFRONT, path: '/' },
-  { key: 'atelier', label: SURFACE_TOGGLE.ATELIER, path: '/workshop' },
+  { key: 'atelier', label: SURFACE_TOGGLE.ATELIER, path: '/atelier' },
 ]
 
 function currentSurface(pathname: string): Surface {
-  return pathname.startsWith('/workshop') ? 'atelier' : 'storefront'
+  return pathname.startsWith('/atelier') ? 'atelier' : 'storefront'
 }
 
 export default function SurfaceToggle() {

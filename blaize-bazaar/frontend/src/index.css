@@ -22,6 +22,26 @@
     --ink-quiet: #a68668;
     --accent: #c44536;
     --dusk: #3d2518;
+
+    /* Editorial chat palette (blaize-chat-synthesis / experience) */
+    --cream-1: #faf3e8;
+    --cream-2: #f4ead6;
+    --cream-3: #ede0c4;
+    --cream-elev: #fffaf0;
+    --ink-1: #1f1410;
+    --ink-3: rgba(31, 20, 16, 0.66);
+    --ink-4: rgba(31, 20, 16, 0.42);
+    --ink-5: rgba(31, 20, 16, 0.22);
+    --rule-1: rgba(31, 20, 16, 0.10);
+    --rule-2: rgba(31, 20, 16, 0.18);
+    --red-1: #a8423a;
+    --red-soft: rgba(168, 66, 58, 0.12);
+    --green-1: #6b8c5e;
+
+    /* Type stacks */
+    --serif: 'Fraunces', 'Times New Roman', Georgia, serif;
+    --sans: 'Inter', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
   }
 
   /* ========================================================================
@@ -980,4 +1000,65 @@
 .rag-markdown pre code {
   background: none;
   padding: 0;
+}
+
+/* ========================================================================
+ * Editorial chat keyframes (blaize-chat-synthesis / experience mockups).
+ * Global scope — consumed by storefront concierge components.
+ * ======================================================================== */
+
+/* Burgundy shimmer sweep across espresso text (thinking block) */
+@keyframes shimmer-sweep {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    rgba(31, 20, 16, 0.55) 0%,
+    rgba(31, 20, 16, 0.55) 30%,
+    rgba(168, 66, 58, 0.95) 50%,
+    rgba(31, 20, 16, 0.55) 70%,
+    rgba(31, 20, 16, 0.55) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: shimmer-sweep 2.4s ease-in-out infinite;
+}
+
+/* Burgundy cursor blink (streaming reply) */
+@keyframes cursor-blink {
+  0%, 50%  { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Status dot pulse ring (concierge header) */
+@keyframes editorial-pulse {
+  0%   { opacity: 0.6; transform: scale(0.7); }
+  100% { opacity: 0;   transform: scale(2.2); }
+}
+
+/* Three-dot typing cascade (composing state) */
+@keyframes editorial-typing-dot {
+  0%, 60%, 100% { opacity: 0.3; transform: scale(0.85); }
+  30%           { opacity: 1;   transform: scale(1.1); }
+}
+
+/* Product artifact card mount */
+@keyframes artifact-mount {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+/* Tool-call indicator pulse (active state) */
+@keyframes toolcall-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-text { animation: none; }
 }

@@ -7,16 +7,11 @@
     <title>Blaize Bazaar - Shop Smart with AI | Aurora PostgreSQL Demo</title>
     <meta name="description" content="AI-powered product search using Aurora PostgreSQL with pgvector, Amazon Bedrock, and AWS Strands SDK" />
     
-    <!-- Storefront faces (Inter body, Fraunces italic display) + /workshop
-         faces (Instrument Sans body, Instrument Serif display, JetBrains Mono
-         for SQL + telemetry tags — mirrors the Coffee Roastery reference).
-         All loaded via Google Fonts with ``display=swap`` so FOUT stays
-         minimal. /workshop scopes its own Instrument stack via the
-         ``.workshop-surface`` class in index.css — the storefront keeps the
-         boutique Fraunces + Inter pairing unchanged. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@300..700&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+    <!-- Typefaces are self-hosted via @fontsource packages and imported
+         from src/main.tsx so they bundle into dist/assets/. No Google
+         Fonts runtime dependency — the workshop runs unchanged on
+         corporate networks that block fonts.gstatic.com. -->
+
   </head>
   <body>
     <div id="root"></div>

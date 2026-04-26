@@ -1,11 +1,11 @@
-"""``/api/workshop/*`` — telemetry-replay endpoint for the DAT406 /workshop route.
+"""``/api/atelier/*`` — telemetry-replay endpoint for the DAT406 /atelier route.
 
 This router is the backend half of the PostgresConf Builders Session
 (DAT406) telemetry surface. Unlike ``/api/agent/chat`` — which streams
 storefront-shaped SSE events (product cards, cart ops, badges) for
 ``ConciergeModal`` — this endpoint returns a single flat replay payload:
 
-    POST /api/workshop/query
+    POST /api/atelier/query
     → {
         "session_id": "...",
         "events": [
@@ -54,7 +54,7 @@ from services.agent_context import AgentContext
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/workshop", tags=["workshop"])
+router = APIRouter(prefix="/api/atelier", tags=["atelier"])
 
 
 def _build_citations(ctx: AgentContext) -> list[dict]:
@@ -179,7 +179,7 @@ async def tool_registry(payload: ToolRegistryQuery) -> dict[str, Any]:
 
 
 class WorkshopQueryRequest(BaseModel):
-    """Body of ``POST /api/workshop/query``.
+    """Body of ``POST /api/atelier/query``.
 
     ``customer_id`` is optional — the workshop chat starts as anonymous.
     When a demo customer is picked from the user dropdown (Week 1 UI),
@@ -245,6 +245,50 @@ async def query(payload: WorkshopQueryRequest) -> StreamingResponse:
                 out += f"data: {json_mod.dumps(ev)}\n\n"
                 yielded += 1
             return out
+
+        # --- Triage fast-path ---------------------------------------------
+        # Same deterministic short-circuit as /api/chat/stream. Ensures
+        # "hi" / "what can you do" / "thanks" demos don't route through
+        # product_recommendation_agent and risk the empty-LLM failure
+        # mode. Panel emission is skipped entirely; one TRIAGE panel
+        # gives the telemetry tab something to render.
+        from services.chat import classify_triage, _TRIAGE_REPLIES
+
+        triage_bucket = classify_triage(ctx.query)
+        if triage_bucket:
+            logger.info(
+                "🎯 Triage (workshop) | %s | msg=%r", triage_bucket, ctx.query[:60]
+            )
+            ctx.emit_plan(
+                steps=["Classify", "Reply"],
+                duration_ms=0,
+                title="Triage",
+            )
+            ctx.step_active(0)
+            yield flush()
+            ctx.emit_panel(
+                agent="triage",
+                tag="LLM · TRIAGE",
+                tag_class="amber",
+                title=f"Classified as {triage_bucket}",
+                sql="",
+                columns=["bucket", "reason"],
+                rows=[[triage_bucket, "deterministic keyword match"]],
+                meta="orchestrator skipped — small-talk short-circuit",
+                duration_ms=0,
+            )
+            ctx.step_done(0)
+            ctx.step_active(1)
+            yield flush()
+            ctx.emit_response(
+                text=_TRIAGE_REPLIES[triage_bucket],
+                citations=[],
+                confidence=None,
+            )
+            ctx.step_done(1)
+            yield flush()
+            yield "data: [DONE]\n\n"
+            return
 
         # --- Phase 1: Plan + pre-orchestrator panels (immediate) ---------
         ctx.emit_plan(
@@ -358,7 +402,7 @@ async def query(payload: WorkshopQueryRequest) -> StreamingResponse:
 
 
 class WorkshopResumeRequest(BaseModel):
-    """Body of ``POST /api/workshop/resume``.
+    """Body of ``POST /api/atelier/resume``.
 
     Anonymous callers get a 400 — the resume turn is specifically the
     "welcome-back for a known demo customer" surface. The chat column

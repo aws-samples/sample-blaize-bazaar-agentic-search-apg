@@ -73,3 +73,7 @@ archive/
 # Embedded git repos (separate content repos)
 lab-content/
 reference/
+
+# Playwright artifacts
+blaize-bazaar/frontend/playwright-report/
+blaize-bazaar/frontend/test-results/

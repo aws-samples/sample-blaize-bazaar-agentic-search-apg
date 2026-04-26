@@ -1,0 +1,364 @@
+/* ========================================================================
+ * StorefrontWelcome — editorial welcome state styles.
+ * Matches docs/blaize-chat-synthesis.html (the panel).
+ * All colors reference CSS custom properties from index.css :root.
+ * ======================================================================== */
+
+.sf-welcome {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Cover image (CSS-only vessel still life) ---- */
+.sf-cover {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background:
+    radial-gradient(ellipse 600px 220px at 50% 105%, #b89270, transparent 75%),
+    linear-gradient(180deg, #ead4b1 0%, #d4b48a 45%, #a87f5e 100%);
+}
+.sf-cover::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 360px 200px at 22% 65%, rgba(250, 243, 232, 0.55), transparent 70%),
+    radial-gradient(ellipse 260px 180px at 82% 25%, rgba(168, 66, 58, 0.22), transparent 70%);
+}
+.sf-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.12  0 0 0 0 0.08  0 0 0 0 0.06  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/></svg>");
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+}
+.sf-cover-floor {
+  position: absolute;
+  bottom: 0;
+  left: 0; right: 0;
+  height: 30%;
+  background: linear-gradient(180deg, transparent, rgba(31, 20, 16, 0.18));
+  z-index: 1;
+}
+
+/* Vessel shapes */
+.sf-cover-shapes {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 36px 36px;
+  z-index: 2;
+}
+.sf-vessel-wrap { position: relative; }
+.sf-vessel {
+  position: relative;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(180deg, #f0e0c4 0%, #d8b890 50%, #a8866a 100%);
+  box-shadow:
+    inset 0 -10px 18px rgba(31, 20, 16, 0.25),
+    inset 0 5px 10px rgba(255, 250, 240, 0.5),
+    inset -6px 0 12px rgba(31, 20, 16, 0.15),
+    inset 6px 0 12px rgba(255, 250, 240, 0.2),
+    0 6px 12px rgba(31, 20, 16, 0.20);
+}
+.sf-vessel-tall {
+  width: 58px; height: 134px;
+  border-radius: 7px 7px 3px 3px;
+  background: linear-gradient(180deg, #f4e4c8 0%, #d2b088 55%, #a07d5d 100%);
+}
+.sf-vessel-tall::before {
+  content: '';
+  position: absolute;
+  top: 8px; left: 8px; right: 8px; bottom: 30%;
+  background: linear-gradient(180deg, rgba(31, 20, 16, 0.06), transparent);
+  border-radius: 3px;
+}
+.sf-vessel-med {
+  width: 68px; height: 96px;
+  border-radius: 34px 34px 3px 3px;
+  background: linear-gradient(180deg, #fbf3e6 0%, #ddc8a8 55%, #b89878 100%);
+}
+.sf-vessel-med::after {
+  content: '';
+  position: absolute;
+  top: 12%; left: 50%;
+  width: 3px; height: 55%;
+  background: rgba(31, 20, 16, 0.08);
+  transform: translateX(-50%);
+  border-radius: 2px;
+}
+.sf-vessel-short {
+  width: 80px; height: 70px;
+  border-radius: 40px 40px 4px 4px;
+  background: linear-gradient(180deg, #ede0c4 0%, #c9a87f 55%, #8a6a4e 100%);
+}
+.sf-vessel-shadow {
+  position: absolute;
+  bottom: -1px; left: 50%;
+  width: 110%; height: 8px;
+  background: radial-gradient(ellipse, rgba(31, 20, 16, 0.4), transparent 70%);
+  transform: translateX(-50%);
+  filter: blur(3px);
+  z-index: 1;
+}
+
+/* Cover overlay text */
+.sf-cover-overlay {
+  position: absolute;
+  bottom: 16px;
+  left: 22px; right: 22px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  z-index: 3;
+}
+.sf-cover-eyebrow {
+  font-family: var(--sans);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(250, 243, 232, 0.96);
+  font-weight: 500;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sf-cover-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--cream-1);
+  box-shadow: 0 0 0 3px rgba(250, 243, 232, 0.2);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.sf-cover-edition {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  color: rgba(250, 243, 232, 0.85);
+  text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ---- Body ---- */
+.sf-body {
+  padding: 24px 26px 16px;
+}
+
+/* Eyebrow row */
+.sf-eyebrow-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.sf-eyebrow-sm {
+  font-family: var(--sans);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.sf-eyebrow-red { color: var(--red-1); }
+.sf-eyebrow-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--rule-1);
+}
+
+/* Greeting */
+.sf-greeting {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+  margin-bottom: 14px;
+  color: var(--ink-1);
+}
+.sf-greeting em { font-style: italic; }
+
+/* Context line */
+.sf-context {
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+.sf-context-num {
+  font-family: var(--serif);
+  font-weight: 500;
+  color: var(--ink-1);
+  font-size: 15px;
+}
+.sf-context-product {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-1);
+  border-bottom: 1px solid var(--rule-2);
+  padding-bottom: 1px;
+}
+
+/* Section */
+.sf-section { margin-top: 24px; }
+.sf-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.sf-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--red-1);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.sf-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--ink-4);
+  letter-spacing: 0.15em;
+}
+
+/* Stacked action pills */
+.sf-actions-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.sf-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 18px;
+  background: transparent;
+  border: 1px solid var(--rule-2);
+  border-radius: 100px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--ink-1);
+  cursor: pointer;
+  transition: all 180ms ease;
+  text-align: left;
+  width: 100%;
+}
+.sf-action-primary {
+  background: var(--ink-1);
+  color: var(--cream-1);
+  border-color: var(--ink-1);
+}
+.sf-action:hover {
+  background: var(--ink-1);
+  color: var(--cream-1);
+  border-color: var(--ink-1);
+  transform: translateX(2px);
+}
+.sf-action-arrow {
+  font-size: 13px;
+  opacity: 0.6;
+  transition: transform 180ms;
+}
+.sf-action:hover .sf-action-arrow {
+  transform: translateX(2px);
+}
+
+/* Centered-dot divider */
+.sf-divider {
+  height: 1px;
+  background: var(--rule-1);
+  margin: 24px 0 22px;
+  position: relative;
+}
+.sf-divider::after {
+  content: '\00B7';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--cream-1);
+  padding: 0 10px;
+  font-size: 16px;
+  color: var(--red-1);
+}
+
+/* Prompt */
+.sf-prompt {
+  font-family: var(--serif);
+  font-size: 16.5px;
+  line-height: 1.5;
+  margin-bottom: 4px;
+  color: var(--ink-1);
+}
+
+/* P.S. section */
+.sf-postscript {
+  margin-top: 18px;
+  font-family: var(--serif);
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+.sf-postscript-lead { margin-bottom: 10px; }
+.sf-ps-mark {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 500;
+  color: var(--red-1);
+  letter-spacing: 0.04em;
+  font-size: 15.5px;
+}
+.sf-ps-dash {
+  color: var(--red-1);
+  margin: 0 4px;
+}
+.sf-postscript-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+.sf-overheard {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14.5px;
+  color: var(--ink-1);
+  background: none;
+  border: none;
+  padding: 5px 0;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: color 150ms;
+}
+.sf-overheard-bullet {
+  color: var(--red-1);
+  font-style: normal;
+  font-size: 14px;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.sf-overheard-quote {
+  border-bottom: 1px solid transparent;
+  transition: border-color 150ms, color 150ms;
+}
+.sf-overheard:hover .sf-overheard-quote {
+  border-bottom-color: var(--ink-1);
+}
+.sf-overheard:hover { color: var(--ink-1); }

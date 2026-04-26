@@ -10,7 +10,7 @@
  * rendering — scroll, animations, badge layout, Under the Hood block.
  *
  * Mode selection via useLocation():
- *   - pathname.startsWith('/workshop') → instrumentation mode. Agent
+ *   - pathname.startsWith('/atelier') → instrumentation mode. Agent
  *     badges render, "Under the Hood" expandable shows tool calls,
  *     guardrails, context stats. Trace-ID footer links to
  *     /inspector?session={id}.
@@ -28,7 +28,7 @@ import { useAgentChat, type AgentBadge, type AgentChatMessage } from '../hooks/u
 import { AGENT_IDENTITIES, type AgentType } from '../utils/agentIdentity'
 import ProductCardConcierge from './ProductCardConcierge'
 import MarkdownMessage from './MarkdownMessage'
-import ConciergeBriefing from './ConciergeBriefing'
+import StorefrontChat from './StorefrontChat'
 
 // Warm palette from storefront.md §"Design tokens".
 const CREAM = '#fbf4e8'
@@ -293,8 +293,8 @@ export default function ConciergeModal() {
   const sessionId = useSessionId()
 
   const isOpen = activeModal === 'concierge'
-  const isWorkshopRoute = location.pathname.startsWith('/workshop')
-  const mode = isWorkshopRoute ? 'workshop' : 'storefront'
+  const isWorkshopRoute = location.pathname.startsWith('/atelier')
+  const mode = isWorkshopRoute ? 'atelier' : 'storefront'
 
   // Initial welcome — per route mode, only used on first mount of this session.
   const initialMessages = useMemo<AgentChatMessage[]>(
@@ -378,7 +378,7 @@ export default function ConciergeModal() {
             data-testid="concierge-modal"
             className="relative flex flex-col w-full max-w-[560px] h-[min(680px,calc(100vh-4rem))] rounded-3xl overflow-hidden shadow-2xl"
             style={{
-              background: CREAM,
+              background: mode === 'storefront' ? 'var(--cream-1)' : CREAM,
               border: '1px solid rgba(45, 24, 16, 0.08)',
             }}
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
@@ -387,6 +387,25 @@ export default function ConciergeModal() {
             transition={{ type: 'spring', stiffness: 320, damping: 28 }}
             onClick={e => e.stopPropagation()}
           >
+            {mode === 'storefront' ? (
+              <StorefrontChat
+                messages={messages}
+                inputValue={inputValue}
+                setInputValue={setInputValue}
+                isLoading={isLoading}
+                backendOnline={backendOnline}
+                sendMessage={sendMessage}
+                clearChat={clearChat}
+                initialMessages={initialMessages}
+                closeModal={closeModal}
+                addToCart={(item) => addToCart(item)}
+              />
+            ) : (
+              /* ============================================================
+               * ATELIER MODE — untouched from pre-editorial-redesign.
+               * Everything below is the original workshop rendering.
+               * ============================================================ */
+              <>
             {/* Header */}
             <div
               className="px-5 py-4 flex items-center justify-between flex-shrink-0"
@@ -418,7 +437,7 @@ export default function ConciergeModal() {
                     ) : (
                       <span className="flex items-center gap-1.5" style={{ color: INK_SOFT }}>
                         <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#047857' }} />
-                        {mode === 'workshop' ? 'Workshop mode · instrumentation on' : 'Concierge ready'}
+                        {mode === 'atelier' ? 'Atelier mode · instrumentation on' : 'Concierge ready'}
                       </span>
                     )}
                   </div>
@@ -452,18 +471,9 @@ export default function ConciergeModal() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
-              {/* Briefing: renders until the shopper sends their first
-                  message. Hidden on /workshop mode — that surface has
-                  its own instrumentation chrome. Action clicks dispatch
-                  the pre-composed label as a real concierge query so
-                  the first turn lands in the same pipeline as a typed
-                  message. Session-scoped (no localStorage) per spec. */}
-              {!isWorkshopRoute &&
-                !messages.some((m) => m.role === 'user') && (
-                  <ConciergeBriefing
-                    onAction={(_id, label) => void sendMessage(label)}
-                  />
-                )}
+              {/* Messages — atelier mode only renders the instrumented
+                  conversation. Welcome state is handled by the storefront
+                  branch via StorefrontChat. */}
               <AnimatePresence initial={false}>
                 {messages.map((message, index) => (
                   <motion.div
@@ -485,7 +495,7 @@ export default function ConciergeModal() {
                             border: message.role === 'assistant' ? '1px solid rgba(45, 24, 16, 0.06)' : 'none',
                           }}
                         >
-                          {mode === 'workshop' && message.role === 'assistant' && message.agent && message.agentStatus !== 'thinking' && (
+                          {mode === 'atelier' && message.role === 'assistant' && message.agent && message.agentStatus !== 'thinking' && (
                             <AgentBadgeRow message={message} />
                           )}
                           {message.agentStatus === 'thinking' && !message.content ? (
@@ -518,7 +528,7 @@ export default function ConciergeModal() {
 
                     {message.products && message.products.length > 0 && (
                       <div className="flex flex-col gap-2.5 w-full">
-                        {mode === 'workshop' && message.agent && <AgentBadgeRow message={message} />}
+                        {mode === 'atelier' && message.agent && <AgentBadgeRow message={message} />}
                         {message.content && (
                           <div style={{ color: INK_SOFT }} className="text-sm font-light leading-relaxed">
                             <MarkdownMessage content={message.content} />
@@ -567,7 +577,7 @@ export default function ConciergeModal() {
                       </div>
                     )}
 
-                    {mode === 'workshop' &&
+                    {mode === 'atelier' &&
                       message.role === 'assistant' &&
                       message.agentStatus === 'complete' &&
                       (message.agent || message.agentExecution) && (
@@ -617,7 +627,7 @@ export default function ConciergeModal() {
                   placeholder={
                     isLoading
                       ? 'Thinking...'
-                      : mode === 'workshop'
+                      : mode === 'atelier'
                         ? 'Ask something that exercises the specialists'
                         : "Tell Blaize what you're looking for..."
                   }
@@ -646,8 +656,8 @@ export default function ConciergeModal() {
                 </motion.button>
               </div>
 
-              {/* Trace-ID footer — workshop route only */}
-              {mode === 'workshop' && sessionId && (
+              {/* Trace-ID footer — atelier route only */}
+              {mode === 'atelier' && sessionId && (
                 <div className="mt-3 flex items-center justify-between text-[10px]" style={{ fontFamily: 'ui-monospace, monospace', color: INK_QUIET }}>
                   <span>session {sessionId.slice(0, 18)}...</span>
                   <Link
@@ -660,6 +670,8 @@ export default function ConciergeModal() {
                 </div>
               )}
             </div>
+              </>
+            )}
           </motion.div>
         </motion.div>
       )}

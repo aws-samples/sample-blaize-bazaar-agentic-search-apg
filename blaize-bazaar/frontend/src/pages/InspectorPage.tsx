@@ -28,7 +28,7 @@ const ACCENT = '#c44536'
 
 function loadWorkshopMessages(): AgentChatMessage[] {
   try {
-    const saved = localStorage.getItem('blaize-concierge-workshop')
+    const saved = localStorage.getItem('blaize-concierge-atelier')
     if (!saved) return []
     const parsed = JSON.parse(saved)
     return parsed.map((msg: any) => ({
@@ -120,12 +120,12 @@ export default function InspectorPage() {
         style={{ borderBottom: `1px solid ${INK_QUIET}30` }}
       >
         <Link
-          to="/workshop"
+          to="/atelier"
           className="inline-flex items-center gap-2 text-sm"
           style={{ color: INK_SOFT }}
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to workshop
+          Back to atelier
         </Link>
         <div
           className="inline-flex items-center gap-2 text-[11px] font-mono"
@@ -148,8 +148,8 @@ export default function InspectorPage() {
         <p className="text-sm mb-8" style={{ color: INK_SOFT }}>
           Frozen view of agent reasoning for the requested session. Live
           updates continue to flow inside the Concierge modal on
-          <Link to="/workshop" className="underline mx-1" style={{ color: ACCENT }}>
-            /workshop
+          <Link to="/atelier" className="underline mx-1" style={{ color: ACCENT }}>
+            /atelier
           </Link>
           — the inspector only reflects what was captured when this page loaded.
         </p>

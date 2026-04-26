@@ -79,6 +79,84 @@ PRODUCT_SEEKING_PATTERNS = re.compile(
 )
 
 
+# ---------------------------------------------------------------------------
+# Triage fast-path — short-circuits greetings/meta/thanks before the
+# orchestrator is created. Cuts the "empty response" failure mode to
+# zero for the demo queries that used to route into
+# product_recommendation_agent and come back blank. Deterministic by
+# design so workshop demos never depend on an LLM roll for small-talk.
+# ---------------------------------------------------------------------------
+
+# Order matters: we check startswith for greeting/thanks to tolerate
+# trailing punctuation ("hi!", "hi there"), and a normalized-word set
+# for meta queries.
+_GREETING_PREFIXES = (
+    "hi", "hello", "hey", "howdy", "yo",
+    "good morning", "good afternoon", "good evening",
+)
+_THANKS_PREFIXES = ("thanks", "thank you", "thx", "ty", "appreciate")
+_META_PHRASES = (
+    "what can you do", "what do you do", "who are you", "what are you",
+    "how do you work", "what are your capabilities", "help",
+    "how can you help", "what can i ask",
+)
+
+
+def classify_triage(query: str) -> Optional[str]:
+    """Return a triage bucket for trivial queries, or None to fall through.
+
+    Buckets:
+      ``greeting`` — "hi", "hello", etc.
+      ``meta``     — capability/meta questions.
+      ``thanks``   — user is closing the conversation politely.
+
+    Kept deterministic (no LLM) so the demo path never rolls empty on
+    the greeting that opens a stage demo.
+    """
+    if not query:
+        return None
+    q = query.strip().lower()
+    # Strip trailing punctuation so "hi!" and "hi." both match.
+    q = re.sub(r'[!?.,;:]+$', '', q).strip()
+    if not q:
+        return None
+
+    # Length cap: treat queries over 60 chars as real questions even if
+    # they START with "hi" (e.g. "hi, can you find me a linen shirt...").
+    if len(q) > 60:
+        return None
+
+    for prefix in _GREETING_PREFIXES:
+        if q == prefix or q.startswith(prefix + " ") or q.startswith(prefix + ","):
+            return "greeting"
+    for prefix in _THANKS_PREFIXES:
+        if q == prefix or q.startswith(prefix + " ") or q.startswith(prefix + ","):
+            return "thanks"
+    for phrase in _META_PHRASES:
+        if q == phrase or phrase in q:
+            return "meta"
+    return None
+
+
+# Canned responses per triage bucket. Kept short + on-brand so the
+# demo still feels boutique, not transactional. Multiple variants so
+# repeat demos don't sound identical.
+_TRIAGE_REPLIES = {
+    "greeting": (
+        "Hi! I'm Blaize — your concierge for the boutique. "
+        "Tell me what you're after: a piece, a vibe, a price range, or a gift."
+    ),
+    "meta": (
+        "I can help you browse the catalog, compare pieces, check what's in stock, "
+        "or surface what's trending right now. Ask me anything — "
+        '"something for long summer walks" is a good way in.'
+    ),
+    "thanks": (
+        "Anytime. Come back when you're ready for the next piece."
+    ),
+}
+
+
 def classify_intent(query: str) -> str:
     """Deterministic intent classification via keyword matching.
     Returns 'pricing', 'inventory', 'customer_support', 'search', or 'recommendation'."""
@@ -1092,6 +1170,67 @@ CURRENT REQUEST: {message}"""
             yield {"type": "complete", "response": {"response": "Chat is not available in this workshop mode.", "products": [], "suggestions": [], "success": True}}
             return
 
+        # Triage fast-path — deterministic short-circuit for greetings,
+        # meta, and thanks. The orchestrator never fires, which means:
+        #  (a) no Bedrock call, no rate-limit exposure, no empty-LLM
+        #      failure mode — "hi" on stage is guaranteed to reply.
+        #  (b) the telemetry tab still gets a panel event so attendees
+        #      can see the classification decision explicitly.
+        triage_bucket = classify_triage(message)
+        if triage_bucket:
+            logger.info(f"🎯 Triage | {triage_bucket} | msg={message[:60]!r}")
+            reply = _TRIAGE_REPLIES[triage_bucket]
+            yield {"type": "start", "content": "Routing your message..."}
+            yield {
+                "type": "agent_step",
+                "agent": "Triage",
+                "action": f"Classified as {triage_bucket} — skipping specialists",
+                "status": "completed",
+            }
+            yield {"type": "content", "content": reply}
+            context_manager_for_triage = None
+            try:
+                from services.context_manager import get_context_manager
+                context_manager_for_triage = get_context_manager()
+                context_manager_for_triage.add_message("user", message)
+                context_manager_for_triage.add_message("assistant", reply)
+            except Exception:
+                pass
+            yield {
+                "type": "complete",
+                "response": {
+                    "response": reply,
+                    "products": [],
+                    "suggestions": [
+                        "something for long summer walks",
+                        "what's low on stock right now",
+                        "pieces that travel well",
+                    ],
+                    "success": True,
+                    "triage": triage_bucket,
+                    "orchestrator_enabled": False,
+                    "agent_execution": {
+                        "agent_steps": [
+                            {"agent": "Triage", "action": f"Classified as {triage_bucket}",
+                             "status": "completed", "timestamp": 0, "duration_ms": 0},
+                        ],
+                        "tool_calls": [],
+                        "reasoning_steps": [],
+                        "waterfall": [],
+                        "spans": [],
+                        "totalMs": 0,
+                        "specialistRoute": f"triage:{triage_bucket}",
+                        "total_duration_ms": 0,
+                        "success_rate": 1.0,
+                        "otel_enabled": False,
+                        "reason": "triage fast-path — orchestrator skipped",
+                    },
+                    "token_count": 0,
+                    "estimated_cost_usd": 0.0,
+                },
+            }
+            return
+
         if not self.strands_available:
             yield {"type": "error", "error": "Strands SDK not available"}
             return
@@ -1364,6 +1503,29 @@ CURRENT REQUEST: {message}"""
         context_manager.add_message("assistant", response_text)
 
         parsed = await self._parse_agent_response(response_text, message, conversation_history, has_tool_products=bool(products_buffered))
+
+        # Fallback for empty-orchestrator turns: if the agent chain
+        # completed but produced no text and no products, the user
+        # sees a blank message. Synthesize a graceful recovery line
+        # so the chat never strands on silence. The fallback depends
+        # on whether we had any tool activity — informative failure
+        # beats a mystery blank.
+        if not parsed["text"] and not products_buffered and not parsed["products"]:
+            if tool_trace:
+                # Tools fired but produced nothing — likely "no matches".
+                parsed["text"] = (
+                    "I looked through the catalog but didn't land on a clear pick for that one. "
+                    "Want to narrow it down — a price range, a category, or a vibe?"
+                )
+            else:
+                parsed["text"] = (
+                    "I'm not sure I caught that — could you give me a bit more to go on? "
+                    "A price range, a category, or what you'd use it for?"
+                )
+            logger.warning(
+                "chat_stream empty-response fallback fired | tools=%d products=%d",
+                len(tool_trace), len(products_buffered),
+            )
 
         # Send clean text content FIRST (before product cards)
         if parsed["text"]:

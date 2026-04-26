@@ -1,5 +1,5 @@
 /**
- * HomePage — the `/` route composition.
+ * StorefrontPage — the `/` route composition.
  *
  * Ordering matches storefront.md §"Frontend Component Tree" and the
  * reference composition in `stories/HomePage.stories.tsx`:
@@ -10,8 +10,8 @@
  *   StoryboardTeaser -> Footer -> CommandPill
  *
  * Modals (AuthModal, PreferencesModal, ConciergeModal, CartModal,
- * CheckoutModal) mount at the App root, not inside HomePage, so they
- * survive route changes.
+ * CheckoutModal) mount at the App root, not inside StorefrontPage,
+ * so they survive route changes.
  *
  * The `key={prefsVersion}` on ProductGrid (Req 1.6.6) is this page's
  * responsibility: the grid itself does not read AuthContext. When
@@ -32,6 +32,7 @@ import RefinementPanel from '../components/RefinementPanel'
 import StoryboardTeaser from '../components/StoryboardTeaser'
 import Footer from '../components/Footer'
 import CommandPill from '../components/CommandPill'
+import StorefrontSpotlight from '../components/StorefrontSpotlight'
 import { useAuth } from '../contexts/AuthContext'
 import { useUI } from '../contexts/UIContext'
 
@@ -45,7 +46,7 @@ const NAV_ROUTES: Record<NavItem, string> = {
   account: '/',
 }
 
-export default function HomePage() {
+export default function StorefrontPage() {
   const { prefsVersion } = useAuth()
   const { openModal } = useUI()
   const navigate = useNavigate()
@@ -61,6 +62,7 @@ export default function HomePage() {
 
   return (
     <div style={{ minHeight: '100vh', background: CREAM }}>
+      <StorefrontSpotlight />
       <AnnouncementBar />
       <Header
         current="home"
