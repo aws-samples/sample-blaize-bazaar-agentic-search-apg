@@ -28,7 +28,7 @@
  *   - The user's last explicit choice is persisted in localStorage so
  *     subsequent reloads open to where they last were.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'react-resizable-panels'
 import {
@@ -50,7 +50,10 @@ import GatewayToolsPanel from '../components/GatewayToolsPanel'
 import ObservabilityPanel from '../components/ObservabilityPanel'
 import RuntimeStatusPanel from '../components/RuntimeStatusPanel'
 import IndexPerformanceDashboard from '../components/IndexPerformanceDashboard'
-import type { WorkshopEvent } from '../services/workshop'
+import AtelierHero from '../components/AtelierHero'
+import AtmosphereStrip from '../components/AtmosphereStrip'
+import MetricsRow from '../components/MetricsRow'
+import type { WorkshopEvent, WorkshopPanelEvent } from '../services/workshop'
 
 const CREAM = '#fbf4e8'
 const INK = '#2d1810'
@@ -384,6 +387,49 @@ function WorkshopContent() {
   const panelCount = events.filter((e) => e.type === 'panel').length
   const [activeTab, setActiveTab] = useTabState(panelCount)
 
+  // Four real metrics feeding the MetricsRow + AtmosphereStrip. All
+  // derived from the current turn's events — no stubs, no per-session
+  // counters that reset on reload.
+  const metrics = useMemo(() => {
+    const panels = events.filter(
+      (e): e is WorkshopPanelEvent => e.type === 'panel',
+    )
+    const toolsUsed = panels.filter((p) => p.tag_class === 'cyan').length
+    const elapsedMs = events.length
+      ? events[events.length - 1].ts_ms - events[0].ts_ms
+      : null
+    // Median of the current turn's panel durations. AtmosphereStrip
+    // renders this; the MetricsRow uses the turn-elapsed instead.
+    let medianMs: number | null = null
+    if (panels.length > 0) {
+      const sorted = [...panels].map((p) => p.duration_ms).sort((a, b) => a - b)
+      const mid = Math.floor(sorted.length / 2)
+      medianMs =
+        sorted.length % 2 === 0
+          ? Math.round((sorted[mid - 1] + sorted[mid]) / 2)
+          : sorted[mid]
+    }
+    // CONFIDENCE · last reply reads the ``result`` row of the most
+    // recent MEMORY · CONFIDENCE panel. The panel's emitter writes
+    // the percent as the "result" row's contribution cell (see
+    // services/workshop_panels.compute_confidence); we parse leading
+    // digits so "94 (clamped to [30, 98])" still yields 94.
+    let confidencePercent: number | null = null
+    for (let i = panels.length - 1; i >= 0; i--) {
+      if (panels[i].tag === 'MEMORY · CONFIDENCE') {
+        const resultRow = panels[i].rows.find(
+          (r) => r[0]?.toLowerCase() === 'result',
+        )
+        if (resultRow && resultRow[1]) {
+          const match = resultRow[1].match(/\d+/)
+          if (match) confidencePercent = parseInt(match[0], 10)
+        }
+        break
+      }
+    }
+    return { panels, toolsUsed, elapsedMs, medianMs, confidencePercent }
+  }, [events])
+
   const detailOpen = detailPanel !== null
   const isBenchModal = detailPanel === 'bench' // IndexPerformanceDashboard stays modal for now
 
@@ -529,27 +575,27 @@ function WorkshopContent() {
       className="workshop-surface min-h-screen flex flex-col"
       style={{ background: CREAM, color: INK }}
     >
-      {/* Top chrome — title + subtitle. Surface switching is handled
-          globally by the Header's SurfaceToggle. */}
-      <header
-        className="px-6 py-5 flex items-start gap-4"
+      {/* Top chrome — editorial hero + atmosphere ticker + live
+          metrics row, full-width above the chat/tabs split. Surface
+          switching is handled globally by the Header's SurfaceToggle.
+          The split below accepts the remaining vertical space; chat
+          and right-rail each manage their own internal scroll. */}
+      <div
+        data-testid="atelier-header-zone"
         style={{ borderBottom: `1px solid ${INK_QUIET}30` }}
       >
-        <div className="flex-1 min-w-0">
-          <h1
-            className="text-2xl md:text-3xl"
-            style={{ fontFamily: "'Instrument Serif', Georgia, serif", color: INK }}
-          >
-            The Atelier
-          </h1>
-          <p
-            className="text-[13.5px] mt-1 max-w-3xl"
-            style={{ color: INK_SOFT }}
-          >
-            Where Blaize works. Chat on the left, live trace in the middle, dashboards on the right.
-          </p>
-        </div>
-      </header>
+        <AtelierHero />
+        <AtmosphereStrip
+          panelCount={panelCount}
+          medianMs={metrics.medianMs}
+        />
+        <MetricsRow
+          panelCount={panelCount}
+          elapsedMs={metrics.elapsedMs}
+          toolsUsed={metrics.toolsUsed}
+          confidencePercent={metrics.confidencePercent}
+        />
+      </div>
 
       {/* Main — responsive three-band layout */}
       <main
@@ -560,16 +606,16 @@ function WorkshopContent() {
         {isLaptop ? (
           <PanelGroup
             orientation="horizontal"
-            className="h-[calc(100vh-180px)] flex"
+            className="h-[calc(100vh-420px)] min-h-[480px] flex"
           >
-            <Panel defaultSize={detailOpen ? '30%' : '38%'} minSize="22%">
+            <Panel defaultSize={detailOpen ? '30%' : '42%'} minSize="22%">
               {chatArea}
             </Panel>
             <PanelResizeHandle
               className="w-1.5 transition-colors hover:bg-[rgba(0,0,0,0.05)]"
               style={{ background: `${INK_QUIET}20` }}
             />
-            <Panel defaultSize={detailOpen ? '30%' : '62%'} minSize="22%">
+            <Panel defaultSize={detailOpen ? '30%' : '58%'} minSize="22%">
               {workArea}
             </Panel>
             <AnimatePresence>
@@ -587,7 +633,7 @@ function WorkshopContent() {
             </AnimatePresence>
           </PanelGroup>
         ) : isTablet ? (
-          <div className="relative h-[calc(100vh-180px)] grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-4">
+          <div className="relative h-[calc(100vh-420px)] min-h-[480px] grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-4">
             {chatArea}
             <div className="relative min-w-0">
               {workArea}

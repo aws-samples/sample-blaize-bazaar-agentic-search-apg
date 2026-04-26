@@ -138,24 +138,32 @@ afterEach(() => {
 // --- Tests ------------------------------------------------------------
 
 describe('WorkshopPage — chrome', () => {
-  it('renders "The Atelier" title with the new subtitle', () => {
+  it('renders the AtelierHero with the italic display title + epigraph', () => {
     renderPage()
-    expect(screen.getByText(/^The Atelier$/)).toBeInTheDocument()
+    expect(screen.getByText(/^The Atelier\.$/)).toBeInTheDocument()
     expect(
-      screen.getByText(/Where Blaize works/i),
+      screen.getByText(/Where Blaize thinks aloud/i),
     ).toBeInTheDocument()
   })
 
-  it('no longer renders the DAT406 kicker or the old back-to-storefront pill', () => {
+  it('renders the hero zone (hero + atmosphere strip + metrics row)', () => {
+    renderPage()
+    expect(screen.getByTestId('atelier-header-zone')).toBeInTheDocument()
+    expect(screen.getByTestId('atelier-hero')).toBeInTheDocument()
+    expect(screen.getByTestId('atmosphere-strip')).toBeInTheDocument()
+    expect(screen.getByTestId('metrics-row')).toBeInTheDocument()
+  })
+
+  it('no longer renders the DAT406 kicker, old subtitle, or back-to-storefront pill', () => {
     renderPage()
     expect(screen.queryByTestId('back-to-storefront')).not.toBeInTheDocument()
     expect(screen.queryByText(/DAT406/)).not.toBeInTheDocument()
-    // The old "Workshop · agentic telemetry" title must not leak into
-    // the new chrome — surface-switching is the global SurfaceToggle's
-    // job now, and the page owns only the Atelier title + subtitle.
     expect(
       screen.queryByText(/Workshop · agentic telemetry/),
     ).not.toBeInTheDocument()
+    // The compact "Where Blaize works" subtitle was replaced by the
+    // editorial "Where Blaize thinks aloud" epigraph in the hero.
+    expect(screen.queryByText(/^Where Blaize works\./)).not.toBeInTheDocument()
   })
 })
 
