@@ -20,6 +20,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Send } from 'lucide-react'
 import {
   queryWorkshop,
+  resumeWorkshop,
   eventsToTurn,
   type Turn,
   type WorkshopEvent,
@@ -30,7 +31,6 @@ import AssistantTurn from './atelier-chat/AssistantTurn'
 import QuickQueryChips from './atelier-chat/QuickQueryChips'
 
 const INK = '#2d1810'
-const INK_SOFT = '#6b4a35'
 const INK_QUIET = '#a68668'
 const CREAM = '#fbf4e8'
 const CREAM_WARM = '#f5e8d3'
@@ -62,9 +62,9 @@ interface WorkshopChatProps {
   onEvents: (events: WorkshopEvent[]) => void
   /**
    * Fired whenever the session id or customer identity changes so the
-   * Atelier's SessionHeader (on the right rail) can stay in sync with
-   * the chat's local state without lifting the state out of this
-   * component.
+   * Atelier's right-rail band can render the session id · customer
+   * inline alongside its "ATELIER / TELEMETRY" kicker, without lifting
+   * the state out of this component.
    */
   onSession?: (state: { sessionId: string | null; customerLabel: string }) => void
   /**
@@ -90,6 +90,10 @@ export default function WorkshopChat({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
+  // Tracks customer ids we've already auto-resumed so picking
+  // someone, resetting, then picking them again doesn't re-fire the
+  // resume unless the user explicitly hits "new session".
+  const resumedCustomersRef = useRef<Set<string>>(new Set())
 
   const customer = useMemo(
     () => DEMO_CUSTOMERS.find((c) => c.id === customerId) ?? DEMO_CUSTOMERS[0],
@@ -111,7 +115,58 @@ export default function WorkshopChat({
     setTurns([])
     setError(null)
     onEvents([])
+    // Clear the resume memo so picking the same customer again fires
+    // a fresh welcome-back turn.
+    resumedCustomersRef.current.clear()
   }
+
+  // Auto-fire the welcome-back resume turn when the user picks a
+  // seeded demo customer on a fresh session. Gated on: non-anonymous,
+  // no prior session, no turns yet, and first time we've seen this
+  // customer id this session. Teaching moment: attendees see the
+  // MEMORY panels populate without typing anything.
+  useEffect(() => {
+    if (customerId === 'anonymous') return
+    if (sessionId) return
+    if (turns.length > 0) return
+    if (resumedCustomersRef.current.has(customerId)) return
+    if (isLoading) return
+
+    resumedCustomersRef.current.add(customerId)
+    const turnId = `resume-${Date.now()}`
+    const resumeText = '(resumed session)'
+
+    setTurns([
+      {
+        id: turnId,
+        user_text: resumeText,
+        assistant_text: null,
+        panels: [],
+        resumed: true,
+      },
+    ])
+    setIsLoading(true)
+
+    resumeWorkshop({ customer_id: customerId })
+      .then((res) => {
+        setSessionId(res.session_id)
+        onEvents(res.events)
+        const resolved = eventsToTurn(turnId, resumeText, res.events)
+        setTurns([{ ...resolved, resumed: true }])
+      })
+      .catch((err) => {
+        const msg = err instanceof Error ? err.message : String(err)
+        setError(msg)
+        setTurns((prev) =>
+          prev.map((t) =>
+            t.id === turnId
+              ? { ...t, assistant_text: `Resume failed: ${msg}` }
+              : t,
+          ),
+        )
+      })
+      .finally(() => setIsLoading(false))
+  }, [customerId, sessionId, turns.length, isLoading, onEvents])
 
   async function submit(query: string) {
     const trimmed = query.trim()
@@ -166,7 +221,10 @@ export default function WorkshopChat({
         border: `1px solid ${INK_QUIET}30`,
       }}
     >
-      {/* Sticky section label — "ATELIER / CHAT → TELEMETRY" */}
+      {/* Sticky section label — "ATELIER / CHAT". Mirrors the
+          "ATELIER / TELEMETRY" band on the right card: same height,
+          padding, border, and letter-spacing. The visual mirror is
+          the affordance — no arrow is needed. */}
       <div
         className="flex items-center gap-3 px-5 py-[14px] text-[10px] uppercase font-medium"
         style={{
@@ -178,7 +236,6 @@ export default function WorkshopChat({
       >
         <span>Atelier / Chat</span>
         <span className="flex-1 h-[1px]" style={{ background: `${INK_QUIET}30` }} />
-        <span style={{ color: INK_SOFT }}>→ Telemetry</span>
       </div>
 
       {/* Scrolling turn list */}
@@ -192,24 +249,38 @@ export default function WorkshopChat({
         />
 
         {turns.length === 0 && (
-          <div
-            className="text-center py-8 text-[13px]"
-            style={{ color: INK_QUIET }}
-          >
-            Ask anything, or pick a quick query below. Telemetry renders on the right.
-          </div>
+          <>
+            <div
+              className="text-[13px] mt-3"
+              style={{ color: INK_QUIET }}
+            >
+              Ask anything, or pick a suggestion below. Telemetry renders on the right.
+            </div>
+            {/* Pre-turn "try asking" strip — mirrors the post-turn
+                strip so the chat pattern stays identical before and
+                after the first question. Customer picker stays as
+                its own row above the composer. */}
+            <QuickQueryChips
+              queries={QUICK_QUERIES}
+              onPick={submit}
+              disabled={isLoading}
+            />
+          </>
         )}
 
         {turns.map((t) => (
           <div key={t.id}>
-            <UserMessage text={t.user_text} />
+            <UserMessage
+              text={t.user_text}
+              variant={t.resumed ? 'resumed' : 'default'}
+            />
             <AssistantTurn turn={t} onOpenTrace={onOpenTrace} />
           </div>
         ))}
 
-        {/* Post-turn "try asking" strip — only once a turn has
-            completed. Pre-turn the welcome + customer picker row
-            below the list fills this role. */}
+        {/* Post-turn "try asking" strip — same component as pre-turn
+            above. Renders once the most-recent turn has resolved so
+            the chat stays warm between questions. */}
         {turns.length > 0 && turns[turns.length - 1].assistant_text !== null && (
           <QuickQueryChips
             queries={QUICK_QUERIES}
@@ -240,15 +311,21 @@ export default function WorkshopChat({
         )}
       </div>
 
-      {/* Customer picker + quick queries row (pre-turn only, so the
-          starting experience stays inviting; once a turn lands, the
-          QuickQueryChips panel in commit 4 takes over the recovery
-          suggestions). */}
+      {/* Customer picker row (pre-turn only). Quick-query pills
+          moved inline into the scroll list via QuickQueryChips, so
+          the bottom chrome stays thin and the "try asking" strip
+          reads consistently before and after the first question. */}
       {turns.length === 0 && (
         <div
           className="px-5 py-3 flex items-center gap-2 flex-wrap"
           style={{ borderTop: `1px solid ${INK_QUIET}20` }}
         >
+          <span
+            className="text-[10px] uppercase"
+            style={{ color: INK_QUIET, letterSpacing: '0.16em' }}
+          >
+            Shop as
+          </span>
           <select
             value={customerId}
             onChange={(e) => setCustomerId(e.target.value)}
@@ -267,24 +344,6 @@ export default function WorkshopChat({
               </option>
             ))}
           </select>
-          <div className="flex flex-wrap gap-1.5 flex-1 justify-end">
-            {QUICK_QUERIES.map((q) => (
-              <button
-                key={q}
-                type="button"
-                onClick={() => submit(q)}
-                disabled={isLoading}
-                className="text-[11px] italic px-3 py-[5px] rounded-full transition-opacity hover:opacity-80 disabled:opacity-40"
-                style={{
-                  background: 'white',
-                  color: INK_SOFT,
-                  border: `1px solid ${INK_QUIET}30`,
-                }}
-              >
-                "{q}"
-              </button>
-            ))}
-          </div>
         </div>
       )}
 

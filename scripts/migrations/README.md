@@ -16,6 +16,12 @@ Numbered in apply order; running a migration twice is a no-op.
    showcase panel returns interesting rows. Uses `WHERE EXISTS` guards
    so it's safe against stripped-down catalog loads that lack some
    product ids.
+3. **`003_workshop_episodic_seed.sql`** — creates `customer_episodic_seed`
+   (the AgentCore Memory **offline fallback** for episodic recall) and
+   seeds 3 episodes per demo customer. Backs the Atelier's
+   welcome-back `POST /api/workshop/resume` turn — pick a seeded
+   customer from the chat's "shop as" picker with no prior session
+   and the `MEMORY · EPISODIC` panel reads from here.
 
 ## Run
 
@@ -28,6 +34,10 @@ PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" \
 PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" \
     -U "$DB_USER" -d "$DB_NAME" \
     -f scripts/migrations/002_workshop_seed.sql
+
+PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" \
+    -U "$DB_USER" -d "$DB_NAME" \
+    -f scripts/migrations/003_workshop_episodic_seed.sql
 ```
 
 Both files `\set ON_ERROR_STOP on` so a CI wrapper gets a non-zero

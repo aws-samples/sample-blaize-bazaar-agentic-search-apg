@@ -10,7 +10,7 @@ describe('AtelierHero', () => {
   it('renders the display title and italic epigraph', () => {
     render(<AtelierHero />)
     expect(screen.getByText(/^The Atelier\.$/)).toBeInTheDocument()
-    expect(screen.getByText(/Where Blaize thinks aloud/)).toBeInTheDocument()
+    expect(screen.getByText(/Where Agents think aloud/)).toBeInTheDocument()
   })
 
   it('renders the ATELIER · NO. 06 kicker by default', () => {

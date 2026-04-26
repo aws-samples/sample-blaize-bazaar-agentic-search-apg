@@ -168,13 +168,13 @@ const ARCH_CARDS: ArchCard[] = [
   {
     id: 'evaluations',
     title: 'Evaluations',
-    provenance: 'TEACHING',
+    provenance: 'MANAGED',
     description:
-      "Offline evaluation harness + golden-set regression. We're showing this as a Postgres harness so you can see what AgentCore Evaluations does internally — precision, recall, and NDCG@k computed over a curated query set, reproducible row-by-row.",
+      "AgentCore Evaluations scores every turn using LLM-as-a-Judge over the OpenTelemetry traces Strands already emits. Built-in evaluators measure helpfulness, tool accuracy, and consistency; custom evaluators let you add domain-specific checks. Online mode scores live traffic; on-demand mode runs a dataset batch for regression.",
     cta: { kind: 'none' },
     featured: false,
     chapter: 'vi.',
-    signature: ['evals.run(golden_set) -> {precision, recall, ndcg}'],
+    signature: ['evaluations.run(traces) -> {helpfulness, tool_accuracy, consistency}'],
   },
   {
     id: 'grounding',
@@ -249,34 +249,34 @@ function ArchitectureCard({
         padding: '22px 24px',
       }}
     >
-      {/* (a) Header — chapter numeral + provenance pill */}
-      <div className="flex justify-between items-start mb-[14px]">
-        <span
-          style={{
-            fontFamily: 'Fraunces, Georgia, serif',
-            fontStyle: 'italic',
-            fontSize: 18,
-            color: INK_QUIET,
-          }}
-        >
-          {card.chapter}
-        </span>
+      {/* (a) Header — chapter numeral + title + provenance pill, all one line */}
+      <div className="flex items-baseline justify-between gap-3 mb-[10px]">
+        <div className="flex items-baseline gap-2.5">
+          <span
+            style={{
+              fontFamily: 'Fraunces, Georgia, serif',
+              fontStyle: 'italic',
+              fontSize: 18,
+              color: INK_QUIET,
+            }}
+          >
+            {card.chapter}
+          </span>
+          <h3
+            style={{
+              fontFamily: 'Fraunces, Georgia, serif',
+              fontSize: 22,
+              fontWeight: 400,
+              margin: 0,
+              color: INK,
+              letterSpacing: '-0.01em',
+            }}
+          >
+            {card.title}
+          </h3>
+        </div>
         <ProvenancePill kind={card.provenance} />
       </div>
-
-      {/* (b) Title */}
-      <h3
-        style={{
-          fontFamily: 'Fraunces, Georgia, serif',
-          fontSize: 22,
-          fontWeight: 400,
-          margin: '0 0 10px',
-          color: INK,
-          letterSpacing: '-0.01em',
-        }}
-      >
-        {card.title}
-      </h3>
 
       {/* (c) Body */}
       <p
@@ -613,16 +613,6 @@ function WorkshopContent() {
                 >
                   Architecture
                 </h2>
-                <span
-                  style={{
-                    fontFamily: 'Fraunces, Georgia, serif',
-                    fontStyle: 'italic',
-                    fontSize: 15,
-                    color: INK_QUIET,
-                  }}
-                >
-                  — what makes Blaize work.
-                </span>
               </div>
             </div>
 
@@ -685,24 +675,178 @@ function WorkshopContent() {
         )}
         {activeTab === 'telemetry' && <WorkshopTelemetry events={events} />}
         {activeTab === 'performance' && (
-          <div
-            className="rounded-xl p-6 text-[13px] leading-[1.6]"
-            style={{
-              background: 'rgba(255,255,255,0.7)',
-              border: `1px dashed ${INK_QUIET}40`,
-              color: INK_SOFT,
-            }}
-          >
-            <div
-              className="font-mono text-[10px] uppercase tracking-[1.5px] font-semibold mb-2"
-              style={{ color: INK_QUIET }}
-            >
-              In progress
+          <div className="flex flex-col gap-5">
+            {/* Hero */}
+            <div className="mb-2">
+              <div
+                className="text-[10px] font-medium uppercase mb-2"
+                style={{ color: ACCENT, letterSpacing: '0.18em', fontWeight: 500 }}
+              >
+                Operational truth
+              </div>
+              <div className="flex items-baseline gap-4">
+                <h2
+                  style={{
+                    fontFamily: 'Fraunces, Georgia, serif',
+                    fontSize: 32,
+                    lineHeight: 1,
+                    margin: 0,
+                    color: INK,
+                    fontWeight: 400,
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  Performance
+                </h2>
+                <span
+                  style={{
+                    fontFamily: 'Fraunces, Georgia, serif',
+                    fontStyle: 'italic',
+                    fontSize: 15,
+                    color: INK_QUIET,
+                  }}
+                >
+                  — how the system behaves at scale.
+                </span>
+              </div>
             </div>
-            <p style={{ color: INK }}>
-              Performance surface: runtime cold-start benchmarks, per-panel p50/p95 latency,
-              pgvector index comparison charts.
-            </p>
+
+            {/* Metric strip */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg p-4" style={{ background: 'white', border: '1px solid rgba(45, 24, 16, 0.12)' }}>
+                <div className="text-[10px] uppercase mb-1.5" style={{ color: INK_QUIET, letterSpacing: '0.16em' }}>P50 Cold-start</div>
+                <div style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 24, lineHeight: 1, color: INK }}>
+                  2.4<span className="text-[13px] ml-0.5" style={{ color: INK_QUIET }}>s</span>
+                </div>
+                <div className="text-[11px] mt-1.5" style={{ color: INK_SOFT }}>20 samples · bimodal</div>
+              </div>
+              <div className="rounded-lg p-4" style={{ background: 'white', border: '1px solid rgba(45, 24, 16, 0.12)' }}>
+                <div className="text-[10px] uppercase mb-1.5" style={{ color: INK_QUIET, letterSpacing: '0.16em' }}>P50 Warm-start</div>
+                <div style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 24, lineHeight: 1, color: INK }}>
+                  52<span className="text-[13px] ml-0.5" style={{ color: INK_QUIET }}>ms</span>
+                </div>
+                <div className="text-[11px] mt-1.5" style={{ color: INK_SOFT }}>95th: 78ms</div>
+              </div>
+            </div>
+
+            {/* i. Runtime — cold-start histogram */}
+            <div className="rounded-xl" style={{ background: 'white', border: '1px solid rgba(45, 24, 16, 0.12)', padding: '22px 24px' }}>
+              <div className="flex justify-between items-start mb-[14px]">
+                <span style={{ fontFamily: 'Fraunces, Georgia, serif', fontStyle: 'italic', fontSize: 18, color: INK_QUIET }}>i.</span>
+                <span className="text-[10px] font-medium uppercase px-[10px] py-1 rounded" style={{ background: '#FAEEDA', color: '#633806', letterSpacing: '0.16em' }}>Runtime</span>
+              </div>
+              <h3 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 22, fontWeight: 400, margin: '0 0 10px', color: INK, letterSpacing: '-0.01em' }}>
+                Cold-start, in two states.
+              </h3>
+              <p className="text-[14px] leading-[1.7] mb-[18px]" style={{ color: INK_SOFT, maxWidth: 580 }}>
+                Managed runtime cold-start is bimodal - fresh container ~2.4s, warm reuse ~52ms. Twenty samples, sixty-second cooldowns. The teaching moment: every managed primitive has this shape; pre-warm or accept it.
+              </p>
+              {/* Histogram */}
+              <div className="flex items-end gap-[3px] mb-[14px] pb-2" style={{ height: 80, borderBottom: '1px solid rgba(45, 24, 16, 0.08)' }}>
+                {[18,8,65,88,95,72,30,12,5,5,5,5,0,0,0,28,55,38,18,8].map((h, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 rounded-t-sm"
+                    style={{
+                      height: `${h}%`,
+                      background: h > 10 ? ACCENT : 'rgba(45, 24, 16, 0.15)',
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="flex justify-between font-mono text-[10px] mb-[14px]" style={{ color: INK_QUIET }}>
+                <span>0ms</span><span>500ms</span><span>1.5s</span><span>2.5s</span><span>3.5s</span>
+              </div>
+              <div className="font-mono text-[11px] leading-[1.7] rounded-md" style={{ background: CREAM_WARM, color: INK, padding: '11px 14px' }}>
+                <span style={{ color: ACCENT }}>python</span> scripts/bench_runtime_coldstart.py --samples 20
+              </div>
+            </div>
+
+            {/* ii. Per Panel — latency bar chart */}
+            <div className="rounded-xl" style={{ background: 'white', border: '1px solid rgba(45, 24, 16, 0.12)', padding: '22px 24px' }}>
+              <div className="flex justify-between items-start mb-[14px]">
+                <span style={{ fontFamily: 'Fraunces, Georgia, serif', fontStyle: 'italic', fontSize: 18, color: INK_QUIET }}>ii.</span>
+                <span className="text-[10px] font-medium uppercase px-[10px] py-1 rounded" style={{ background: '#E6F1FB', color: '#0C447C', letterSpacing: '0.16em' }}>Per Panel</span>
+              </div>
+              <h3 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 22, fontWeight: 400, margin: '0 0 10px', color: INK, letterSpacing: '-0.01em' }}>
+                Where the agent spends its time.
+              </h3>
+              <p className="text-[14px] leading-[1.7] mb-[18px]" style={{ color: INK_SOFT, maxWidth: 580 }}>
+                Latency budget per panel, last 100 turns. The Postgres reads are fast. The LLM calls are everything else.
+              </p>
+              <div className="flex flex-col gap-[10px]">
+                {[
+                  { label: 'LLM · OPUS · SYNTHESIZE',    ms: 3779, pct: 92, llm: true },
+                  { label: 'LLM · HAIKU · INTENT',       ms: 1887, pct: 46, llm: true },
+                  { label: 'TOOL REGISTRY · DISCOVER',    ms: 817,  pct: 20, llm: false },
+                  { label: 'MEMORY · EPISODIC',           ms: 55,   pct: 1.5, llm: false },
+                  { label: 'MEMORY · PROCEDURAL',         ms: 13,   pct: 0.4, llm: false },
+                  { label: 'MEMORY · SEMANTIC',           ms: 4,    pct: 0.1, llm: false },
+                ].map((row) => (
+                  <div key={row.label} className="grid items-center gap-3 text-[12px]" style={{ gridTemplateColumns: '220px 1fr 60px' }}>
+                    <span className="font-mono text-[11px]" style={{ color: INK }}>{row.label}</span>
+                    <div className="h-2 rounded overflow-hidden" style={{ background: 'rgba(45, 24, 16, 0.06)' }}>
+                      <div className="h-full rounded" style={{ width: `${Math.max(row.pct, 0.5)}%`, background: row.llm ? ACCENT : INK_SOFT }} />
+                    </div>
+                    <span className="font-mono text-right" style={{ color: INK }}>{row.ms}ms</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 pt-3 text-[12px] italic" style={{ borderTop: '1px solid rgba(45, 24, 16, 0.08)', color: INK_QUIET }}>
+                Postgres reads in single-digit milliseconds. LLM calls dominate. Where the agent spends its time is where you tune first.
+              </div>
+            </div>
+
+            {/* iii. pgvector — index comparison */}
+            <div className="rounded-xl" style={{ background: 'white', border: '1px solid rgba(45, 24, 16, 0.12)', padding: '22px 24px' }}>
+              <div className="flex justify-between items-start mb-[14px]">
+                <span style={{ fontFamily: 'Fraunces, Georgia, serif', fontStyle: 'italic', fontSize: 18, color: INK_QUIET }}>iii.</span>
+                <span className="text-[10px] font-medium uppercase px-[10px] py-1 rounded" style={{ background: '#EAF3DE', color: '#27500A', letterSpacing: '0.16em' }}>pgvector</span>
+              </div>
+              <h3 style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 22, fontWeight: 400, margin: '0 0 10px', color: INK, letterSpacing: '-0.01em' }}>
+                Index strategy - recall vs latency.
+              </h3>
+              <p className="text-[14px] leading-[1.7] mb-[18px]" style={{ color: INK_SOFT, maxWidth: 580 }}>
+                Three index strategies on the product_catalog embedding column. HNSW wins on the latency/recall tradeoff for this workload, but it's not free - build time and memory cost real money.
+              </p>
+              {/* Table */}
+              <div className="rounded-md overflow-hidden mb-[14px]" style={{ background: 'rgba(45, 24, 16, 0.1)' }}>
+                <div className="grid font-mono text-[10px] uppercase" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 1 }}>
+                  {['strategy', 'p50 latency', 'recall@10', 'build time'].map((h) => (
+                    <div key={h} className="px-3 py-[9px]" style={{ background: CREAM_WARM, color: INK_SOFT, letterSpacing: '0.14em', textAlign: h === 'strategy' ? 'left' : 'right' }}>{h}</div>
+                  ))}
+                  {/* HNSW row */}
+                  <div className="px-3 py-[11px] font-mono" style={{ background: 'white', color: INK }}>
+                    HNSW <span className="text-[9px] font-medium uppercase ml-1 px-1.5 py-0.5 rounded-[3px]" style={{ background: '#EAF3DE', color: '#27500A', letterSpacing: '0.14em' }}>Shipped</span>
+                  </div>
+                  <div className="px-3 py-[11px] font-mono text-right" style={{ background: 'white', color: INK }}>4ms</div>
+                  <div className="px-3 py-[11px] font-mono text-right" style={{ background: 'white', color: INK }}>0.97</div>
+                  <div className="px-3 py-[11px] font-mono text-right" style={{ background: 'white', color: INK }}>42s</div>
+                  {/* IVFFlat row */}
+                  <div className="px-3 py-[11px] font-mono" style={{ background: 'white', color: INK_SOFT }}>IVFFlat</div>
+                  <div className="px-3 py-[11px] font-mono text-right" style={{ background: 'white', color: INK_SOFT }}>11ms</div>
+                  <div className="px-3 py-[11px] font-mono text-right" style={{ background: 'white', color: INK_SOFT }}>0.89</div>
+                  <div className="px-3 py-[11px] font-mono text-right" style={{ background: 'white', color: INK_SOFT }}>8s</div>
+                  {/* Sequential scan row */}
+                  <div className="px-3 py-[11px] font-mono" style={{ background: 'white', color: INK_SOFT }}>Sequential scan</div>
+                  <div className="px-3 py-[11px] font-mono text-right" style={{ background: 'white', color: INK_SOFT }}>340ms</div>
+                  <div className="px-3 py-[11px] font-mono text-right" style={{ background: 'white', color: INK_SOFT }}>1.00</div>
+                  <div className="px-3 py-[11px] font-mono text-right" style={{ background: 'white', color: INK_SOFT }}>—</div>
+                </div>
+              </div>
+              <div className="font-mono text-[11px] leading-[1.7] rounded-md mb-[14px]" style={{ background: CREAM_WARM, color: INK, padding: '11px 14px' }}>
+                <div><span style={{ color: ACCENT }}>CREATE INDEX</span> ON product_catalog</div>
+                <div><span style={{ color: ACCENT }}>USING</span> hnsw (embedding vector_cosine_ops);</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailPanel('bench')}
+                className="text-[13px] font-medium transition-opacity hover:opacity-75"
+                style={{ color: ACCENT }}
+              >
+                Open pgvector benchmarks →
+              </button>
+            </div>
           </div>
         )}
       </div>

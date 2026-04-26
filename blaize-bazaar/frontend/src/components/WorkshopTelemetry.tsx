@@ -33,6 +33,28 @@ const INK_QUIET = '#a68668'
 const CREAM_WARM = '#f5e8d3'
 const ACCENT = '#c44536'
 
+const PANEL_PREVIEW: Array<{
+  tag: string
+  pillBg: string
+  pillFg: string
+  description: string
+  highlight?: boolean
+}> = [
+  { tag: 'LLM · HAIKU · INTENT',       pillBg: '#FAEEDA', pillFg: '#633806', description: 'parse the request' },
+  { tag: 'TOOL REGISTRY · DISCOVER',    pillBg: '#E6F1FB', pillFg: '#0C447C', description: 'rank tools' },
+  { tag: 'MEMORY · AGENTCORE · STM',    pillBg: '#E6F1FB', pillFg: '#0C447C', description: 'session context' },
+  { tag: 'MEMORY · EPISODIC',           pillBg: '#EAF3DE', pillFg: '#27500A', description: 'recent orders' },
+  { tag: 'MEMORY · PROFILE',            pillBg: '#EAF3DE', pillFg: '#27500A', description: 'preferences summary' },
+  { tag: 'MEMORY · PROCEDURAL',         pillBg: '#EAF3DE', pillFg: '#27500A', description: 'cohort JOIN · the headline', highlight: true },
+  { tag: 'MEMORY · SEMANTIC',           pillBg: '#EAF3DE', pillFg: '#27500A', description: 'pgvector search' },
+  { tag: 'RECOMMENDATION · FILTER',     pillBg: '#E6F1FB', pillFg: '#0C447C', description: 'budget · category' },
+  { tag: 'TOOL · CHECK_INVENTORY',      pillBg: '#EEEDFE', pillFg: '#3C3489', description: 'SQL · audit trail' },
+  { tag: 'GUARDRAIL · FACT-CHECK',      pillBg: '#FAEEDA', pillFg: '#633806', description: 'verify picks' },
+  { tag: 'GROUNDING',                   pillBg: '#EAF3DE', pillFg: '#27500A', description: 'cite every claim' },
+  { tag: 'MEMORY · CONFIDENCE',         pillBg: '#EAF3DE', pillFg: '#27500A', description: 'deterministic from data' },
+  { tag: 'LLM · OPUS · SYNTHESIZE',     pillBg: '#FAEEDA', pillFg: '#633806', description: 'grounded reply' },
+]
+
 // Mockup-matched panel tag ramp. Each family pairs a saturated fill
 // with a deep text color so the pills read as chips rather than as
 // background noise. ``cyan`` covers data operations (pgvector,
@@ -320,8 +342,90 @@ export default function WorkshopTelemetry({ events }: { events: WorkshopEvent[] 
 
   if (!events.length) {
     return (
-      <div className="text-center py-12 text-sm" style={{ color: INK_QUIET }}>
-        Ask a question in the chat on the left. Telemetry panels stream in here.
+      <div className="py-6 px-4">
+        {/* Hero */}
+        <div className="text-center max-w-[520px] mx-auto pt-6 pb-8">
+          <div
+            className="text-[10px] font-medium uppercase mb-4"
+            style={{ color: ACCENT, letterSpacing: '0.22em' }}
+          >
+            The bench is set
+          </div>
+          <h2
+            style={{
+              fontFamily: 'Fraunces, Georgia, serif',
+              fontStyle: 'italic',
+              fontSize: 32,
+              lineHeight: 1.15,
+              margin: 0,
+              color: INK,
+              fontWeight: 400,
+              letterSpacing: '-0.01em',
+            }}
+          >
+            Ask Blaize a question.
+          </h2>
+          <p
+            className="mt-4"
+            style={{
+              fontFamily: 'Fraunces, Georgia, serif',
+              fontStyle: 'italic',
+              fontSize: 15,
+              color: INK_SOFT,
+              lineHeight: 1.6,
+            }}
+          >
+            Every step appears here - the parse, the JOINs, the safety checks, the synthesis.
+          </p>
+        </div>
+
+        {/* 13-panel preview */}
+        <div className="max-w-[480px] mx-auto">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="flex-1 h-px" style={{ background: 'rgba(45, 24, 16, 0.12)' }} />
+            <span className="text-[10px] uppercase" style={{ color: INK_QUIET, letterSpacing: '0.18em' }}>
+              Each turn produces 13 panels
+            </span>
+            <span className="flex-1 h-px" style={{ background: 'rgba(45, 24, 16, 0.12)' }} />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            {PANEL_PREVIEW.map((p, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 px-3 py-[7px] rounded"
+                style={{
+                  opacity: 0.5,
+                  background: p.highlight ? 'rgba(196, 69, 54, 0.04)' : undefined,
+                }}
+              >
+                <span className="font-mono text-[10px] min-w-[18px]" style={{ color: INK_QUIET }}>
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <span
+                  className="text-[9px] font-medium uppercase whitespace-nowrap px-[7px] py-[2px] rounded-[3px]"
+                  style={{
+                    background: p.pillBg,
+                    color: p.pillFg,
+                    letterSpacing: '0.14em',
+                  }}
+                >
+                  {p.tag}
+                </span>
+                <span className="text-[11px] italic" style={{ color: INK_QUIET }}>
+                  {p.description}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div
+            className="mt-6 text-center text-[12px] italic"
+            style={{ color: INK_QUIET, lineHeight: 1.7 }}
+          >
+            Each panel lights up as it emits.
+          </div>
+        </div>
       </div>
     )
   }

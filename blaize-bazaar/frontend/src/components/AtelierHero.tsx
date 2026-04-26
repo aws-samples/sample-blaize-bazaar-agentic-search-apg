@@ -62,7 +62,7 @@ export default function AtelierHero({ editionNumber = 6 }: { editionNumber?: num
           fontWeight: 600,
         }}
       >
-        Where Blaize thinks aloud. Every step of the reasoning, on display.
+        Where Agents think aloud. Every step of the reasoning, on display.
       </p>
     </section>
   )

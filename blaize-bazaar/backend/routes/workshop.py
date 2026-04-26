@@ -234,6 +234,7 @@ async def query(payload: WorkshopQueryRequest) -> WorkshopQueryResponse:
         # never break the user-facing turn.
         try:
             from services.embeddings import EmbeddingService
+            from services.episodic_memory import emit_memory_episodic_panel
             from services.workshop_panels import (
                 emit_gateway_panel,
                 emit_tool_registry_panel,
@@ -244,6 +245,10 @@ async def query(payload: WorkshopQueryRequest) -> WorkshopQueryResponse:
             # so a direct call from the async handler is fine. Wrapping
             # in to_thread would add latency without an ergonomic win.
             turn_embedding = emb_service.embed_query(ctx.query)
+            # Episodic panel fires first so MEMORY · EPISODIC anchors
+            # the trace at index 1 — matches the teaching flow
+            # "who are you? → what do we know? → what can we use?".
+            await emit_memory_episodic_panel(ctx, db_service=db_service)
             await emit_tool_registry_panel(
                 ctx, db_service=db_service, query_embedding=turn_embedding
             )
@@ -274,6 +279,145 @@ async def query(payload: WorkshopQueryRequest) -> WorkshopQueryResponse:
         logger.exception("Workshop turn failed: %s", exc)
         ctx.emit_response(
             text=f"Workshop turn failed: {exc.__class__.__name__}: {exc}",
+            confidence=None,
+        )
+
+    return WorkshopQueryResponse(
+        session_id=ctx.session_id,
+        events=ctx.events,
+    )
+
+
+# ----- /api/workshop/resume ---------------------------------------------
+# The "welcome-back" turn. Fired by the Atelier chat when the user
+# picks a seeded demo customer and no session_id exists yet. Emits
+# three cohesive panels — MEMORY · EPISODIC, MEMORY · PREFERENCES,
+# MEMORY · PROCEDURAL — plus a composed response text the chat
+# column renders as the first assistant reply.
+#
+# Separate from /query so the frontend can auto-fire it on customer
+# change without the user typing a pseudo-query, and so the backend
+# doesn't have to branch on a sentinel query string. Same response
+# shape as /query, so the frontend renderer is shared.
+
+
+class WorkshopResumeRequest(BaseModel):
+    """Body of ``POST /api/workshop/resume``.
+
+    Anonymous callers get a 400 — the resume turn is specifically the
+    "welcome-back for a known demo customer" surface. The chat column
+    never fires this for anonymous.
+    """
+
+    customer_id: str = Field(
+        ...,
+        min_length=1,
+        description="Seeded demo customer id (e.g. 'CUST-0001').",
+    )
+    session_id: Optional[str] = Field(
+        default=None,
+        description="Optional — resume into an existing session if the chat already has one.",
+    )
+
+
+def _compose_resume_text(
+    customer_name: str,
+    preferences_summary: Optional[str],
+    latest_episode: Optional[str],
+    cohort_top_product: Optional[str],
+) -> str:
+    """Build the welcome-back assistant text deterministically.
+
+    No LLM call — this is the teaching moment about continuity, not
+    about generation. The text quotes the three memory reads so the
+    attendee can map each clause to the panel that sourced it.
+    """
+    first_name = customer_name.split(" ", 1)[0] if customer_name else "there"
+    parts = [f"Welcome back, {first_name}."]
+    if latest_episode:
+        parts.append(f"Last time: {latest_episode}")
+    if preferences_summary:
+        parts.append(f"Your preferences on file: {preferences_summary}")
+    if cohort_top_product:
+        parts.append(
+            f"Customers with a similar history recently picked up {cohort_top_product}."
+        )
+    parts.append("Want to pick that thread up, or start somewhere new?")
+    return " ".join(parts)
+
+
+@router.post("/resume", response_model=WorkshopQueryResponse)
+async def resume(payload: WorkshopResumeRequest) -> WorkshopQueryResponse:
+    """Replay the three MEMORY panels + emit a welcome-back response.
+
+    Panel order mirrors the teaching flow — EPISODIC first ("who are
+    you?"), PREFERENCES next ("what do we know?"), PROCEDURAL last
+    ("what might we suggest?"). The composed response text references
+    all three so the trace reads end-to-end.
+    """
+    customer_id = payload.customer_id.strip()
+    if customer_id == "anonymous" or not customer_id:
+        raise HTTPException(  # copy-allow: http-error-detail
+            status_code=400,
+            detail="resume requires a seeded customer_id",
+        )
+
+    session_id = payload.session_id or f"ws-{uuid.uuid4().hex[:12]}"
+    ctx = AgentContext(
+        session_id=session_id,
+        customer_id=customer_id,
+        query="(resumed session)",
+    )
+
+    ctx.emit_plan(
+        steps=["Recall", "Summarize", "Offer"],
+        duration_ms=0,
+        title="Resume",
+    )
+    ctx.step_active(0)
+
+    try:
+        from services.episodic_memory import (
+            emit_memory_episodic_panel,
+            emit_memory_preferences_panel,
+            emit_memory_procedural_panel,
+        )
+        from app import db_service  # populated by lifespan startup
+
+        if db_service is None:
+            raise RuntimeError("Database service not initialised")
+
+        episodes = await emit_memory_episodic_panel(ctx, db_service=db_service)
+        ctx.step_done(0)
+        ctx.step_active(1)
+
+        prefs_row = await emit_memory_preferences_panel(ctx, db_service=db_service)
+        cohort = await emit_memory_procedural_panel(ctx, db_service=db_service)
+        ctx.step_done(1)
+        ctx.step_active(2)
+
+        latest_episode = (
+            episodes[0]["summary_text"].rstrip(".") if episodes else None
+        )
+        preferences_summary = (
+            (prefs_row or {}).get("preferences_summary") if prefs_row else None
+        )
+        customer_name = (prefs_row or {}).get("name", customer_id) if prefs_row else customer_id
+        cohort_top_product = cohort[0].get("name") if cohort else None
+
+        text = _compose_resume_text(
+            customer_name=customer_name,
+            preferences_summary=preferences_summary,
+            latest_episode=latest_episode,
+            cohort_top_product=cohort_top_product,
+        )
+        ctx.emit_response(text=text, confidence=None)
+        ctx.step_done(2)
+
+    except Exception as exc:
+        logger.exception("Workshop resume failed: %s", exc)
+        ctx.emit_response(
+            text=f"Workshop resume failed: {exc.__class__.__name__}: {exc}",
             confidence=None,
         )
 

@@ -124,6 +124,13 @@ export interface Turn {
   confidence?: WorkshopPanelEvent
   products?: TurnProduct[]
   citations?: WorkshopCitation[]
+  /**
+   * True when this turn is the synthetic "welcome-back" resume that
+   * fires on customer change with no session yet. The user never
+   * typed the ``user_text``; the UserMessage renders italic + muted
+   * to make that visible.
+   */
+  resumed?: boolean
 }
 
 const CONFIDENCE_TAG = 'MEMORY · CONFIDENCE'
@@ -224,6 +231,37 @@ export async function queryWorkshop(
   if (!res.ok) {
     const body = await res.text().catch(() => '')
     throw new Error(`workshop query failed (${res.status}): ${body || res.statusText}`)
+  }
+  return (await res.json()) as WorkshopQueryResponse
+}
+
+export interface WorkshopResumeRequest {
+  customer_id: string
+  session_id?: string | null
+}
+
+/**
+ * Fires the "welcome-back" resume turn for a seeded demo customer.
+ *
+ * Emits three cohesive memory panels (EPISODIC / PREFERENCES /
+ * PROCEDURAL) + a composed assistant text. The response shape
+ * matches ``queryWorkshop`` so the chat column renders this as a
+ * normal turn with ``user_text`` set to a pseudo-query in italics.
+ */
+export async function resumeWorkshop(
+  req: WorkshopResumeRequest,
+): Promise<WorkshopQueryResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/workshop/resume`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      customer_id: req.customer_id,
+      session_id: req.session_id ?? null,
+    }),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`workshop resume failed (${res.status}): ${body || res.statusText}`)
   }
   return (await res.json()) as WorkshopQueryResponse
 }

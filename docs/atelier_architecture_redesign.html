@@ -1,0 +1,84 @@
+<div style="background: #fbf4e8; padding: 1.75rem 1.5rem; border-radius: 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #2d1810; line-height: 1.5;">
+
+<div style="margin-bottom: 1.75rem;">
+  <div style="font-size: 10px; letter-spacing: 0.18em; color: #c44536; margin-bottom: 8px; font-weight: 500;">SEVEN CONCEPTS</div>
+  <div style="display: flex; align-items: baseline; gap: 16px;">
+    <h2 style="font-family: 'Iowan Old Style', Georgia, serif; font-size: 32px; line-height: 1; margin: 0; color: #2d1810; font-weight: 400; letter-spacing: -0.01em;">Architecture</h2>
+    <div style="font-family: 'Iowan Old Style', Georgia, serif; font-style: italic; font-size: 15px; color: #a68668;">&mdash; what makes Blaize work.</div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+
+<div style="grid-column: 1 / -1; background: white; border: 1px solid rgba(45, 24, 16, 0.12); border-radius: 12px; padding: 22px 24px; position: relative;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+    <span style="font-family: 'Iowan Old Style', Georgia, serif; font-style: italic; font-size: 18px; color: #a68668;">i.</span>
+    <span style="background: #EEEDFE; color: #3C3489; padding: 4px 10px; border-radius: 4px; font-size: 10px; letter-spacing: 0.16em; font-weight: 500;">BOTH</span>
+  </div>
+  <h3 style="font-family: 'Iowan Old Style', Georgia, serif; font-size: 22px; font-weight: 400; margin: 0 0 10px; color: #2d1810; letter-spacing: -0.01em;">Memory</h3>
+  <p style="font-size: 14px; line-height: 1.7; color: #6b4a35; margin: 0 0 16px; max-width: 580px;">
+    AgentCore Memory holds short-term conversation state. Aurora pgvector holds long-term semantic + procedural recall. Two tiers, one session id &mdash; the agent reads from whichever gives the right context for the turn.
+  </p>
+  <div style="background: #f5e8d3; border-radius: 6px; padding: 11px 14px; font-family: ui-monospace, 'Cascadia Code', monospace; font-size: 11px; line-height: 1.7; color: #2d1810; margin-bottom: 16px;">
+    <div><span style="color: #c44536;">stm</span> = agentcore.<span style="color: #c44536;">memory</span>.get(session_id)</div>
+    <div><span style="color: #c44536;">ltm</span> = aurora.<span style="color: #c44536;">find_similar</span>(emb, customer_id)</div>
+  </div>
+  <a href="#" style="font-size: 13px; color: #c44536; text-decoration: none; font-weight: 500;">Open memory dashboard &rarr;</a>
+</div>
+
+<div style="background: white; border: 1px solid rgba(45, 24, 16, 0.12); border-radius: 12px; padding: 22px 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+    <span style="font-family: 'Iowan Old Style', Georgia, serif; font-style: italic; font-size: 18px; color: #a68668;">ii.</span>
+    <span style="background: #E6F1FB; color: #0C447C; padding: 4px 10px; border-radius: 4px; font-size: 10px; letter-spacing: 0.16em; font-weight: 500;">MANAGED</span>
+  </div>
+  <h3 style="font-family: 'Iowan Old Style', Georgia, serif; font-size: 22px; font-weight: 400; margin: 0 0 10px; color: #2d1810; letter-spacing: -0.01em;">MCP</h3>
+  <p style="font-size: 14px; line-height: 1.7; color: #6b4a35; margin: 0 0 16px;">
+    Model Context Protocol is an open standard. AgentCore Gateway is AWS's managed MCP server. We use Gateway as the primitive &mdash; you could run your own, but Gateway handles publishing, auth, and observability for you.
+  </p>
+  <div style="background: #f5e8d3; border-radius: 6px; padding: 11px 14px; font-family: ui-monospace, monospace; font-size: 11px; line-height: 1.7; color: #2d1810;">
+    <div>gateway.<span style="color: #c44536;">list_tools</span>() &rarr; MCPToolset</div>
+  </div>
+</div>
+
+<div style="background: white; border: 1px solid rgba(45, 24, 16, 0.12); border-radius: 12px; padding: 22px 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+    <span style="font-family: 'Iowan Old Style', Georgia, serif; font-style: italic; font-size: 18px; color: #a68668;">iii.</span>
+    <span style="background: #EAF3DE; color: #27500A; padding: 4px 10px; border-radius: 4px; font-size: 10px; letter-spacing: 0.16em; font-weight: 500;">OWNED</span>
+  </div>
+  <h3 style="font-family: 'Iowan Old Style', Georgia, serif; font-size: 22px; font-weight: 400; margin: 0 0 10px; color: #2d1810; letter-spacing: -0.01em;">State Management</h3>
+  <p style="font-size: 14px; line-height: 1.7; color: #6b4a35; margin: 0 0 16px;">
+    Session state lives in Postgres &mdash; orders, customers, approvals, tool_audit. Aurora is the source of truth for domain facts the agents grant themselves access to. AgentCore never tries to own this side.
+  </p>
+  <div style="background: #f5e8d3; border-radius: 6px; padding: 11px 14px; font-family: ui-monospace, monospace; font-size: 11px; line-height: 1.7; color: #2d1810; margin-bottom: 16px;">
+    <div><span style="color: #c44536;">SELECT</span> * <span style="color: #c44536;">FROM</span> orders <span style="color: #c44536;">WHERE</span> &hellip;</div>
+  </div>
+  <a href="#" style="font-size: 13px; color: #c44536; text-decoration: none; font-weight: 500;">Open pgvector benchmarks &rarr;</a>
+</div>
+
+<div style="grid-column: 1 / -1; background: white; border: 1px solid rgba(45, 24, 16, 0.12); border-radius: 12px; padding: 22px 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+    <span style="font-family: 'Iowan Old Style', Georgia, serif; font-style: italic; font-size: 18px; color: #a68668;">iv.</span>
+    <span style="background: #EEEDFE; color: #3C3489; padding: 4px 10px; border-radius: 4px; font-size: 10px; letter-spacing: 0.16em; font-weight: 500;">BOTH</span>
+  </div>
+  <h3 style="font-family: 'Iowan Old Style', Georgia, serif; font-size: 22px; font-weight: 400; margin: 0 0 10px; color: #2d1810; letter-spacing: -0.01em;">Tool Registry &middot; Gateway</h3>
+  <p style="font-size: 14px; line-height: 1.7; color: #6b4a35; margin: 0 0 16px; max-width: 580px;">
+    AgentCore Gateway publishes tools via MCP to any runtime. The teaching deconstruction shows the same discovery primitive implemented over Aurora pgvector &mdash; both columns rank the same nine tools, you see what Gateway abstracts for you.
+  </p>
+  <div style="background: #f5e8d3; border-radius: 6px; padding: 11px 14px; font-family: ui-monospace, monospace; font-size: 11px; line-height: 1.7; color: #2d1810; margin-bottom: 16px;">
+    <div><span style="color: #c44536;">SELECT</span> name, <span style="color: #6b4a35;">1</span> - (description_emb <span style="color: #c44536;">&lt;=&gt;</span> $1) <span style="color: #c44536;">AS</span> score</div>
+    <div><span style="color: #c44536;">FROM</span> tools <span style="color: #c44536;">ORDER BY</span> description_emb <span style="color: #c44536;">&lt;=&gt;</span> $1 <span style="color: #c44536;">LIMIT</span> 4;</div>
+  </div>
+  <a href="#" style="font-size: 13px; color: #c44536; text-decoration: none; font-weight: 500;">Open tool registry &rarr;</a>
+</div>
+
+</div>
+
+<div style="margin-top: 1.5rem; padding: 14px 16px; background: rgba(245, 232, 211, 0.5); border-radius: 8px; display: flex; align-items: center; gap: 18px; font-size: 11px; color: #6b4a35; flex-wrap: wrap;">
+  <span style="font-size: 10px; letter-spacing: 0.18em; color: #a68668;">LEGEND</span>
+  <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="background: #E6F1FB; color: #0C447C; padding: 2px 7px; border-radius: 3px; font-size: 9px; letter-spacing: 0.14em; font-weight: 500;">MANAGED</span><span style="color: #6b4a35;">AWS managed primitive.</span></span>
+  <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="background: #EAF3DE; color: #27500A; padding: 2px 7px; border-radius: 3px; font-size: 9px; letter-spacing: 0.14em; font-weight: 500;">OWNED</span><span style="color: #6b4a35;">Postgres is source of truth.</span></span>
+  <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="background: #EEEDFE; color: #3C3489; padding: 2px 7px; border-radius: 3px; font-size: 9px; letter-spacing: 0.14em; font-weight: 500;">BOTH</span><span style="color: #6b4a35;">Managed primitive + your data.</span></span>
+  <span style="display: inline-flex; align-items: center; gap: 6px;"><span style="background: #FAEEDA; color: #633806; padding: 2px 7px; border-radius: 3px; font-size: 9px; letter-spacing: 0.14em; font-weight: 500;">TEACHING</span><span style="color: #6b4a35;">Postgres demonstrating a primitive.</span></span>
+</div>
+
+</div>

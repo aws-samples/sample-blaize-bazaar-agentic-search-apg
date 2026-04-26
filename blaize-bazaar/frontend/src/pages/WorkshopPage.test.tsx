@@ -148,7 +148,7 @@ describe('WorkshopPage — chrome', () => {
     renderPage()
     expect(screen.getByText(/^The Atelier\.$/)).toBeInTheDocument()
     expect(
-      screen.getByText(/Where Blaize thinks aloud/i),
+      screen.getByText(/Where Agents think aloud/i),
     ).toBeInTheDocument()
   })
 
@@ -168,7 +168,7 @@ describe('WorkshopPage — chrome', () => {
       screen.queryByText(/Workshop · agentic telemetry/),
     ).not.toBeInTheDocument()
     // The compact "Where Blaize works" subtitle was replaced by the
-    // editorial "Where Blaize thinks aloud" epigraph in the hero.
+    // editorial "Where Agents think aloud" epigraph in the hero.
     expect(screen.queryByText(/^Where Blaize works\./)).not.toBeInTheDocument()
   })
 })
@@ -223,11 +223,11 @@ describe('WorkshopPage — architecture cards render the right CTA pattern', () 
     expect(mcp.textContent).toContain('managed MCP server')
   })
 
-  it('Evaluations body copy reinforces the Teaching label', () => {
+  it('Evaluations body copy describes AgentCore Evaluations', () => {
     renderPage()
     const evals = screen.getByTestId('arch-card-evaluations')
-    expect(evals.textContent).toContain('Postgres harness')
-    expect(evals.textContent).toContain('NDCG')
+    expect(evals.textContent).toContain('AgentCore Evaluations')
+    expect(evals.textContent).toContain('LLM-as-a-Judge')
   })
 })
 
