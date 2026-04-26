@@ -158,11 +158,11 @@ class Settings(BaseSettings):
     AGENTCORE_RUNTIME_ENDPOINT: Optional[str] = None
 
     # Challenge 5 feature flag. When False (default) the `/api/agent/chat`
-    # and `/api/agents/query` endpoints run the in-process Strands
-    # orchestrator from Challenge 4. When True the same endpoints forward
-    # every request through `services.agentcore_runtime.run_agent_on_runtime`
-    # so participants can migrate from local execution to managed runtime
-    # by flipping this single env var in `backend/.env`.
+    # endpoint runs the in-process Strands orchestrator from Challenge 4.
+    # When True it forwards every request through
+    # `services.agentcore_runtime.run_agent_on_runtime` so participants
+    # can migrate from local execution to managed runtime by flipping
+    # this single env var in `backend/.env`.
     USE_AGENTCORE_RUNTIME: bool = False
 
     # ========================================

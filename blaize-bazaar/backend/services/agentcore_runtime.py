@@ -12,8 +12,7 @@ on the flag (see Design "Runtime selection switch").
 Two public entry points:
 
     run_agent(message, session_id, user_id)
-        Dispatcher called by the ``/api/agent/chat`` route (Task 3.5)
-        and by the legacy ``/api/agents/query`` endpoint in ``app.py``.
+        Dispatcher called by the ``/api/agent/chat`` route (Task 3.5).
         Branches on ``settings.USE_AGENTCORE_RUNTIME``.
 
     run_agent_on_runtime(message, session_id, user_id)
@@ -108,8 +107,8 @@ async def _run_orchestrator_inprocess(
 # Requirement 2.5.1 and Design "Runtime selection switch". Participants
 # replace this body to invoke the AgentCore Runtime SDK. When the
 # feature flag ``USE_AGENTCORE_RUNTIME`` is ``True``, the ``/api/agent/
-# chat`` route (Task 3.5) and the legacy ``/api/agents/query`` endpoint
-# forward every request here instead of running Strands locally.
+# chat`` route (Task 3.5) forwards every request here instead of
+# running Strands locally.
 #
 # The runtime contract is a JSON payload ``{"prompt", "session_id",
 # "user_id"}``; the Runtime container unpacks it in the ``@app.entry
@@ -203,10 +202,9 @@ async def run_agent(
     ``settings.USE_AGENTCORE_RUNTIME``.
 
     This is the single entry point used by the route handler for
-    ``/api/agent/chat`` (Task 3.5) and the legacy ``/api/agents/query``
-    endpoint in ``app.py``. Flipping ``USE_AGENTCORE_RUNTIME=true`` in
-    ``backend/.env`` and restarting is the only change participants need
-    to make to migrate from local execution to managed runtime.
+    ``/api/agent/chat`` (Task 3.5). Flipping ``USE_AGENTCORE_RUNTIME=true``
+    in ``backend/.env`` and restarting is the only change participants
+    need to make to migrate from local execution to managed runtime.
     """
     if settings.USE_AGENTCORE_RUNTIME:
         return await run_agent_on_runtime(message, session_id, user_id)

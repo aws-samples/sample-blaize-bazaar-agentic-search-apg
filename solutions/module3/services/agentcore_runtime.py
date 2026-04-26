@@ -78,8 +78,8 @@ async def _run_orchestrator_inprocess(
 # Requirement 2.5.1 and Design "Runtime selection switch". Participants
 # replace this body to invoke the AgentCore Runtime SDK. When the
 # feature flag ``USE_AGENTCORE_RUNTIME`` is ``True``, the ``/api/agent/
-# chat`` route (Task 3.5) and the legacy ``/api/agents/query`` endpoint
-# forward every request here instead of running Strands locally.
+# chat`` route (Task 3.5) forwards every request here instead of
+# running Strands locally.
 #
 # The runtime contract is a JSON payload ``{"prompt", "session_id",
 # "user_id"}``; the Runtime container unpacks it in the ``@app.entry

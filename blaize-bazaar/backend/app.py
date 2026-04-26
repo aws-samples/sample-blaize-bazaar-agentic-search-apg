@@ -1,6 +1,6 @@
 """
 Blaize Bazaar - Main FastAPI Application
-FastAPI app with semantic search (Lab 1) and multi-agent system (Lab 2)
+FastAPI app for the Blaize Bazaar workshop backend.
 """
 
 import asyncio
@@ -11,7 +11,6 @@ from contextlib import asynccontextmanager
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, Query, Depends, Request
-from fastapi import File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -24,13 +23,11 @@ from models.search import (
     ChatRequest,
     ChatResponse,
 )
-from models.image_search_models import ImageSearchResponse
 from models.product import ProductWithScore
 from services.database import DatabaseService
 from services.auth import get_current_user
 from services.embeddings import EmbeddingService
 from services.chat import ChatService
-from services.image_search import ImageSearchService
 from datetime import datetime
 from services.sql_query_logger import init_query_logger, get_query_logger, QueryLog
 from services.index_performance import get_index_performance_service
@@ -45,10 +42,6 @@ from routes import (
     user_router,
     workshop_router,
 )
-
-# Lab 2 agents use Strands SDK function pattern (not class-based)
-# Agents are available via /api/agents/query endpoint
-LAB2_AVAILABLE = True
 
 # Configure logging for Strands SDK
 logging.basicConfig(
@@ -84,11 +77,8 @@ logger.setLevel(logging.INFO)
 db_service: DatabaseService = None
 embedding_service: EmbeddingService = None
 chat_service: ChatService = None
-image_search_service: ImageSearchService = None
 query_logger = None
 index_performance_service = None
-
-# Lab 2 agents use function pattern - no global instances needed
 
 
 @asynccontextmanager
@@ -100,7 +90,7 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Blaize Bazaar Workshop API...")
     
-    global db_service, embedding_service, chat_service, image_search_service, query_logger, index_performance_service
+    global db_service, embedding_service, chat_service, query_logger, index_performance_service
     
     try:
         # Initialize Strands OpenTelemetry tracing
@@ -195,13 +185,9 @@ async def lifespan(app: FastAPI):
         index_performance_service = get_index_performance_service(conn_string)
         logger.info("✅ Index performance service initialized")
 
-        # Initialize image search service
-        image_search_service = ImageSearchService()
-        logger.info("✅ Image search service initialized")
-        
         # Set chat service logger to INFO
         logging.getLogger('services.chat').setLevel(logging.INFO)
-        
+
         # Initialize agent tools. The concierge uses pure pgvector
         # semantic search (``HybridSearchService._vector_search``); the
         # hybrid + rerank pipeline was removed when the concierge
@@ -210,10 +196,7 @@ async def lifespan(app: FastAPI):
         set_db_service(db_service)
         set_main_loop(asyncio.get_event_loop())
         logger.info("✅ Agent tools initialized with pgvector semantic search")
-        
-        # Lab 2 agents use Strands SDK function pattern
-        logger.info("✅ Lab 2 agents available via /api/agents/query")
-        
+
         logger.info("🚀 Blaize Bazaar Workshop API is ready!")
         
     except Exception as e:
@@ -304,14 +287,6 @@ async def get_embedding_service() -> EmbeddingService:
     return embedding_service
 
 
-def get_image_search_service_dep():
-    """Dependency for image search service"""
-    global image_search_service
-    if not image_search_service:
-        raise HTTPException(status_code=503, detail="Image search service not initialized")
-    return image_search_service
-
-
 # ============================================================================
 # HEALTH CHECK ENDPOINTS
 # ============================================================================
@@ -322,8 +297,6 @@ async def root():
     return {
         "message": "Blaize Bazaar Workshop API",
         "version": "1.0.0",
-        "lab1": "Semantic Search with pgvector",
-        "lab2": "Multi-Agent System with Custom Tools" if LAB2_AVAILABLE else "Not Available"
     }
 
 
@@ -339,10 +312,10 @@ async def health_check(
         "status": "healthy",
         "database": "unknown",
         "bedrock": "unknown",
-        "custom_tools": "unknown" if LAB2_AVAILABLE else "not_available",
-        "version": "1.0.0"
+        "custom_tools": "available",
+        "version": "1.0.0",
     }
-    
+
     # Check database connection
     try:
         await db.execute_query("SELECT 1")
@@ -351,7 +324,7 @@ async def health_check(
         logger.error(f"Database health check failed: {e}")
         health_status["database"] = "disconnected"
         health_status["status"] = "degraded"
-    
+
     # Check Bedrock access
     try:
         embedding_service.generate_embedding("test")
@@ -360,11 +333,7 @@ async def health_check(
         logger.error(f"Bedrock health check failed: {e}")
         health_status["bedrock"] = "inaccessible"
         health_status["status"] = "degraded"
-    
-    # Check Custom Tools if Lab 2 is available
-    if LAB2_AVAILABLE:
-        health_status["custom_tools"] = "available"
-    
+
     return HealthResponse(**health_status)
 
 
@@ -377,132 +346,12 @@ async def health_check(
 # been removed — don't re-add it; the router owns that path.
 
 
-@app.post("/api/search/image", response_model=ImageSearchResponse)
-async def image_search(
-    file: UploadFile = File(...),
-    limit: int = Query(default=12, ge=1, le=50),
-    min_similarity: float = Query(default=0.0, ge=0, le=1),
-    db: DatabaseService = Depends(get_db_service),
-    embeddings: EmbeddingService = Depends(get_embedding_service),
-    image_search: ImageSearchService = Depends(get_image_search_service_dep),
-):
-    """
-    Multi-Modal Image Search Endpoint
-    
-    Upload a product image to find similar products using Claude Opus 4 vision
-    and pgvector semantic search.
-    """
-    import time
-    import base64
-    
-    start_time = time.time()
-    
-    try:
-        # Validate file type
-        if not file.content_type or not file.content_type.startswith('image/'):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid file type. Must be an image (JPEG, PNG, WebP)"
-            )
-        
-        logger.info(f"📸 Image search: {file.filename}")
-        
-        # Read image
-        image_data = await file.read()
-        image_size_mb = len(image_data) / (1024 * 1024)
-        
-        if image_size_mb > 5:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Image too large: {image_size_mb:.2f}MB. Maximum is 5MB"
-            )
-        
-        # Analyze with Claude Opus 4
-        logger.info("🤖 Analyzing image with Claude Opus 4 vision...")
-        analysis = await image_search.analyze_image(
-            image_data=image_data,
-            mime_type=file.content_type
-        )
-        
-        if not analysis:
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to analyze image"
-            )
-        
-        # Generate search query
-        search_query = image_search.create_search_query(analysis)
-        logger.info(f"🔍 Generated search query: {search_query[:100]}...")
-        
-        # Get embedding
-        query_embedding = embeddings.generate_embedding(search_query)
-        
-        # Search database with relaxed quality filters
-        query = """
-            SELECT 
-                "productId",
-                product_description,
-                "imgUrl" as imgurl,
-                "productURL" as producturl,
-                stars,
-                reviews,
-                price,
-                category_id,
-                "isBestSeller" as isbestseller,
-                "boughtInLastMonth" as boughtinlastmonth,
-                category_name,
-                quantity,
-                1 - (embedding <=> %s::vector) as similarity_score
-            FROM blaize_bazaar.product_catalog
-            WHERE stars >= 3.0
-              AND "imgUrl" IS NOT NULL
-            ORDER BY embedding <=> %s::vector
-            LIMIT %s
-        """
-        
-        results = await db.fetch_all(
-            query,
-            query_embedding,
-            query_embedding,
-            limit
-        )
-        
-        # Filter by similarity in application if needed
-        if min_similarity > 0:
-            results = [r for r in results if r.get("similarity_score", 0) >= min_similarity]
-        
-        # Format results
-        from models.product import ProductWithScore
-        from models.search import SearchResult
-        
-        search_results = []
-        for row in results:
-            product = ProductWithScore(**dict(row))
-            search_result = SearchResult(product=product)
-            search_results.append(search_result)
-        
-        search_time_ms = (time.time() - start_time) * 1000
-        logger.info(f"✅ Image search complete: {len(results)} products in {search_time_ms:.2f}ms")
-        
-        image_base64 = base64.b64encode(image_data).decode('utf-8')
-        
-        return ImageSearchResponse(
-            query_type="image",
-            analysis=analysis,
-            search_query=search_query,
-            results=[r.dict() for r in search_results],
-            total_results=len(search_results),
-            search_time_ms=search_time_ms,
-            image_preview=f"data:{file.content_type};base64,{image_base64[:200]}..."
-        )
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"❌ Image search failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        await file.close()
+# NOTE: the old ``POST /api/search/image`` multi-modal endpoint and its
+# ``ImageSearchService`` backing have been removed — no frontend caller
+# was left after the storefront scope trimmed down to text-in search.
+# If image search returns, restore via a fresh ``routes/search.py``
+# handler using Bedrock Claude vision + pgvector; don't bring back the
+# global service singleton.
 
 @app.get("/api/products/category/{category_query}")
 async def browse_category(
@@ -560,13 +409,6 @@ async def browse_category(
         logger.error(f"❌ Category browse failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# ============================================================================
-# LAB 2: MULTI-AGENT ENDPOINTS (Optional)
-# ============================================================================
-
-# Lab 2 agents use Strands SDK function pattern - available via /api/agents/query
-# No class-based agent endpoints needed
 
 
 # ============================================================================
@@ -765,72 +607,12 @@ async def autocomplete(
         return {"suggestions": []}
 
 
-@app.post("/api/agents/query")
-async def agent_query(
-    query: str,
-    agent_type: str = "orchestrator",
-    enable_thinking: bool = False,
-    db: DatabaseService = Depends(get_db_service)
-):
-    """
-    Query specialized agents (inventory, recommendation, pricing)
-    Uses custom business logic tools to provide data to agents
-    
-    Args:
-        query: User query
-        agent_type: Type of agent (orchestrator, inventory, recommendation, pricing)
-        enable_thinking: Enable Claude Opus 4's extended thinking (default: False)
-    """
-    try:
-        from agents.orchestrator import create_orchestrator
-        from agents.inventory_agent import inventory_restock_agent
-        from agents.recommendation_agent import product_recommendation_agent
-        from agents.pricing_agent import price_optimization_agent
-        
-        # Agents now handle their own tool calls - no need to pre-fetch context
-        if agent_type == "orchestrator":
-            # Challenge 5: route through the runtime dispatcher so flipping
-            # settings.USE_AGENTCORE_RUNTIME=true in backend/.env forwards
-            # every orchestrator request to AgentCore Runtime without any
-            # further code changes here.
-            from services.agentcore_runtime import run_agent
+# NOTE: the old ``POST /api/agents/query`` legacy endpoint (which
+# dispatched to individual specialist agents by ``agent_type``) has
+# been removed. No frontend caller remained — the orchestrator path
+# is ``POST /api/agent/chat`` (see routes/agent.py) which the
+# concierge already uses.
 
-            response = await run_agent(
-                message=query,
-                session_id="legacy-agents-query",
-                user_id=None,
-            )
-            if not response:
-                return {
-                    "response": "🔧 The orchestrator isn't wired up yet. Complete Module 3b to enable it.",
-                    "agent_type": agent_type,
-                    "status": "not_implemented"
-                }
-        elif agent_type == "inventory":
-            response = inventory_restock_agent(query)
-        elif agent_type == "recommendation":
-            response = product_recommendation_agent(query)
-        elif agent_type == "pricing":
-            response = price_optimization_agent(query)
-        elif agent_type == "customer_support":
-            from agents.customer_support_agent import customer_support_agent
-            response = customer_support_agent(query)
-        elif agent_type == "search":
-            from agents.search_agent import search_agent
-            response = search_agent(query)
-        else:
-            raise HTTPException(status_code=400, detail="Invalid agent type")
-        
-        return {
-            "response": str(response),
-            "agent_type": agent_type,
-            "success": True,
-            "note": "Agents use live database tools for fresh data"
-        }
-        
-    except Exception as e:
-        logger.error(f"Agent query failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Agent query failed: {str(e)}")
 
 # ============================================================================
 # SQL QUERY INSPECTOR ENDPOINTS

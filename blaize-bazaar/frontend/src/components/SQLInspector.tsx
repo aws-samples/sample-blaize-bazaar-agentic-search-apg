@@ -94,7 +94,6 @@ const SQLInspector = ({ isOpen, onClose }: SQLInspectorProps) => {
   const getQueryTypeColor = (type: string): string => {
     const colors: Record<string, string> = {
       'semantic_search': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-      'image_search': 'bg-white/[0.08] text-white/40 border-white/10',
       'autocomplete': 'bg-green-500/20 text-green-300 border-green-500/30',
       'category_browse': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
     };
