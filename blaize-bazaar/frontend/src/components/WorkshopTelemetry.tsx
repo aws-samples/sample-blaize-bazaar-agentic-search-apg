@@ -1,19 +1,23 @@
 /**
- * WorkshopTelemetry — replays the WorkshopEvent stream for the /workshop
+ * WorkshopTelemetry — replays the WorkshopEvent stream for the Atelier
  * telemetry tab.
  *
- * Mirrors the Coffee Roastery playEvents() / renderPanel() / renderPlan()
- * helpers with the same animation beats:
- *   - Plan slides in first, steps in `queued` state.
- *   - step events tick individual rows queued → active → done.
- *   - panel events fade in per-panel, rows reveal with a staggered delay.
- *   - response event is handled by the parent (rendered in WorkshopChat).
+ * Visual register aligned to ``docs/atelier_editorial_redesign.html``:
+ *   - White panel cards with 1px ink-at-14% border, 10px radius
+ *   - Tag pills use a mockup-matched cyan/amber/green ramp
+ *     (200-fill / 800-text) with letter-spaced uppercase copy
+ *   - SQL block bg cream-warm; keywords rendered in terracotta
+ *     #c44536; numbers and ``$1`` placeholders in ink-soft; default
+ *     identifiers inherit ink
+ *   - Column headers letter-spaced uppercase 10px in ink-quiet,
+ *     monospace cells in ink, dashed row separators
+ *   - Meta footer italic ink-quiet with monospace inline-code spans
+ *     rendered in ink-soft (font-style: normal)
+ *   - Plan step states: RUNNING in terracotta letter-spaced caps,
+ *     QUEUED in ink-quiet letter-spaced caps, OK in green
  *
- * Palette uses placeholder cyan (#0891b2) per Week 1 plan. Final boutique
- * palette integration is deferred to Week 7. `tag_class` values map:
- *   cyan  → data op (pgvector, Gateway, Memory)
- *   amber → LLM / Guardrail
- *   green → grounding / success
+ * The ``tag_class`` → color contract stays fixed so the backend
+ * emitters don't change with this polish pass.
  */
 import { useMemo } from 'react'
 import type {
@@ -26,14 +30,21 @@ import type {
 const INK = '#2d1810'
 const INK_SOFT = '#6b4a35'
 const INK_QUIET = '#a68668'
-const CREAM = '#fbf4e8'
 const CREAM_WARM = '#f5e8d3'
+const ACCENT = '#c44536'
 
-// Week 1 placeholder palette — full boutique integration lands Week 7.
-const TAG_COLORS: Record<'cyan' | 'amber' | 'green', { bg: string; border: string; fg: string }> = {
-  cyan: { bg: '#e0f2fe', border: '#7dd3fc', fg: '#0369a1' },
-  amber: { bg: '#fef3c7', border: '#fcd34d', fg: '#b45309' },
-  green: { bg: '#ecfdf5', border: '#86efac', fg: '#047857' },
+// Mockup-matched panel tag ramp. Each family pairs a saturated fill
+// with a deep text color so the pills read as chips rather than as
+// background noise. ``cyan`` covers data operations (pgvector,
+// Gateway, Memory, Tool Registry); ``amber`` covers LLM + Guardrail
+// output; ``green`` covers grounding / success / confidence.
+const TAG_COLORS: Record<
+  'cyan' | 'amber' | 'green',
+  { bg: string; border: string; fg: string }
+> = {
+  cyan:  { bg: '#B5D4F4', border: '#8EB8E2', fg: '#0C447C' },
+  amber: { bg: '#F2DFA6', border: '#D9BF75', fg: '#664100' },
+  green: { bg: '#C0DD97', border: '#8EB566', fg: '#27500A' },
 }
 
 const SQL_KEYWORDS =
@@ -44,71 +55,109 @@ const SQL_KEYWORDS =
  * tokens so keyword matches don't clash with HTML escaping. Output is
  * injected via dangerouslySetInnerHTML on a <pre> with no user content
  * (SQL comes from AgentContext emitters, not user input).
+ *
+ * Coloring:
+ *   - keywords          → ACCENT terracotta
+ *   - string literals   → ink-soft
+ *   - $1 / $n           → ink-soft
+ *   - cosine operators  → ink-soft bold
+ *   - -- comments       → ink-quiet italic
+ *   - default           → ink (inherited)
  */
 function kwify(sql: string): string {
+  // Markdown-safe sentinel pairs keep keyword matches from clashing
+  // with HTML escaping. Each pair opens / closes a styled span.
+  const S = {
+    commentOpen:  '\x01', commentClose:  '\x02', // -- line comment (italic ink-quiet)
+    literalOpen:  '\x03', literalClose:  '\x04', // 'str' and $N (ink-soft)
+    keywordOpen:  '\x05', keywordClose:  '\x06', // SELECT / FROM / WHERE… (terracotta)
+    operatorOpen: '\x07', operatorClose: '\x08', // <=> <-> <#> (terracotta bold)
+  } as const
+
   let s = sql
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-  s = s.replace(/--[^\n]*/g, (m) => `\u0001${m}\u0002`)
-  s = s.replace(/'[^']*'/g, (m) => `\u0003${m}\u0004`)
-  s = s.replace(/\$\d+/g, (m) => `\u0003${m}\u0004`)
-  s = s.replace(SQL_KEYWORDS, '\u0005$1\u0006')
-  s = s.replace(/(&lt;=&gt;|&lt;-&gt;|&lt;#&gt;)/g, '\u0007$1\u0008')
+  s = s.replace(/--[^\n]*/g, (m) => `${S.commentOpen}${m}${S.commentClose}`)
+  s = s.replace(/'[^']*'/g, (m) => `${S.literalOpen}${m}${S.literalClose}`)
+  s = s.replace(/\$\d+/g, (m) => `${S.literalOpen}${m}${S.literalClose}`)
+  s = s.replace(SQL_KEYWORDS, `${S.keywordOpen}$1${S.keywordClose}`)
+  s = s.replace(
+    /(&lt;=&gt;|&lt;-&gt;|&lt;#&gt;)/g,
+    `${S.operatorOpen}$1${S.operatorClose}`,
+  )
   s = s
-    .replace(/\u0001/g, '<span style="color:#a68668;font-style:italic">')
-    .replace(/\u0002/g, '</span>')
-    .replace(/\u0003/g, '<span style="color:#b45309">')
-    .replace(/\u0004/g, '</span>')
-    .replace(/\u0005/g, '<span style="color:#2d1810;font-weight:600">')
-    .replace(/\u0006/g, '</span>')
-    .replace(/\u0007/g, '<span style="color:#6b4a35;font-weight:600">')
-    .replace(/\u0008/g, '</span>')
+    .replace(/\x01/g, `<span style="color:${INK_QUIET};font-style:italic">`)
+    .replace(/\x02/g, '</span>')
+    .replace(/\x03/g, `<span style="color:${INK_SOFT}">`)
+    .replace(/\x04/g, '</span>')
+    .replace(/\x05/g, `<span style="color:${ACCENT};font-weight:500">`)
+    .replace(/\x06/g, '</span>')
+    .replace(/\x07/g, `<span style="color:${ACCENT};font-weight:500">`)
+    .replace(/\x08/g, '</span>')
   return s
 }
 
 function PanelCard({ ev }: { ev: WorkshopPanelEvent }) {
   const colors = TAG_COLORS[ev.tag_class] || TAG_COLORS.cyan
   return (
-    <div
-      className="rounded-xl overflow-hidden animate-[fadeSlide_0.32s_ease-out]"
-      style={{ background: 'rgba(255,255,255,0.7)', border: `1px solid ${INK_QUIET}30` }}
+    <article
+      className="rounded-[10px] animate-[fadeSlide_0.32s_ease-out] overflow-hidden"
+      style={{
+        background: 'white',
+        border: '1px solid rgba(45, 24, 16, 0.14)',
+      }}
+      data-testid={`panel-card-${ev.tag}`}
     >
-      <div
-        className="flex items-center gap-2.5 px-3.5 py-2.5"
-        style={{ borderBottom: `1px solid ${INK_QUIET}20`, background: CREAM_WARM }}
-      >
+      {/* Header row — tag pill + title + duration */}
+      <header className="flex items-center gap-2.5 px-5 py-[14px]">
         <span
-          className="font-mono text-[9.5px] font-semibold tracking-[2px] uppercase px-2 py-0.5 rounded whitespace-nowrap"
-          style={{ color: colors.fg, border: `1px solid ${colors.border}`, background: colors.bg }}
+          className="font-mono text-[10px] font-medium px-[9px] py-[3px] rounded whitespace-nowrap uppercase"
+          style={{
+            color: colors.fg,
+            background: colors.bg,
+            border: `1px solid ${colors.border}`,
+            letterSpacing: '0.12em',
+          }}
         >
           {ev.tag}
         </span>
-        <span className="flex-1 text-[14px] font-semibold" style={{ color: INK }}>
+        <span className="flex-1 text-[14px] font-medium" style={{ color: INK }}>
           {ev.title}
         </span>
         {ev.duration_ms > 0 && (
-          <span className="font-mono text-[10.5px]" style={{ color: INK_QUIET }}>
+          <span
+            className="font-mono text-[11px]"
+            style={{ color: INK_QUIET }}
+          >
             {ev.duration_ms}ms
           </span>
         )}
-      </div>
-      <div className="px-3.5 py-3">
+      </header>
+
+      {/* Body — SQL block, results table, meta footer */}
+      <div className="px-5 pb-[18px]">
         {ev.sql && (
           <pre
-            className="font-mono text-[13px] leading-[1.55] p-2.5 rounded-md overflow-x-auto whitespace-pre-wrap break-words"
-            style={{ background: CREAM_WARM, border: `1px solid ${INK_QUIET}20`, color: INK }}
+            className="font-mono text-[12px] leading-[1.7] rounded-md overflow-x-auto whitespace-pre-wrap break-words"
+            style={{
+              background: CREAM_WARM,
+              color: INK,
+              padding: '12px 14px',
+              marginBottom: ev.columns.length > 0 || ev.meta ? '14px' : '0',
+            }}
             dangerouslySetInnerHTML={{ __html: kwify(ev.sql) }}
           />
         )}
         {ev.columns.length > 0 && (
-          <div className="mt-2 font-mono text-[13px]">
+          <div className="font-mono text-[12px]">
             <div
-              className="grid gap-3.5 py-1.5 text-[10px] uppercase tracking-[1px]"
+              className="grid gap-2.5 py-1.5 text-[10px] uppercase"
               style={{
                 gridTemplateColumns: `repeat(${ev.columns.length}, minmax(min-content, 1fr))`,
                 color: INK_QUIET,
-                borderBottom: `1px solid ${INK_QUIET}20`,
+                letterSpacing: '0.14em',
+                borderBottom: '1px solid rgba(45, 24, 16, 0.1)',
               }}
             >
               {ev.columns.map((c, i) => (
@@ -118,10 +167,13 @@ function PanelCard({ ev }: { ev: WorkshopPanelEvent }) {
             {ev.rows.map((row, rIdx) => (
               <div
                 key={rIdx}
-                className="grid gap-3.5 py-1.5 animate-[rowIn_0.22s_ease-out]"
+                className="grid gap-2.5 py-2 animate-[rowIn_0.22s_ease-out]"
                 style={{
                   gridTemplateColumns: `repeat(${ev.columns.length}, minmax(min-content, 1fr))`,
-                  borderBottom: rIdx === ev.rows.length - 1 ? 'none' : `1px dashed ${INK_QUIET}20`,
+                  borderBottom:
+                    rIdx === ev.rows.length - 1
+                      ? 'none'
+                      : '1px solid rgba(45, 24, 16, 0.05)',
                   color: INK,
                   animationDelay: `${rIdx * 80}ms`,
                   animationFillMode: 'both',
@@ -134,24 +186,25 @@ function PanelCard({ ev }: { ev: WorkshopPanelEvent }) {
                 ))}
               </div>
             ))}
-            {ev.meta && (
-              <div
-                className="font-mono text-[10.5px] mt-2"
-                style={{ color: INK_QUIET }}
-                dangerouslySetInnerHTML={{ __html: ev.meta }}
-              />
-            )}
           </div>
         )}
-        {!ev.columns.length && ev.meta && (
+        {ev.meta && (
           <div
-            className="font-mono text-[10.5px]"
-            style={{ color: INK_QUIET }}
+            className="text-[12px] leading-[1.7] italic"
+            style={{
+              color: INK_QUIET,
+              marginTop: ev.columns.length > 0 ? '14px' : '0',
+              paddingTop: ev.columns.length > 0 ? '12px' : '0',
+              borderTop:
+                ev.columns.length > 0
+                  ? '1px solid rgba(45, 24, 16, 0.1)'
+                  : 'none',
+            }}
             dangerouslySetInnerHTML={{ __html: ev.meta }}
           />
         )}
       </div>
-    </div>
+    </article>
   )
 }
 
@@ -162,9 +215,8 @@ interface PlanState {
 
 /**
  * Reduce the event list into render state. The replay is "already played"
- * by the time these events arrive (Week 1 returns the full trail at
- * end-of-turn), so step events are collapsed into their final state
- * against the matching plan.
+ * by the time these events arrive, so step events are collapsed into
+ * their final state against the matching plan.
  */
 function usePlanReducer(events: WorkshopEvent[]): {
   plan: PlanState | null
@@ -192,6 +244,77 @@ function usePlanReducer(events: WorkshopEvent[]): {
   }, [events])
 }
 
+function PlanCard({ plan }: { plan: PlanState }) {
+  const colors = TAG_COLORS.cyan
+  return (
+    <article
+      className="rounded-[10px] animate-[fadeSlide_0.32s_ease-out] overflow-hidden"
+      style={{
+        background: 'white',
+        border: '1px solid rgba(45, 24, 16, 0.14)',
+      }}
+      data-testid="plan-card"
+    >
+      <header className="flex items-center gap-2.5 px-5 py-[14px]">
+        <span
+          className="font-mono text-[10px] font-medium px-[9px] py-[3px] rounded uppercase"
+          style={{
+            color: colors.fg,
+            background: colors.bg,
+            border: `1px solid ${colors.border}`,
+            letterSpacing: '0.12em',
+          }}
+        >
+          PLAN
+        </span>
+        <span className="flex-1 text-[14px] font-medium" style={{ color: INK }}>
+          {plan.event.title}
+        </span>
+        {plan.event.duration_ms > 0 && (
+          <span className="font-mono text-[11px]" style={{ color: INK_QUIET }}>
+            ~{plan.event.duration_ms}ms
+          </span>
+        )}
+      </header>
+      <ol className="m-0 list-none px-5 pb-2">
+        {plan.event.steps.map((step, i) => {
+          const state = plan.stepStates[i]
+          const stateLabel =
+            state === 'done' ? 'OK' : state === 'active' ? 'RUNNING' : 'QUEUED'
+          const stateColor =
+            state === 'done' ? TAG_COLORS.green.fg : state === 'active' ? ACCENT : INK_QUIET
+          return (
+            <li
+              key={i}
+              className="flex items-center justify-between py-[9px] text-[13px]"
+              style={{
+                borderTop: i === 0 ? 'none' : '1px solid rgba(45, 24, 16, 0.07)',
+                color: state === 'queued' ? INK_SOFT : INK,
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <span
+                  className="font-mono text-[11px]"
+                  style={{ color: INK_QUIET }}
+                >
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <span>{step}</span>
+              </div>
+              <span
+                className="font-mono text-[10px] uppercase"
+                style={{ color: stateColor, letterSpacing: '0.14em' }}
+              >
+                {stateLabel}
+              </span>
+            </li>
+          )
+        })}
+      </ol>
+    </article>
+  )
+}
+
 export default function WorkshopTelemetry({ events }: { events: WorkshopEvent[] }) {
   const { plan, panels } = usePlanReducer(events)
 
@@ -205,71 +328,7 @@ export default function WorkshopTelemetry({ events }: { events: WorkshopEvent[] 
 
   return (
     <div className="flex flex-col gap-3">
-      {plan && (
-        <div
-          className="rounded-xl overflow-hidden animate-[fadeSlide_0.32s_ease-out]"
-          style={{ background: 'rgba(255,255,255,0.7)', border: `1px solid ${INK_QUIET}30` }}
-        >
-          <div
-            className="flex items-center gap-2.5 px-3.5 py-2.5"
-            style={{ borderBottom: `1px solid ${INK_QUIET}20`, background: CREAM_WARM }}
-          >
-            <span
-              className="font-mono text-[9.5px] font-semibold tracking-[2px] uppercase px-2 py-0.5 rounded"
-              style={{
-                color: TAG_COLORS.cyan.fg,
-                border: `1px solid ${TAG_COLORS.cyan.border}`,
-                background: TAG_COLORS.cyan.bg,
-              }}
-            >
-              PLAN
-            </span>
-            <span className="flex-1 text-[14px] font-semibold" style={{ color: INK }}>
-              {plan.event.title}
-            </span>
-            {plan.event.duration_ms > 0 && (
-              <span className="font-mono text-[10.5px]" style={{ color: INK_QUIET }}>
-                ~{plan.event.duration_ms}ms
-              </span>
-            )}
-          </div>
-          <ol className="px-3.5 py-3 m-0 list-none flex flex-col gap-1.5">
-            {plan.event.steps.map((step, i) => {
-              const state = plan.stepStates[i]
-              const stateLabel = state === 'done' ? 'ok' : state === 'active' ? 'running' : 'queued'
-              const stateColor =
-                state === 'done' ? '#047857' : state === 'active' ? INK : INK_QUIET
-              return (
-                <li
-                  key={i}
-                  className="flex items-start gap-3 px-2.5 py-2 rounded-md text-[14.5px]"
-                  style={{
-                    background: state === 'active' ? CREAM : CREAM_WARM,
-                    border: `1px solid ${state === 'active' ? INK_QUIET + '40' : 'transparent'}`,
-                  }}
-                >
-                  <span
-                    className="font-mono text-[11px] font-semibold min-w-[22px]"
-                    style={{ color: INK_SOFT }}
-                  >
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <span className="flex-1" style={{ color: INK, lineHeight: 1.5 }}>
-                    {step}
-                  </span>
-                  <span
-                    className="font-mono text-[10px] uppercase tracking-[1px]"
-                    style={{ color: stateColor }}
-                  >
-                    {stateLabel}
-                  </span>
-                </li>
-              )
-            })}
-          </ol>
-        </div>
-      )}
-
+      {plan && <PlanCard plan={plan} />}
       {panels.map((ev, i) => (
         <PanelCard key={i} ev={ev} />
       ))}

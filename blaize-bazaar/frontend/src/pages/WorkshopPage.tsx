@@ -53,6 +53,7 @@ import IndexPerformanceDashboard from '../components/IndexPerformanceDashboard'
 import AtelierHero from '../components/AtelierHero'
 import AtmosphereStrip from '../components/AtmosphereStrip'
 import MetricsRow from '../components/MetricsRow'
+import SessionHeader from '../components/SessionHeader'
 import type { WorkshopEvent, WorkshopPanelEvent } from '../services/workshop'
 
 const CREAM = '#fbf4e8'
@@ -378,6 +379,12 @@ function useTabState(panelCount: number): [Tab, (t: Tab) => void] {
 function WorkshopContent() {
   const [events, setEvents] = useState<WorkshopEvent[]>([])
   const [detailPanel, setDetailPanel] = useState<DetailPanelKey>(null)
+  // Lifted from WorkshopChat so the SessionHeader on the right rail
+  // can stay in sync with the chat's local session state.
+  const [sessionInfo, setSessionInfo] = useState<{
+    sessionId: string | null
+    customerLabel: string
+  }>({ sessionId: null, customerLabel: 'Anonymous' })
 
   // Three responsive bands: ≥ 1280 three-zone resizable, 1024-1280
   // detail overlays, < 1024 vertical stack.
@@ -446,13 +453,19 @@ function WorkshopContent() {
 
   const workArea = (
     <div className="h-full flex flex-col gap-3 min-w-0">
+      <SessionHeader
+        sessionId={sessionInfo.sessionId}
+        customerLabel={sessionInfo.customerLabel}
+        elapsedMs={metrics.elapsedMs}
+      />
       <div
         role="tablist"
-        className="flex items-center gap-1 p-1 rounded-full self-start"
-        style={{ background: CREAM_WARM, border: `1px solid ${INK_QUIET}25` }}
+        className="flex gap-1.5"
+        style={{ borderBottom: '1px solid rgba(45, 24, 16, 0.12)' }}
       >
         {TAB_ORDER.map((t) => {
           const active = activeTab === t
+          const showCount = t === 'telemetry' && panelCount > 0
           return (
             <button
               key={t}
@@ -461,16 +474,25 @@ function WorkshopContent() {
               aria-selected={active}
               data-testid={`workshop-tab-${t}`}
               onClick={() => setActiveTab(t)}
-              className="px-4 py-1.5 rounded-full text-[12.5px] font-medium transition-colors flex items-center gap-1.5"
-              style={{ background: active ? INK : 'transparent', color: active ? CREAM : INK_SOFT }}
+              className="px-[18px] py-[9px] text-[13px] font-medium transition-colors flex items-center gap-1.5"
+              style={
+                active
+                  ? {
+                      background: INK,
+                      color: CREAM,
+                      borderRadius: '8px 8px 0 0',
+                    }
+                  : { color: INK_SOFT, background: 'transparent' }
+              }
             >
               <span className="capitalize">{t}</span>
-              {t === 'telemetry' && panelCount > 0 && (
+              {showCount && (
                 <span
-                  className="font-mono text-[10px] px-1.5 py-0.5 rounded-full"
+                  className="font-mono text-[10px] px-[7px] rounded-full"
                   style={{
-                    background: active ? 'rgba(255,255,255,0.15)' : INK_QUIET + '30',
-                    color: active ? CREAM : INK_SOFT,
+                    background: '#c44536',
+                    color: 'white',
+                    lineHeight: 1.6,
                   }}
                 >
                   {panelCount}
@@ -552,7 +574,7 @@ function WorkshopContent() {
 
   const chatArea = (
     <div className="h-full min-w-0">
-      <WorkshopChat onEvents={setEvents} />
+      <WorkshopChat onEvents={setEvents} onSession={setSessionInfo} />
     </div>
   )
 

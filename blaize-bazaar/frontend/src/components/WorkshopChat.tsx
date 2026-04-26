@@ -75,9 +75,25 @@ interface WorkshopChatProps {
    * sibling column) can subscribe to the same stream.
    */
   onEvents: (events: WorkshopEvent[]) => void
+  /**
+   * Fired whenever the session id or customer identity changes so the
+   * Atelier's SessionHeader (on the right rail) can stay in sync with
+   * the chat's local state without lifting the state out of this
+   * component.
+   */
+  onSession?: (state: { sessionId: string | null; customerLabel: string }) => void
 }
 
-export default function WorkshopChat({ onEvents }: WorkshopChatProps) {
+/** Parse a customer dropdown label ("Marco · linen") → display name ("Marco"). */
+function customerDisplayName(customerId: string): string {
+  if (customerId === 'anonymous') return 'Anonymous'
+  const match = DEMO_CUSTOMERS.find((c) => c.id === customerId)
+  if (!match) return customerId
+  // "Marco · linen" → "Marco"
+  return match.label.split('·')[0].trim()
+}
+
+export default function WorkshopChat({ onEvents, onSession }: WorkshopChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [customerId, setCustomerId] = useState<string>('anonymous')
@@ -91,6 +107,13 @@ export default function WorkshopChat({ onEvents }: WorkshopChatProps) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages, isLoading])
+
+  useEffect(() => {
+    onSession?.({
+      sessionId,
+      customerLabel: customerDisplayName(customerId),
+    })
+  }, [sessionId, customerId, onSession])
 
   function resetSession() {
     setSessionId(null)
