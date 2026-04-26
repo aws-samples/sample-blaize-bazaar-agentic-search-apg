@@ -58,6 +58,7 @@ class AgentContext:
     query: str = ""
     events: list[dict] = field(default_factory=list)
     _plan_step_index: int = 0
+    _panel_index: int = 0
 
     # -- base emitter --------------------------------------------------------
     def emit(self, ev: dict) -> None:
@@ -148,7 +149,16 @@ class AgentContext:
         success). Any other value falls back to cyan on the renderer side.
         ``rows`` should be pre-stringified — the renderer does ``esc()``
         on each cell and nothing else.
+
+        ``trace_index`` is a monotonically-incrementing 1-based counter
+        stamped on every panel in the order they're emitted. The
+        frontend uses it as the stable referent for citation pills —
+        an LLM-synthesised sentence carrying ``[trace 7]`` resolves
+        to the 7th panel emitted this turn. Tied to panel events
+        specifically (not plan / step / response) because only panels
+        get cited.
         """
+        self._panel_index += 1
         self.emit(
             {
                 "type": "panel",
@@ -161,6 +171,7 @@ class AgentContext:
                 "rows": list(rows) if rows else [],
                 "meta": meta,
                 "duration_ms": duration_ms,
+                "trace_index": self._panel_index,
             }
         )
 

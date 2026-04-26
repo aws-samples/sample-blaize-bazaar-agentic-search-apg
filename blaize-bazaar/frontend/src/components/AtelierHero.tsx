@@ -61,7 +61,7 @@ export default function AtelierHero({ editionNumber = 6 }: { editionNumber?: num
           fontStyle: 'italic',
         }}
       >
-        Where Blaize thinks aloud. Every query, every JOIN, every guarded reply — laid bare.
+        Where Blaize thinks aloud. Every step of the reasoning, on display.
       </p>
     </section>
   )

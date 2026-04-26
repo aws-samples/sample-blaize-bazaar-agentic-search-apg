@@ -27,6 +27,7 @@ import {
 import CustomerCard from './atelier-chat/CustomerCard'
 import UserMessage from './atelier-chat/UserMessage'
 import AssistantTurn from './atelier-chat/AssistantTurn'
+import QuickQueryChips from './atelier-chat/QuickQueryChips'
 
 const INK = '#2d1810'
 const INK_SOFT = '#6b4a35'
@@ -66,9 +67,22 @@ interface WorkshopChatProps {
    * component.
    */
   onSession?: (state: { sessionId: string | null; customerLabel: string }) => void
+  /**
+   * Fired when a citation pill / "view trace" / "Open in trace" link
+   * is clicked. The parent scrolls the telemetry tab to the matching
+   * panel and flashes a terracotta border on it. The ``traceRef`` is
+   * either ``"plan"``, a panel ``tag`` ("TOOL REGISTRY · DISCOVER"),
+   * or a citation ``ref`` ("trace 7") — the scroll-and-flash hook on
+   * the parent resolves each shape to the matching DOM node.
+   */
+  onOpenTrace?: (traceRef: string) => void
 }
 
-export default function WorkshopChat({ onEvents, onSession }: WorkshopChatProps) {
+export default function WorkshopChat({
+  onEvents,
+  onSession,
+  onOpenTrace,
+}: WorkshopChatProps) {
   const [turns, setTurns] = useState<Turn[]>([])
   const [input, setInput] = useState('')
   const [customerId, setCustomerId] = useState<string>('anonymous')
@@ -189,9 +203,20 @@ export default function WorkshopChat({ onEvents, onSession }: WorkshopChatProps)
         {turns.map((t) => (
           <div key={t.id}>
             <UserMessage text={t.user_text} />
-            <AssistantTurn turn={t} />
+            <AssistantTurn turn={t} onOpenTrace={onOpenTrace} />
           </div>
         ))}
+
+        {/* Post-turn "try asking" strip — only once a turn has
+            completed. Pre-turn the welcome + customer picker row
+            below the list fills this role. */}
+        {turns.length > 0 && turns[turns.length - 1].assistant_text !== null && (
+          <QuickQueryChips
+            queries={QUICK_QUERIES}
+            onPick={submit}
+            disabled={isLoading}
+          />
+        )}
 
         {isLoading && (
           <div

@@ -42,7 +42,9 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import Footer from '../components/Footer'
+import Header from '../components/Header'
 import { AuthGate } from '../App'
+import { useUI } from '../contexts/UIContext'
 import WorkshopChat from '../components/WorkshopChat'
 import WorkshopTelemetry from '../components/WorkshopTelemetry'
 import MemoryDashboard from '../components/MemoryDashboard'
@@ -54,6 +56,7 @@ import AtelierHero from '../components/AtelierHero'
 import AtmosphereStrip from '../components/AtmosphereStrip'
 import MetricsRow from '../components/MetricsRow'
 import SessionHeader from '../components/SessionHeader'
+import { useScrollAndFlash } from '../hooks/useScrollAndFlash'
 import type { WorkshopEvent, WorkshopPanelEvent } from '../services/workshop'
 
 const CREAM = '#fbf4e8'
@@ -377,6 +380,7 @@ function useTabState(panelCount: number): [Tab, (t: Tab) => void] {
 }
 
 function WorkshopContent() {
+  const { openModal } = useUI()
   const [events, setEvents] = useState<WorkshopEvent[]>([])
   const [detailPanel, setDetailPanel] = useState<DetailPanelKey>(null)
   // Lifted from WorkshopChat so the SessionHeader on the right rail
@@ -385,6 +389,21 @@ function WorkshopContent() {
     sessionId: string | null
     customerLabel: string
   }>({ sessionId: null, customerLabel: 'Anonymous' })
+
+  // Cross-panel citation scroll + 800ms terracotta pulse. Chat calls
+  // ``scrollToTrace(ref)`` when a citation pill / "view trace" /
+  // "Open in trace" link is clicked; the hook resolves the ref
+  // against the right-rail panel cards by testid.
+  const { containerRef: traceContainerRef, scrollToTrace } = useScrollAndFlash()
+
+  const handleOpenTrace = (traceRef: string) => {
+    // Ensure the Telemetry tab is showing before attempting to scroll —
+    // a citation click while on Architecture should swap tabs first.
+    if (activeTab !== 'telemetry') setActiveTab('telemetry')
+    // Defer the scroll so the tab swap has a chance to mount the
+    // panel cards before we query for them.
+    requestAnimationFrame(() => scrollToTrace(traceRef))
+  }
 
   // Three responsive bands: ≥ 1280 three-zone resizable, 1024-1280
   // detail overlays, < 1024 vertical stack.
@@ -503,7 +522,10 @@ function WorkshopContent() {
         })}
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div
+        ref={traceContainerRef}
+        className="flex-1 overflow-y-auto min-h-0"
+      >
         {activeTab === 'architecture' && (
           <div className="flex flex-col gap-5">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -574,7 +596,11 @@ function WorkshopContent() {
 
   const chatArea = (
     <div className="h-full min-w-0">
-      <WorkshopChat onEvents={setEvents} onSession={setSessionInfo} />
+      <WorkshopChat
+        onEvents={setEvents}
+        onSession={setSessionInfo}
+        onOpenTrace={handleOpenTrace}
+      />
     </div>
   )
 
@@ -597,14 +623,26 @@ function WorkshopContent() {
       className="workshop-surface min-h-screen flex flex-col"
       style={{ background: CREAM, color: INK }}
     >
-      {/* Top chrome — editorial hero + atmosphere ticker + live
-          metrics row, full-width above the chat/tabs split. Surface
-          switching is handled globally by the Header's SurfaceToggle.
-          The split below accepts the remaining vertical space; chat
-          and right-rail each manage their own internal scroll. */}
+      {/* Global header chrome — wordmark + SurfaceToggle (Storefront /
+          Atelier) + Account + Bag. Mounted on every route, including
+          ``/workshop``, so the top navigation stays consistent and
+          the surface-switch toggle has a permanent home. */}
+      <Header
+        current="home"
+        onAccountClick={() => openModal('auth')}
+      />
+
+      {/* Editorial hero + atmosphere ticker + live metrics row,
+          full-width above the chat/tabs split. The cream-warm
+          background on the hero zone deepens the magazine feel: the
+          white metric cards and white panel cards in the split below
+          get to pop against the warmer band. */}
       <div
         data-testid="atelier-header-zone"
-        style={{ borderBottom: `1px solid ${INK_QUIET}30` }}
+        style={{
+          background: CREAM_WARM,
+          borderBottom: `1px solid ${INK_QUIET}30`,
+        }}
       >
         <AtelierHero />
         <AtmosphereStrip

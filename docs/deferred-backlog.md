@@ -87,6 +87,38 @@ schema end-to-end and cached agent output has aged out. At that point,
 search-and-destroy on the legacy fallbacks and delete the corresponding
 backfill branches in `_normalize()`.
 
+## Synthesis system prompt — emit inline citation markers
+
+- **Issue:** The frontend ships the full citation infrastructure —
+  `AgentContext.emit_panel` stamps `trace_index` on every panel, the
+  Turn primitive carries `citations` through to `AssistantText`, and
+  `useScrollAndFlash` resolves a citation ref to the right-rail
+  panel with an 800ms terracotta pulse. But the LLM synthesis prompt
+  in `services/chat.py` (and the Runtime-side equivalent in
+  `backend/agentcore_runtime.py`) does not yet instruct the model to
+  emit inline citation markers. Citation pills render only when the
+  `response` event carries `citations`, which today happens on no
+  query.
+- **Concrete spec:**
+  - Update the synthesis prompt so the model emits each grounded
+    claim with an inline citation, e.g.
+    `<cite trace="7">Italian Linen Camp Shirt</cite>` where ``7``
+    is the panel's `trace_index` (1-based emission order).
+  - The response emitter parses these markers into the existing
+    `WorkshopCitation` shape: `{ k: "<source key>", ref: "trace 7" }`.
+  - On the frontend, `AssistantText` already renders `ref` as the
+    pill label and fires `onCitationClick(ref)` → `scrollToTrace`
+    resolves ``"trace 7"`` to the 7th `panel-card-*` in the
+    telemetry tab.
+- **Surface:** `services/chat.py` synthesizer system prompt, plus
+  the Runtime-side synthesizer if the prompts diverge.
+- **Risk:** Low. The frontend is additive — pills show up when the
+  LLM starts emitting them; nothing breaks if it doesn't.
+- **Test:** End-to-end manual — ask "what should I buy?", confirm
+  citation pills render on claims, click them, verify the panel
+  flashes in the trace.
+- **Discovered:** during Atelier redesign commit 4, 2026-04-26.
+
 ## AuthModal solutions/module3 parity drift
 
 - **Issue:** `solutions/module3/frontend/components/AuthModal.tsx` missing `const DUSK = '#3d2518'` that exists in `blaize-bazaar/frontend/src/components/AuthModal.tsx`

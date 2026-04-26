@@ -7,22 +7,21 @@
  *   1. PlanPreviewChip (if plan)
  *   2. ToolChips for each non-special panel (in emission order)
  *   3. AssistantText (the actual reply)
- *   4. Product mini-cards (commit 4)
- *   5. Confidence summary (commit 4)
+ *   4. ProductMiniCard grid (if recommendation picks)
+ *   5. ConfidenceSummary (if MEMORY · CONFIDENCE panel emitted)
  *
- * Citation plumbing is wired here via ``onCitationClick`` so the
- * parent can scroll the telemetry tab to a matching panel. The
- * synthesis prompt that emits inline citations is a follow-up
- * (see docs/deferred-backlog.md); the infrastructure is in place.
- *
- * Per-tool summary overrides and the ProductMiniCard / ConfidenceSummary
- * renders land in commit 4. This commit provides a stable Turn →
- * AssistantTurn pipeline so commit 4's additions are pure visual
- * swaps.
+ * Citation plumbing is wired here via ``onOpenTrace`` so the parent
+ * can scroll the telemetry tab to a matching panel. Plan-chip,
+ * tool-chip "Open in trace", and inline citation pills all flow
+ * through the same callback. The synthesis prompt that emits inline
+ * citations is a follow-up (see docs/deferred-backlog.md); the
+ * infrastructure is in place.
  */
 import type { Turn, WorkshopPanelEvent } from '../../services/workshop'
 import AssistantText from './AssistantText'
+import ConfidenceSummary from './ConfidenceSummary'
 import PlanPreviewChip from './PlanPreviewChip'
+import ProductMiniCard from './ProductMiniCard'
 import ToolChip from './ToolChip'
 
 export interface AssistantTurnProps {
@@ -79,7 +78,26 @@ export default function AssistantTurn({ turn, onOpenTrace }: AssistantTurnProps)
           onCitationClick={onOpenTrace}
         />
       )}
-      {/* ProductMiniCard grid + ConfidenceSummary land in commit 4. */}
+      {turn.products && turn.products.length > 0 && (
+        <div
+          data-testid="assistant-turn-products"
+          className="grid gap-2 mb-4"
+          style={{
+            gridTemplateColumns: `repeat(${Math.min(turn.products.length, 3)}, minmax(0, 1fr))`,
+          }}
+        >
+          {turn.products.slice(0, 3).map((p, i) => (
+            <ProductMiniCard
+              key={p.product_id ?? `${p.name}-${i}`}
+              name={p.name}
+              price={p.price}
+              attributes={p.attributes}
+              tone={p.tone}
+            />
+          ))}
+        </div>
+      )}
+      <ConfidenceSummary panel={turn.confidence} />
     </div>
   )
 }

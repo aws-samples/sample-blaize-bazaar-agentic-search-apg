@@ -94,6 +94,12 @@ vi.mock('../components/IndexPerformanceDashboard', () => ({
 vi.mock('../components/Footer', () => ({
   default: () => <div data-testid="stub-footer">footer</div>,
 }))
+vi.mock('../components/Header', () => ({
+  default: () => <div data-testid="stub-header">header</div>,
+}))
+vi.mock('../contexts/UIContext', () => ({
+  useUI: () => ({ openModal: vi.fn() }),
+}))
 
 // matchMedia is jsdom-missing by default. We control it per-test so we
 // can drive the three responsive bands deterministically.

@@ -43,6 +43,13 @@ export interface WorkshopPanelEvent {
   meta: string
   duration_ms: number
   ts_ms: number
+  /**
+   * 1-based position of this panel in the turn's panel stream.
+   * Stamped by the backend's ``AgentContext.emit_panel``. Citation
+   * pills ("trace 7") resolve to the panel with ``trace_index === 7``.
+   * Optional for backwards compatibility with pre-trace-index events.
+   */
+  trace_index?: number
 }
 
 export interface WorkshopCitation {
