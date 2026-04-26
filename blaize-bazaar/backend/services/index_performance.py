@@ -523,14 +523,14 @@ class IndexPerformanceService:
     # ================================================================
 
     async def get_distinct_categories(self) -> List[str]:
-        """Get distinct category_name values for the filter dropdown."""
+        """Get distinct category values for the filter dropdown."""
         with psycopg.connect(self.conn_string) as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT DISTINCT category_name
+                    SELECT DISTINCT category
                     FROM blaize_bazaar.product_catalog
-                    WHERE category_name IS NOT NULL
-                    ORDER BY category_name
+                    WHERE category IS NOT NULL
+                    ORDER BY category
                 """)
                 return [row[0] for row in cur.fetchall()]
 
@@ -564,11 +564,11 @@ class IndexPerformanceService:
 
         filtered_sql = """
             SELECT
-                "productId", product_description, price, stars, category_name,
+                "productId", product_description, price, stars, category,
                 1 - (embedding <=> %s::vector) as similarity_score
             FROM blaize_bazaar.product_catalog
             WHERE embedding IS NOT NULL
-              AND category_name = %s
+              AND category = %s
             ORDER BY embedding <=> %s::vector
             LIMIT %s
         """

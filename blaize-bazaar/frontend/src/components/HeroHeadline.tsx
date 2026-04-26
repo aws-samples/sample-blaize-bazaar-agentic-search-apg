@@ -36,8 +36,8 @@ export default function HeroHeadline() {
         className="mt-4 font-[Fraunces] italic text-[40px] leading-[1] sm:text-[48px] md:text-[56px] lg:text-[64px]"
         style={{ color: INK, letterSpacing: '-0.01em', fontWeight: 400 }}
       >
-        <span className="block">{HERO_HEADLINE.TITLE_TOP}</span>
-        <span className="block">{HERO_HEADLINE.TITLE_BOTTOM}</span>
+        <span>{HERO_HEADLINE.TITLE_TOP}</span>{' '}
+        <span>{HERO_HEADLINE.TITLE_BOTTOM}</span>
       </h1>
 
       <p

@@ -45,7 +45,7 @@ export default function AtelierHero({ editionNumber = 6 }: { editionNumber?: num
         className="text-[54px] md:text-[60px] leading-[1] m-0"
         style={{
           color: INK,
-          fontFamily: "'Iowan Old Style', Georgia, 'Times New Roman', serif",
+          fontFamily: 'Fraunces, Georgia, serif',
           fontWeight: 400,
           fontStyle: 'italic',
           letterSpacing: '-0.02em',
@@ -54,11 +54,12 @@ export default function AtelierHero({ editionNumber = 6 }: { editionNumber?: num
         The Atelier.
       </h1>
       <p
-        className="text-[16px] leading-[1.6] max-w-[460px] mx-auto mt-5"
+        className="text-[16px] leading-[1.6] max-w-[620px] mx-auto mt-5"
         style={{
           color: INK_SOFT,
-          fontFamily: "'Iowan Old Style', Georgia, 'Times New Roman', serif",
+          fontFamily: 'Fraunces, Georgia, serif',
           fontStyle: 'italic',
+          fontWeight: 600,
         }}
       >
         Where Blaize thinks aloud. Every step of the reasoning, on display.

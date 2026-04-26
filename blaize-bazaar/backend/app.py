@@ -591,16 +591,16 @@ async def autocomplete(
     """Product search autocomplete"""
     try:
         query = """
-            SELECT product_description, category_name
+            SELECT name, category
             FROM blaize_bazaar.product_catalog
-            WHERE product_description ILIKE %s
+            WHERE name ILIKE %s
             ORDER BY reviews DESC
             LIMIT %s
         """
         results = await db.fetch_all(query, f"%{q}%", limit)
         return {"suggestions": [{
-            "text": r["product_description"][:60],
-            "category": r["category_name"]
+            "text": r["name"][:60],
+            "category": r["category"]
         } for r in results]}
     except Exception as e:
         logger.error(f"❌ Autocomplete failed: {e}")

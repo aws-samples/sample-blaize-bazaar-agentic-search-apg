@@ -32,13 +32,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'react-resizable-panels'
 import {
-  Brain,
-  Layers,
-  Network,
-  Server,
-  ShieldCheck,
-  Ruler,
-  Wrench,
   ArrowRight,
 } from 'lucide-react'
 import Footer from '../components/Footer'
@@ -55,7 +48,6 @@ import IndexPerformanceDashboard from '../components/IndexPerformanceDashboard'
 import AtelierHero from '../components/AtelierHero'
 import AtmosphereStrip from '../components/AtmosphereStrip'
 import MetricsRow from '../components/MetricsRow'
-import SessionHeader from '../components/SessionHeader'
 import { useScrollAndFlash } from '../hooks/useScrollAndFlash'
 import type { WorkshopEvent, WorkshopPanelEvent } from '../services/workshop'
 
@@ -79,17 +71,14 @@ const PROV_META: Record<
   Provenance,
   {
     pillBg: string
-    pillBorder: string
     pillFg: string
     label: string
-    iconFg: string
-    iconBg: string
   }
 > = {
-  MANAGED:  { pillBg: '#e0f2fe', pillBorder: '#7dd3fc', pillFg: '#0369a1', label: 'Managed',  iconFg: '#0369a1', iconBg: '#e0f2fe' },
-  OWNED:    { pillBg: '#ecfdf5', pillBorder: '#86efac', pillFg: '#047857', label: 'Owned',    iconFg: '#047857', iconBg: '#ecfdf5' },
-  BOTH:     { pillBg: '#f3e8ff', pillBorder: '#d8b4fe', pillFg: '#7e22ce', label: 'Both',     iconFg: '#7e22ce', iconBg: '#f3e8ff' },
-  TEACHING: { pillBg: '#fef3c7', pillBorder: '#fcd34d', pillFg: '#b45309', label: 'Teaching', iconFg: '#b45309', iconBg: '#fef3c7' },
+  MANAGED:  { pillBg: '#E6F1FB', pillFg: '#0C447C', label: 'Managed' },
+  OWNED:    { pillBg: '#EAF3DE', pillFg: '#27500A', label: 'Owned' },
+  BOTH:     { pillBg: '#EEEDFE', pillFg: '#3C3489', label: 'Both' },
+  TEACHING: { pillBg: '#FAEEDA', pillFg: '#633806', label: 'Teaching' },
 }
 
 type CardCTA =
@@ -101,9 +90,14 @@ interface ArchCard {
   id: string
   title: string
   provenance: Provenance
-  Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
   description: string
   cta: CardCTA
+  /** Featured cards span the full grid width. */
+  featured: boolean
+  /** Roman chapter numeral, e.g. "i.", "ii." */
+  chapter: string
+  /** Signature code line(s) shown in the cream-warm code block. */
+  signature: string[]
 }
 
 // Card order follows the agent's actual flow so an L400 reader
@@ -114,64 +108,84 @@ const ARCH_CARDS: ArchCard[] = [
     id: 'memory',
     title: 'Memory',
     provenance: 'BOTH',
-    Icon: Brain,
     description:
       'AgentCore Memory holds short-term conversation state; Aurora pgvector holds long-term semantic + procedural recall. Two tiers, one session id — the agent reads from whichever gives the right context for the turn.',
     cta: { kind: 'action', label: 'Open memory dashboard', open: 'memory' },
-  },
-  {
-    id: 'tool-registry',
-    title: 'Tool Registry · Gateway',
-    provenance: 'BOTH',
-    Icon: Wrench,
-    description:
-      "AgentCore Gateway publishes tools via MCP to any runtime; the teaching deconstruction shows the same discovery primitive implemented over Aurora pgvector. Both columns rank the same 9 tools — you see what Gateway abstracts for you.",
-    cta: { kind: 'action', label: 'Open tool registry', open: 'gateway' },
+    featured: true,
+    chapter: 'i.',
+    signature: [
+      'stm = agentcore.memory.get(session_id)',
+      'ltm = aurora.find_similar(emb, customer_id)',
+    ],
   },
   {
     id: 'mcp',
     title: 'MCP',
     provenance: 'MANAGED',
-    Icon: Network,
     description:
       "Model Context Protocol is an open standard; AgentCore Gateway is AWS's managed MCP server. This workshop uses Gateway as the MCP primitive — you could run your own MCP server, but Gateway handles tool publishing, auth, and observability for you.",
     cta: { kind: 'none' },
+    featured: false,
+    chapter: 'ii.',
+    signature: ['gateway.list_tools() -> MCPToolset'],
   },
   {
     id: 'state',
     title: 'State Management',
     provenance: 'OWNED',
-    Icon: Server,
     description:
       'Session state lives in Postgres — orders, customers, approvals, tool audit. Aurora is the source of truth for domain facts the agents grant themselves access to; AgentCore never tries to own this side of the system.',
     cta: { kind: 'action', label: 'Open pgvector benchmarks', open: 'bench' },
+    featured: false,
+    chapter: 'iii.',
+    signature: ['SELECT * FROM orders WHERE customer_id = $1 ...'],
+  },
+  {
+    id: 'tool-registry',
+    title: 'Tool Registry · Gateway',
+    provenance: 'BOTH',
+    description:
+      "AgentCore Gateway publishes tools via MCP to any runtime; the teaching deconstruction shows the same discovery primitive implemented over Aurora pgvector. Both columns rank the same 9 tools — you see what Gateway abstracts for you.",
+    cta: { kind: 'action', label: 'Open tool registry', open: 'gateway' },
+    featured: true,
+    chapter: 'iv.',
+    signature: [
+      'SELECT name, 1 - (description_emb <=> $1) AS score',
+      'FROM tools ORDER BY description_emb <=> $1 LIMIT 4;',
+    ],
   },
   {
     id: 'runtime',
     title: 'Runtime',
     provenance: 'MANAGED',
-    Icon: Layers,
     description:
       "AgentCore Runtime runs the orchestrator inside a managed microVM — scale, cold-start, and VPC wiring are AWS's problem. Flip USE_AGENTCORE_RUNTIME on to promote the same code from local FastAPI to the hosted runtime without touching the orchestrator.",
     cta: { kind: 'action', label: 'Open runtime status', open: 'runtime' },
-  },
-  {
-    id: 'grounding',
-    title: 'Grounding · Approvals · Guardrails',
-    provenance: 'BOTH',
-    Icon: ShieldCheck,
-    description:
-      'Bedrock guardrails on the LLM; Aurora-backed approvals queue for sensitive tool calls (place_order, restock). One card because all three fire on the same turn boundary — the answer leaves only if it survives every check.',
-    cta: { kind: 'in-progress' },
+    featured: false,
+    chapter: 'v.',
+    signature: ['runtime.invoke(orchestrator, payload)'],
   },
   {
     id: 'evaluations',
     title: 'Evaluations',
     provenance: 'TEACHING',
-    Icon: Ruler,
     description:
       "Offline evaluation harness + golden-set regression. We're showing this as a Postgres harness so you can see what AgentCore Evaluations does internally — precision, recall, and NDCG@k computed over a curated query set, reproducible row-by-row.",
     cta: { kind: 'none' },
+    featured: false,
+    chapter: 'vi.',
+    signature: ['evals.run(golden_set) -> {precision, recall, ndcg}'],
+  },
+  {
+    id: 'grounding',
+    title: 'Grounding · Approvals · Guardrails',
+    provenance: 'BOTH',
+    description:
+      'Bedrock guardrails on the LLM; Aurora-backed approvals queue for sensitive tool calls (place_order, restock). One card because all three fire on the same turn boundary — the answer leaves only if it survives every check.',
+    cta: { kind: 'in-progress' },
+    featured: true,
+    chapter: 'vii.',
+    signature: ['guardrails.check(claims) ; approvals.queue(tool_call)'],
   },
 ]
 
@@ -179,8 +193,15 @@ function ProvenancePill({ kind }: { kind: Provenance }) {
   const m = PROV_META[kind]
   return (
     <span
-      className="font-mono text-[9.5px] font-semibold tracking-[1.5px] uppercase px-2 py-0.5 rounded whitespace-nowrap"
-      style={{ color: m.pillFg, border: `1px solid ${m.pillBorder}`, background: m.pillBg }}
+      className="text-[10px] font-medium uppercase whitespace-nowrap"
+      style={{
+        color: m.pillFg,
+        background: m.pillBg,
+        padding: '4px 10px',
+        borderRadius: 4,
+        letterSpacing: '0.16em',
+        fontWeight: 500,
+      }}
     >
       {m.label}
     </span>
@@ -211,93 +232,105 @@ function ArchitectureCard({
   onOpen: (key: Exclude<DetailPanelKey, null>) => void
   active: boolean
 }) {
-  const m = PROV_META[card.provenance]
-  const Icon = card.Icon
   const isActionCard = card.cta.kind === 'action'
+  const ctaLabel = card.cta.kind === 'action' ? card.cta.label : ''
+  const ctaOpen = card.cta.kind === 'action' ? card.cta.open : null
 
   return (
     <article
       data-testid={`arch-card-${card.id}`}
       data-active={active ? 'true' : 'false'}
-      className="group relative rounded-2xl p-5 flex flex-col gap-4 transition-all duration-200 ease-out"
+      className="relative rounded-xl flex flex-col transition-all duration-200 ease-out"
       style={{
-        background: active ? CREAM_WARM : CREAM,
-        border: `1px solid ${active ? `${ACCENT}60` : `${INK_QUIET}25`}`,
-        borderLeft: active ? `3px solid ${ACCENT}` : `1px solid ${INK_QUIET}25`,
-        boxShadow: active
-          ? '0 8px 24px rgba(107, 74, 53, 0.10), 0 4px 8px rgba(107, 74, 53, 0.06)'
-          : '0 2px 8px rgba(107, 74, 53, 0.06), 0 1px 3px rgba(107, 74, 53, 0.04)',
-        transform: active ? 'translate3d(0, -1px, 0)' : 'translate3d(0, 0, 0)',
+        gridColumn: card.featured ? '1 / -1' : undefined,
+        background: active ? CREAM_WARM : 'white',
+        border: `1px solid ${active ? `${ACCENT}60` : 'rgba(45, 24, 16, 0.12)'}`,
+        borderLeft: active ? `3px solid ${ACCENT}` : `1px solid rgba(45, 24, 16, 0.12)`,
+        padding: '22px 24px',
       }}
     >
-      {/* Top row — icon tile + provenance pill */}
-      <div className="flex items-start justify-between gap-3">
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: m.iconBg, border: `1px solid ${m.pillBorder}` }}
-          aria-hidden
+      {/* (a) Header — chapter numeral + provenance pill */}
+      <div className="flex justify-between items-start mb-[14px]">
+        <span
+          style={{
+            fontFamily: 'Fraunces, Georgia, serif',
+            fontStyle: 'italic',
+            fontSize: 18,
+            color: INK_QUIET,
+          }}
         >
-          <Icon className="w-5 h-5" style={{ color: m.iconFg }} />
-        </div>
+          {card.chapter}
+        </span>
         <ProvenancePill kind={card.provenance} />
       </div>
 
-      {/* Title */}
+      {/* (b) Title */}
       <h3
-        className="text-[17px] leading-[1.25]"
-        style={{ color: INK, fontFamily: "'Iowan Old Style', Georgia, 'Times New Roman', serif", fontWeight: 500 }}
+        style={{
+          fontFamily: 'Fraunces, Georgia, serif',
+          fontSize: 22,
+          fontWeight: 400,
+          margin: '0 0 10px',
+          color: INK,
+          letterSpacing: '-0.01em',
+        }}
       >
         {card.title}
       </h3>
 
-      {/* Body — 4-line clamp. The clamp is a soft ceiling; we write
-          to fit inside it rather than relying on overflow. */}
+      {/* (c) Body */}
       <p
-        className="text-[13.5px] leading-[1.55]"
+        className="text-[14px] leading-[1.7]"
         style={{
           color: INK_SOFT,
-          display: '-webkit-box',
-          WebkitLineClamp: 4,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
+          margin: '0 0 16px',
+          maxWidth: card.featured ? 580 : undefined,
         }}
       >
         {card.description}
       </p>
 
-      {/* Footer rule + CTA */}
-      {card.cta.kind !== 'none' && (
-        <>
-          <div
-            aria-hidden
-            className="h-px w-full mt-auto"
-            style={{ background: `${INK_QUIET}25` }}
-          />
-          {isActionCard && card.cta.kind === 'action' ? (
-            <button
-              type="button"
-              onClick={() => onOpen(card.cta.kind === 'action' ? card.cta.open : ('memory' as const))}
-              data-testid={`arch-card-open-${card.id}`}
-              className="self-start inline-flex items-center gap-1.5 text-[13px] font-medium transition-opacity hover:opacity-75"
-              style={{ color: INK, fontFamily: "'Instrument Sans', sans-serif" }}
-            >
-              {active ? 'Viewing · click to close' : card.cta.label}
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          ) : (
-            <span
-              data-testid={`arch-card-inprogress-${card.id}`}
-              className="self-start font-mono text-[10px] uppercase tracking-[1.3px] px-2 py-0.5 rounded"
-              style={{
-                color: INK_QUIET,
-                border: `1px solid ${INK_QUIET}40`,
-                background: 'rgba(0,0,0,0.02)',
-              }}
-            >
-              In progress
-            </span>
-          )}
-        </>
+      {/* (d) Signature code block */}
+      <div
+        className="font-mono text-[11px] leading-[1.7]"
+        style={{
+          background: CREAM_WARM,
+          borderRadius: 6,
+          padding: '11px 14px',
+          color: INK,
+          marginBottom: card.cta.kind !== 'none' ? 16 : 0,
+        }}
+      >
+        {card.signature.map((line, i) => (
+          <div key={i}>{line}</div>
+        ))}
+      </div>
+
+      {/* (e) Action */}
+      {isActionCard && card.cta.kind === 'action' && (
+        <button
+          type="button"
+          onClick={() => ctaOpen && onOpen(ctaOpen)}
+          data-testid={`arch-card-open-${card.id}`}
+          className="self-start inline-flex items-center gap-1.5 text-[13px] font-medium transition-opacity hover:opacity-75"
+          style={{ color: ACCENT }}
+        >
+          {active ? 'Viewing · click to close' : ctaLabel}
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      )}
+      {card.cta.kind === 'in-progress' && (
+        <span
+          data-testid={`arch-card-inprogress-${card.id}`}
+          className="self-start font-mono text-[10px] uppercase tracking-[1.3px] px-2 py-0.5 rounded"
+          style={{
+            color: INK_QUIET,
+            border: `1px solid ${INK_QUIET}40`,
+            background: 'rgba(0,0,0,0.02)',
+          }}
+        >
+          In progress
+        </span>
       )}
     </article>
   )
@@ -383,8 +416,9 @@ function WorkshopContent() {
   const { openModal } = useUI()
   const [events, setEvents] = useState<WorkshopEvent[]>([])
   const [detailPanel, setDetailPanel] = useState<DetailPanelKey>(null)
-  // Lifted from WorkshopChat so the SessionHeader on the right rail
-  // can stay in sync with the chat's local session state.
+  // Lifted from WorkshopChat so the right-rail band can render the
+  // live session id + customer label inline alongside its
+  // "ATELIER / TELEMETRY" kicker.
   const [sessionInfo, setSessionInfo] = useState<{
     sessionId: string | null
     customerLabel: string
@@ -471,15 +505,44 @@ function WorkshopContent() {
   }
 
   const workArea = (
-    <div className="h-full flex flex-col gap-3 min-w-0">
-      <SessionHeader
-        sessionId={sessionInfo.sessionId}
-        customerLabel={sessionInfo.customerLabel}
-        elapsedMs={metrics.elapsedMs}
-      />
+    <div
+      className="flex flex-col h-full rounded-xl overflow-hidden min-w-0"
+      style={{
+        background: 'rgba(255,255,255,0.7)',
+        border: `1px solid ${INK_QUIET}30`,
+      }}
+    >
+      {/* Sticky section label — "ATELIER / TELEMETRY" kicker on the
+          left, session id · customer · elapsed on the right. Mirrors
+          the "ATELIER / CHAT" band on the left card — same height,
+          padding, border, letter-spacing. */}
+      <div
+        data-testid="session-header"
+        className="flex items-center gap-3 px-5 py-[14px] text-[10px] uppercase font-medium"
+        style={{
+          background: CREAM_WARM,
+          borderBottom: `1px solid ${INK_QUIET}20`,
+          color: INK_QUIET,
+          letterSpacing: '0.16em',
+        }}
+      >
+        <span>Atelier / Telemetry</span>
+        <span className="flex-1 h-[1px]" style={{ background: `${INK_QUIET}30` }} />
+        <span
+          className="font-mono normal-case tracking-normal text-[11px]"
+          style={{ color: INK_SOFT, letterSpacing: 0 }}
+        >
+          {sessionInfo.sessionId ?? '—'}
+          <span style={{ color: INK_QUIET }}> · </span>
+          {sessionInfo.customerLabel}
+          <span style={{ color: INK_QUIET }}> · </span>
+          {metrics.elapsedMs === null ? '—' : `${metrics.elapsedMs}ms`}
+        </span>
+      </div>
+
       <div
         role="tablist"
-        className="flex gap-1.5"
+        className="flex gap-1.5 px-5 pt-3"
         style={{ borderBottom: '1px solid rgba(45, 24, 16, 0.12)' }}
       >
         {TAB_ORDER.map((t) => {
@@ -524,11 +587,47 @@ function WorkshopContent() {
 
       <div
         ref={traceContainerRef}
-        className="flex-1 overflow-y-auto min-h-0"
+        className="flex-1 overflow-y-auto min-h-0 px-5 py-5"
       >
         {activeTab === 'architecture' && (
           <div className="flex flex-col gap-5">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Tab hero — "SEVEN CONCEPTS / Architecture — what makes Blaize work." */}
+            <div className="mb-2">
+              <div
+                className="text-[10px] font-medium uppercase mb-2"
+                style={{ color: ACCENT, letterSpacing: '0.18em', fontWeight: 500 }}
+              >
+                Seven concepts
+              </div>
+              <div className="flex items-baseline gap-4">
+                <h2
+                  style={{
+                    fontFamily: 'Fraunces, Georgia, serif',
+                    fontSize: 32,
+                    lineHeight: 1,
+                    margin: 0,
+                    color: INK,
+                    fontWeight: 400,
+                    letterSpacing: '-0.01em',
+                  }}
+                >
+                  Architecture
+                </h2>
+                <span
+                  style={{
+                    fontFamily: 'Fraunces, Georgia, serif',
+                    fontStyle: 'italic',
+                    fontSize: 15,
+                    color: INK_QUIET,
+                  }}
+                >
+                  — what makes Blaize work.
+                </span>
+              </div>
+            </div>
+
+            {/* Bento grid — featured cards span full width */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {ARCH_CARDS.map((c) => (
                 <ArchitectureCard
                   key={c.id}
@@ -538,25 +637,41 @@ function WorkshopContent() {
                 />
               ))}
             </div>
+
+            {/* Legend strip */}
             <div
-              className="rounded-xl p-4 text-[12.5px] leading-[1.7]"
+              className="flex items-center gap-[18px] flex-wrap text-[11px]"
               style={{
-                background: CREAM_WARM,
-                border: `1px dashed ${INK_QUIET}40`,
+                background: 'rgba(245, 232, 211, 0.5)',
+                borderRadius: 8,
+                padding: '14px 16px',
                 color: INK_SOFT,
               }}
             >
               <span
-                className="font-mono text-[10px] uppercase tracking-[1.5px] font-semibold mr-2"
-                style={{ color: INK }}
+                className="text-[10px] uppercase"
+                style={{ color: INK_QUIET, letterSpacing: '0.18em' }}
               >
                 Legend
               </span>
-              <ProvenancePill kind="MANAGED" /> AWS managed primitive.{' '}
-              <ProvenancePill kind="OWNED" /> Postgres is the source of truth.{' '}
-              <ProvenancePill kind="BOTH" /> Managed primitive paired with your own state.{' '}
-              <ProvenancePill kind="TEACHING" /> Postgres used to demystify a managed primitive.
+              <span className="inline-flex items-center gap-1.5">
+                <ProvenancePill kind="MANAGED" />
+                <span>AWS managed primitive.</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <ProvenancePill kind="OWNED" />
+                <span>Postgres is source of truth.</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <ProvenancePill kind="BOTH" />
+                <span>Managed primitive + your data.</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <ProvenancePill kind="TEACHING" />
+                <span>Postgres demonstrating a primitive.</span>
+              </span>
             </div>
+
             <button
               type="button"
               onClick={() => setDetailPanel('obs')}

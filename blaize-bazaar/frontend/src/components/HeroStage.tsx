@@ -480,7 +480,7 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
             hidden handles the outer edge but not sibling overlap. */}
         <div
           data-testid="hero-stage-image-panel"
-          className="relative aspect-[4/3] md:aspect-[21/9] overflow-hidden"
+          className="relative aspect-[4/3] md:aspect-[2/1] overflow-hidden"
         >
           {/* Mobile-only dark glass breadcrumb top-left (Req 1.3.10) */}
           <div
@@ -513,6 +513,7 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
             style={{
               opacity: imageOpacity,
               transition: 'opacity 250ms ease-out',
+              objectPosition: 'center 40%',
             }}
           />
 

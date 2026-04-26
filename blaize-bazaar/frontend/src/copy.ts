@@ -54,7 +54,7 @@ export const SEARCH_PILL_PLACEHOLDER =
 export const HERO_HEADLINE = {
   EYEBROW: "Summer Edit \u00b7 No. 06",
   TITLE_TOP: "Search,", // copy-allow: search-as-verb
-  TITLE_BOTTOM: "re:Imagined.",
+  TITLE_BOTTOM: "re:Engineered.",
   SUBHEADLINE: "Tell Blaize what you're looking for. Watch the pieces find you.",
 } as const;
 

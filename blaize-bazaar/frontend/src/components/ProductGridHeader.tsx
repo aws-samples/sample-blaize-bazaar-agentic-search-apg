@@ -50,7 +50,7 @@ export default function ProductGridHeader() {
               margin: 0,
               color: INK,
               fontSize: '2.5rem',
-              fontWeight: 300,
+              fontWeight: 400,
               letterSpacing: '-0.01em',
             }}
           >
