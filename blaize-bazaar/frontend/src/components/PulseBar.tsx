@@ -53,12 +53,12 @@ const SOURCE_COLORS: Record<SourceTag, { dot: string; tooltip: string }> = {
   stub: {
     dot: '#b45309',
     tooltip:
-      "Placeholder — wires up when Week 5 ships tool_audit writes. Visible so you can see the scaffolding.",
+      'Placeholder — lights up once tool_audit writes are wired. Visible so you can see the scaffolding.',
   },
   partial: {
     dot: '#6b4a35',
     tooltip:
-      'Partially live — reflects real numbers but resets on process restart. Persistence lands Week 5.',
+      'Partially live — reflects real numbers but resets on process restart. Persistence is in progress.',
   },
 }
 

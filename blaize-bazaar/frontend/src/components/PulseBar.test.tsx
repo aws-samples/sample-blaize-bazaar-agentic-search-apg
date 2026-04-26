@@ -27,7 +27,7 @@ const METRICS_FIXTURE = {
       id: 'agent_activity',
       label: 'Agent activity',
       primary: '— grounded picks',
-      secondary: 'lights up Week 5',
+      secondary: 'lights up once tool_audit writes land',
       source: 'stub' as const,
     },
     {

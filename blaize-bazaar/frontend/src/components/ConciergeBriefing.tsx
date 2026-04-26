@@ -284,7 +284,9 @@ function Chip({
   onProductChip?: (productId: string) => void
 }) {
   const style = CHIP_STYLES[chip.source]
-  const title = chip.meaning ?? (chip.source === 'stub' ? 'Lights up Week 5' : undefined)
+  const title =
+    chip.meaning ??
+    (chip.source === 'stub' ? 'Lights up when tool_audit writes land' : undefined)
   const clickable = chip.kind === 'product' && !!chip.product_id && !!onProductChip
 
   const content = (
@@ -300,7 +302,7 @@ function Chip({
       {chip.source === 'stub' && (
         <span
           aria-label="placeholder — lights up later"
-          title="Placeholder — lights up when Week 5 ships tool_audit."
+          title="Placeholder — lights up when tool_audit writes are wired."
           className="w-1 h-1 rounded-full"
           style={{ background: style.fg }}
         />

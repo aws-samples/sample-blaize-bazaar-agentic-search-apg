@@ -357,7 +357,7 @@ async def pulse() -> PulseResponse:
             id="agent_activity",
             label="Agent activity",
             primary="— grounded picks",
-            secondary="lights up Week 5 (tool_audit)",
+            secondary="lights up once tool_audit writes land",
             source="stub",
         ),
         PulseMetric(
