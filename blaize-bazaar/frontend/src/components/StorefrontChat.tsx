@@ -270,6 +270,49 @@ function toolLabel(
   return { label: cleaned.charAt(0).toUpperCase() + cleaned.slice(1) }
 }
 
+/**
+ * skillDisplayName — fallback for routing events that arrive before
+ * the full skill registry is fetched. The backend emits the lowercase
+ * canonical name in ``loaded_skills`` (e.g. ``style-advisor``); for
+ * the storefront we want the reader-friendly form (``style advisor``).
+ *
+ * The ``display_name`` field in SKILL.md frontmatter is the source of
+ * truth, but the SSE event only carries the canonical name. We map
+ * the two shipping skills here; unknown skills fall through to
+ * hyphen-split which is still readable.
+ */
+const SKILL_DISPLAY_NAMES: Record<string, string> = {
+  'style-advisor': 'style advisor',
+  'gift-concierge': 'gift concierge',
+}
+
+function skillDisplayName(canonicalName: string): string {
+  return (
+    SKILL_DISPLAY_NAMES[canonicalName] ?? canonicalName.replace(/-/g, ' ')
+  )
+}
+
+/**
+ * formatAttribution — compose the "Drawing from..." line.
+ *
+ *   0 skills: empty string (caller must not render anything)
+ *   1 skill:  "Drawing from the style advisor"
+ *   2 skills: "Drawing from the style advisor and the gift concierge"
+ *   3+:       "Drawing from the X, the Y, and the Z"
+ *
+ * Oxford comma for 3+ per storefront copy style. Never shown when the
+ * list is empty — the storefront treats "no skills active" as invisible.
+ */
+function formatAttribution(loadedSkills: string[]): string {
+  const names = loadedSkills.map(skillDisplayName)
+  if (names.length === 0) return ''
+  if (names.length === 1) return `Drawing from the ${names[0]}`
+  if (names.length === 2)
+    return `Drawing from the ${names[0]} and the ${names[1]}`
+  const head = names.slice(0, -1).map((n) => `the ${n}`).join(', ')
+  return `Drawing from ${head}, and the ${names[names.length - 1]}`
+}
+
 function AgentMessage({
   message,
   addToCart,
@@ -306,6 +349,17 @@ function AgentMessage({
         <span className="ec-b-mini">B</span>
         Blaize
       </div>
+
+      {/* Skill attribution — renders only when the router loaded one or
+          more skills for this turn. Matches the italic burgundy eyebrow
+          register used elsewhere in the editorial chat; intentionally
+          minimal (a whisper, not a badge). */}
+      {message.skillRouting &&
+        message.skillRouting.loaded_skills.length > 0 && (
+          <div className="ec-msg-attribution">
+            {formatAttribution(message.skillRouting.loaded_skills)}
+          </div>
+        )}
 
       {/* Thinking state — inline dots when no reasoning yet */}
       {isThinking && !hasReasoning && (

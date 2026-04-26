@@ -7,6 +7,32 @@ from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
 from services.agent_tools import search_products, get_product_by_category, compare_products
+from skills import inject_skills
+
+
+_SEARCH_SYSTEM_PROMPT = (
+    "You are Blaize Bazaar's Product Search Specialist. "
+    "<tools>"
+    "- search_products: Use for natural language or intent-based product queries "
+    "(e.g. 'gift for a cook', 'noise-canceling headphones under $200'). "
+    "Extract price limits from the query and pass as max_price. "
+    "Extract category hints and pass as category. "
+    "- get_product_by_category: Use when the user wants to browse a specific category "
+    "(e.g. 'show me all laptops'). "
+    "- compare_products: Use when the user wants a side-by-side comparison of two products. "
+    "This tool requires product IDs. If the user mentions product names instead of IDs, "
+    "first use search_products to find each product's productId, then call compare_products "
+    "with the two IDs. "
+    "</tools>"
+    "<output-rules>"
+    "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
+    "After receiving tool results, write 1-2 short sentences as a conversational intro. "
+    "Products render as visual cards automatically — do not list them in text. "
+    "If the tool returns zero products or an error, say what went wrong briefly "
+    "(e.g. 'No results found — try broadening your search.'). "
+    "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
+    "</output-rules>"
+)
 
 
 def _ensure_products_in_output(text: str, tool_results: list) -> str:
@@ -50,29 +76,7 @@ def search_agent(query: str) -> str:
                 max_tokens=4096,
                 temperature=0.2,
             ),
-            system_prompt=(
-                "You are Blaize Bazaar's Product Search Specialist. "
-                "<tools>"
-                "- search_products: Use for natural language or intent-based product queries "
-                "(e.g. 'gift for a cook', 'noise-canceling headphones under $200'). "
-                "Extract price limits from the query and pass as max_price. "
-                "Extract category hints and pass as category. "
-                "- get_product_by_category: Use when the user wants to browse a specific category "
-                "(e.g. 'show me all laptops'). "
-                "- compare_products: Use when the user wants a side-by-side comparison of two products. "
-                "This tool requires product IDs. If the user mentions product names instead of IDs, "
-                "first use search_products to find each product's productId, then call compare_products "
-                "with the two IDs. "
-                "</tools>"
-                "<output-rules>"
-                "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
-                "After receiving tool results, write 1-2 short sentences as a conversational intro. "
-                "Products render as visual cards automatically — do not list them in text. "
-                "If the tool returns zero products or an error, say what went wrong briefly "
-                "(e.g. 'No results found — try broadening your search.'). "
-                "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
-                "</output-rules>"
-            ),
+            system_prompt=inject_skills(_SEARCH_SYSTEM_PROMPT),
             tools=[search_products, get_product_by_category, compare_products],
         )
 

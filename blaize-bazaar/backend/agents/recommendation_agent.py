@@ -13,6 +13,7 @@ from services.agent_tools import (
     compare_products,
     get_product_by_category,
 )
+from skills import inject_skills
 from storefront_copy import RECOMMENDATION_SYSTEM_PROMPT
 
 
@@ -55,13 +56,17 @@ def product_recommendation_agent(query: str) -> str:
         tool_results = []
 
         # === CHALLENGE 3: START ===
+        # inject_skills() reads the current turn's loaded skills from the
+        # ContextVar set by chat.chat_stream(). When zero skills are loaded
+        # (the common case), this is a no-op and returns the base prompt
+        # unchanged. Agent-agnostic — see backend/skills/context.py.
         agent = Agent(
             model=BedrockModel(
                 model_id=settings.BEDROCK_CHAT_MODEL,
                 max_tokens=4096,
                 temperature=0.2,
             ),
-            system_prompt=RECOMMENDATION_SYSTEM_PROMPT,
+            system_prompt=inject_skills(RECOMMENDATION_SYSTEM_PROMPT),
             tools=[
                 search_products,
                 get_trending_products,

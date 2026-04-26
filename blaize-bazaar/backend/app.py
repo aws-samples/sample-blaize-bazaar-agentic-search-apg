@@ -916,6 +916,35 @@ async def personalized_search(
 # WORKSHOP MODULE STATUS ENDPOINT
 # ============================================================================
 
+@app.get("/api/atelier/skills")
+async def list_skills():
+    """
+    List all skills in the registry for the Atelier Architecture tab.
+
+    Returns shape that matches the frontend's expectations — name,
+    description, version, display_name, token_estimate, and the full
+    markdown body so the "Open SKILL.md →" link can render it inline
+    without a second request.
+    """
+    from skills import get_registry
+    registry = get_registry()
+    return {
+        "skills": [
+            {
+                "name": s.name,
+                "display_name": s.display_name_resolved,
+                "description": s.description,
+                "version": s.version,
+                "token_estimate": s.token_estimate,
+                "body": s.body,
+                "path": s.path,
+            }
+            for s in registry.get_all()
+        ],
+        "count": len(registry),
+    }
+
+
 @app.get("/api/atelier/status")
 async def get_workshop_status():
     """Detect which workshop modules have been completed by inspecting stub source code."""

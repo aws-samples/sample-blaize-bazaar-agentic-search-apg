@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Atelier · Tool Registry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,500&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream-1: #faf3e8; --cream-2: #f4ead6; --cream-3: #ede0c4; --cream-elev: #fffaf0;
+  --ink-1: #1f1410; --ink-3: rgba(31,20,16,0.66); --ink-4: rgba(31,20,16,0.42); --ink-5: rgba(31,20,16,0.22);
+  --rule-1: rgba(31,20,16,0.10); --rule-2: rgba(31,20,16,0.18);
+  --red-1: #a8423a; --red-soft: rgba(168,66,58,0.12); --green-1: #6b8c5e;
+  --serif: 'Fraunces', 'Times New Roman', Georgia, serif;
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--cream-2); color: var(--ink-1); font-family: var(--sans); min-height: 100vh; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+.page { max-width: 1320px; margin: 0 auto; padding: 48px 40px 80px; }
+
+.crumb { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 22px; display: flex; align-items: center; gap: 10px; }
+.crumb .sep { color: var(--ink-5); }
+.crumb .here { color: var(--red-1); }
+
+.page-title { font-family: var(--serif); font-weight: 400; font-size: 56px; line-height: 1; letter-spacing: -0.02em; margin-bottom: 16px; }
+.page-title em { font-style: italic; }
+.page-sub { font-family: var(--serif); font-style: italic; font-weight: 300; font-size: 18px; line-height: 1.55; color: var(--ink-3); max-width: 760px; margin-bottom: 14px; }
+.page-meta { font-family: var(--sans); font-size: 12px; color: var(--ink-4); display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.page-meta .label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--red-1); margin-right: 6px; font-weight: 500; }
+
+.section-eyebrow { font-family: var(--sans); font-size: 10px; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--red-1); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.section-eyebrow::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--red-1); }
+.section-title { font-family: var(--serif); font-weight: 400; font-size: 32px; letter-spacing: -0.015em; margin-bottom: 6px; }
+.section-title em { font-style: italic; }
+.section-desc { font-family: var(--serif); font-style: italic; font-weight: 300; font-size: 15px; line-height: 1.55; color: var(--ink-3); margin-bottom: 24px; max-width: 720px; }
+
+/* Bipartite section */
+.bp-section { margin-top: 40px; margin-bottom: 48px; background: var(--cream-1); border: 1px solid var(--rule-1); border-radius: 14px; padding: 32px 36px; position: relative; }
+.bp-section::before { content: ''; position: absolute; top: -1px; left: 36px; width: 28px; height: 1px; background: var(--red-1); }
+
+.bp-canvas { margin-top: 28px; background: var(--cream-elev); border: 1px solid var(--rule-1); border-radius: 12px; padding: 24px; }
+.bp-canvas-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+.bp-canvas-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-4); font-weight: 500; }
+.bp-canvas-meta { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
+.bp-canvas-meta .num { color: var(--red-1); font-weight: 500; }
+
+.bp-svg { width: 100%; height: auto; }
+
+/* Legend */
+.bp-legend { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--rule-1); display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 700px) { .bp-legend { grid-template-columns: 1fr; } }
+.legend-item { display: flex; align-items: center; gap: 10px; font-family: var(--sans); font-size: 12.5px; color: var(--ink-3); }
+.legend-item em { font-family: var(--serif); font-style: italic; color: var(--ink-1); }
+.legend-line { width: 32px; height: 2px; flex-shrink: 0; }
+.legend-line.solid { background: var(--red-1); }
+.legend-line.dashed { background: repeating-linear-gradient(90deg, var(--red-1) 0 4px, transparent 4px 8px); }
+.legend-line.gated { background: repeating-linear-gradient(90deg, var(--ink-1) 0 6px, transparent 6px 12px); height: 3px; }
+
+/* Tool detail rows */
+.tool-detail-section { margin-bottom: 48px; }
+.td-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+
+.td-row { background: var(--cream-1); border: 1px solid var(--rule-1); border-radius: 10px; overflow: hidden; }
+.td-head { padding: 14px 18px; display: grid; grid-template-columns: 280px 1fr auto; gap: 18px; align-items: center; border-bottom: 1px solid var(--rule-1); }
+@media (max-width: 800px) { .td-head { grid-template-columns: 1fr; } }
+.td-tool-id { display: flex; flex-direction: column; gap: 3px; }
+.td-tool-name { font-family: var(--mono); font-size: 13px; color: var(--ink-1); font-weight: 500; }
+.td-tool-headline { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--ink-3); }
+.td-access { font-family: var(--sans); font-size: 12.5px; color: var(--ink-3); }
+.td-access em { font-family: var(--serif); font-style: italic; color: var(--ink-1); }
+.td-access strong { font-weight: 600; color: var(--ink-1); }
+.td-access .gated-tag { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-1); padding: 2px 7px; border: 1px solid var(--ink-1); border-radius: 3px; font-weight: 500; margin-left: 8px; }
+.td-stats { display: flex; gap: 14px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); align-items: center; }
+.td-stats .item .num { color: var(--ink-1); font-weight: 500; }
+
+.td-grants { padding: 10px 18px; background: var(--cream-2); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-family: var(--sans); font-size: 11.5px; color: var(--ink-3); }
+.td-grants .grants-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-4); margin-right: 6px; font-weight: 500; }
+.agent-chip { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 3px; background: var(--cream-1); border: 1px solid var(--rule-2); color: var(--ink-1); }
+.agent-chip.gated { background: var(--ink-1); color: var(--cream-1); border-color: var(--ink-1); }
+
+/* Cheat sheet */
+.cheat-section { margin-bottom: 32px; }
+.cheat-eyebrow { font-family: var(--sans); font-size: 10px; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--red-1); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.cheat-eyebrow::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--red-1); }
+.cheat-title { font-family: var(--serif); font-weight: 400; font-size: 28px; letter-spacing: -0.015em; margin-bottom: 22px; }
+.cheat-title em { font-style: italic; }
+.cheat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: 1px solid var(--rule-1); border-radius: 10px; overflow: hidden; }
+@media (max-width: 900px) { .cheat-grid { grid-template-columns: 1fr; } }
+.cheat-cell { padding: 22px 24px; background: var(--cream-1); border-right: 1px solid var(--rule-1); }
+.cheat-cell:last-child { border-right: none; }
+@media (max-width: 900px) { .cheat-cell { border-right: none; border-bottom: 1px solid var(--rule-1); } .cheat-cell:last-child { border-bottom: none; } }
+.cheat-key { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em; color: var(--red-1); font-weight: 500; margin-bottom: 8px; }
+.cheat-name { font-family: var(--serif); font-style: italic; font-size: 22px; font-weight: 400; letter-spacing: -0.005em; margin-bottom: 6px; }
+.cheat-q { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--ink-3); margin-bottom: 14px; }
+.cheat-list { list-style: none; display: flex; flex-direction: column; gap: 6px; font-family: var(--sans); font-size: 12.5px; line-height: 1.5; color: var(--ink-1); }
+.cheat-list li { display: flex; align-items: baseline; gap: 8px; }
+.cheat-list li::before { content: '·'; color: var(--red-1); font-weight: 600; flex-shrink: 0; }
+.cheat-list em { font-family: var(--serif); font-style: italic; color: var(--ink-3); }
+
+/* Live strip */
+.live-strip { background: var(--cream-1); border: 1px solid var(--rule-1); border-radius: 12px; overflow: hidden; }
+.live-strip-head { padding: 14px 22px; background: var(--ink-1); color: var(--cream-1); display: flex; justify-content: space-between; align-items: center; }
+.live-strip-eyebrow { font-family: var(--sans); font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(250,243,232,0.65); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.live-strip-eyebrow .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--red-1); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 0.5; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
+.live-strip-meta { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em; color: rgba(250,243,232,0.65); }
+.live-strip-title { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 17px; color: var(--cream-1); margin-top: 4px; }
+
+.live-rows { padding: 0; }
+.access-row { display: grid; grid-template-columns: 100px 160px 1fr 80px; gap: 16px; padding: 12px 22px; border-bottom: 1px solid var(--rule-1); align-items: baseline; }
+.access-row:last-child { border-bottom: none; }
+.access-row.head { background: var(--cream-2); font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-4); font-weight: 500; }
+.access-row .stamp { font-family: var(--mono); font-size: 11px; color: var(--ink-3); }
+.access-row .agent-cell { font-family: var(--mono); font-size: 11.5px; color: var(--ink-1); font-weight: 500; }
+.access-row .tool-cell { font-family: var(--serif); font-style: italic; font-size: 13.5px; color: var(--ink-1); }
+.access-row .tool-cell .name { font-family: var(--mono); font-size: 11.5px; color: var(--ink-1); font-weight: 500; font-style: normal; }
+.access-row .ms { font-family: var(--mono); font-size: 11px; color: var(--red-1); text-align: right; font-weight: 500; }
+
+.footer-note { margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--rule-1); font-family: var(--serif); font-style: italic; font-size: 13.5px; color: var(--ink-3); text-align: center; }
+.footer-note .dot { margin: 0 10px; vertical-align: middle; color: var(--red-1); }
+.footer-note .mono { font-family: var(--mono); font-size: 11.5px; font-style: normal; color: var(--ink-1); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="crumb">
+    <span>Atelier</span><span class="sep">·</span>
+    <span>Architecture</span><span class="sep">·</span>
+    <span class="here">Tool Registry</span>
+  </div>
+
+  <h1 class="page-title">The registry, <em>who can call what.</em></h1>
+  <p class="page-sub">Five agents, seven tools, twenty-three grants. Not every agent gets every tool — the registry binds tools to agents based on what each role <em>should</em> do, not what it <em>could</em>. Where MCP shows the plumbing, this shows the access map.</p>
+  <div class="page-meta">
+    <div><span class="label">Agents</span> 5</div>
+    <div><span class="label">Tools</span> 7</div>
+    <div><span class="label">Grants</span> 23 of 35 possible</div>
+    <div><span class="label">Gated</span> 1 · restock</div>
+  </div>
+
+  <!-- Bipartite graph -->
+  <section class="bp-section">
+    <div class="section-eyebrow">The grants</div>
+    <h2 class="section-title">Five agents, <em>seven tools.</em></h2>
+    <p class="section-desc">A bipartite graph: agents on the left, tools on the right, lines for each grant. Solid lines are everyday access; dashed are read-only or low-frequency; the espresso-dashed line is the one gated grant — <em>support → restock</em> requires explicit user confirmation in chat.</p>
+
+    <div class="bp-canvas">
+      <div class="bp-canvas-head">
+        <div class="bp-canvas-label">Access graph · all routes</div>
+        <div class="bp-canvas-meta"><span class="num">23</span> grants · <span class="num">12</span> blocked · <span class="num">1</span> gated</div>
+      </div>
+
+      <svg class="bp-svg" viewBox="0 0 720 460" xmlns="http://www.w3.org/2000/svg">
+        <!-- Column labels -->
+        <text x="120" y="30" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="2.5" fill="#a8423a" font-weight="500">AGENTS · 5</text>
+        <text x="600" y="30" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="2.5" fill="#a8423a" font-weight="500">TOOLS · 7</text>
+
+        <!-- AGENTS (left column) -->
+        <!-- orchestrator -->
+        <rect x="40" y="55" width="160" height="44" rx="8" fill="#1f1410" />
+        <text x="120" y="76" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="15" fill="#faf3e8">orchestrator</text>
+        <text x="120" y="91" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="rgba(250,243,232,0.55)" letter-spacing="1">HAIKU · ROUTES</text>
+
+        <!-- search -->
+        <rect x="40" y="125" width="160" height="44" rx="8" fill="#faf3e8" stroke="rgba(31,20,16,0.30)" stroke-width="1" />
+        <text x="120" y="146" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="15" fill="#1f1410">search</text>
+        <text x="120" y="161" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="rgba(31,20,16,0.42)" letter-spacing="1">OPUS · 2 GRANTS</text>
+
+        <!-- recommendation -->
+        <rect x="40" y="195" width="160" height="44" rx="8" fill="#faf3e8" stroke="rgba(31,20,16,0.30)" stroke-width="1" />
+        <text x="120" y="216" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="15" fill="#1f1410">recommendation</text>
+        <text x="120" y="231" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="rgba(31,20,16,0.42)" letter-spacing="1">OPUS · 5 GRANTS</text>
+
+        <!-- pricing -->
+        <rect x="40" y="265" width="160" height="44" rx="8" fill="#faf3e8" stroke="rgba(31,20,16,0.30)" stroke-width="1" />
+        <text x="120" y="286" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="15" fill="#1f1410">pricing</text>
+        <text x="120" y="301" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="rgba(31,20,16,0.42)" letter-spacing="1">OPUS · 3 GRANTS</text>
+
+        <!-- support -->
+        <rect x="40" y="335" width="160" height="44" rx="8" fill="#faf3e8" stroke="rgba(31,20,16,0.30)" stroke-width="1" />
+        <text x="120" y="356" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="15" fill="#1f1410">support</text>
+        <text x="120" y="371" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="rgba(31,20,16,0.42)" letter-spacing="1">OPUS · 6 GRANTS</text>
+
+        <!-- TOOLS (right column) -->
+        <!-- search_products -->
+        <rect x="520" y="60" width="160" height="34" rx="6" fill="#faf3e8" stroke="rgba(31,20,16,0.30)" stroke-width="1" />
+        <text x="600" y="82" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#1f1410" font-weight="500">search_products</text>
+
+        <!-- get_recommendations -->
+        <rect x="520" y="110" width="160" height="34" rx="6" fill="#faf3e8" stroke="rgba(31,20,16,0.30)" stroke-width="1" />
+        <text x="600" y="132" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#1f1410" font-weight="500">get_recommendations</text>
+
+        <!-- get_trending_products -->
+        <rect x="520" y="160" width="160" height="34" rx="6" fill="#faf3e8" stroke="rgba(31,20,16,0.30)" stroke-width="1" />
+        <text x="600" y="182" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#1f1410" font-weight="500">get_trending_products</text>
+
+        <!-- check_inventory -->
+        <rect x="520" y="210" width="160" height="34" rx="6" fill="#faf3e8" stroke="rgba(31,20,16,0.30)" stroke-width="1" />
+        <text x="600" y="232" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#1f1410" font-weight="500">check_inventory</text>
+
+        <!-- get_pricing -->
+        <rect x="520" y="260" width="160" height="34" rx="6" fill="#faf3e8" stroke="rgba(31,20,16,0.30)" stroke-width="1" />
+        <text x="600" y="282" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#1f1410" font-weight="500">get_pricing</text>
+
+        <!-- get_order_history -->
+        <rect x="520" y="310" width="160" height="34" rx="6" fill="#faf3e8" stroke="rgba(31,20,16,0.30)" stroke-width="1" />
+        <text x="600" y="332" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#1f1410" font-weight="500">get_order_history</text>
+
+        <!-- restock (gated) -->
+        <rect x="520" y="360" width="160" height="34" rx="6" fill="#1f1410" stroke="#1f1410" stroke-width="1" />
+        <text x="600" y="382" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#faf3e8" font-weight="500">restock</text>
+        <text x="690" y="377" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="8" fill="rgba(250,243,232,0.7)" letter-spacing="1.5">GATED</text>
+
+        <!-- EDGES -->
+        <!-- search → search_products, get_trending_products -->
+        <line x1="200" y1="147" x2="520" y2="77" stroke="rgba(168,66,58,0.7)" stroke-width="1.5" />
+        <line x1="200" y1="147" x2="520" y2="177" stroke="rgba(168,66,58,0.7)" stroke-width="1.5" />
+
+        <!-- recommendation → search_products, get_recommendations, check_inventory, get_trending_products, get_order_history -->
+        <line x1="200" y1="217" x2="520" y2="77" stroke="rgba(168,66,58,0.7)" stroke-width="1.5" />
+        <line x1="200" y1="217" x2="520" y2="127" stroke="rgba(168,66,58,0.7)" stroke-width="1.5" />
+        <line x1="200" y1="217" x2="520" y2="177" stroke="rgba(168,66,58,0.7)" stroke-width="1.5" />
+        <line x1="200" y1="217" x2="520" y2="227" stroke="rgba(168,66,58,0.7)" stroke-width="1.5" />
+        <line x1="200" y1="217" x2="520" y2="327" stroke="rgba(168,66,58,0.4)" stroke-width="1.5" stroke-dasharray="4,4" />
+
+        <!-- pricing → search_products, get_pricing, check_inventory -->
+        <line x1="200" y1="287" x2="520" y2="77" stroke="rgba(168,66,58,0.4)" stroke-width="1.5" stroke-dasharray="4,4" />
+        <line x1="200" y1="287" x2="520" y2="277" stroke="rgba(168,66,58,0.7)" stroke-width="1.5" />
+        <line x1="200" y1="287" x2="520" y2="227" stroke="rgba(168,66,58,0.7)" stroke-width="1.5" />
+
+        <!-- support → search_products, check_inventory, get_pricing, get_order_history, get_recommendations, restock(gated) -->
+        <line x1="200" y1="357" x2="520" y2="77" stroke="rgba(168,66,58,0.4)" stroke-width="1.5" stroke-dasharray="4,4" />
+        <line x1="200" y1="357" x2="520" y2="127" stroke="rgba(168,66,58,0.4)" stroke-width="1.5" stroke-dasharray="4,4" />
+        <line x1="200" y1="357" x2="520" y2="227" stroke="rgba(168,66,58,0.7)" stroke-width="1.5" />
+        <line x1="200" y1="357" x2="520" y2="277" stroke="rgba(168,66,58,0.7)" stroke-width="1.5" />
+        <line x1="200" y1="357" x2="520" y2="327" stroke="rgba(168,66,58,0.7)" stroke-width="1.5" />
+        <line x1="200" y1="357" x2="520" y2="377" stroke="#1f1410" stroke-width="2.5" stroke-dasharray="6,6" />
+
+        <!-- caption -->
+        <text x="360" y="445" text-anchor="middle" font-family="Fraunces, serif" font-style="italic" font-size="13" fill="rgba(31,20,16,0.66)">Orchestrator routes; specialists invoke. The dispatcher itself holds no tool grants.</text>
+      </svg>
+
+      <div class="bp-legend">
+        <div class="legend-item"><span class="legend-line solid"></span><span><em>Everyday access</em> · used regularly in normal flows</span></div>
+        <div class="legend-item"><span class="legend-line dashed"></span><span><em>Read-only / rare</em> · accessed for context, not action</span></div>
+        <div class="legend-item"><span class="legend-line gated"></span><span><em>Gated</em> · requires explicit user confirmation</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tool detail rows -->
+  <section class="tool-detail-section">
+    <div class="section-eyebrow">The catalog</div>
+    <h2 class="section-title">Each tool, <em>and who has it.</em></h2>
+    <p class="section-desc">Seven rows. The middle column tells you which agents hold the grant — the right column tells you the cost. Bind a tool to fewer agents than you think; access creep is real.</p>
+
+    <div class="td-grid">
+
+      <div class="td-row">
+        <div class="td-head">
+          <div class="td-tool-id">
+            <span class="td-tool-name">search_products</span>
+            <span class="td-tool-headline"><em>Semantic search across the catalog.</em></span>
+          </div>
+          <div class="td-access">Held by <strong>4 agents</strong> — every specialist except the orchestrator.</div>
+          <div class="td-stats">
+            <span class="item">~<span class="num">280</span>ms p50</span>
+            <span class="item"><span class="num">9</span> calls last 12 turns</span>
+          </div>
+        </div>
+        <div class="td-grants">
+          <span class="grants-label">Granted to</span>
+          <span class="agent-chip">search</span>
+          <span class="agent-chip">recommendation</span>
+          <span class="agent-chip">pricing</span>
+          <span class="agent-chip">support</span>
+        </div>
+      </div>
+
+      <div class="td-row">
+        <div class="td-head">
+          <div class="td-tool-id">
+            <span class="td-tool-name">get_recommendations</span>
+            <span class="td-tool-headline"><em>Curated picks based on context.</em></span>
+          </div>
+          <div class="td-access">Held by <strong>2 agents</strong> — the recommendation specialist owns this; support reads for context.</div>
+          <div class="td-stats">
+            <span class="item">~<span class="num">410</span>ms p50</span>
+            <span class="item"><span class="num">4</span> calls last 12 turns</span>
+          </div>
+        </div>
+        <div class="td-grants">
+          <span class="grants-label">Granted to</span>
+          <span class="agent-chip">recommendation</span>
+          <span class="agent-chip">support</span>
+        </div>
+      </div>
+
+      <div class="td-row">
+        <div class="td-head">
+          <div class="td-tool-id">
+            <span class="td-tool-name">get_trending_products</span>
+            <span class="td-tool-headline"><em>What's moving on the floor.</em></span>
+          </div>
+          <div class="td-access">Held by <strong>2 agents</strong> — both forward-looking surfaces.</div>
+          <div class="td-stats">
+            <span class="item">~<span class="num">95</span>ms p50</span>
+            <span class="item"><span class="num">1</span> call last 12 turns</span>
+          </div>
+        </div>
+        <div class="td-grants">
+          <span class="grants-label">Granted to</span>
+          <span class="agent-chip">search</span>
+          <span class="agent-chip">recommendation</span>
+        </div>
+      </div>
+
+      <div class="td-row">
+        <div class="td-head">
+          <div class="td-tool-id">
+            <span class="td-tool-name">check_inventory</span>
+            <span class="td-tool-headline"><em>Stock by SKU and size.</em></span>
+          </div>
+          <div class="td-access">Held by <strong>3 agents</strong> — anywhere a piece might be quoted as available.</div>
+          <div class="td-stats">
+            <span class="item">~<span class="num">42</span>ms p50</span>
+            <span class="item"><span class="num">11</span> calls last 12 turns</span>
+          </div>
+        </div>
+        <div class="td-grants">
+          <span class="grants-label">Granted to</span>
+          <span class="agent-chip">recommendation</span>
+          <span class="agent-chip">pricing</span>
+          <span class="agent-chip">support</span>
+        </div>
+      </div>
+
+      <div class="td-row">
+        <div class="td-head">
+          <div class="td-tool-id">
+            <span class="td-tool-name">get_pricing</span>
+            <span class="td-tool-headline"><em>Current price + active offers.</em></span>
+          </div>
+          <div class="td-access">Held by <strong>2 agents</strong> — pricing owns it; support reads for refund context.</div>
+          <div class="td-stats">
+            <span class="item">~<span class="num">28</span>ms p50</span>
+            <span class="item"><span class="num">2</span> calls last 12 turns</span>
+          </div>
+        </div>
+        <div class="td-grants">
+          <span class="grants-label">Granted to</span>
+          <span class="agent-chip">pricing</span>
+          <span class="agent-chip">support</span>
+        </div>
+      </div>
+
+      <div class="td-row">
+        <div class="td-head">
+          <div class="td-tool-id">
+            <span class="td-tool-name">get_order_history</span>
+            <span class="td-tool-headline"><em>Past orders for the customer.</em></span>
+          </div>
+          <div class="td-access">Held by <strong>2 agents</strong> — support owns it; recommendation has read for personalization.</div>
+          <div class="td-stats">
+            <span class="item">~<span class="num">22</span>ms p50</span>
+            <span class="item"><span class="num">3</span> calls last 12 turns</span>
+          </div>
+        </div>
+        <div class="td-grants">
+          <span class="grants-label">Granted to</span>
+          <span class="agent-chip">recommendation</span>
+          <span class="agent-chip">support</span>
+        </div>
+      </div>
+
+      <div class="td-row">
+        <div class="td-head">
+          <div class="td-tool-id">
+            <span class="td-tool-name">restock</span>
+            <span class="td-tool-headline"><em>Place a restock signal.</em></span>
+          </div>
+          <div class="td-access">Held by <strong>1 agent</strong> only — and gated.<span class="gated-tag">Gated</span></div>
+          <div class="td-stats">
+            <span class="item">~<span class="num">120</span>ms p50</span>
+            <span class="item"><span class="num">0</span> calls last 12 turns</span>
+          </div>
+        </div>
+        <div class="td-grants">
+          <span class="grants-label">Granted to</span>
+          <span class="agent-chip gated">support · gated</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Cheat sheet -->
+  <section class="cheat-section">
+    <div class="cheat-eyebrow">When in doubt</div>
+    <h2 class="cheat-title">Three rules <em>about granting.</em></h2>
+
+    <div class="cheat-grid">
+      <div class="cheat-cell">
+        <div class="cheat-key">DEFAULT DENY</div>
+        <div class="cheat-name">Bind less, not more.</div>
+        <div class="cheat-q"><em>"Should this agent really need it?"</em></div>
+        <ul class="cheat-list">
+          <li>New tool starts with zero grants</li>
+          <li>Each grant is added explicitly, with a reason</li>
+          <li>Access creep happens silently — review periodically</li>
+          <li><em>Capability sprawl is a risk surface, not a feature</em></li>
+        </ul>
+      </div>
+      <div class="cheat-cell">
+        <div class="cheat-key">ROLE FIT</div>
+        <div class="cheat-name">Tool to job, not to convenience.</div>
+        <div class="cheat-q"><em>"Is this central to the agent's role?"</em></div>
+        <ul class="cheat-list">
+          <li>Recommendation owns <em>get_recommendations</em></li>
+          <li>Support reads it; doesn't own it</li>
+          <li>Multiple owners is a smell — pick one</li>
+          <li><em>If two agents fight over a tool, you have a missing agent</em></li>
+        </ul>
+      </div>
+      <div class="cheat-cell">
+        <div class="cheat-key">GATE SIDE EFFECTS</div>
+        <div class="cheat-name">Writes need confirmation.</div>
+        <div class="cheat-q"><em>"Does this change something durable?"</em></div>
+        <ul class="cheat-list">
+          <li>Reads are free; writes are gated</li>
+          <li><em>restock</em> requires explicit user "yes"</li>
+          <li>The gate is at the tool, not the agent</li>
+          <li><em>Don't trust an agent to ask the question on your behalf</em></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live strip -->
+  <section>
+    <div class="live-strip">
+      <div class="live-strip-head">
+        <div>
+          <div class="live-strip-eyebrow"><span class="pulse"></span> Live · this turn</div>
+          <div class="live-strip-title">Grants exercised, <em>this turn.</em></div>
+        </div>
+        <div class="live-strip-meta">turn 04 · 11:47:32 · 3 invocations · 0 denials</div>
+      </div>
+      <div class="live-rows">
+        <div class="access-row head">
+          <span>Stamp</span>
+          <span>Agent</span>
+          <span>Tool</span>
+          <span style="text-align: right;">Elapsed</span>
+        </div>
+        <div class="access-row">
+          <span class="stamp">11:47:32.118</span>
+          <span class="agent-cell">recommendation</span>
+          <span class="tool-cell">→ <span class="name">search_products</span></span>
+          <span class="ms">274ms</span>
+        </div>
+        <div class="access-row">
+          <span class="stamp">11:47:32.402</span>
+          <span class="agent-cell">recommendation</span>
+          <span class="tool-cell">→ <span class="name">check_inventory</span></span>
+          <span class="ms">38ms</span>
+        </div>
+        <div class="access-row">
+          <span class="stamp">11:47:32.448</span>
+          <span class="agent-cell">recommendation</span>
+          <span class="tool-cell">→ <span class="name">get_recommendations</span></span>
+          <span class="ms">412ms</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="footer-note">
+    Five agents, seven tools, twenty-three grants. <span class="dot">·</span> The grant is the contract; the tool is the surface; the agent is the role. <span class="dot">·</span> Default deny, gate side effects, review periodically.
+  </p>
+
+</div>
+</body>
+</html>

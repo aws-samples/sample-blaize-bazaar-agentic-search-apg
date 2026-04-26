@@ -489,3 +489,22 @@
   color: var(--ink-4);
   letter-spacing: 0.05em;
 }
+
+/* ---- Skill attribution line ----
+ *
+ * Renders only when the router loaded one or more skills for the turn.
+ * Sits between the "· Blaize" eyebrow and the reply body. Italic
+ * burgundy serif, small-caps tracking — a whisper of context, never a
+ * badge. When no skills load the line is absent entirely (empty state
+ * is invisible per the storefront design contract).
+ */
+.ec-msg-attribution {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--red-1);
+  letter-spacing: 0.04em;
+  margin-top: 6px;
+  margin-bottom: -2px;
+}

@@ -1317,6 +1317,37 @@ CURRENT REQUEST: {message}"""
         full_message = f"[USE: {intent_hint}] {full_message}"
         logger.info(f"🎯 Intent: {intent} → {intent_hint}")
 
+        # --- Skill router ---------------------------------------------------
+        # One LLM call to Haiku 4.5 decides which skills to inject into the
+        # reasoning specialists' system prompts for this turn. Runs after
+        # intent classification so the triage fast-path (greetings, meta,
+        # thanks) short-circuits before reaching here.
+        #
+        # The ``skill_routing`` SSE event must fire BEFORE any text tokens
+        # so the storefront UI can render the attribution line above the
+        # reply. Storefront reads ``loaded_skills``; Atelier renders the
+        # full decision in its live activation log.
+        skill_decision = None
+        try:
+            from skills import SkillRouter, get_registry
+            router = SkillRouter(get_registry())
+            skill_decision = router.route(message)
+            logger.info(
+                "🪡 Skills | loaded=%s | elapsed=%dms",
+                skill_decision.loaded_skills or "none",
+                skill_decision.elapsed_ms,
+            )
+        except Exception as exc:
+            logger.warning("Skill router unavailable: %s", exc)
+
+        # Emit the routing event immediately — before any text — so the
+        # storefront attribution line is mounted above the streamed reply.
+        if skill_decision is not None:
+            yield {
+                "type": "skill_routing",
+                "routing": skill_decision.model_dump(),
+            }
+
         # --- Queue-based streaming bridge ---
         loop = asyncio.get_running_loop()
         queue: asyncio.Queue = asyncio.Queue()
@@ -1400,6 +1431,38 @@ CURRENT REQUEST: {message}"""
         )
         orchestrator_result = [None]
         orchestrator_error = [None]
+
+        # Set the ContextVar with the loaded skills before invoking the
+        # orchestrator. asyncio.to_thread (Python 3.9+) propagates context
+        # into the worker thread via copy_context(), so specialist agent
+        # factories reading via get_loaded_skills() will see these values.
+        # The token is reset via a finally block on the orchestrator wait
+        # (not here) so a mid-stream error can't leak skills to the next
+        # request.
+        skill_token = None
+        if skill_decision is not None and skill_decision.loaded_skills:
+            try:
+                from skills import set_loaded_skills, get_registry
+                loaded_objs = [
+                    get_registry().get(name)
+                    for name in skill_decision.loaded_skills
+                ]
+                loaded_objs = [s for s in loaded_objs if s is not None]
+                if loaded_objs:
+                    skill_token = set_loaded_skills(loaded_objs)
+            except Exception as exc:
+                logger.warning("Skill ContextVar set failed: %s", exc)
+
+        def _reset_skill_token() -> None:
+            """Idempotent reset — safe to call on any exit path."""
+            nonlocal skill_token
+            if skill_token is not None:
+                try:
+                    from skills import loaded_skills_var
+                    loaded_skills_var.reset(skill_token)
+                except Exception as exc:
+                    logger.warning("Skill ContextVar reset failed: %s", exc)
+                skill_token = None
 
         async def run_orchestrator():
             try:
@@ -1492,7 +1555,13 @@ CURRENT REQUEST: {message}"""
                 yield {"type": "content_delta", "delta": event["_text"]}
 
         # --- Await orchestrator completion ---
-        await task
+        try:
+            await task
+        finally:
+            # Reset ContextVar as soon as the orchestrator is done —
+            # specialists can no longer run, so nothing else needs the
+            # loaded skills from here on. Safe on exception paths too.
+            _reset_skill_token()
 
         if orchestrator_error[0]:
             yield {"type": "error", "error": str(orchestrator_error[0])}

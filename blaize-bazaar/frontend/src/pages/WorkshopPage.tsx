@@ -45,6 +45,8 @@ import GatewayToolsPanel from '../components/GatewayToolsPanel'
 import ObservabilityPanel from '../components/ObservabilityPanel'
 import RuntimeStatusPanel from '../components/RuntimeStatusPanel'
 import IndexPerformanceDashboard from '../components/IndexPerformanceDashboard'
+import SkillsPanel from '../components/SkillsPanel'
+import type { SkillRouting } from '../hooks/useAgentChat'
 import AtelierHero from '../components/AtelierHero'
 import AtelierSpotlight from '../components/AtelierSpotlight'
 import AtmosphereStrip from '../components/AtmosphereStrip'
@@ -63,7 +65,7 @@ type Tab = 'telemetry' | 'architecture' | 'performance'
 
 type Provenance = 'MANAGED' | 'OWNED' | 'BOTH' | 'TEACHING'
 
-type DetailPanelKey = 'memory' | 'gateway' | 'obs' | 'runtime' | 'bench' | null
+type DetailPanelKey = 'memory' | 'gateway' | 'obs' | 'runtime' | 'bench' | 'skills' | null
 
 // Provenance → (pill colors, icon, icon tint). The icon + its tint
 // double-encode the provenance so a card reads correctly even if
@@ -120,6 +122,20 @@ const ARCH_CARDS: ArchCard[] = [
     ],
   },
   {
+    id: 'skills',
+    title: 'Skills',
+    provenance: 'OWNED',
+    description:
+      "Folders of domain expertise loaded into the agent's context only when the conversation needs them. Skills don't pick products and they don't fetch data — they shape how the agent thinks and writes about a topic. Blaize ships two: style-advisor and gift-concierge.",
+    cta: { kind: 'action', label: 'Open skills architecture', open: 'skills' },
+    featured: true,
+    chapter: 'ii.',
+    signature: [
+      'router.route(user_message) -> [skill]',
+      'inject_skills(base_prompt, loaded_skills)',
+    ],
+  },
+  {
     id: 'mcp',
     title: 'MCP',
     provenance: 'MANAGED',
@@ -127,7 +143,7 @@ const ARCH_CARDS: ArchCard[] = [
       "Model Context Protocol is an open standard; AgentCore Gateway is AWS's managed MCP server. This workshop uses Gateway as the MCP primitive — you could run your own MCP server, but Gateway handles tool publishing, auth, and observability for you.",
     cta: { kind: 'none' },
     featured: false,
-    chapter: 'ii.',
+    chapter: 'iii.',
     signature: ['gateway.list_tools() -> MCPToolset'],
   },
   {
@@ -138,7 +154,7 @@ const ARCH_CARDS: ArchCard[] = [
       'Session state lives in Postgres — orders, customers, approvals, tool audit. Aurora is the source of truth for domain facts the agents grant themselves access to; AgentCore never tries to own this side of the system.',
     cta: { kind: 'action', label: 'Open pgvector benchmarks', open: 'bench' },
     featured: false,
-    chapter: 'iii.',
+    chapter: 'iv.',
     signature: ['SELECT * FROM orders WHERE customer_id = $1 ...'],
   },
   {
@@ -149,7 +165,7 @@ const ARCH_CARDS: ArchCard[] = [
       "AgentCore Gateway publishes tools via MCP to any runtime; the teaching deconstruction shows the same discovery primitive implemented over Aurora pgvector. Both columns rank the same 9 tools — you see what Gateway abstracts for you.",
     cta: { kind: 'action', label: 'Open tool registry', open: 'gateway' },
     featured: true,
-    chapter: 'iv.',
+    chapter: 'v.',
     signature: [
       'SELECT name, 1 - (description_emb <=> $1) AS score',
       'FROM tools ORDER BY description_emb <=> $1 LIMIT 4;',
@@ -163,7 +179,7 @@ const ARCH_CARDS: ArchCard[] = [
       "AgentCore Runtime runs the orchestrator inside a managed microVM — scale, cold-start, and VPC wiring are AWS's problem. Flip USE_AGENTCORE_RUNTIME on to promote the same code from local FastAPI to the hosted runtime without touching the orchestrator.",
     cta: { kind: 'action', label: 'Open runtime status', open: 'runtime' },
     featured: false,
-    chapter: 'v.',
+    chapter: 'vi.',
     signature: ['runtime.invoke(orchestrator, payload)'],
   },
   {
@@ -174,7 +190,7 @@ const ARCH_CARDS: ArchCard[] = [
       "AgentCore Evaluations scores every turn using LLM-as-a-Judge over the OpenTelemetry traces Strands already emits. Built-in evaluators measure helpfulness, tool accuracy, and consistency; custom evaluators let you add domain-specific checks. Online mode scores live traffic; on-demand mode runs a dataset batch for regression.",
     cta: { kind: 'none' },
     featured: false,
-    chapter: 'vi.',
+    chapter: 'vii.',
     signature: ['evaluations.run(traces) -> {helpfulness, tool_accuracy, consistency}'],
   },
   {
@@ -185,7 +201,7 @@ const ARCH_CARDS: ArchCard[] = [
       'Bedrock guardrails on the LLM; Aurora-backed approvals queue for sensitive tool calls (place_order, restock). One card because all three fire on the same turn boundary — the answer leaves only if it survives every check.',
     cta: { kind: 'in-progress' },
     featured: true,
-    chapter: 'vii.',
+    chapter: 'viii.',
     signature: ['guardrails.check(claims) ; approvals.queue(tool_call)'],
   },
 ]
@@ -417,6 +433,45 @@ function WorkshopContent() {
   const { openModal } = useUI()
   const [events, setEvents] = useState<WorkshopEvent[]>([])
   const [detailPanel, setDetailPanel] = useState<DetailPanelKey>(null)
+  // Most recent skill routing decision — persisted by useAgentChat in
+  // localStorage so the Atelier Skills panel can read the decision
+  // captured by the storefront chat on another route. Polls every
+  // 2 seconds while the panel is open; cheap and avoids cross-route
+  // context plumbing.
+  const [skillRouting, setSkillRouting] = useState<SkillRouting | null>(() => {
+    try {
+      const stored = localStorage.getItem('blaize-skill-routing-latest')
+      return stored ? (JSON.parse(stored) as SkillRouting) : null
+    } catch {
+      return null
+    }
+  })
+
+  useEffect(() => {
+    if (detailPanel !== 'skills') return
+    const tick = () => {
+      try {
+        const stored = localStorage.getItem('blaize-skill-routing-latest')
+        if (!stored) return
+        const parsed = JSON.parse(stored) as SkillRouting
+        setSkillRouting((prev) => {
+          if (
+            prev &&
+            prev.user_message === parsed.user_message &&
+            prev.elapsed_ms === parsed.elapsed_ms
+          ) {
+            return prev
+          }
+          return parsed
+        })
+      } catch {
+        // ignore
+      }
+    }
+    tick()
+    const t = setInterval(tick, 2000)
+    return () => clearInterval(t)
+  }, [detailPanel])
   // Lifted from WorkshopChat so the right-rail band can render the
   // live session id + customer label inline alongside its
   // "ATELIER / TELEMETRY" kicker.
@@ -502,6 +557,10 @@ function WorkshopContent() {
     if (detailPanel === 'gateway') return <GatewayToolsPanel onClose={closeDetail} />
     if (detailPanel === 'obs') return <ObservabilityPanel onClose={closeDetail} />
     if (detailPanel === 'runtime') return <RuntimeStatusPanel onClose={closeDetail} />
+    if (detailPanel === 'skills')
+      return (
+        <SkillsDetailWrapper onClose={closeDetail} routing={skillRouting} />
+      )
     return null
   }
 
@@ -1008,6 +1067,56 @@ function WorkshopContent() {
         onClose={closeDetail}
       />
     </div>
+  )
+}
+
+/* ---- Skills detail wrapper ----
+ *
+ * Matches the other detail-panel component shape (a container with a
+ * header + close button) so it slots into the same resizable panel
+ * slot as MemoryDashboard, GatewayToolsPanel, etc. The SkillsPanel
+ * body is the canonical architecture view from Phase 4.
+ */
+function SkillsDetailWrapper({
+  onClose,
+  routing,
+}: {
+  onClose: () => void
+  routing: SkillRouting | null
+}) {
+  return (
+    <section
+      data-testid="skills-detail"
+      className="h-full flex flex-col overflow-hidden rounded-2xl"
+      style={{ background: 'var(--cream-2)', border: `1px solid ${INK_QUIET}30` }}
+    >
+      <div
+        className="flex items-center justify-between px-5 py-[14px] text-[10px] uppercase font-medium flex-shrink-0"
+        style={{
+          background: 'var(--cream-1)',
+          borderBottom: `1px solid ${INK_QUIET}20`,
+          color: 'var(--red-1)',
+          letterSpacing: '0.16em',
+        }}
+      >
+        <span>Atelier · Architecture · Skills</span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="close skills panel"
+          className="px-2 py-1 rounded-md transition-colors hover:bg-[rgba(0,0,0,0.04)] normal-case tracking-normal text-[11px]"
+          style={{ color: 'var(--ink-3)', letterSpacing: 0 }}
+        >
+          Close ✕
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-6 py-6">
+        <SkillsPanel
+          routing={routing}
+          userMessage={routing?.user_message ?? null}
+        />
+      </div>
+    </section>
   )
 }
 

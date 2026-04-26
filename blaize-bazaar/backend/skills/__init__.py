@@ -25,6 +25,7 @@ from .context import (
     get_loaded_skills,
     inject_skills,
 )
+from .router import SkillRouter
 
 __all__ = [
     "Skill",
@@ -36,4 +37,5 @@ __all__ = [
     "set_loaded_skills",
     "get_loaded_skills",
     "inject_skills",
+    "SkillRouter",
 ]

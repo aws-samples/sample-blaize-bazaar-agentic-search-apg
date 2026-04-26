@@ -91,7 +91,7 @@ realignment and still reference the legacy shape (`product_description`,
       block selects legacy columns. Mirror the shape in
       [`hybrid_search.py`](../blaize-bazaar/backend/services/hybrid_search.py)
       (`name, brand, color, description, category, rating, reviews,
-      badge, tags, "imgUrl"`; filter `"imgUrl" IS NOT NULL`). Reachable
+    badge, tags, "imgUrl"`; filter `"imgUrl" IS NOT NULL`). Reachable
       only via `/api/performance/*`; pick up before the HNSW demo is
       used in a session.
 - [ ] `models/product.py` — legacy `Product` Pydantic class declares
@@ -102,7 +102,7 @@ realignment and still reference the legacy shape (`product_description`,
       when `ProductWithScore` next needs real product data.
 - [ ] Legacy normalizer fallbacks — `services/chat.py` and
       `routes/search.py` still do `p.get("name") or
-      p.get("product_description", "")` style guards for old fixtures
+    p.get("product_description", "")` style guards for old fixtures
       and cached agent output. Defensive and harmless today; rip out
       after a workshop cycle rotates fully through the new schema.
 
@@ -132,3 +132,37 @@ realignment and still reference the legacy shape (`product_description`,
   files. Fix by copying the DUSK constant (or determining the
   module3-intended value) and syncing.
 - Discovered during Bug 1-4 pre-telemetry fixes.
+
+## Skills · catalog-grounded demo queries (Apr 2026)
+
+Ten canonical test queries that exercise the skill router against the
+live 92-product catalog. Used by `skills/router_test.py` and pulled
+from the catalog inspector run on 2026-04-26. Keep in sync with
+`skills/router_test.py::TEST_CASES` when either the catalog or the
+skill descriptions change.
+
+- [ ] Turn these into a lab exercise — participants see the query,
+      predict which skills load, then run the router and compare
+- [ ] Add an 11th "mixed" case when a third skill ships (e.g.
+      fit-sizing against a "wide-leg trousers, I'm between sizes" query)
+- [ ] Record router latency per case across 10 runs for the
+      `SKILLS_NOTES.md` performance section
+
+**Style-advisor (single-skill):**
+
+- `a linen piece for slow Sundays` → Linen Camp Shirt ($118 Sage)
+- `something to wear for warm evenings out` → Sundress in Washed Linen ($148), Silk Slip Midi ($228)
+- `what goes with the Cashmere-Blend Cardigan?` → Cashmere-Blend Cardigan ($158 Forest)
+
+**Style-advisor + Gift-concierge (two-skill):**
+
+- `gift for my mom's 60th, around $200` → Silk Slip Midi ($228), Knit Column Dress ($198), Bucket Bag ($168)
+- `something my partner would love for our anniversary` → Silk Scarf ($148), Brass Cuff ($88), evening dresses
+- `housewarming gift under $80` → Soy Candle ($58), Linen Napkin Set ($68), Ceramic Vase ($78)
+
+**Negatives (no skills load):**
+
+- `is the Italian Linen Camp Shirt in stock?` → inventory query
+- `how do I return an order?` → policy query
+- `what's the Linen Duvet Cover made of?` → spec-sheet factual query (tests the negative bullet)
+- `what's the cheapest bag you have?` → pricing / filter query

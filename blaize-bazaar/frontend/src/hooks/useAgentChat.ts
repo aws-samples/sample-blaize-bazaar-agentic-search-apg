@@ -56,6 +56,22 @@ export interface AgentExecution {
   reason?: string
 }
 
+/**
+ * Skill routing decision for one turn.
+ *
+ * Shape mirrors the backend ``RouterDecision`` Pydantic model. Emitted
+ * once per turn via the ``skill_routing`` SSE event, before any text
+ * tokens, so the storefront can render the attribution line above the
+ * reply and the Atelier can render the live activation log.
+ */
+export interface SkillRouting {
+  loaded_skills: string[]
+  considered: Array<{ name: string; reason: string }>
+  elapsed_ms: number
+  raw_response?: string
+  user_message: string
+}
+
 export type AgentBadge =
   | 'search'
   | 'pricing'
@@ -73,6 +89,11 @@ export interface AgentChatMessage {
   agent?: AgentBadge
   agentStatus?: 'thinking' | 'streaming' | 'complete'
   agentExecution?: AgentExecution
+  /** Skill routing decision for this turn. Set when the backend emits
+   * a ``skill_routing`` SSE event. Storefront uses ``loaded_skills`` to
+   * render the italic burgundy attribution line; Atelier renders the
+   * full decision in its live activation log. */
+  skillRouting?: SkillRouting
 }
 
 export interface UseAgentChatOptions {
@@ -317,7 +338,33 @@ export function useAgentChat(
           text,
           historyBeforeUser,
           data => {
-            if (data.type === 'agent_step') {
+            if (data.type === 'skill_routing') {
+              // Routing event arrives BEFORE any text tokens per the
+              // backend ordering contract. Attach to the current
+              // assistant message (the thinking placeholder) so both
+              // the storefront attribution line and the Atelier
+              // activation log can read it.
+              setMessages(prev => {
+                const updated = [...prev]
+                const lastMsg = updated[updated.length - 1]
+                if (lastMsg && lastMsg.role === 'assistant') {
+                  lastMsg.skillRouting = data.routing
+                }
+                return [...updated]
+              })
+              // Persist the most recent routing to localStorage so the
+              // Atelier Skills panel (which lives on a different route)
+              // can render the live activation log without plumbing
+              // cross-route state through a context provider.
+              try {
+                localStorage.setItem(
+                  'blaize-skill-routing-latest',
+                  JSON.stringify(data.routing),
+                )
+              } catch {
+                // quota or private mode — silent
+              }
+            } else if (data.type === 'agent_step') {
               if (!showInstrumentation) return
               setMessages(prev => {
                 const updated = [...prev]

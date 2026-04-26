@@ -8,6 +8,7 @@ from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
 from services.agent_tools import get_return_policy, search_products
+from skills import inject_skills
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,11 @@ def customer_support_agent(query: str) -> str:
             "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
             "</output-rules>"
         )
+
+        # Inject per-turn skills into the composed base prompt. No-op when
+        # the router loaded zero skills (the common case for transactional
+        # support queries like return policy lookups).
+        system_prompt = inject_skills(system_prompt)
 
         if exa_client:
             with exa_client:

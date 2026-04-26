@@ -1,7 +1,7 @@
 ---
 name: style-advisor
 display_name: Style advisor
-description: Boutique editorial voice for describing products, fit, fabric, and styling. Activates when the agent is recommending or describing pieces to a customer. Do not load for inventory, pricing, or transactional queries.
+description: Boutique editorial voice for describing products, fit, fabric, and styling. Activates when the agent is recommending or describing pieces to a customer — including gift recommendations, which always require the agent to describe the pieces it surfaces. Do NOT load for inventory, pricing, or transactional queries. Do NOT load for factual queries about materials, dimensions, care, or other spec-sheet details — those are answered from the product page, not by an advisor.
 version: 1.0
 ---
 

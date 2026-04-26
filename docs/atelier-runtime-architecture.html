@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Atelier · Runtime Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,500&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cream-1: #faf3e8; --cream-2: #f4ead6; --cream-3: #ede0c4; --cream-elev: #fffaf0;
+  --ink-1: #1f1410; --ink-3: rgba(31,20,16,0.66); --ink-4: rgba(31,20,16,0.42); --ink-5: rgba(31,20,16,0.22);
+  --rule-1: rgba(31,20,16,0.10); --rule-2: rgba(31,20,16,0.18);
+  --red-1: #a8423a; --red-soft: rgba(168,66,58,0.12); --green-1: #6b8c5e;
+  --serif: 'Fraunces', 'Times New Roman', Georgia, serif;
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--cream-2); color: var(--ink-1); font-family: var(--sans); min-height: 100vh; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+.page { max-width: 1320px; margin: 0 auto; padding: 48px 40px 80px; }
+
+.crumb { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 22px; display: flex; align-items: center; gap: 10px; }
+.crumb .sep { color: var(--ink-5); }
+.crumb .here { color: var(--red-1); }
+
+.page-title { font-family: var(--serif); font-weight: 400; font-size: 56px; line-height: 1; letter-spacing: -0.02em; margin-bottom: 16px; }
+.page-title em { font-style: italic; }
+.page-sub { font-family: var(--serif); font-style: italic; font-weight: 300; font-size: 18px; line-height: 1.55; color: var(--ink-3); max-width: 720px; margin-bottom: 14px; }
+.page-meta { font-family: var(--sans); font-size: 12px; color: var(--ink-4); display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.page-meta .label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--red-1); margin-right: 6px; font-weight: 500; }
+
+.section-eyebrow { font-family: var(--sans); font-size: 10px; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--red-1); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.section-eyebrow::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--red-1); }
+.section-title { font-family: var(--serif); font-weight: 400; font-size: 32px; letter-spacing: -0.015em; margin-bottom: 6px; }
+.section-title em { font-style: italic; }
+.section-desc { font-family: var(--serif); font-style: italic; font-weight: 300; font-size: 15px; line-height: 1.55; color: var(--ink-3); margin-bottom: 24px; max-width: 720px; }
+
+/* Layer overview */
+.layers-section { margin-top: 40px; margin-bottom: 48px; }
+.layers-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 1000px) { .layers-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .layers-grid { grid-template-columns: 1fr; } }
+.layer-card { background: var(--cream-1); border: 1px solid var(--rule-1); border-radius: 10px; padding: 16px 18px; position: relative; }
+.layer-card::before { content: ''; position: absolute; top: -1px; left: 18px; width: 20px; height: 1px; background: var(--red-1); }
+.layer-num { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em; color: var(--red-1); font-weight: 500; margin-bottom: 6px; }
+.layer-name { font-family: var(--serif); font-weight: 400; font-size: 18px; letter-spacing: -0.005em; margin-bottom: 4px; }
+.layer-name em { font-style: italic; }
+.layer-budget { font-family: var(--mono); font-size: 11px; color: var(--ink-1); margin-bottom: 6px; }
+.layer-budget .num { color: var(--red-1); font-weight: 500; }
+.layer-text { font-family: var(--sans); font-size: 11.5px; line-height: 1.5; color: var(--ink-3); }
+
+/* Sequence */
+.seq-section { margin-bottom: 48px; }
+.seq-frame { background: var(--cream-1); border: 1px solid var(--rule-1); border-radius: 14px; padding: 32px 36px; position: relative; }
+.seq-frame::before { content: ''; position: absolute; top: -1px; left: 36px; width: 28px; height: 1px; background: var(--red-1); }
+
+.seq-list { margin-top: 28px; display: flex; flex-direction: column; }
+.seq-step { display: grid; grid-template-columns: 64px 1fr 280px; gap: 24px; align-items: start; padding: 22px 0; border-top: 1px solid var(--rule-1); position: relative; }
+.seq-step:first-child { border-top: 1px solid var(--rule-2); }
+@media (max-width: 900px) { .seq-step { grid-template-columns: 48px 1fr; } .seq-step .seq-handoff { grid-column: 2; margin-top: 12px; } }
+
+.seq-num-wrap { position: relative; }
+.seq-num { font-family: var(--serif); font-style: italic; font-weight: 300; font-size: 36px; color: var(--red-1); line-height: 1; letter-spacing: -0.01em; }
+.seq-num-line { position: absolute; left: 8px; top: 44px; bottom: -22px; width: 1px; background: var(--rule-1); }
+.seq-step:last-child .seq-num-line { display: none; }
+
+.seq-content { padding-top: 6px; }
+.seq-step-name-row { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+.seq-step-name { font-family: var(--serif); font-weight: 400; font-size: 22px; letter-spacing: -0.005em; }
+.seq-step-name em { font-style: italic; }
+.seq-step-layer { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--red-1); padding: 3px 8px; border: 1px solid rgba(168,66,58,0.4); border-radius: 3px; font-weight: 500; }
+.seq-step-layer.fastpath { color: var(--green-1); border-color: rgba(107,140,94,0.4); }
+.seq-step-layer.async { color: var(--ink-4); border-color: var(--rule-2); }
+.seq-step-desc { font-family: var(--sans); font-size: 13.5px; line-height: 1.6; color: var(--ink-3); margin-bottom: 6px; }
+.seq-step-desc em { font-family: var(--serif); font-style: italic; color: var(--ink-1); font-size: 14px; }
+.seq-step-desc .mono { font-family: var(--mono); font-size: 12px; background: var(--cream-2); padding: 1px 6px; border-radius: 3px; color: var(--ink-1); }
+
+.seq-handoff {
+  background: var(--cream-2);
+  border: 1px solid var(--rule-1);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.6;
+  color: var(--ink-1);
+}
+.seq-handoff .label { font-family: var(--sans); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-4); display: block; margin-bottom: 4px; font-weight: 500; }
+.seq-handoff .arrow-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+.seq-handoff .arrow-row .arrow { color: var(--red-1); font-weight: 600; flex-shrink: 0; width: 12px; }
+.seq-handoff .arrow-row .key { color: var(--red-1); }
+.seq-handoff .ms { color: var(--green-1); margin-left: auto; font-weight: 500; }
+.seq-handoff .comment { color: var(--ink-4); font-style: italic; }
+
+/* Cheat sheet */
+.cheat-section { margin-bottom: 32px; }
+.cheat-eyebrow { font-family: var(--sans); font-size: 10px; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase; color: var(--red-1); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.cheat-eyebrow::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--red-1); }
+.cheat-title { font-family: var(--serif); font-weight: 400; font-size: 28px; letter-spacing: -0.015em; margin-bottom: 22px; }
+.cheat-title em { font-style: italic; }
+.cheat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: 1px solid var(--rule-1); border-radius: 10px; overflow: hidden; }
+@media (max-width: 900px) { .cheat-grid { grid-template-columns: 1fr; } }
+.cheat-cell { padding: 22px 24px; background: var(--cream-1); border-right: 1px solid var(--rule-1); }
+.cheat-cell:last-child { border-right: none; }
+@media (max-width: 900px) { .cheat-cell { border-right: none; border-bottom: 1px solid var(--rule-1); } .cheat-cell:last-child { border-bottom: none; } }
+.cheat-key { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em; color: var(--red-1); font-weight: 500; margin-bottom: 8px; }
+.cheat-name { font-family: var(--serif); font-style: italic; font-size: 22px; font-weight: 400; letter-spacing: -0.005em; margin-bottom: 6px; }
+.cheat-q { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--ink-3); margin-bottom: 14px; }
+.cheat-list { list-style: none; display: flex; flex-direction: column; gap: 6px; font-family: var(--sans); font-size: 12.5px; line-height: 1.5; color: var(--ink-1); }
+.cheat-list li { display: flex; align-items: baseline; gap: 8px; }
+.cheat-list li::before { content: '·'; color: var(--red-1); font-weight: 600; flex-shrink: 0; }
+.cheat-list em { font-family: var(--serif); font-style: italic; color: var(--ink-3); }
+
+/* Live strip */
+.live-strip { background: var(--cream-1); border: 1px solid var(--rule-1); border-radius: 12px; overflow: hidden; }
+.live-strip-head { padding: 14px 22px; background: var(--ink-1); color: var(--cream-1); display: flex; justify-content: space-between; align-items: center; }
+.live-strip-eyebrow { font-family: var(--sans); font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: rgba(250,243,232,0.65); font-weight: 500; display: flex; align-items: center; gap: 8px; }
+.live-strip-eyebrow .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--red-1); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 0.5; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
+.live-strip-meta { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.05em; color: rgba(250,243,232,0.65); }
+.live-strip-title { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 17px; color: var(--cream-1); margin-top: 4px; }
+
+.timeline-body { padding: 22px; }
+.timeline-bar { display: flex; height: 38px; border-radius: 6px; overflow: hidden; border: 1px solid var(--rule-2); }
+.tb-seg { padding: 0 12px; display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10.5px; color: var(--cream-1); border-right: 1px solid rgba(250,243,232,0.15); position: relative; }
+.tb-seg:last-child { border-right: none; }
+.tb-seg .name { font-weight: 500; letter-spacing: 0.05em; }
+.tb-seg .ms { font-size: 9.5px; opacity: 0.65; }
+.tb-seg.s1 { background: #5a3528; flex: 0 0 5%; }
+.tb-seg.s2 { background: #6b3d2a; flex: 0 0 4%; }
+.tb-seg.s3 { background: #8a4030; flex: 0 0 8%; }
+.tb-seg.s4 { background: #a8423a; flex: 1; }
+.tb-seg.s5 { background: #b85a4a; flex: 0 0 28%; }
+.tb-seg.s6 { background: #1f1410; flex: 0 0 4%; }
+
+.timeline-legend { margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-family: var(--sans); font-size: 11.5px; }
+@media (max-width: 700px) { .timeline-legend { grid-template-columns: 1fr 1fr; } }
+.tl-item { display: flex; align-items: baseline; gap: 8px; padding: 4px 0; }
+.tl-item .swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.tl-item .name-cell { color: var(--ink-1); flex: 1; }
+.tl-item .name-cell em { font-family: var(--serif); font-style: italic; color: var(--ink-3); }
+.tl-item .ms-cell { color: var(--ink-4); font-family: var(--mono); font-size: 10px; }
+
+.timeline-totals { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--rule-1); display: flex; justify-content: space-between; align-items: baseline; font-family: var(--sans); font-size: 12.5px; color: var(--ink-3); }
+.timeline-totals .total-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--red-1); font-weight: 500; }
+.timeline-totals .total-value { font-family: var(--serif); font-style: italic; font-weight: 500; font-size: 16px; color: var(--ink-1); }
+
+.footer-note { margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--rule-1); font-family: var(--serif); font-style: italic; font-size: 13.5px; color: var(--ink-3); text-align: center; }
+.footer-note .dot { margin: 0 10px; vertical-align: middle; color: var(--red-1); }
+.footer-note .mono { font-family: var(--mono); font-size: 11.5px; font-style: normal; color: var(--ink-1); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="crumb">
+    <span>Atelier</span><span class="sep">·</span>
+    <span>Architecture</span><span class="sep">·</span>
+    <span class="here">Runtime</span>
+  </div>
+
+  <h1 class="page-title">Runtime, <em>one turn end-to-end.</em></h1>
+  <p class="page-sub">A single message arrives at the API. By the time the user sees a streamed reply, it has touched seven layers — fastpath, intent, router, orchestrator, specialist, tools, stream. Each layer has a budget. Each layer has a job.</p>
+  <div class="page-meta">
+    <div><span class="label">Layers</span> 7</div>
+    <div><span class="label">This turn</span> 2,847ms total</div>
+    <div><span class="label">First token</span> 412ms</div>
+    <div><span class="label">Streamed</span> 2,435ms</div>
+  </div>
+
+  <!-- Layer overview -->
+  <section class="layers-section">
+    <div class="section-eyebrow">The layers</div>
+    <h2 class="section-title">Seven surfaces, <em>one message.</em></h2>
+    <p class="section-desc">A trimmed view of where time goes. Most layers are fast — the budget is dominated by the specialist agent and the streaming reply. Knowing the budgets is half of knowing where to optimize.</p>
+
+    <div class="layers-grid">
+      <div class="layer-card">
+        <div class="layer-num">i.</div>
+        <div class="layer-name"><em>Fastpath.</em></div>
+        <div class="layer-budget"><span class="num">~20</span>ms</div>
+        <div class="layer-text">Greetings, thanks, meta — short-circuit before any LLM fires.</div>
+      </div>
+      <div class="layer-card">
+        <div class="layer-num">ii.</div>
+        <div class="layer-name"><em>Intent.</em></div>
+        <div class="layer-budget"><span class="num">~80</span>ms</div>
+        <div class="layer-text">Deterministic classifier. Routes to the right specialist.</div>
+      </div>
+      <div class="layer-card">
+        <div class="layer-num">iii.</div>
+        <div class="layer-name"><em>Skill router.</em></div>
+        <div class="layer-budget"><span class="num">~280</span>ms</div>
+        <div class="layer-text">One Haiku call. Decides which skills to inject.</div>
+      </div>
+      <div class="layer-card">
+        <div class="layer-num">iv.</div>
+        <div class="layer-name"><em>Orchestrator.</em></div>
+        <div class="layer-budget"><span class="num">~420</span>ms</div>
+        <div class="layer-text">Haiku dispatcher. Picks a specialist, hands off.</div>
+      </div>
+      <div class="layer-card">
+        <div class="layer-num">v.</div>
+        <div class="layer-name"><em>Specialist.</em></div>
+        <div class="layer-budget"><span class="num">~1,800</span>ms</div>
+        <div class="layer-text">Opus reasoning + tool calls. Where time mostly goes.</div>
+      </div>
+      <div class="layer-card">
+        <div class="layer-num">vi.</div>
+        <div class="layer-name"><em>Tools.</em></div>
+        <div class="layer-budget"><span class="num">~280</span>ms</div>
+        <div class="layer-text">Aurora reads, embeddings, registry calls.</div>
+      </div>
+      <div class="layer-card">
+        <div class="layer-num">vii.</div>
+        <div class="layer-name"><em>Stream.</em></div>
+        <div class="layer-budget"><span class="num">~80</span>ms</div>
+        <div class="layer-text">SSE close, session_state write, async LTM extract.</div>
+      </div>
+      <div class="layer-card" style="background: var(--ink-1); border-color: var(--ink-1);">
+        <div class="layer-num" style="color: rgba(250,243,232,0.65);">total</div>
+        <div class="layer-name" style="color: var(--cream-1);"><em>One turn.</em></div>
+        <div class="layer-budget" style="color: var(--cream-1);"><span class="num" style="color: var(--cream-1);">~2.8</span>s</div>
+        <div class="layer-text" style="color: rgba(250,243,232,0.65);">First token at <span style="color: var(--cream-1); font-family: var(--mono);">~412ms</span>; rest streams.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sequence -->
+  <section class="seq-section">
+    <div class="seq-frame">
+      <div class="section-eyebrow">The journey</div>
+      <h2 class="section-title">Step by step, <em>handoff by handoff.</em></h2>
+      <p class="section-desc">Each step shows what the layer received and what it passed forward. Following the right column tells you the data shape at every seam — the truth of the runtime is the handoffs, not the implementations.</p>
+
+      <div class="seq-list">
+
+        <div class="seq-step">
+          <div class="seq-num-wrap">
+            <div class="seq-num">i.</div>
+            <div class="seq-num-line"></div>
+          </div>
+          <div class="seq-content">
+            <div class="seq-step-name-row">
+              <h3 class="seq-step-name"><em>Triage fastpath.</em></h3>
+              <span class="seq-step-layer fastpath">deterministic · 20ms</span>
+            </div>
+            <p class="seq-step-desc">The request lands at <span class="mono">POST /api/chat/stream</span>. Before anything LLM fires, a regex pass checks for greetings, thanks, and meta-queries. If matched, a canned reply ships and the turn ends here. <em>No agent invocation.</em></p>
+          </div>
+          <div class="seq-handoff">
+            <span class="label">Handoff</span>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">in:</span> message<span class="comment"> · session</span></span></div>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">out:</span> match? <span class="comment">→ canned</span></span><span class="ms">20ms</span></div>
+          </div>
+        </div>
+
+        <div class="seq-step">
+          <div class="seq-num-wrap">
+            <div class="seq-num">ii.</div>
+            <div class="seq-num-line"></div>
+          </div>
+          <div class="seq-content">
+            <div class="seq-step-name-row">
+              <h3 class="seq-step-name"><em>Intent classification.</em></h3>
+              <span class="seq-step-layer">deterministic · 80ms</span>
+            </div>
+            <p class="seq-step-desc">A small classifier (rules + small embedding) tags the message as <em>recommend</em>, <em>search</em>, <em>support</em>, <em>pricing</em>, or <em>inventory</em>. The tag prepends an <span class="mono">[USE: …]</span> hint so the orchestrator can route deterministically rather than reasoning about routing.</p>
+          </div>
+          <div class="seq-handoff">
+            <span class="label">Handoff</span>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">in:</span> message</span></div>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">out:</span> intent <span class="comment">+ hint</span></span><span class="ms">78ms</span></div>
+          </div>
+        </div>
+
+        <div class="seq-step">
+          <div class="seq-num-wrap">
+            <div class="seq-num">iii.</div>
+            <div class="seq-num-line"></div>
+          </div>
+          <div class="seq-content">
+            <div class="seq-step-name-row">
+              <h3 class="seq-step-name">Skill <em>routing.</em></h3>
+              <span class="seq-step-layer">Haiku · 280ms</span>
+            </div>
+            <p class="seq-step-desc">One short Haiku call against the skill registry's descriptions. Returns a JSON list of skill names to load. The loaded skills are injected into the specialist's system prompt via a <span class="mono">ContextVar</span> — the orchestrator itself doesn't carry skills.</p>
+          </div>
+          <div class="seq-handoff">
+            <span class="label">Handoff</span>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">in:</span> message <span class="comment">· skills.list()</span></span></div>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">out:</span> RouterDecision</span><span class="ms">287ms</span></div>
+          </div>
+        </div>
+
+        <div class="seq-step">
+          <div class="seq-num-wrap">
+            <div class="seq-num">iv.</div>
+            <div class="seq-num-line"></div>
+          </div>
+          <div class="seq-content">
+            <div class="seq-step-name-row">
+              <h3 class="seq-step-name"><em>Orchestrator.</em></h3>
+              <span class="seq-step-layer">Haiku · 420ms</span>
+            </div>
+            <p class="seq-step-desc">The dispatcher. Reads the intent hint, picks one of the five specialists, and hands off. <em>Doesn't reason about the answer</em> — that's the specialist's job. Cheap and fast on purpose.</p>
+          </div>
+          <div class="seq-handoff">
+            <span class="label">Handoff</span>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">in:</span> hint + msg + STM</span></div>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">out:</span> specialist.invoke()</span><span class="ms">418ms</span></div>
+          </div>
+        </div>
+
+        <div class="seq-step">
+          <div class="seq-num-wrap">
+            <div class="seq-num">v.</div>
+            <div class="seq-num-line"></div>
+          </div>
+          <div class="seq-content">
+            <div class="seq-step-name-row">
+              <h3 class="seq-step-name"><em>Specialist agent.</em></h3>
+              <span class="seq-step-layer">Opus · 1,800ms</span>
+            </div>
+            <p class="seq-step-desc">Opus reasoning, with the loaded skills appended to the base system prompt. Reads STM, may pull LTM, decides which tools to fire, composes the streaming reply. <em>Where the budget mostly goes</em> — and where the editorial voice gets shaped.</p>
+          </div>
+          <div class="seq-handoff">
+            <span class="label">Handoff</span>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">in:</span> prompt + skills + ctx</span></div>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">out:</span> SSE token stream</span><span class="ms">~1.8s</span></div>
+          </div>
+        </div>
+
+        <div class="seq-step">
+          <div class="seq-num-wrap">
+            <div class="seq-num">vi.</div>
+            <div class="seq-num-line"></div>
+          </div>
+          <div class="seq-content">
+            <div class="seq-step-name-row">
+              <h3 class="seq-step-name">Tools, <em>through the gateway.</em></h3>
+              <span class="seq-step-layer">parallel · 280ms</span>
+            </div>
+            <p class="seq-step-desc">During step v, the specialist invokes one or more tools — usually <em>search_products</em>, <em>check_inventory</em>, <em>get_recommendations</em>. The Gateway routes calls; results return to the specialist mid-reasoning. Cost is wall-clock parallel with v.</p>
+          </div>
+          <div class="seq-handoff">
+            <span class="label">Handoff</span>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">in:</span> tool name + args</span></div>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">out:</span> typed result</span><span class="ms">42–412ms</span></div>
+          </div>
+        </div>
+
+        <div class="seq-step">
+          <div class="seq-num-wrap">
+            <div class="seq-num">vii.</div>
+            <div class="seq-num-line"></div>
+          </div>
+          <div class="seq-content">
+            <div class="seq-step-name-row">
+              <h3 class="seq-step-name"><em>Stream close, session write.</em></h3>
+              <span class="seq-step-layer">sync · 80ms</span>
+              <span class="seq-step-layer async">async · LTM</span>
+            </div>
+            <p class="seq-step-desc">The SSE stream emits its <span class="mono">complete</span> event. Synchronously: write the new turn back to <span class="mono">session_state</span>. Asynchronously, in a background job: extract durable facts and upsert them into LTM via Aurora pgvector. <em>The next turn starts hot.</em></p>
+          </div>
+          <div class="seq-handoff">
+            <span class="label">Handoff</span>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">sync:</span> session.upsert()</span><span class="ms">8ms</span></div>
+            <div class="arrow-row"><span class="arrow">→</span><span><span class="key">async:</span> ltm.extract()</span><span class="comment">background</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Cheat sheet -->
+  <section class="cheat-section">
+    <div class="cheat-eyebrow">When in doubt</div>
+    <h2 class="cheat-title">Three rules <em>about latency.</em></h2>
+
+    <div class="cheat-grid">
+      <div class="cheat-cell">
+        <div class="cheat-key">FAST FIRST</div>
+        <div class="cheat-name">Cheap layers up front.</div>
+        <div class="cheat-q"><em>"Why classify before reasoning?"</em></div>
+        <ul class="cheat-list">
+          <li>Fastpath catches greetings · ~20ms</li>
+          <li>Intent classifier routes deterministically · ~80ms</li>
+          <li>Each cheap layer that succeeds saves 1.8s of Opus</li>
+          <li><em>Don't make the smart model decide what the small model can</em></li>
+        </ul>
+      </div>
+      <div class="cheat-cell">
+        <div class="cheat-key">PARALLEL</div>
+        <div class="cheat-name">Tools while reasoning.</div>
+        <div class="cheat-q"><em>"Why don't tool calls stack?"</em></div>
+        <ul class="cheat-list">
+          <li>Specialist invokes tools mid-stream</li>
+          <li>Multiple tools fire concurrently when independent</li>
+          <li>Wall-clock cost = max(tool latencies), not sum</li>
+          <li><em>Sequential tool chains are a smell</em></li>
+        </ul>
+      </div>
+      <div class="cheat-cell">
+        <div class="cheat-key">DEFER</div>
+        <div class="cheat-name">Async what can wait.</div>
+        <div class="cheat-q"><em>"What blocks the user vs runs after?"</em></div>
+        <ul class="cheat-list">
+          <li>Reply streaming blocks · everything else doesn't</li>
+          <li>LTM extraction · async</li>
+          <li>Telemetry · async</li>
+          <li><em>Time-to-first-token is the only number the user feels</em></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Live timeline -->
+  <section>
+    <div class="live-strip">
+      <div class="live-strip-head">
+        <div>
+          <div class="live-strip-eyebrow"><span class="pulse"></span> Live · last turn</div>
+          <div class="live-strip-title">The waterfall, <em>this turn.</em></div>
+        </div>
+        <div class="live-strip-meta">turn 04 · 11:47:32 · 2,847ms total · ttft 412ms</div>
+      </div>
+      <div class="timeline-body">
+        <div class="timeline-bar">
+          <div class="tb-seg s1"><span class="name">i</span></div>
+          <div class="tb-seg s2"><span class="name">ii</span></div>
+          <div class="tb-seg s3"><span class="name">iii</span></div>
+          <div class="tb-seg s4"><span class="name">iv</span></div>
+          <div class="tb-seg s5"><span class="name">v · stream</span></div>
+          <div class="tb-seg s6"><span class="name">vii</span></div>
+        </div>
+
+        <div class="timeline-legend">
+          <div class="tl-item"><span class="swatch" style="background: #5a3528;"></span><span class="name-cell"><em>i.</em> Triage</span><span class="ms-cell">12ms</span></div>
+          <div class="tl-item"><span class="swatch" style="background: #6b3d2a;"></span><span class="name-cell"><em>ii.</em> Intent</span><span class="ms-cell">78ms</span></div>
+          <div class="tl-item"><span class="swatch" style="background: #8a4030;"></span><span class="name-cell"><em>iii.</em> Skill router</span><span class="ms-cell">287ms</span></div>
+          <div class="tl-item"><span class="swatch" style="background: #a8423a;"></span><span class="name-cell"><em>iv.</em> Orchestrator</span><span class="ms-cell">418ms</span></div>
+          <div class="tl-item"><span class="swatch" style="background: #b85a4a;"></span><span class="name-cell"><em>v + vi.</em> Specialist + tools</span><span class="ms-cell">2,044ms</span></div>
+          <div class="tl-item"><span class="swatch" style="background: #1f1410;"></span><span class="name-cell"><em>vii.</em> Stream close</span><span class="ms-cell">8ms</span></div>
+        </div>
+
+        <div class="timeline-totals">
+          <div><span class="total-label">First token at</span> <span class="total-value">412ms</span> · stream completed at <span class="total-value">2,847ms</span></div>
+          <div style="font-family: var(--mono); font-size: 11px; color: var(--ink-4);">→ session.upsert ✓ · ltm.extract ⇢</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="footer-note">
+    Seven layers, one turn. <span class="dot">·</span> The right column tells the truth — the handoffs are the runtime. <span class="dot">·</span> Cheap layers protect expensive ones; parallelism beats serial; defer what can wait.
+  </p>
+
+</div>
+</body>
+</html>
