@@ -49,7 +49,7 @@ export default function CustomerCard({
           style={{
             background: INK,
             color: CREAM,
-            fontFamily: "'Instrument Serif', Georgia, serif",
+            fontFamily: "'Iowan Old Style', Georgia, 'Times New Roman', serif",
             fontStyle: 'italic',
           }}
         >

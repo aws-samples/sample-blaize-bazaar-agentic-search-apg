@@ -113,12 +113,17 @@
     font-variant-ligatures: contextual common-ligatures;
   }
 
-  /* /workshop surface — Coffee Roastery font stack scoped to the
-     telemetry route so the storefront's Fraunces + Inter pairing stays
-     unchanged. Applied on WorkshopPage's root via className. Headings
-     with explicit inline ``font-family`` still win (react styles beat
-     cascade) — the inline values inside /workshop components are
-     switched to Instrument Serif to match. */
+  /* /workshop ("Atelier") font stack — scoped to the telemetry route
+     so the storefront's Fraunces + Inter pairing stays unchanged.
+     Applied on WorkshopPage's root via className.
+
+     Display serif is Iowan Old Style (ships with every macOS install,
+     also rendered by iOS's "Charter" when Iowan is missing) with
+     Georgia as the universal fallback on Windows/Linux. This reads
+     more "magazine" — slightly more condensed, higher contrast —
+     than Instrument Serif and requires no web-font load. Italic is
+     applied at the usage site so we can do both roman small-caps
+     kickers and italic display titles with the same stack. */
   .workshop-surface {
     font-family:
       'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
@@ -128,7 +133,7 @@
   .workshop-surface h2,
   .workshop-surface h3,
   .workshop-surface .workshop-display {
-    font-family: 'Instrument Serif', Georgia, serif;
+    font-family: 'Iowan Old Style', Georgia, 'Times New Roman', serif;
     font-weight: 400;
   }
 

@@ -109,7 +109,7 @@ function MetricCard({ id, label, sublabel, value, unit, emptyValue }: MetricCard
         className="text-[26px] leading-[1]"
         style={{
           color: INK,
-          fontFamily: "'Instrument Serif', Georgia, serif",
+          fontFamily: "'Iowan Old Style', Georgia, 'Times New Roman', serif",
           fontStyle: 'italic',
           fontWeight: 400,
         }}

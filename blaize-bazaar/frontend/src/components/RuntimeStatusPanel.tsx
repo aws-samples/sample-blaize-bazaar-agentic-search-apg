@@ -70,7 +70,7 @@ export default function RuntimeStatusPanel({ onClose }: { onClose: () => void })
           <div>
             <h2
               className="text-base font-semibold"
-              style={{ color: INK, fontFamily: "'Instrument Serif', Georgia, serif" }}
+              style={{ color: INK, fontFamily: "'Iowan Old Style', Georgia, 'Times New Roman', serif" }}
             >
               AgentCore Runtime
             </h2>

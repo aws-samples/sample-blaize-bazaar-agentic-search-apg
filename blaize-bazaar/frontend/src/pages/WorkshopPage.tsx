@@ -242,7 +242,7 @@ function ArchitectureCard({
       {/* Title */}
       <h3
         className="text-[17px] leading-[1.25]"
-        style={{ color: INK, fontFamily: "'Instrument Serif', Georgia, serif", fontWeight: 500 }}
+        style={{ color: INK, fontFamily: "'Iowan Old Style', Georgia, 'Times New Roman', serif", fontWeight: 500 }}
       >
         {card.title}
       </h3>
