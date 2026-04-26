@@ -75,6 +75,133 @@ export interface WorkshopQueryResponse {
   events: WorkshopEvent[]
 }
 
+// ---------------------------------------------------------------------------
+// Turn primitive
+// ---------------------------------------------------------------------------
+
+/**
+ * A Turn groups the user's query with the full event bundle the agent
+ * emitted in response, categorized so the renderer can compose the
+ * interleaved Atelier chat (text → plan chip → tool chips → text →
+ * products → text → confidence) without re-scanning the event list
+ * each render.
+ *
+ * Special-tag panels are lifted out of ``panels`` so the renderer
+ * handles them as first-class UI primitives rather than as generic
+ * tool chips:
+ *   - PLAN panel       → ``plan`` (rendered as PlanPreviewChip)
+ *   - MEMORY · CONFIDENCE → ``confidence`` (rendered as ConfidenceSummary)
+ *   - RECOMMENDATION panels whose rows describe products →
+ *     ``products`` (rendered as ProductMiniCard grid)
+ *
+ * ``panels`` retains everything else (tool calls, memory queries,
+ * guardrails, grounding) in event-emission order.
+ */
+
+export interface TurnProduct {
+  product_id?: string
+  name: string
+  price?: string
+  attributes?: string
+  /** Optional color block hex for the placeholder visual. */
+  tone?: string
+}
+
+export interface Turn {
+  id: string
+  user_text: string
+  assistant_text: string | null
+  plan?: WorkshopPlanEvent
+  /** All panels except PLAN, MEMORY · CONFIDENCE, RECOMMENDATION. */
+  panels: WorkshopPanelEvent[]
+  confidence?: WorkshopPanelEvent
+  products?: TurnProduct[]
+  citations?: WorkshopCitation[]
+}
+
+const CONFIDENCE_TAG = 'MEMORY · CONFIDENCE'
+const RECOMMENDATION_TAG_RE = /^RECOMMENDATION /
+
+/**
+ * Turn the raw events of a single submit into a Turn.
+ *
+ * Pure function — pass it the user's prompt text and the events
+ * returned by /api/workshop/query for that prompt. Safe to call from
+ * ``useMemo``; idempotent for the same inputs.
+ */
+export function eventsToTurn(
+  id: string,
+  userText: string,
+  events: WorkshopEvent[],
+): Turn {
+  let plan: WorkshopPlanEvent | undefined
+  let confidence: WorkshopPanelEvent | undefined
+  let recommendationPanel: WorkshopPanelEvent | undefined
+  const panels: WorkshopPanelEvent[] = []
+  let assistantText: string | null = null
+  let citations: WorkshopCitation[] | undefined
+
+  for (const ev of events) {
+    if (ev.type === 'plan') {
+      plan = ev
+    } else if (ev.type === 'panel') {
+      if (ev.tag === CONFIDENCE_TAG) {
+        confidence = ev
+      } else if (RECOMMENDATION_TAG_RE.test(ev.tag)) {
+        recommendationPanel = ev
+      } else {
+        panels.push(ev)
+      }
+    } else if (ev.type === 'response') {
+      assistantText = ev.text
+      if (ev.citations && ev.citations.length > 0) citations = ev.citations
+    }
+  }
+
+  const products = recommendationPanel
+    ? recommendationPanelToProducts(recommendationPanel)
+    : undefined
+
+  return {
+    id,
+    user_text: userText,
+    assistant_text: assistantText,
+    plan,
+    panels,
+    confidence,
+    products,
+    citations,
+  }
+}
+
+/**
+ * Lift a RECOMMENDATION panel's rows into TurnProduct shapes so the
+ * chat can render ProductMiniCards. The panel's column order is the
+ * backend's contract; we tolerate extra columns and fill what we can.
+ *
+ * Heuristic columns (backend emits some combination of these):
+ *   name, price, attrs, product_id
+ *
+ * If columns don't match, fall back to whatever's there.
+ */
+function recommendationPanelToProducts(
+  panel: WorkshopPanelEvent,
+): TurnProduct[] {
+  const cols = panel.columns.map((c) => c.toLowerCase())
+  const ixOf = (key: string) => cols.indexOf(key)
+  const nameIx = ixOf('name') >= 0 ? ixOf('name') : 0
+  const priceIx = ixOf('price')
+  const attrsIx = ixOf('attrs') >= 0 ? ixOf('attrs') : ixOf('attributes')
+  const idIx = ixOf('product_id') >= 0 ? ixOf('product_id') : ixOf('id')
+
+  return panel.rows.map((row) => ({
+    product_id: idIx >= 0 ? row[idIx] : undefined,
+    name: row[nameIx] ?? '(unnamed)',
+    price: priceIx >= 0 ? row[priceIx] : undefined,
+    attributes: attrsIx >= 0 ? row[attrsIx] : undefined,
+  }))
+}
+
 export async function queryWorkshop(
   req: WorkshopQueryRequest,
 ): Promise<WorkshopQueryResponse> {
