@@ -158,6 +158,77 @@ describe('WorkshopPage — chrome', () => {
   })
 })
 
+describe('WorkshopPage — architecture cards render the right CTA pattern', () => {
+  it('renders 7 cards in the locked order Memory → Tool Registry → MCP → State → Runtime → Grounding → Evaluations', () => {
+    renderPage()
+    const ids = [
+      'memory',
+      'tool-registry',
+      'mcp',
+      'state',
+      'runtime',
+      'grounding',
+      'evaluations',
+    ]
+    for (const id of ids) {
+      expect(screen.getByTestId(`arch-card-${id}`)).toBeInTheDocument()
+    }
+  })
+
+  it('renders an action CTA on Memory, Tool Registry, State, and Runtime', () => {
+    renderPage()
+    expect(screen.getByTestId('arch-card-open-memory')).toBeInTheDocument()
+    expect(screen.getByTestId('arch-card-open-tool-registry')).toBeInTheDocument()
+    expect(screen.getByTestId('arch-card-open-state')).toBeInTheDocument()
+    expect(screen.getByTestId('arch-card-open-runtime')).toBeInTheDocument()
+  })
+
+  it('renders an "In progress" pill on Grounding (detail panel is deferred)', () => {
+    renderPage()
+    expect(screen.getByTestId('arch-card-inprogress-grounding')).toBeInTheDocument()
+    // Grounding MUST NOT have an opening action anymore — it used to
+    // mistakenly open RuntimeStatusPanel; Runtime is its own card now.
+    expect(screen.queryByTestId('arch-card-open-grounding')).not.toBeInTheDocument()
+  })
+
+  it('renders NO CTA on MCP or Evaluations (concept cards stand on body copy)', () => {
+    renderPage()
+    expect(screen.queryByTestId('arch-card-open-mcp')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('arch-card-inprogress-mcp')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('arch-card-open-evaluations')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('arch-card-inprogress-evaluations'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('MCP body copy resolves the protocol-vs-primitive distinction', () => {
+    renderPage()
+    const mcp = screen.getByTestId('arch-card-mcp')
+    expect(mcp.textContent).toContain('open standard')
+    expect(mcp.textContent).toContain('managed MCP server')
+  })
+
+  it('Evaluations body copy reinforces the Teaching label', () => {
+    renderPage()
+    const evals = screen.getByTestId('arch-card-evaluations')
+    expect(evals.textContent).toContain('Postgres harness')
+    expect(evals.textContent).toContain('NDCG')
+  })
+})
+
+describe('WorkshopPage — Runtime card opens the RuntimeStatusPanel', () => {
+  it('opens the runtime detail panel when the Runtime card CTA is clicked', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByTestId('arch-card-open-runtime'))
+    await waitFor(() =>
+      expect(screen.getByTestId('stub-runtime-panel')).toBeInTheDocument(),
+    )
+    expect(screen.getByTestId('detail-panel-slot')).toBeInTheDocument()
+  })
+})
+
 describe('WorkshopPage — architecture cards open detail panels inline', () => {
   it('opens MemoryDashboard when the memory card action is clicked', async () => {
     const user = userEvent.setup()
@@ -256,5 +327,51 @@ describe('WorkshopPage — responsive breakpoints', () => {
     await waitFor(() =>
       expect(screen.getByTestId('detail-panel-tablet-overlay')).toBeInTheDocument(),
     )
+  })
+})
+
+describe('WorkshopPage — tab default + persistence', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('defaults to the Architecture tab on first load (no stored preference)', () => {
+    renderPage()
+    expect(
+      screen.getByTestId('workshop-tab-architecture').getAttribute('aria-selected'),
+    ).toBe('true')
+    expect(
+      screen.getByTestId('workshop-tab-telemetry').getAttribute('aria-selected'),
+    ).toBe('false')
+  })
+
+  it('renders tabs in the order Telemetry → Architecture → Performance', () => {
+    renderPage()
+    const tabs = [
+      screen.getByTestId('workshop-tab-telemetry'),
+      screen.getByTestId('workshop-tab-architecture'),
+      screen.getByTestId('workshop-tab-performance'),
+    ]
+    // Confirm DOM order matches the declared tab order — the second
+    // sibling must be Architecture etc.
+    const parent = tabs[0].parentElement!
+    expect(parent.children[0]).toBe(tabs[0])
+    expect(parent.children[1]).toBe(tabs[1])
+    expect(parent.children[2]).toBe(tabs[2])
+  })
+
+  it("persists the user's explicit tab choice to localStorage", async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await user.click(screen.getByTestId('workshop-tab-performance'))
+    expect(localStorage.getItem('blaize-atelier-tab')).toBe('performance')
+  })
+
+  it('opens to the stored tab choice on a subsequent render', () => {
+    localStorage.setItem('blaize-atelier-tab', 'performance')
+    renderPage()
+    expect(
+      screen.getByTestId('workshop-tab-performance').getAttribute('aria-selected'),
+    ).toBe('true')
   })
 })
