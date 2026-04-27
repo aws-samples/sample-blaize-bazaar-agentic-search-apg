@@ -24,6 +24,7 @@ import { Send, X, GitCompare, AlertCircle } from 'lucide-react'
 import { useUI } from '../contexts/UIContext'
 import { useLayout } from '../contexts/LayoutContext'
 import { useCart } from '../contexts/CartContext'
+import { usePersona } from '../contexts/PersonaContext'
 import { useAgentChat, type AgentBadge, type AgentChatMessage } from '../hooks/useAgentChat'
 import { AGENT_IDENTITIES, type AgentType } from '../utils/agentIdentity'
 import ProductCardConcierge from './ProductCardConcierge'
@@ -289,6 +290,7 @@ export default function ConciergeModal() {
   const { activeModal, closeModal, openComparison, consumePendingQuery } = useUI()
   const { workshopMode, guardrailsEnabled } = useLayout()
   const { addToCart } = useCart()
+  const { persona } = usePersona()
   const location = useLocation()
   const sessionId = useSessionId()
 
@@ -296,18 +298,35 @@ export default function ConciergeModal() {
   const isWorkshopRoute = location.pathname.startsWith('/atelier')
   const mode = isWorkshopRoute ? 'atelier' : 'storefront'
 
+  // Time-of-day greeting for the personalized storefront welcome. Boundaries
+  // match the house style guide's "Good morning/afternoon/evening" rotation.
+  const greeting = useMemo(() => {
+    const h = new Date().getHours()
+    if (h < 12) return 'Good morning'
+    if (h < 17) return 'Good afternoon'
+    return 'Good evening'
+  }, [])
+
   // Initial welcome — per route mode, only used on first mount of this session.
-  const initialMessages = useMemo<AgentChatMessage[]>(
-    () => [
+  const initialMessages = useMemo<AgentChatMessage[]>(() => {
+    let content: string
+    if (isWorkshopRoute) {
+      content = WELCOME_WORKSHOP
+    } else if (persona) {
+      const firstName = persona.display_name.split(' ')[0]
+      content = `${greeting}, ${firstName}. ${WELCOME_STOREFRONT}`
+    } else {
+      content = WELCOME_STOREFRONT
+    }
+    return [
       {
         role: 'assistant',
-        content: isWorkshopRoute ? WELCOME_WORKSHOP : WELCOME_STOREFRONT,
+        content,
         timestamp: new Date(),
         suggestions: isWorkshopRoute ? SUGGESTIONS_WORKSHOP : SUGGESTIONS_STOREFRONT,
       },
-    ],
-    [isWorkshopRoute],
-  )
+    ]
+  }, [isWorkshopRoute, persona, greeting])
 
   const {
     messages,

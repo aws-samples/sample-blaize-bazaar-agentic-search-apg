@@ -23,6 +23,7 @@ import {
   type ChatProduct,
 } from '../services/chat'
 import type { WorkshopMode } from '../contexts/LayoutContext'
+import { usePersona } from '../contexts/PersonaContext'
 
 export type ChatMode = 'storefront' | 'atelier'
 
@@ -235,6 +236,11 @@ export function useAgentChat(
   const [isLoading, setIsLoading] = useState(false)
   const [backendOnline, setBackendOnline] = useState(true)
   const [sessionCost, setSessionCost] = useState(0)
+
+  // Active persona (if any) — used to scope backend LTM reads to the
+  // right customer_id. Read from context so persona switches take
+  // effect on the next turn without remounting the chat surface.
+  const { persona } = usePersona()
 
   // Keep a ref of the latest messages so sendMessage can read history
   // without re-creating the callback on every message update.
@@ -512,6 +518,7 @@ export function useAgentChat(
           // which workshop module the participant has completed.
           mode === 'storefront' ? undefined : workshopMode,
           guardrailsEnabled,
+          persona?.customer_id ?? null,
         )
 
         if (response.estimated_cost_usd) {
@@ -589,7 +596,7 @@ export function useAgentChat(
         setIsLoading(false)
       }
     },
-    [inputValue, isLoading, mode, workshopMode, guardrailsEnabled],
+    [inputValue, isLoading, mode, workshopMode, guardrailsEnabled, persona?.customer_id],
   )
 
   const clearChat = useCallback(

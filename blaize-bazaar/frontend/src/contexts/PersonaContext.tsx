@@ -102,6 +102,11 @@ export function PersonaProvider({ children }: { children: ReactNode }) {
       // Clear any existing chat persistence
       localStorage.removeItem('blaize-storefront-chat')
       localStorage.removeItem('blaize-atelier-chat')
+      // ConciergeModal uses its own persist keys — clear those too so the
+      // personalized welcome ("Good evening, Marco") actually renders on
+      // the next open instead of being shadowed by a stale cached reply.
+      localStorage.removeItem('blaize-concierge-storefront')
+      localStorage.removeItem('blaize-concierge-atelier')
 
       setPersona(data.persona)
     } catch (err) {
@@ -117,6 +122,8 @@ export function PersonaProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(SESSION_KEY)
     localStorage.removeItem('blaize-storefront-chat')
     localStorage.removeItem('blaize-atelier-chat')
+    localStorage.removeItem('blaize-concierge-storefront')
+    localStorage.removeItem('blaize-concierge-atelier')
   }, [])
 
   return (

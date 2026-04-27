@@ -67,6 +67,22 @@ SUPPORT_KEYWORDS = {"return", "refund", "policy", "help", "support", "troublesho
                     "issue", "problem", "warranty", "broken", "defective"}
 SEARCH_KEYWORDS = {"search for", "looking for", "where can I", "compare", "browse"}
 
+# Past-purchase / history queries — these reference the shopper's own
+# order history and must route to the recommendation specialist with the
+# persona's LTM preamble, NEVER to support (which has no order-history
+# tool). Matched case-insensitively against the full query.
+PAST_PURCHASE_PATTERN = re.compile(
+    r'\b('
+    r'what (did|have) i (buy|bought|purchase|purchased|order|ordered)|'
+    r'what i (bought|purchased|ordered)|'
+    r'(my|last) (purchase|purchases|order|orders|time)|'
+    r'last time i (bought|purchased|ordered)|'
+    r'previous (purchase|order|orders)|'
+    r'order history|purchase history|buy again|reorder'
+    r')\b',
+    re.IGNORECASE,
+)
+
 # Product-seeking phrases that override pricing keywords. "Find me a
 # linen shirt under $150" is a search with a price filter, not a
 # pricing analysis request.
@@ -162,6 +178,13 @@ def classify_intent(query: str) -> str:
     Returns 'pricing', 'inventory', 'customer_support', 'search', or 'recommendation'."""
     q = query.lower()
     words = set(re.findall(r'\w+', q))
+
+    # Past-purchase queries route to recommendation so the specialist can
+    # ground in the persona's order history via the LTM preamble. Takes
+    # priority over everything else — these are personal-profile
+    # questions, not shopping queries in the usual sense.
+    if PAST_PURCHASE_PATTERN.search(query):
+        return "recommendation"
 
     # If the query seeks a specific product, route to search even if
     # price keywords are present. "find me a linen shirt under $150"
@@ -472,7 +495,10 @@ CURRENT REQUEST: {message}"""
                 "search": "search",
                 "recommendation": "recommendation",
             }[intent]
-            full_message = f"[USE: {intent_hint}] {full_message}"
+            full_message = (
+                f"[ROUTING DIRECTIVE: call the {intent_hint} tool. "
+                f"Do not call any other specialist.]\n{full_message}"
+            )
             logger.info(f"🎯 Intent: {intent} → {intent_hint}")
             
             # Invoke orchestrator with timing
@@ -1410,7 +1436,15 @@ CURRENT REQUEST: {message}"""
             "search": "search",
             "recommendation": "recommendation",
         }[intent]
-        full_message = f"[USE: {intent_hint}] {full_message}"
+        # Authoritative routing directive — Haiku 4.5 at temp 0.0 reads
+        # this as the final word, overriding its own tie-break instincts.
+        # Persona-shaped queries ("what did I buy last time") land on
+        # recommendation with the LTM preamble instead of drifting to
+        # support, which has no order-history tool.
+        full_message = (
+            f"[ROUTING DIRECTIVE: call the {intent_hint} tool. "
+            f"Do not call any other specialist.]\n{full_message}"
+        )
         timing["intent"] = (time.perf_counter() - intent_t0) * 1000
         logger.info(f"🎯 Intent: {intent} → {intent_hint}")
 
