@@ -1164,6 +1164,16 @@ CURRENT REQUEST: {message}"""
         import asyncio
         import time
 
+        # Resolve the effective customer_id for this turn. Personas
+        # stash their customer_id in user["customer_id"] from the
+        # /api/chat/stream endpoint. If no persona is active this is
+        # None and LTM reads are skipped.
+        customer_id: Optional[str] = None
+        if user and isinstance(user, dict):
+            cid = user.get("customer_id")
+            if cid and isinstance(cid, str) and cid != "anonymous":
+                customer_id = cid
+
         # Per-turn runtime timing (seeds Atelier Runtime page live strip)
         # and DB query log (seeds Atelier State Management live strip).
         # Markers are recorded inline via time.perf_counter(); the db log
@@ -1267,15 +1277,22 @@ CURRENT REQUEST: {message}"""
         session_manager = None
         if session_id:
             # === WIRE IT LIVE (Lab 4b) ===
+            from config import settings
             if user and settings.AGENTCORE_MEMORY_ID:
                 try:
                     from services.agentcore_memory import create_agentcore_session_manager
+                    # Prefer persona customer_id over Cognito sub so memory
+                    # is scoped to the persona's identity for the demo.
+                    memory_user_id = (
+                        customer_id
+                        or user.get("sub", "anonymous")
+                    )
                     session_manager = create_agentcore_session_manager(
                         session_id=session_id,
-                        user_id=user.get("sub", "anonymous"),
+                        user_id=memory_user_id,
                     )
                     if session_manager:
-                        logger.info(f"🧠 AgentCore Memory (stream) for user={user.get('email')}")
+                        logger.info(f"🧠 AgentCore Memory (stream) for user={memory_user_id}")
                 except Exception as e:
                     logger.warning(f"AgentCore Memory setup failed: {e}")
             # === END WIRE IT LIVE ===
@@ -1326,6 +1343,62 @@ CURRENT REQUEST: {message}"""
                 f"CONVERSATION HISTORY:\n{conversation_context}\n---\n"
                 f"CURRENT REQUEST: {message}"
             )
+
+        # --- Persona LTM preamble -----------------------------------------
+        # When a persona is active (customer_id is set), read their LTM
+        # facts + order history from Aurora and prepend them to the
+        # orchestrator message so specialists ground their reply in the
+        # persona's actual history. Skipped for anonymous sessions —
+        # they get the editorial fallback.
+        persona_preamble = ""
+        if customer_id and self.db_service:
+            try:
+                facts_rows = await self.db_service.fetch_all(
+                    "SELECT summary_text, ts_offset_days "
+                    "FROM customer_episodic_seed "
+                    "WHERE customer_id = %s "
+                    "ORDER BY ts_offset_days DESC LIMIT 8",
+                    customer_id,
+                )
+                orders_rows = await self.db_service.fetch_all(
+                    'SELECT pc.name, pc.price, pc.category, o.placed_at '
+                    'FROM orders o '
+                    'JOIN blaize_bazaar.product_catalog pc ON o.product_id = pc."productId" '
+                    "WHERE o.customer_id = %s "
+                    "ORDER BY o.placed_at DESC LIMIT 10",
+                    customer_id,
+                )
+                customer_row = await self.db_service.fetch_one(
+                    "SELECT name FROM customers WHERE id = %s",
+                    customer_id,
+                )
+                name = customer_row["name"] if customer_row else "the shopper"
+                if facts_rows or orders_rows:
+                    lines = [f"PERSONA CONTEXT — {name} ({customer_id})"]
+                    if facts_rows:
+                        lines.append("Known about them (LTM):")
+                        for f in facts_rows:
+                            lines.append(f"  - {f['summary_text']}")
+                    if orders_rows:
+                        lines.append("Past orders:")
+                        for o in orders_rows:
+                            lines.append(
+                                f"  - {o['name']} (${o['price']:.0f}, {o['category']})"
+                            )
+                    lines.append(
+                        "Use this to tailor the reply — reference past purchases, "
+                        "respect preferences, avoid asking for info you already know."
+                    )
+                    persona_preamble = "\n".join(lines) + "\n---\n"
+                logger.info(
+                    f"👤 Persona LTM | {customer_id} | "
+                    f"facts={len(facts_rows)} orders={len(orders_rows)}"
+                )
+            except Exception as e:
+                logger.warning(f"Persona LTM read failed for {customer_id}: {e}")
+
+        if persona_preamble:
+            full_message = persona_preamble + full_message
 
         # Deterministic intent classification — tells the orchestrator which agent to use
         intent_t0 = time.perf_counter()
@@ -1505,6 +1578,20 @@ CURRENT REQUEST: {message}"""
         products_sent = []
         products_buffered = []  # Hold products until text streams first
         current_tool = None
+        # Track the most recent stream segment (reset on content_reset).
+        # Used as a fallback when orchestrator_result is empty but
+        # specialist tokens were streamed.
+        streamed_text_buffer: List[str] = []
+        # Preserve the content from the last pre-reset segment. When a
+        # specialist handles the reply inline (all tokens produced
+        # during its tool invocation, then content_reset clears them),
+        # this holds the richest content we saw. Used as fallback
+        # when nothing arrives after the reset.
+        pre_reset_buffer: List[str] = []
+        # The most recent specialist tool_result text — the canonical
+        # source for the user-facing reply when the specialist handles
+        # composition inline. Captured from _result in tool_done events.
+        last_specialist_text: str = ""
         price_limit = self._extract_price_limit(message)
 
         while True:
@@ -1555,6 +1642,22 @@ CURRENT REQUEST: {message}"""
                             and (p.get("name") or p.get("product_description")) not in sent_names
                         ]
                         products_buffered.extend(new_products)
+                    # If the specialist returned editorial text (not a
+                    # JSON product envelope), capture it as a fallback
+                    # for when orchestrator_result comes back empty.
+                    # Only trust results from specialist agents — leaf
+                    # tools return JSON blobs, not prose.
+                    _SPECIALIST_TOOLS = {
+                        "search", "recommendation", "pricing",
+                        "inventory", "support",
+                    }
+                    if (
+                        tool_name in _SPECIALIST_TOOLS
+                        and not raw_products
+                        and result_str
+                        and not result_str.lstrip().startswith(("{", "["))
+                    ):
+                        last_specialist_text = result_str.strip()
 
                 tool_ms = int(
                     (time.time() - tool_starts.pop(tool_name, time.time())) * 1000
@@ -1576,11 +1679,18 @@ CURRENT REQUEST: {message}"""
                 # Reset streamed content — the orchestrator will now generate its final response
                 # and we don't want pre-tool thinking text mixed with post-tool response
                 yield {"type": "content_reset"}
+                # Preserve whatever was streamed during this tool's
+                # execution. If the orchestrator produces nothing
+                # afterwards, we recover this as the user-facing text.
+                if streamed_text_buffer:
+                    pre_reset_buffer = list(streamed_text_buffer)
+                streamed_text_buffer.clear()
 
             elif "_text" in event:
                 # Stream text tokens to the client in real time
                 if not ttft_mark:
                     ttft_mark.append(time.perf_counter())
+                streamed_text_buffer.append(event["_text"])
                 yield {"type": "content_delta", "delta": event["_text"]}
 
         # --- Await orchestrator completion ---
@@ -1609,21 +1719,52 @@ CURRENT REQUEST: {message}"""
         # on whether we had any tool activity — informative failure
         # beats a mystery blank.
         if not parsed["text"] and not products_buffered and not parsed["products"]:
-            if tool_trace:
+            # Recovery priority:
+            # 1. last_specialist_text — the specialist's tool_result
+            #    prose. Canonical when a specialist composes the reply
+            #    inline (most common when persona context is active).
+            # 2. streamed buffers — either post-reset (orchestrator's
+            #    final synthesis) or pre-reset (specialist's inline
+            #    streaming). Pick whichever is longer.
+            # 3. Generic fallback.
+            recovered = ""
+            recovery_source = ""
+            if last_specialist_text and len(last_specialist_text) > 40:
+                recovered = last_specialist_text
+                recovery_source = "specialist_tool_result"
+            else:
+                post_reset = "".join(streamed_text_buffer).strip()
+                pre_reset = "".join(pre_reset_buffer).strip()
+                streamed = post_reset if len(post_reset) > len(pre_reset) else pre_reset
+                if streamed and len(streamed) > 40:
+                    recovered = streamed
+                    recovery_source = f"streamed_buffer (pre={len(pre_reset)}, post={len(post_reset)})"
+
+            if recovered:
+                parsed["text"] = recovered
+                logger.info(
+                    "chat_stream recovered | source=%s chars=%d",
+                    recovery_source, len(recovered),
+                )
+            elif tool_trace:
                 # Tools fired but produced nothing — likely "no matches".
                 parsed["text"] = (
                     "I looked through the catalog but didn't land on a clear pick for that one. "
                     "Want to narrow it down — a price range, a category, or a vibe?"
+                )
+                logger.warning(
+                    "chat_stream empty-response fallback fired | tools=%d products=%d",
+                    len(tool_trace), len(products_buffered),
                 )
             else:
                 parsed["text"] = (
                     "I'm not sure I caught that — could you give me a bit more to go on? "
                     "A price range, a category, or what you'd use it for?"
                 )
-            logger.warning(
-                "chat_stream empty-response fallback fired | tools=%d products=%d",
-                len(tool_trace), len(products_buffered),
-            )
+                logger.warning(
+                    "chat_stream empty-response fallback fired | tools=%d products=%d",
+                    len(tool_trace), len(products_buffered),
+                )
 
         # Send clean text content FIRST (before product cards)
         if parsed["text"]:
