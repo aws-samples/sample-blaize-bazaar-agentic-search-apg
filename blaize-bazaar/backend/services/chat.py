@@ -39,9 +39,9 @@ GUARDRAILS (ACTIVE):
 SINGLE_AGENT_PROMPT = """You are Blaize AI, the shopping assistant for Blaize Bazaar.
 
 TOOL SELECTION:
-- get_trending_products → When user asks about trending, popular, or best-selling items. Pass category if they mention one (e.g. "trending in electronics" → category="Electronics").
+- trending_products → When user asks about trending, popular, or best-selling items. Pass category if they mention one (e.g. "trending in electronics" → category="Electronics").
 - search_products → Descriptive or intent-based product queries (e.g. "gift for a cook", "noise-canceling headphones under $200")
-- get_price_analysis → Pricing statistics and category comparisons
+- price_analysis → Pricing statistics and category comparisons
 
 Call exactly one tool per query. Extract price limits and pass as max_price.
 The search tool handles category mapping automatically — pass the user's words directly.
@@ -83,7 +83,7 @@ PRODUCT_SEEKING_PATTERNS = re.compile(
 # Triage fast-path — short-circuits greetings/meta/thanks before the
 # orchestrator is created. Cuts the "empty response" failure mode to
 # zero for the demo queries that used to route into
-# product_recommendation_agent and come back blank. Deterministic by
+# recommendation and come back blank. Deterministic by
 # design so workshop demos never depend on an LLM roll for small-talk.
 # ---------------------------------------------------------------------------
 
@@ -466,11 +466,11 @@ CURRENT REQUEST: {message}"""
             # Deterministic intent classification
             intent = classify_intent(message)
             intent_hint = {
-                "pricing": "price_optimization_agent",
-                "inventory": "inventory_restock_agent",
-                "customer_support": "customer_support_agent",
-                "search": "search_agent",
-                "recommendation": "product_recommendation_agent",
+                "pricing": "pricing",
+                "inventory": "inventory",
+                "customer_support": "support",
+                "search": "search",
+                "recommendation": "recommendation",
             }[intent]
             full_message = f"[USE: {intent_hint}] {full_message}"
             logger.info(f"🎯 Intent: {intent} → {intent_hint}")
@@ -567,8 +567,8 @@ CURRENT REQUEST: {message}"""
             from strands.models.bedrock import BedrockModel
             from services.agent_tools import (
                 search_products,
-                get_trending_products,
-                get_price_analysis,
+                trending_products,
+                price_analysis,
             )
 
             single_prompt = SINGLE_AGENT_PROMPT
@@ -578,7 +578,7 @@ CURRENT REQUEST: {message}"""
             agent = Agent(
                 model=BedrockModel(model_id=self.model_id, max_tokens=8192, temperature=0.0),
                 system_prompt=single_prompt,
-                tools=[search_products, get_trending_products, get_price_analysis]
+                tools=[search_products, trending_products, price_analysis]
             )
 
             # Build conversation context
@@ -781,8 +781,8 @@ CURRENT REQUEST: {message}"""
             from strands.models.bedrock import BedrockModel
             from services.agent_tools import (
                 search_products,
-                get_trending_products,
-                get_price_analysis,
+                trending_products,
+                price_analysis,
             )
 
             single_prompt = SINGLE_AGENT_PROMPT
@@ -796,7 +796,7 @@ CURRENT REQUEST: {message}"""
                     temperature=0.0
                 ),
                 system_prompt=single_prompt,
-                tools=[search_products, get_trending_products, get_price_analysis]
+                tools=[search_products, trending_products, price_analysis]
             )
 
             # Build conversation context
@@ -1137,11 +1137,11 @@ CURRENT REQUEST: {message}"""
     def _tool_to_agent_name(tool_name: str) -> str:
         """Map tool function names to user-facing agent names."""
         return {
-            'product_recommendation_agent': 'Search Agent',
-            'price_optimization_agent': 'Pricing Agent',
-            'inventory_restock_agent': 'Inventory Agent',
-            'customer_support_agent': 'Support Agent',
-            'search_agent': 'Search Agent',
+            'recommendation': 'Recommendation Agent',
+            'pricing': 'Pricing Agent',
+            'inventory': 'Inventory Agent',
+            'support': 'Support Agent',
+            'search': 'Search Agent',
             'search_products': 'Search Agent',
         }.get(tool_name, 'Search Agent')
 
@@ -1164,6 +1164,26 @@ CURRENT REQUEST: {message}"""
         import asyncio
         import time
 
+        # Per-turn runtime timing (seeds Atelier Runtime page live strip)
+        # and DB query log (seeds Atelier State Management live strip).
+        # Markers are recorded inline via time.perf_counter(); the db log
+        # is propagated through a ContextVar so tool invocations hit the
+        # same buffer even when they run via asyncio.to_thread.
+        from services.database import db_query_log_var
+        turn_start = time.perf_counter()
+        timing: Dict[str, float] = {
+            "fastpath": 0.0,
+            "intent": 0.0,
+            "skill_router": 0.0,
+            "orchestrator": 0.0,
+            "specialist": 0.0,
+            "tools": 0.0,
+            "stream": 0.0,
+        }
+        ttft_mark: List[float] = []  # first streamed token timestamp
+        db_queries_for_turn: list = []
+        db_token = db_query_log_var.set(db_queries_for_turn)
+
         # Workshop mode: chat disabled for legacy/search
         if workshop_mode in ("legacy", "search"):
             yield {"type": "content", "content": "Chat is not available in this workshop mode. Progress to Module 2 to unlock agentic AI."}
@@ -1176,7 +1196,9 @@ CURRENT REQUEST: {message}"""
         #      failure mode — "hi" on stage is guaranteed to reply.
         #  (b) the telemetry tab still gets a panel event so attendees
         #      can see the classification decision explicitly.
+        fastpath_t0 = time.perf_counter()
         triage_bucket = classify_triage(message)
+        timing["fastpath"] = (time.perf_counter() - fastpath_t0) * 1000
         if triage_bucket:
             logger.info(f"🎯 Triage | {triage_bucket} | msg={message[:60]!r}")
             reply = _TRIAGE_REPLIES[triage_bucket]
@@ -1306,15 +1328,17 @@ CURRENT REQUEST: {message}"""
             )
 
         # Deterministic intent classification — tells the orchestrator which agent to use
+        intent_t0 = time.perf_counter()
         intent = classify_intent(message)
         intent_hint = {
-            "pricing": "price_optimization_agent",
-            "inventory": "inventory_restock_agent",
-            "customer_support": "customer_support_agent",
-            "search": "search_agent",
-            "recommendation": "product_recommendation_agent",
+            "pricing": "pricing",
+            "inventory": "inventory",
+            "customer_support": "support",
+            "search": "search",
+            "recommendation": "recommendation",
         }[intent]
         full_message = f"[USE: {intent_hint}] {full_message}"
+        timing["intent"] = (time.perf_counter() - intent_t0) * 1000
         logger.info(f"🎯 Intent: {intent} → {intent_hint}")
 
         # --- Skill router ---------------------------------------------------
@@ -1328,6 +1352,7 @@ CURRENT REQUEST: {message}"""
         # reply. Storefront reads ``loaded_skills``; Atelier renders the
         # full decision in its live activation log.
         skill_decision = None
+        skill_t0 = time.perf_counter()
         try:
             from skills import SkillRouter, get_registry
             router = SkillRouter(get_registry())
@@ -1339,6 +1364,7 @@ CURRENT REQUEST: {message}"""
             )
         except Exception as exc:
             logger.warning("Skill router unavailable: %s", exc)
+        timing["skill_router"] = (time.perf_counter() - skill_t0) * 1000
 
         # Emit the routing event immediately — before any text — so the
         # storefront attribution line is mounted above the streamed reply.
@@ -1425,6 +1451,7 @@ CURRENT REQUEST: {message}"""
 
         # --- Run orchestrator in background thread ---
         start_time = time.time()
+        orchestrator_t0 = time.perf_counter()
         logger.info(
             f"📨 chat_stream | intent={intent} → {intent_hint} "
             f"| session={session_id or 'anon'} | msg={message[:80]!r}"
@@ -1552,6 +1579,8 @@ CURRENT REQUEST: {message}"""
 
             elif "_text" in event:
                 # Stream text tokens to the client in real time
+                if not ttft_mark:
+                    ttft_mark.append(time.perf_counter())
                 yield {"type": "content_delta", "delta": event["_text"]}
 
         # --- Await orchestrator completion ---
@@ -1643,6 +1672,52 @@ CURRENT REQUEST: {message}"""
         token_count, estimated_cost, cost_breakdown = self._estimate_cost(response_text)
         total_ms = int((time.time() - start_time) * 1000)
         self._track_query(products_count=len(products_sent), duration_ms=total_ms, agent_type="Orchestrator")
+
+        # --- Finalize per-layer timing ------------------------------------
+        # Sum tool wall-clock from the tool_trace we've been collecting
+        # through BeforeToolCall / AfterToolCall hooks. Orchestrator time
+        # is the wall-clock from orchestrator_t0 to turn end minus the
+        # streaming tail; specialist time is embedded in orchestrator_ms
+        # (Strands doesn't expose it cleanly — document in notes).
+        tools_ms = sum(t.get("ms", 0) for t in tool_trace)
+        turn_total_ms = int((time.perf_counter() - turn_start) * 1000)
+        orchestrator_ms = int((time.perf_counter() - orchestrator_t0) * 1000)
+        # Stream = time from first-token to turn end. TTFT = first-token
+        # relative to turn start.
+        if ttft_mark:
+            ttft_ms = int((ttft_mark[0] - turn_start) * 1000)
+            stream_ms = int((time.perf_counter() - ttft_mark[0]) * 1000)
+        else:
+            ttft_ms = turn_total_ms
+            stream_ms = 0
+        timing["orchestrator"] = max(0, orchestrator_ms - tools_ms - stream_ms)
+        timing["specialist"] = 0  # Strands hides this — kept for shape parity
+        timing["tools"] = tools_ms
+        timing["stream"] = stream_ms
+
+        # Emit timing + db query events BEFORE the complete event so the
+        # Atelier runtime and state-management pages pick them up via
+        # their useAgentChat localStorage bridge.
+        yield {
+            "type": "runtime_timing",
+            "timing": {
+                "layers": {k: round(v, 1) for k, v in timing.items()},
+                "ttft_ms": ttft_ms,
+                "total_ms": turn_total_ms,
+                "timestamp": int(time.time() * 1000),
+            },
+        }
+        yield {
+            "type": "db_queries",
+            "queries": list(db_queries_for_turn),
+        }
+        # Reset the ContextVar so a subsequent request on the same Task
+        # doesn't inherit this buffer. The token is set above with
+        # db_query_log_var.set(...).
+        try:
+            db_query_log_var.reset(db_token)
+        except Exception:
+            pass
 
         # End-of-turn telemetry: total latency, product count, tool waterfall.
         # Compact one-liner so the workshop terminal stays legible without

@@ -388,6 +388,30 @@ export function useAgentChat(
                 return updated
               })
             } else if (data.type === 'tool_call') {
+              // Always persist tool calls to localStorage so the
+              // Atelier architecture pages (MCP, Tool Registry) can
+              // render the live strip without being mounted in the
+              // same component tree as the chat. Cross-route state.
+              try {
+                const raw = localStorage.getItem('blaize-last-tool-calls')
+                const prev = raw ? JSON.parse(raw) : []
+                const list = Array.isArray(prev) ? prev : []
+                list.push({
+                  tool: data.tool,
+                  args: data.args,
+                  agent: data.agent,
+                  duration_ms: data.duration_ms ?? 0,
+                  timestamp: Date.now(),
+                })
+                // Keep last 20 calls across turns — enough for demos.
+                const trimmed = list.slice(-20)
+                localStorage.setItem(
+                  'blaize-last-tool-calls',
+                  JSON.stringify(trimmed),
+                )
+              } catch {
+                // quota / private mode — non-fatal
+              }
               if (!showInstrumentation) return
               setMessages(prev => {
                 const updated = [...prev]
@@ -457,6 +481,31 @@ export function useAgentChat(
                 lastMsg.agentExecution = undefined
                 return [...updated]
               })
+            } else if (data.type === 'runtime_timing') {
+              // Per-layer wall-clock timing for the most recent turn.
+              // Written to localStorage for the Atelier Runtime page
+              // to consume via useRuntimeTiming().
+              try {
+                localStorage.setItem(
+                  'blaize-last-runtime-timing',
+                  JSON.stringify(data.timing),
+                )
+              } catch {
+                // quota / private mode — non-fatal
+              }
+            } else if (data.type === 'db_queries') {
+              // Per-turn database operations (reads and writes) with
+              // SQL snippets. Written to localStorage for the Atelier
+              // State Management page to consume via useDbQueries().
+              try {
+                const list = Array.isArray(data.queries) ? data.queries : []
+                localStorage.setItem(
+                  'blaize-last-db-queries',
+                  JSON.stringify(list),
+                )
+              } catch {
+                // quota / private mode — non-fatal
+              }
             }
           },
           // Storefront mode always gets full chat access regardless of

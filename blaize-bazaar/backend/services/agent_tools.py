@@ -6,6 +6,7 @@ Cohere Rerank pipeline was removed when the concierge switched to pure
 semantic retrieval.
 """
 from strands import tool
+import contextvars
 import json
 import asyncio
 import re
@@ -28,16 +29,29 @@ def _run_async(coro):
     """Run async coroutine from a sync context (e.g. Strands @tool in a background thread).
 
     Dispatches to the main uvicorn event loop via run_coroutine_threadsafe so that
-    the AsyncConnectionPool (bound to the main loop) works correctly.
+    the AsyncConnectionPool (bound to the main loop) works correctly. Propagates
+    the caller's ContextVars (e.g. ``db_query_log_var``) into the coroutine so
+    per-turn telemetry buffers catch tool-initiated DB calls.
     """
+    # Capture the current ContextVars (e.g. db_query_log_var) so the
+    # coroutine runs with the same context even when dispatched to a
+    # different event loop.
+    ctx = contextvars.copy_context()
+
+    async def _run_in_ctx():
+        # Create a Task in the captured context; this ensures ContextVars
+        # set by the caller (like db_query_log_var) are visible inside
+        # the coroutine even though we crossed threads.
+        return await asyncio.get_running_loop().create_task(coro, context=ctx)
+
     if _main_loop and _main_loop.is_running():
-        future = asyncio.run_coroutine_threadsafe(coro, _main_loop)
+        future = asyncio.run_coroutine_threadsafe(_run_in_ctx(), _main_loop)
         return future.result(timeout=30)
     # Fallback for standalone / test contexts where no main loop is set
     try:
         loop = asyncio.get_event_loop()
         if loop.is_running():
-            future = asyncio.run_coroutine_threadsafe(coro, loop)
+            future = asyncio.run_coroutine_threadsafe(_run_in_ctx(), loop)
             return future.result(timeout=30)
         return loop.run_until_complete(coro)
     except RuntimeError:
@@ -49,7 +63,7 @@ def _run_async(coro):
             loop.close()
 
 @tool
-def get_inventory_health() -> str:
+def inventory_health() -> str:
     """Get current inventory health statistics including stock levels and alerts. Use for warehouse, stock status, or inventory overview questions."""
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
@@ -57,13 +71,13 @@ def get_inventory_health() -> str:
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
-        result = _run_async(logic.get_inventory_health())
+        result = _run_async(logic.inventory_health())
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
 
 @tool
-def get_trending_products(limit: int = 5, category: str = None) -> str:
+def trending_products(limit: int = 5, category: str = None) -> str:
     """Get the most popular and trending products, optionally filtered by category. Use when customers ask about bestsellers, what's hot, or popular items.
 
     Args:
@@ -83,14 +97,14 @@ def get_trending_products(limit: int = 5, category: str = None) -> str:
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
-        result = _run_async(logic.get_trending_products(limit, category))
+        result = _run_async(logic.trending_products(limit, category))
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
     # === CHALLENGE 2: END ===
 
 @tool
-def get_price_analysis(category: str = None) -> str:
+def price_analysis(category: str = None) -> str:
     """Get pricing statistics and price distribution analysis for a product category. Use for price comparisons, budget analysis, or average price questions."""
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
@@ -98,7 +112,7 @@ def get_price_analysis(category: str = None) -> str:
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
-        result = _run_async(logic.get_price_analysis(category))
+        result = _run_async(logic.price_analysis(category))
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -188,7 +202,7 @@ def search_products(
         return json.dumps({"error": "Database service not initialized"})
 
     try:
-        from services.hybrid_search import HybridSearchService
+        from services.vector_search import VectorSearch
         from services.embeddings import EmbeddingService
 
         # Auto-detect category from query if not provided
@@ -198,14 +212,14 @@ def search_products(
         embedding_service = EmbeddingService()
         query_embedding = embedding_service.embed_query(query)
 
-        hybrid = HybridSearchService(_db_service)
+        vector = VectorSearch(_db_service)
 
-        # Concierge uses pure pgvector semantic search (Module 1 teaching
-        # surface). The hybrid + rerank pipeline was removed — only
-        # ``_vector_search`` survives on ``HybridSearchService`` today.
+        # Concierge uses pure pgvector semantic search — the Module 1
+        # teaching surface. The hybrid + rerank pipeline was removed
+        # when the concierge switched to semantic-only retrieval.
         pool_size = 30 if category else 20
         rows = _run_async(
-            hybrid._vector_search(query_embedding, pool_size, ef_search=40)
+            vector.vector_search(query_embedding, pool_size, ef_search=40)
         )
         result = {"results": rows, "method": "semantic"}
 
@@ -255,7 +269,7 @@ def search_products(
         return json.dumps({"error": str(e)})
 
 @tool
-def get_product_by_category(
+def browse_category(
     category: str,
     min_rating: float = 0.0,
     max_price: float = None,
@@ -283,7 +297,7 @@ def get_product_by_category(
         return json.dumps({"error": str(e)})
 
 @tool
-def get_low_stock_products(limit: int = 5) -> str:
+def low_stock(limit: int = 5) -> str:
     """Get products that are running low on stock, prioritized by demand. Use to identify items that need restocking soon.
 
     Args:
@@ -295,7 +309,7 @@ def get_low_stock_products(limit: int = 5) -> str:
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
-        result = _run_async(logic.get_low_stock_products(limit))
+        result = _run_async(logic.low_stock(limit))
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -373,7 +387,7 @@ def compare_products(product_id_1: int, product_id_2: int) -> str:
 # === RETURN POLICY TOOL (backed by blaize_bazaar.return_policies table) ===
 
 @tool
-def get_return_policy(category: str = "default") -> str:
+def return_policy(category: str = "default") -> str:
     """Look up the return and refund policy for a specific product category. Use when customers ask about returns, refunds, warranties, or return windows.
 
     Args:
