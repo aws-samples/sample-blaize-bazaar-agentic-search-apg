@@ -194,7 +194,7 @@ class WorkshopQueryRequest(BaseModel):
     )
     customer_id: Optional[str] = Field(
         default=None,
-        description="Seeded demo customer id (e.g. 'CUST-0003'). None ⇒ anonymous.",
+        description="Seeded demo customer id (e.g. 'CUST-MARCO'). None ⇒ anonymous.",
     )
 
 
@@ -412,7 +412,7 @@ class WorkshopResumeRequest(BaseModel):
     customer_id: str = Field(
         ...,
         min_length=1,
-        description="Seeded demo customer id (e.g. 'CUST-0001').",
+        description="Seeded demo customer id (e.g. 'CUST-MARCO').",
     )
     session_id: Optional[str] = Field(
         default=None,

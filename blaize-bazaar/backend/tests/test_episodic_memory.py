@@ -71,7 +71,7 @@ def test_fetch_episodic_seed_returns_empty_for_anonymous() -> None:
 
 def test_fetch_episodic_seed_returns_empty_on_db_error() -> None:
     db = _StubDB(raise_exc=RuntimeError("pg connection lost"))
-    rows = _run(fetch_episodic_seed(db, "CUST-0001"))
+    rows = _run(fetch_episodic_seed(db, "CUST-MARCO"))
     assert rows == []
 
 
@@ -82,13 +82,13 @@ def test_fetch_episodic_seed_maps_rows_to_canonical_shape() -> None:
             {"summary_text": "asked about travel fabric", "ts_offset_days": -9},
         ]
     )
-    rows = _run(fetch_episodic_seed(db, "CUST-0001", limit=2))
+    rows = _run(fetch_episodic_seed(db, "CUST-MARCO", limit=2))
     assert rows == [
         {"summary_text": "saw a linen shirt", "ts_offset_days": -3},
         {"summary_text": "asked about travel fabric", "ts_offset_days": -9},
     ]
     # LIMIT parameter flows through to the SQL binding.
-    assert db.calls[0][1] == ("CUST-0001", 2)
+    assert db.calls[0][1] == ("CUST-MARCO", 2)
 
 
 def test_emit_memory_episodic_panel_anonymous_emits_skipped_panel() -> None:
@@ -104,7 +104,7 @@ def test_emit_memory_episodic_panel_anonymous_emits_skipped_panel() -> None:
 
 
 def test_emit_memory_episodic_panel_populates_rows_for_known_customer() -> None:
-    ctx = AgentContext(session_id="s1", customer_id="CUST-0001", query="q")
+    ctx = AgentContext(session_id="s1", customer_id="CUST-MARCO", query="q")
     db = _StubDB(
         result=[
             {"summary_text": "browsed linen shirts", "ts_offset_days": -3},
@@ -125,7 +125,7 @@ def test_emit_memory_episodic_panel_populates_rows_for_known_customer() -> None:
         ["1 week ago", "asked about wrinkle resistance"],
         ["2 weeks ago", "added sage-green shirt"],
     ]
-    assert "CUST-0001" in p["meta"]
+    assert "CUST-MARCO" in p["meta"]
     assert p["trace_index"] == 1
 
 
@@ -145,7 +145,7 @@ def test_emit_memory_episodic_panel_no_seed_rows_still_emits_panel() -> None:
 
 def test_emit_memory_episodic_panel_survives_db_error() -> None:
     """DB error → panel with zero rows, NOT an unhandled exception."""
-    ctx = AgentContext(session_id="s1", customer_id="CUST-0001", query="q")
+    ctx = AgentContext(session_id="s1", customer_id="CUST-MARCO", query="q")
     db = _StubDB(raise_exc=RuntimeError("connection reset"))
 
     _run(emit_memory_episodic_panel(ctx, db_service=db))

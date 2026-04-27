@@ -104,111 +104,49 @@ CREATE TABLE IF NOT EXISTS blaize_bazaar.return_policies (
 """
 
 CUSTOMERS = [
-    ("CUST-0001", "Marco Ferraro",   "Linen and summer staples. Travel-friendly. Warm neutrals."),
-    ("CUST-0002", "Anya Volkov",     "Workwear and neutrals. Minimalist. Structured pieces."),
-    ("CUST-0003", "Priya Raman",     "Evening wear, dresses, statement accessories."),
-    ("CUST-0004", "Kenji Watanabe",  "Outerwear, utility, and everyday carry."),
-    ("CUST-0005", "Sofia Martinez",  "Home goods, candles, and gift-giving."),
-    ("CUST-0006", "Leo Okonkwo",     "Footwear, sport, and outdoor."),
-    ("CUST-0007", "Imani Clarke",    "Bags, dresses, and occasion wear."),
-    ("CUST-0008", "Haruto Tanaka",   "Tops, bottoms, and home office."),
+    ("CUST-MARCO", "Marco",          "Linen and summer staples. Travel-friendly. Warm neutrals."),
+    ("CUST-ANNA",  "Anna",           "Buys for others. Gift-giver. Milestone occasions."),
+    ("CUST-FRESH", "A new visitor",  ""),
 ]
 
 # Orders use real integer productIds from the boutique catalog.
-# Each customer gets 3-5 orders in their lean + 1-2 overlaps.
 ORDERS = [
-    # Marco — linen / summer / travel
-    ("CUST-0001", 1, 1, "55 days"),   # Italian Linen Camp Shirt
-    ("CUST-0001", 4, 1, "40 days"),   # Relaxed Oxford Shirt
-    ("CUST-0001", 2, 1, "30 days"),   # Wide-Leg Linen Trousers
-    ("CUST-0001", 11, 1, "20 days"),  # Linen Camp Shirt
-    ("CUST-0001", 6, 1, "10 days"),   # Leather Slide Sandal (overlap Leo)
+    # Marco — linen / summer / travel (7 orders)
+    ("CUST-MARCO", 1, 1, "56 days"),   # Italian Linen Camp Shirt
+    ("CUST-MARCO", 4, 1, "48 days"),   # Relaxed Oxford Shirt
+    ("CUST-MARCO", 9, 1, "40 days"),   # Linen Utility Jacket
+    ("CUST-MARCO", 6, 1, "32 days"),   # Leather Slide Sandal
+    ("CUST-MARCO", 3, 1, "24 days"),   # Signature Straw Tote
+    ("CUST-MARCO", 8, 1, "16 days"),   # Ceramic Tumbler Set
+    ("CUST-MARCO", 7, 1, "8 days"),    # Cashmere-Blend Cardigan
 
-    # Anya — workwear / neutrals / minimal
-    ("CUST-0002", 1, 1, "48 days"),   # Italian Linen Camp Shirt (overlap Marco)
-    ("CUST-0002", 35, 1, "35 days"),  # Poplin Band-Collar Shirt
-    ("CUST-0002", 5, 1, "25 days"),   # Sundress in Washed Linen
-    ("CUST-0002", 19, 1, "12 days"),  # Poplin Shirt Dress
+    # Anna — gift-giver (5 orders, varied recipients + price bands)
+    ("CUST-ANNA", 5, 1, "40 days"),    # Sundress in Washed Linen (birthday gift)
+    ("CUST-ANNA", 7, 1, "32 days"),    # Cashmere-Blend Cardigan (anniversary)
+    ("CUST-ANNA", 3, 1, "24 days"),    # Signature Straw Tote (housewarming)
+    ("CUST-ANNA", 8, 1, "16 days"),    # Ceramic Tumbler Set (housewarming)
+    ("CUST-ANNA", 6, 1, "8 days"),     # Leather Slide Sandal (birthday)
 
-    # Priya — evening / dresses / accessories
-    ("CUST-0003", 5, 1, "52 days"),   # Sundress in Washed Linen (overlap Anya)
-    ("CUST-0003", 91, 1, "38 days"),  # Gold Hoop Earrings
-    ("CUST-0003", 30, 1, "22 days"),  # Brass Cuff Bracelet
-    ("CUST-0003", 25, 1, "14 days"),  # Leather Crossbody
-    ("CUST-0003", 20, 1, "5 days"),   # Tiered Cotton Maxi
-
-    # Kenji — outerwear / utility
-    ("CUST-0004", 9, 1, "45 days"),   # Linen Utility Jacket
-    ("CUST-0004", 15, 1, "30 days"),  # Lightweight Chore Jacket
-    ("CUST-0004", 17, 1, "18 days"),  # Quilted Vest
-    ("CUST-0004", 14, 1, "8 days"),   # Linen Overshirt
-
-    # Sofia — home / candles / gifts
-    ("CUST-0005", 28, 2, "50 days"),  # Soy Candle in Ceramic
-    ("CUST-0005", 8, 1, "35 days"),   # Ceramic Tumbler Set
-    ("CUST-0005", 27, 1, "20 days"),  # Linen Throw Blanket
-    ("CUST-0005", 88, 1, "6 days"),   # Incense Bundle
-    ("CUST-0005", 25, 1, "12 days"),  # Leather Crossbody (overlap Priya)
-
-    # Leo — footwear / sport / outdoor
-    ("CUST-0006", 10, 1, "42 days"),  # Featherweight Trail Runner
-    ("CUST-0006", 6, 1, "28 days"),   # Leather Slide Sandal (overlap Marco)
-    ("CUST-0006", 22, 1, "16 days"),  # Canvas Court Sneaker
-    ("CUST-0006", 67, 1, "9 days"),   # Running Sneaker
-
-    # Imani — bags / dresses
-    ("CUST-0007", 25, 1, "44 days"),  # Leather Crossbody (overlap Priya+Sofia)
-    ("CUST-0007", 19, 1, "33 days"),  # Poplin Shirt Dress (overlap Anya)
-    ("CUST-0007", 20, 1, "21 days"),  # Tiered Cotton Maxi (overlap Priya)
-    ("CUST-0007", 73, 1, "7 days"),   # Saddle Bag
-
-    # Haruto — tops / bottoms / home
-    ("CUST-0008", 32, 1, "47 days"),  # Boxy Cotton Tee
-    ("CUST-0008", 43, 1, "32 days"),  # High-Waist Denim
-    ("CUST-0008", 84, 1, "17 days"),  # Cotton Waffle Bath Towel Set
-    ("CUST-0008", 8, 1, "4 days"),    # Ceramic Tumbler Set (overlap Sofia)
+    # Fresh visitor — no orders
 ]
 
 EPISODES = [
     # Marco — linen / summer / travel
-    ("CUST-0001", "Browsed mens linen shirts for a Lisbon trip; added one to bag.", -14),
-    ("CUST-0001", "Asked about wrinkle-resistance in travel fabrics.", -9),
-    ("CUST-0001", "Compared two camp shirts; saved a sage-green one.", -3),
+    ("CUST-MARCO", "Prefers natural fibers, oat tones", -60),
+    ("CUST-MARCO", "Bought Maren tunic oat last August", -45),
+    ("CUST-MARCO", "Sizes consistently in M", -40),
+    ("CUST-MARCO", "Browsed mens linen shirts for a Lisbon trip; added one to bag.", -14),
+    ("CUST-MARCO", "Asked about wrinkle-resistance in travel fabrics.", -9),
+    ("CUST-MARCO", "Compared two camp shirts; saved a sage-green one.", -3),
 
-    # Anya — workwear / neutrals
-    ("CUST-0002", "Asked for workwear in a muted palette; liked a charcoal blazer.", -18),
-    ("CUST-0002", "Filtered dresses under $150, sorted by colour.", -7),
-    ("CUST-0002", "Requested fabric care labels on two shirts.", -2),
+    # Anna — gift-giver
+    ("CUST-ANNA", "Past orders skew gift-shaped — multiple recipients, varied price bands", -50),
+    ("CUST-ANNA", "Recent searches mention 'for my mother'", -20),
+    ("CUST-ANNA", "Price bands range $140 to $310, milestone-leaning", -15),
+    ("CUST-ANNA", "Bought a sundress as a birthday gift last month", -30),
+    ("CUST-ANNA", "Asked about gift wrapping and delivery timing for an anniversary", -9),
 
-    # Priya — evening / accessories
-    ("CUST-0003", "Viewed two evening dresses; asked which pairs with a gold cuff.", -20),
-    ("CUST-0003", "Compared three earring sets; saved a drop-pearl pair.", -11),
-    ("CUST-0003", "Asked for bags that match an emerald dress.", -4),
-
-    # Kenji — outerwear / utility
-    ("CUST-0004", "Compared utility jackets for layering in autumn.", -15),
-    ("CUST-0004", "Asked about water-resistance in waxed cotton.", -6),
-    ("CUST-0004", "Saved a quilted vest for weekend hikes.", -1),
-
-    # Sofia — home / gifts
-    ("CUST-0005", "Restocked soy candles; asked about scent pairing.", -22),
-    ("CUST-0005", "Filtered home goods by price; saved a linen throw.", -8),
-    ("CUST-0005", "Asked for a gift bundle recommendation under $100.", -3),
-
-    # Leo — footwear / sport
-    ("CUST-0006", "Compared trail runners vs road shoes; saved a trail pair.", -17),
-    ("CUST-0006", "Asked about sole durability for long-distance walks.", -5),
-    ("CUST-0006", "Viewed canvas sneakers for weekend markets.", -2),
-
-    # Imani — bags / dresses
-    ("CUST-0007", "Saved a leather tote for a work conference.", -13),
-    ("CUST-0007", "Asked which dresses complement a cognac handbag.", -8),
-    ("CUST-0007", "Viewed occasion dresses in jewel tones.", -3),
-
-    # Haruto — tops / home
-    ("CUST-0008", "Compared cotton tees for everyday wear.", -16),
-    ("CUST-0008", "Asked about towel sets for a bathroom refresh.", -9),
-    ("CUST-0008", "Saved a ceramic tumbler set as a housewarming gift.", -2),
+    # Fresh visitor — no episodes
 ]
 
 RETURN_POLICIES = [

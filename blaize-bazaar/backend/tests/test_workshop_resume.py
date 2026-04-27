@@ -94,7 +94,7 @@ def test_resume_emits_three_memory_panels_in_order() -> None:
     )
     client = _make_client(db)
 
-    r = client.post("/api/atelier/resume", json={"customer_id": "CUST-0001"})
+    r = client.post("/api/atelier/resume", json={"customer_id": "CUST-MARCO"})
     assert r.status_code == 200
     body = r.json()
     assert "session_id" in body
@@ -130,7 +130,7 @@ def test_resume_db_failure_emits_empty_panels_and_graceful_response() -> None:
     db = _StubDB(raise_exc=RuntimeError("connection reset"))
     client = _make_client(db)
 
-    r = client.post("/api/atelier/resume", json={"customer_id": "CUST-0001"})
+    r = client.post("/api/atelier/resume", json={"customer_id": "CUST-MARCO"})
     assert r.status_code == 200
     body = r.json()
 
@@ -160,7 +160,7 @@ def test_resume_session_id_roundtrips_when_supplied() -> None:
 
     r = client.post(
         "/api/atelier/resume",
-        json={"customer_id": "CUST-0001", "session_id": "ws-fixed123"},
+        json={"customer_id": "CUST-MARCO", "session_id": "ws-fixed123"},
     )
     assert r.status_code == 200
     assert r.json()["session_id"] == "ws-fixed123"

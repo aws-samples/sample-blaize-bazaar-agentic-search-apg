@@ -38,14 +38,9 @@ const CREAM_WARM = '#f5e8d3'
 // Seeded demo customers from scripts/migrations/002_workshop_seed.sql.
 const DEMO_CUSTOMERS: Array<{ id: string; label: string; sublabel?: string }> = [
   { id: 'anonymous', label: 'Anonymous' },
-  { id: 'CUST-0001', label: 'Marco', sublabel: '3 prior orders · linen' },
-  { id: 'CUST-0002', label: 'Anya', sublabel: 'workwear' },
-  { id: 'CUST-0003', label: 'Priya', sublabel: 'evening' },
-  { id: 'CUST-0004', label: 'Kenji', sublabel: 'tech' },
-  { id: 'CUST-0005', label: 'Sofia', sublabel: 'beauty' },
-  { id: 'CUST-0006', label: 'Leo', sublabel: 'sport' },
-  { id: 'CUST-0007', label: 'Imani', sublabel: 'bags' },
-  { id: 'CUST-0008', label: 'Haruto', sublabel: 'mobile' },
+  { id: 'CUST-MARCO', label: 'Marco', sublabel: 'returning · linen · 7 orders' },
+  { id: 'CUST-ANNA', label: 'Anna', sublabel: 'gift-giver · 5 orders' },
+  { id: 'CUST-FRESH', label: 'New visitor', sublabel: 'empty memory' },
 ]
 
 const QUICK_QUERIES = [

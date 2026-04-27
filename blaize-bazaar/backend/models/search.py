@@ -97,6 +97,7 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
     workshop_mode: Optional[str] = Field(default=None, description="Workshop progression mode: 'legacy', 'search', 'agentic', 'production'")
     guardrails_enabled: bool = Field(default=False, description="Enable content moderation guardrails")
+    customer_id: Optional[str] = Field(default=None, description="Persona customer id (e.g. 'CUST-MARCO'). None = anonymous.")
 
 
 class ChatResponse(BaseModel):

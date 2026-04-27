@@ -596,13 +596,20 @@ async def chat_stream(request: ChatRequest, user=Depends(get_current_user)):
     async def event_generator():
         try:
             history = [{"role": msg.role, "content": msg.content} for msg in request.conversation_history]
+            # Merge persona customer_id into the user dict so the agent
+            # context and LTM reads scope to the right customer. The
+            # persona's customer_id takes precedence over the Cognito
+            # sub when both are present (workshop affordance).
+            effective_user = dict(user) if user else {}
+            if request.customer_id:
+                effective_user["customer_id"] = request.customer_id
             async for event in chat_service.chat_stream(
                 message=request.message,
                 conversation_history=history,
                 session_id=request.session_id,
                 workshop_mode=request.workshop_mode,
                 guardrails_enabled=request.guardrails_enabled,
-                user=user
+                user=effective_user or None
             ):
                 yield f"data: {json.dumps(event, ensure_ascii=False, default=str)}\n\n"
         except Exception as e:
@@ -1076,6 +1083,121 @@ async def atelier_catalog():
         "agents": agents,
         "tools": tools,
         "grants": grants,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Persona endpoints — workshop affordance for switching curated identities.
+# Reads from docs/personas-config.json; no database table for persona defs.
+# ---------------------------------------------------------------------------
+
+import pathlib as _pathlib
+
+_PERSONAS_CONFIG_PATH = _pathlib.Path(__file__).resolve().parent.parent.parent / "docs" / "personas-config.json"
+_personas_cache: Optional[list] = None
+
+
+def _load_personas() -> list:
+    """Load persona definitions from docs/personas-config.json. Cached."""
+    global _personas_cache
+    if _personas_cache is not None:
+        return _personas_cache
+    try:
+        raw = json.loads(_PERSONAS_CONFIG_PATH.read_text())
+        _personas_cache = raw.get("personas", [])
+    except Exception as e:
+        logger.warning(f"Failed to load personas config: {e}")
+        _personas_cache = []
+    return _personas_cache
+
+
+@app.get("/api/atelier/personas/reload")
+async def reload_personas():
+    """Dev helper — force re-read of personas-config.json."""
+    global _personas_cache
+    _personas_cache = None
+    return {"reloaded": True, "count": len(_load_personas())}
+
+
+# In-memory session → persona mapping. Lightweight — no DB table.
+# Keyed by session_id; value is the persona id string.
+_session_persona: dict[str, str] = {}
+
+
+@app.get("/api/atelier/personas")
+async def list_personas():
+    """Return the three persona definitions (without internal customer_ids)."""
+    personas = _load_personas()
+    return [
+        {
+            "id": p["id"],
+            "display_name": p["display_name"],
+            "role_tag": p["role_tag"],
+            "blurb": p["blurb"],
+            "avatar_color": p["avatar_color"],
+            "avatar_initial": p["avatar_initial"],
+            "stats": p["stats"],
+        }
+        for p in personas
+    ]
+
+
+from pydantic import BaseModel as _BaseModel
+
+
+class PersonaSwitchRequest(_BaseModel):
+    persona_id: str
+    current_session_id: Optional[str] = None
+
+
+@app.post("/api/persona/switch")
+async def switch_persona(req: PersonaSwitchRequest):
+    """End the current session and start a new one under the given persona."""
+    personas = _load_personas()
+    persona = next((p for p in personas if p["id"] == req.persona_id), None)
+    if not persona:
+        raise HTTPException(status_code=404, detail=f"Unknown persona: {req.persona_id}")
+
+    import uuid
+    new_session_id = f"persona-{req.persona_id}-{uuid.uuid4().hex[:8]}"
+
+    # Track the mapping so /api/persona/current can resolve it.
+    _session_persona[new_session_id] = req.persona_id
+
+    return {
+        "session_id": new_session_id,
+        "persona": {
+            "id": persona["id"],
+            "display_name": persona["display_name"],
+            "role_tag": persona["role_tag"],
+            "avatar_color": persona["avatar_color"],
+            "avatar_initial": persona["avatar_initial"],
+            "customer_id": persona["customer_id"],
+            "stats": persona["stats"],
+        },
+    }
+
+
+@app.get("/api/persona/current")
+async def get_current_persona(session_id: Optional[str] = Query(default=None)):
+    """Return the active persona for a session, or null."""
+    if not session_id or session_id not in _session_persona:
+        return {"persona": None}
+    persona_id = _session_persona[session_id]
+    personas = _load_personas()
+    persona = next((p for p in personas if p["id"] == persona_id), None)
+    if not persona:
+        return {"persona": None}
+    return {
+        "persona": {
+            "id": persona["id"],
+            "display_name": persona["display_name"],
+            "role_tag": persona["role_tag"],
+            "avatar_color": persona["avatar_color"],
+            "avatar_initial": persona["avatar_initial"],
+            "customer_id": persona["customer_id"],
+            "stats": persona["stats"],
+        },
     }
 
 
