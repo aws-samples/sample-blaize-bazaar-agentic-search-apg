@@ -1,19 +1,22 @@
 /**
  * MetricsRow — four live metric cards above the chat/tabs split.
  *
- * Rescoped from the mockup's SESSIONS / PANELS / P50 / CONFIDENCE to
- * four metrics we can read from the current turn honestly — "what's
- * happening right now in this session" is a better demo signal than
- * "3 sessions across the system":
+ * Four metrics read honestly from live state — "what's happening in
+ * this session" is a better demo signal than system-wide counters:
  *
- *   PANELS · this turn         events.filter(type=panel).length
+ *   SKILLS · this turn         latest skill routing's loaded_skills.length
  *   ELAPSED · this turn        last_event_ts - first_event_ts
  *   TOOLS USED · this turn     panel count with tag_class === 'cyan'
  *   CONFIDENCE · last reply    result value from MEMORY · CONFIDENCE
  *
- * Pre-turn empty states: PANELS/TOOLS show 0, ELAPSED shows '—',
+ * Pre-turn empty states: SKILLS/TOOLS show 0, ELAPSED shows '—',
  * CONFIDENCE shows '—'. Once the first turn completes all four
  * resolve to real numbers.
+ *
+ * Skills is sourced from ``blaize-skill-routing-latest`` in
+ * localStorage (written by the storefront chat's useAgentChat). The
+ * Atelier workshop chat shares the same key so the Architecture tab's
+ * Skills story gets a live dashboard number.
  */
 
 const INK = '#2d1810'
@@ -21,8 +24,8 @@ const INK_SOFT = '#6b4a35'
 const INK_QUIET = '#a68668'
 
 export interface MetricsRowProps {
-  /** Count of ``type === 'panel'`` events in the current turn. */
-  panelCount: number
+  /** Loaded-skill count from the latest skill routing decision. */
+  skillCount: number
   /** Elapsed wall-clock ms of the current turn, or null pre-turn. */
   elapsedMs: number | null
   /** Count of panel events whose tag_class === 'cyan' (data-op tools). */
@@ -32,7 +35,7 @@ export interface MetricsRowProps {
 }
 
 export default function MetricsRow({
-  panelCount,
+  skillCount,
   elapsedMs,
   toolsUsed,
   confidencePercent,
@@ -43,10 +46,10 @@ export default function MetricsRow({
       className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-6 py-5"
     >
       <MetricCard
-        id="panels"
-        label="Panels"
+        id="skills"
+        label="Skills"
         sublabel="this turn"
-        value={panelCount}
+        value={skillCount}
         unit={null}
         emptyValue={0}
       />

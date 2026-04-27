@@ -10,13 +10,13 @@ describe('MetricsRow', () => {
   it('renders all four metric cards with their labels', () => {
     render(
       <MetricsRow
-        panelCount={13}
+        skillCount={2}
         elapsedMs={14163}
         toolsUsed={5}
         confidencePercent={94}
       />,
     )
-    expect(screen.getByTestId('metric-card-panels')).toBeInTheDocument()
+    expect(screen.getByTestId('metric-card-skills')).toBeInTheDocument()
     expect(screen.getByTestId('metric-card-elapsed')).toBeInTheDocument()
     expect(screen.getByTestId('metric-card-tools-used')).toBeInTheDocument()
     expect(screen.getByTestId('metric-card-confidence')).toBeInTheDocument()
@@ -25,13 +25,13 @@ describe('MetricsRow', () => {
   it('renders real values when supplied', () => {
     render(
       <MetricsRow
-        panelCount={13}
+        skillCount={2}
         elapsedMs={14163}
         toolsUsed={5}
         confidencePercent={94}
       />,
     )
-    expect(screen.getByTestId('metric-card-panels').textContent).toContain('13')
+    expect(screen.getByTestId('metric-card-skills').textContent).toContain('2')
     expect(screen.getByTestId('metric-card-elapsed').textContent).toContain(
       '14163',
     )
@@ -52,7 +52,7 @@ describe('MetricsRow', () => {
   it('shows em-dash on ELAPSED and CONFIDENCE in the pre-turn empty state', () => {
     render(
       <MetricsRow
-        panelCount={0}
+        skillCount={0}
         elapsedMs={null}
         toolsUsed={0}
         confidencePercent={null}
@@ -73,16 +73,16 @@ describe('MetricsRow', () => {
     ).not.toContain('%')
   })
 
-  it('PANELS and TOOLS USED render 0 (not em-dash) in empty state — 0 is honest', () => {
+  it('SKILLS and TOOLS USED render 0 (not em-dash) in empty state — 0 is honest', () => {
     render(
       <MetricsRow
-        panelCount={0}
+        skillCount={0}
         elapsedMs={null}
         toolsUsed={0}
         confidencePercent={null}
       />,
     )
-    expect(screen.getByTestId('metric-card-panels').textContent).toContain('0')
+    expect(screen.getByTestId('metric-card-skills').textContent).toContain('0')
     expect(screen.getByTestId('metric-card-tools-used').textContent).toContain(
       '0',
     )

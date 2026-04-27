@@ -43,16 +43,6 @@ vi.mock('../components/WorkshopChat', () => ({
 vi.mock('../components/WorkshopTelemetry', () => ({
   default: () => <div data-testid="stub-workshop-telemetry">telemetry</div>,
 }))
-vi.mock('../components/ObservabilityPanel', () => ({
-  default: ({ onClose }: { onClose: () => void }) => (
-    <div data-testid="stub-obs-panel">
-      obs
-      <button onClick={onClose} data-testid="stub-obs-close">
-        close
-      </button>
-    </div>
-  ),
-}))
 vi.mock('../components/IndexPerformanceDashboard', () => ({
   default: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="stub-bench-modal">bench</div> : null,

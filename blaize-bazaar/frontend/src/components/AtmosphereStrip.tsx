@@ -8,7 +8,7 @@
  *
  * Live values wire through the WorkshopPage's session state:
  *   - active sessions count (currently always 1 — see below)
- *   - panel count in current turn
+ *   - skill count loaded into context this turn
  *   - median panel duration in current turn
  *
  * "Active sessions" is reserved for when we wire multi-session
@@ -22,16 +22,17 @@ const ACCENT = '#c44536'
 
 interface AtmosphereStripProps {
   activeSessions?: number
-  panelCount: number
+  skillCount: number
   medianMs: number | null
 }
 
 export default function AtmosphereStrip({
   activeSessions = 1,
-  panelCount,
+  skillCount,
   medianMs,
 }: AtmosphereStripProps) {
   const sessionWord = activeSessions === 1 ? 'ACTIVE SESSION' : 'ACTIVE SESSIONS'
+  const skillWord = skillCount === 1 ? 'SKILL LOADED' : 'SKILLS LOADED'
   const medianDisplay = medianMs === null ? '—' : `${medianMs}MS MEDIAN`
   return (
     <div
@@ -62,7 +63,7 @@ export default function AtmosphereStrip({
         ·
       </span>
       <span>
-        {panelCount} {panelCount === 1 ? 'PANEL' : 'PANELS'}
+        {skillCount} {skillWord}
       </span>
       <span style={{ color: INK_QUIET }} aria-hidden>
         ·

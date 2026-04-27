@@ -17,7 +17,7 @@
  *
  * Teaching anchor: "Use AgentCore for solved primitives. Use Aurora
  * for domain state you own." Each architecture card carries a
- * provenance pill (Managed / Owned / Both / Teaching).
+ * provenance pill (Managed / Owned / Both).
  *
  * Tab behavior:
  *   - Tabs render in order Telemetry → Architecture → Performance.
@@ -41,7 +41,6 @@ import { AuthGate } from '../App'
 import { useUI } from '../contexts/UIContext'
 import WorkshopChat from '../components/WorkshopChat'
 import WorkshopTelemetry from '../components/WorkshopTelemetry'
-import ObservabilityPanel from '../components/ObservabilityPanel'
 import IndexPerformanceDashboard from '../components/IndexPerformanceDashboard'
 import SkillsPanel from '../components/SkillsPanel'
 import MemoryArchPage from '../components/atelier-arch/MemoryArchPage'
@@ -68,10 +67,9 @@ const ACCENT = '#c44536'
 
 type Tab = 'telemetry' | 'architecture' | 'performance'
 
-type Provenance = 'MANAGED' | 'OWNED' | 'BOTH' | 'TEACHING'
+type Provenance = 'MANAGED' | 'OWNED' | 'BOTH'
 
 type DetailPanelKey =
-  | 'obs'
   | 'bench'
   | 'skills'
   // Atelier architecture detail pages (Phase 2+)
@@ -124,7 +122,6 @@ const PROV_META: Record<
   MANAGED:  { pillBg: '#E6F1FB', pillFg: '#0C447C', label: 'Managed' },
   OWNED:    { pillBg: '#EAF3DE', pillFg: '#27500A', label: 'Owned' },
   BOTH:     { pillBg: '#EEEDFE', pillFg: '#3C3489', label: 'Both' },
-  TEACHING: { pillBg: '#FAEEDA', pillFg: '#633806', label: 'Teaching' },
 }
 
 type CardCTA =
@@ -506,8 +503,12 @@ function WorkshopContent() {
     }
   })
 
+  // Poll localStorage for the latest skill routing decision. Runs
+  // unconditionally (not gated on the Skills detail panel being open)
+  // so the MetricsRow + AtmosphereStrip can show "Skills · this turn"
+  // from the moment the storefront or atelier chat lands a routing
+  // event. 2s interval is cheap and avoids cross-route context.
   useEffect(() => {
-    if (detailPanel !== 'skills') return
     const tick = () => {
       try {
         const stored = localStorage.getItem('blaize-skill-routing-latest')
@@ -530,7 +531,7 @@ function WorkshopContent() {
     tick()
     const t = setInterval(tick, 2000)
     return () => clearInterval(t)
-  }, [detailPanel])
+  }, [])
   // Lifted from WorkshopChat so the right-rail band can render the
   // live session id + customer label inline alongside its
   // "ATELIER / TELEMETRY" kicker.
@@ -602,8 +603,12 @@ function WorkshopContent() {
         break
       }
     }
-    return { panels, toolsUsed, elapsedMs, medianMs, confidencePercent }
-  }, [events])
+    // Skills loaded this turn — sourced from the latest routing decision
+    // that ``useAgentChat`` writes to localStorage and WorkshopPage
+    // polls above. Falls back to 0 until the first turn lands.
+    const skillCount = skillRouting?.loaded_skills.length ?? 0
+    return { panels, toolsUsed, elapsedMs, medianMs, confidencePercent, skillCount }
+  }, [events, skillRouting])
 
   const detailOpen = detailPanel !== null
   const isBenchModal = detailPanel === 'bench' // IndexPerformanceDashboard stays modal for now
@@ -623,7 +628,6 @@ function WorkshopContent() {
   }
 
   const renderDetail = () => {
-    if (detailPanel === 'obs') return <ObservabilityPanel onClose={closeDetail} />
     if (detailPanel === 'skills')
       return (
         <SkillsDetailWrapper onClose={closeDetail} routing={skillRouting} />
@@ -808,21 +812,7 @@ function WorkshopContent() {
                 <ProvenancePill kind="BOTH" />
                 <span>Managed primitive + your data.</span>
               </span>
-              <span className="inline-flex items-center gap-1.5">
-                <ProvenancePill kind="TEACHING" />
-                <span>Postgres demonstrating a primitive.</span>
-              </span>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setDetailPanel('obs')}
-              data-testid="open-observability-secondary"
-              className="self-start text-[11.5px] underline-offset-2 hover:underline mt-1"
-              style={{ color: INK_QUIET }}
-            >
-              Observability dashboard →
-            </button>
           </div>
         )}
         {activeTab === 'telemetry' && <WorkshopTelemetry events={events} />}
@@ -1059,11 +1049,11 @@ function WorkshopContent() {
       >
         <AtelierHero />
         <AtmosphereStrip
-          panelCount={panelCount}
+          skillCount={metrics.skillCount}
           medianMs={metrics.medianMs}
         />
         <MetricsRow
-          panelCount={panelCount}
+          skillCount={metrics.skillCount}
           elapsedMs={metrics.elapsedMs}
           toolsUsed={metrics.toolsUsed}
           confidencePercent={metrics.confidencePercent}
