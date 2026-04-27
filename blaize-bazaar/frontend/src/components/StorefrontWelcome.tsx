@@ -24,11 +24,39 @@ interface StorefrontWelcomeProps {
   persona?: PersonaSnapshot | null
 }
 
+type TimeOfDay = 'morning' | 'afternoon' | 'evening'
+
+function timeOfDay(): TimeOfDay {
+  const h = new Date().getHours()
+  if (h < 12) return 'morning'
+  if (h < 17) return 'afternoon'
+  return 'evening'
+}
+
+const TOD_GREETING: Record<TimeOfDay, string> = {
+  morning: 'Good morning',
+  afternoon: 'Good afternoon',
+  evening: 'Good evening',
+}
+
+const TOD_EYEBROW: Record<TimeOfDay, string> = {
+  morning: 'This morning at the boutique',
+  afternoon: 'This afternoon at the boutique',
+  evening: 'Tonight at the boutique',
+}
+
+const TOD_COVER_EYEBROW: Record<TimeOfDay, string> = {
+  morning: "This morning's standout",
+  afternoon: "This afternoon's standout",
+  evening: "Tonight's standout",
+}
+
 interface PersonaCopy {
-  /** Full greeting line, excluding time-of-day. Wrapped in <em> in the
-   * markup. "Good evening." for fresh visitors; "Welcome back, Marco."
-   * for a returning persona. */
-  greeting: string
+  /** Greeting line without time-of-day prefix. For fresh visitors this
+   * is empty and the time-of-day stands alone ("Good evening."). For
+   * returning personas it's the warm back-reference ("Marco — welcome
+   * back."). */
+  greetingSuffix: (firstName: string) => string
   /** Short context paragraph that follows the greeting. Grounded in
    * persona signals so it reads like the storefront remembers them. */
   context: React.ReactNode
@@ -37,7 +65,7 @@ interface PersonaCopy {
 }
 
 const FRESH_COPY: PersonaCopy = {
-  greeting: 'Good evening.',
+  greetingSuffix: () => '',
   context: (
     <>
       I've been watching the floor —{' '}
@@ -60,13 +88,14 @@ const FRESH_COPY: PersonaCopy = {
 }
 
 const MARCO_COPY: PersonaCopy = {
-  greeting: 'Welcome back, Marco.',
+  greetingSuffix: (firstName) => `, ${firstName}. Welcome back.`,
   context: (
     <>
-      It's been three weeks. The{' '}
-      <span className="sf-context-product">Maren tunic</span> in oat is
-      still hanging well, and there's a new sage linen camp shirt that
-      picked up where your last saved piece left off.
+      It's been three weeks since your last visit. Seven orders in your
+      history, with a steady thread of{' '}
+      <span className="sf-context-product">natural fibers and oat tones</span>.
+      A new sage linen camp shirt just landed that picks up where your
+      last saved piece left off.
     </>
   ),
   picks: [
@@ -82,13 +111,14 @@ const MARCO_COPY: PersonaCopy = {
 }
 
 const ANNA_COPY: PersonaCopy = {
-  greeting: 'Welcome back, Anna.',
+  greetingSuffix: (firstName) => `, ${firstName}. Welcome back.`,
   context: (
     <>
-      A few new arrivals since your last visit, with{' '}
-      <span className="sf-context-product">gift-ready pieces</span> across
-      milestone and everyday price bands. I can help narrow by occasion
-      or recipient whenever you're ready.
+      Nine days since your last visit. Five orders in your history, all
+      gift-shaped across milestone and everyday price bands. A handful of{' '}
+      <span className="sf-context-product">gift-ready pieces</span>{' '}
+      arrived since — I can narrow by occasion or recipient whenever
+      you're ready.
     </>
   ),
   picks: [
@@ -118,6 +148,9 @@ function copyForPersona(persona?: PersonaSnapshot | null): PersonaCopy {
 
 export default function StorefrontWelcome({ onSend, persona }: StorefrontWelcomeProps) {
   const copy = copyForPersona(persona)
+  const tod = timeOfDay()
+  const firstName = persona ? persona.display_name.split(' ')[0] : ''
+  const greeting = `${TOD_GREETING[tod]}${copy.greetingSuffix(firstName)}.`
 
   return (
     <div className="sf-welcome">
@@ -141,7 +174,7 @@ export default function StorefrontWelcome({ onSend, persona }: StorefrontWelcome
         <div className="sf-cover-overlay">
           <div className="sf-cover-eyebrow">
             <span className="sf-cover-dot" />
-            Tonight's standout
+            {TOD_COVER_EYEBROW[tod]}
           </div>
           <div className="sf-cover-edition">No. 06</div>
         </div>
@@ -151,13 +184,13 @@ export default function StorefrontWelcome({ onSend, persona }: StorefrontWelcome
       <div className="sf-body">
         {/* Eyebrow row */}
         <div className="sf-eyebrow-row">
-          <span className="sf-eyebrow-sm">Tonight at the boutique</span>
+          <span className="sf-eyebrow-sm">{TOD_EYEBROW[tod]}</span>
           <span className="sf-eyebrow-rule" />
         </div>
 
         {/* Greeting */}
         <h2 className="sf-greeting">
-          <em>{copy.greeting}</em>
+          <em>{greeting}</em>
         </h2>
         <p className="sf-context">{copy.context}</p>
 
