@@ -1343,20 +1343,6 @@ async def agentcore_gateway_tools():
         return {"tools": [], "error": str(e)}
 
 
-@app.get("/api/agentcore/observability/status")
-async def agentcore_observability_status():
-    """Get OTEL/X-Ray observability status (Lab 4d)"""
-    import os
-    endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "")
-    service_name = os.environ.get("OTEL_SERVICE_NAME", "blaize-bazaar")
-    return {
-        "enabled": bool(endpoint),
-        "service_name": service_name,
-        "endpoint": endpoint or "not configured",
-        "recent_traces": []  # Populated by trace collector in production
-    }
-
-
 @app.get("/api/agentcore/runtime/status")
 async def agentcore_runtime_status():
     """Get AgentCore Runtime execution status (Lab 4e)"""
