@@ -37,6 +37,11 @@
     --red-1: #a8423a;
     --red-soft: rgba(168, 66, 58, 0.12);
     --green-1: #6b8c5e;
+    /* Amber — introduced for Evaluations (telemetry corner).
+       Scoped to that surface for now; add usage notes here if
+       other pages adopt. */
+    --amber-1: #b88a3a;
+    --amber-soft: rgba(184, 138, 58, 0.12);
 
     /* Type stacks */
     --serif: 'Fraunces', 'Times New Roman', Georgia, serif;

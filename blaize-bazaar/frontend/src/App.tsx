@@ -32,6 +32,7 @@ import WorkshopPage from './pages/WorkshopPage'
 import InspectorPage from './pages/InspectorPage'
 import StoryboardPage from './pages/StoryboardPage'
 import DiscoverPage from './pages/DiscoverPage'
+import AtelierComponentsPreview from './pages/AtelierComponentsPreview'
 import './styles/premium-heading-styles.css'
 
 // ---------------------------------------------------------------------------
@@ -124,6 +125,22 @@ function App() {
                  */}
                 <Route path="/" element={<StorefrontPage />} />
                 <Route path="/atelier" element={<WorkshopPage />} />
+                {/* Architecture detail pages — deep-linkable. The
+                    underlying WorkshopPage reads the :section param
+                    and opens the matching detail panel on mount. */}
+                <Route
+                  path="/atelier/architecture/:section"
+                  element={<WorkshopPage />}
+                />
+                {/* Dev-only: preview gallery for shared atelier/ primitives.
+                    Guarded by import.meta.env.DEV so production bundles
+                    never include it. */}
+                {import.meta.env.DEV && (
+                  <Route
+                    path="/atelier/_components"
+                    element={<AtelierComponentsPreview />}
+                  />
+                )}
                 <Route path="/inspector" element={<InspectorPage />} />
                 <Route path="/storyboard" element={<StoryboardPage />} />
                 <Route path="/discover" element={<DiscoverPage />} />

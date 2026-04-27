@@ -1,26 +1,29 @@
 /**
  * SkillsPanel — Atelier Architecture tab Skills view.
  *
- * Renders the full skills architecture teaching surface, matching
- * ``docs/atelier-skills-architecture.html``:
+ * Consumes the shared ``atelier/`` primitives (DetailPageShell,
+ * SectionFrame, CheatSheet, LiveStrip, StatusBadge). The Skills
+ * page is the visual contract — every other architecture page
+ * mirrors the same shell + primitives.
  *
- *   1. Breadcrumb + title + summary meta
- *   2. Triangle diagram (agents · tools · skills)
- *   3. The library — one card per registered skill, three states
- *      (Active this turn / Considered / Dormant), state derived from
- *      the most recent ``RouterDecision``
- *   4. Live activation log — the turn's user message + verdict+reason
- *      for each skill + summary line
- *   5. Before/after impact panel — static teaching example for v1
- *      (flag for later: wire to live before/after comparison)
- *   6. Three-layer cheat sheet — agents/tools/skills columns
- *
- * The "Open SKILL.md" affordance on each library card opens a modal
- * with the skill's markdown body rendered via MarkdownMessage (the
- * same component the chat uses).
+ * Page structure:
+ *   1. DetailPageShell — crumb, title, subtitle, meta strip
+ *   2. TriangleSection — agents / tools / skills mental model
+ *   3. Library + live log two-column layout
+ *      - Library: SkillLibraryCard[] (Active / Considered / Dormant)
+ *      - Live log: the router's routing decision for this turn
+ *   4. ImpactSection — before/after static teaching example (v1)
+ *   5. CheatSheet — three-layer cheat sheet (agents/tools/skills)
+ *   6. SkillModal (conditional) — renders the skill body markdown
  */
 import { useEffect, useMemo, useState } from 'react'
 import MarkdownMessage from './MarkdownMessage'
+import {
+  DetailPageShell,
+  SectionFrame,
+  CheatSheet,
+  StatusBadge,
+} from './atelier'
 import type { SkillRouting } from '../hooks/useAgentChat'
 import '../styles/skills-panel.css'
 
@@ -90,131 +93,156 @@ export default function SkillsPanel({
   }, [routing, skills])
 
   return (
-    <div className="sk-page">
-      {/* ---- Breadcrumb ---- */}
-      <div className="sk-crumb">
-        <span>Atelier</span>
-        <span className="sk-sep">·</span>
-        <span>Architecture</span>
-        <span className="sk-sep">·</span>
-        <span className="sk-here">Skills</span>
-      </div>
+    <>
+      <DetailPageShell
+        crumb={['Atelier', 'Architecture', 'Skills']}
+        title={
+          <>
+            Skills, <em>at the boutique.</em>
+          </>
+        }
+        subtitle="Domain expertise, loaded only when the conversation needs it. Skills don't pick products and they don't fetch data — they shape how the agent thinks and writes about a topic."
+        meta={[
+          { label: 'Active', value: `${activeCount} of ${skills.length || '—'}` },
+          { label: 'This turn', value: turnElapsedMs ? `${turnElapsedMs} ms` : '—' },
+          { label: 'Tokens added', value: tokensAdded || '—' },
+          { label: 'Library version', value: 'v1.0' },
+        ]}
+      >
+        {/* ---- Triangle ---- */}
+        <TriangleSection />
 
-      {/* ---- Title + meta ---- */}
-      <div>
-        <h1 className="sk-title">
-          Skills, <em>at the boutique.</em>
-        </h1>
-        <p className="sk-sub">
-          Domain expertise, loaded only when the conversation needs it.
-          Skills don't pick products and they don't fetch data — they
-          shape how the agent thinks and writes about a topic.
-        </p>
-        <div className="sk-meta">
-          <div>
-            <span className="sk-meta-label">Active</span>
-            {activeCount} of {skills.length || '—'}
-          </div>
-          <div>
-            <span className="sk-meta-label">This turn</span>
-            {turnElapsedMs ? `${turnElapsedMs} ms` : '—'}
-          </div>
-          <div>
-            <span className="sk-meta-label">Tokens added</span>
-            {tokensAdded || '—'}
-          </div>
-          <div>
-            <span className="sk-meta-label">Library version</span>
-            v1.0
-          </div>
-        </div>
-      </div>
-
-      {/* ---- Triangle ---- */}
-      <TriangleSection />
-
-      {/* ---- Library + Live log ---- */}
-      <section className="sk-layout">
-        <div className="sk-col">
-          <div>
-            <div className="sk-col-head">
-              <div className="sk-col-eyebrow">The library</div>
-              <div className="sk-col-meta">
-                /skills · {skills.length} available
+        {/* ---- Library + Live log ---- */}
+        <section className="sk-layout">
+          <div className="sk-col">
+            <div>
+              <div className="sk-col-head">
+                <div className="sk-col-eyebrow">The library</div>
+                <div className="sk-col-meta">
+                  /skills · {skills.length} available
+                </div>
               </div>
+              <h2 className="sk-col-title">
+                What's <em>on the shelf.</em>
+              </h2>
+              <p className="sk-col-sub">
+                Each skill is a folder under{' '}
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 13 }}>
+                  /skills/
+                </span>{' '}
+                — a{' '}
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 13 }}>
+                  SKILL.md
+                </span>{' '}
+                with optional helper files. New ones drop in without code changes.
+              </p>
             </div>
-            <h2 className="sk-col-title">
-              What's <em>on the shelf.</em>
-            </h2>
-            <p className="sk-col-sub">
-              Each skill is a folder under{' '}
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 13 }}>
-                /skills/
-              </span>{' '}
-              — a{' '}
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 13 }}>
-                SKILL.md
-              </span>{' '}
-              with optional helper files. New ones drop in without code changes.
-            </p>
-          </div>
 
-          {loading ? (
-            <div className="sk-empty-log">Loading the library…</div>
-          ) : skills.length === 0 ? (
-            <div className="sk-empty-log">
-              No skills registered yet. Drop a SKILL.md into /skills/
-              and restart the server.
-            </div>
-          ) : (
-            skills.map((s) => (
-              <SkillLibraryCard
-                key={s.name}
-                skill={s}
-                state={resolveState(s.name, routing)}
-                onOpen={() => setSelectedSkill(s)}
-              />
-            ))
-          )}
-        </div>
-
-        <div className="sk-col">
-          <div>
-            <div className="sk-col-head">
-              <div className="sk-col-eyebrow">Live · this turn</div>
-              <div className="sk-col-meta">
-                {routing
-                  ? `${routing.loaded_skills.length} loaded · ${routing.elapsed_ms}ms`
-                  : 'awaiting first turn'}
+            {loading ? (
+              <div className="sk-empty-log">Loading the library…</div>
+            ) : skills.length === 0 ? (
+              <div className="sk-empty-log">
+                No skills registered yet. Drop a SKILL.md into /skills/
+                and restart the server.
               </div>
-            </div>
-            <h2 className="sk-col-title">
-              What loaded, <em>and why.</em>
-            </h2>
-            <p className="sk-col-sub">
-              For every turn, the skill router decides which skills the
-              conversation needs. Routing is one short LLM call against
-              the skill library's{' '}
-              <span style={{ fontFamily: 'var(--mono)', fontSize: 13 }}>
-                description
-              </span>{' '}
-              field.
-            </p>
+            ) : (
+              skills.map((s) => (
+                <SkillLibraryCard
+                  key={s.name}
+                  skill={s}
+                  state={resolveState(s.name, routing)}
+                  onOpen={() => setSelectedSkill(s)}
+                />
+              ))
+            )}
           </div>
 
-          <LiveActivationLog
-            routing={routing}
-            userMessage={userMessage}
-            tokensAdded={tokensAdded}
-          />
-        </div>
-      </section>
+          <div className="sk-col">
+            <div>
+              <div className="sk-col-head">
+                <div className="sk-col-eyebrow">Live · this turn</div>
+                <div className="sk-col-meta">
+                  {routing
+                    ? `${routing.loaded_skills.length} loaded · ${routing.elapsed_ms}ms`
+                    : 'awaiting first turn'}
+                </div>
+              </div>
+              <h2 className="sk-col-title">
+                What loaded, <em>and why.</em>
+              </h2>
+              <p className="sk-col-sub">
+                For every turn, the skill router decides which skills the
+                conversation needs. Routing is one short LLM call against
+                the skill library's{' '}
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 13 }}>
+                  description
+                </span>{' '}
+                field.
+              </p>
+            </div>
 
-      {/* ---- Before / After impact (static v1) ---- */}
-      <ImpactSection />
+            <LiveActivationLog
+              routing={routing}
+              userMessage={userMessage}
+              tokensAdded={tokensAdded}
+            />
+          </div>
+        </section>
 
-      {/* ---- Three-layer cheat sheet ---- */}
-      <DistinctionSection />
+        {/* ---- Before / After impact (static v1) ---- */}
+        <ImpactSection />
+
+        {/* ---- Three-layer cheat sheet (shared component) ---- */}
+        <CheatSheet
+          eyebrow="When in doubt"
+          title={
+            <>
+              Three layers, <em>three questions.</em>
+            </>
+          }
+          cells={[
+            {
+              key: 'AGENTS',
+              name: 'Who handles it?',
+              question: <em>"Which specialist owns this turn?"</em>,
+              list: [
+                'Has its own system prompt',
+                'Decides what to do next',
+                'Can hand off to other agents',
+                <>
+                  <em>Add when</em> a new role is needed
+                </>,
+              ],
+            },
+            {
+              key: 'TOOLS',
+              name: 'What action runs?',
+              question: <em>"Which function returns the data?"</em>,
+              list: [
+                'Typed inputs and outputs',
+                'Deterministic, no opinions',
+                'Cost: one function call',
+                <>
+                  <em>Add when</em> new data or action is needed
+                </>,
+              ],
+            },
+            {
+              key: 'SKILLS',
+              name: 'How do we think about it?',
+              question: <em>"Which expert lens loads here?"</em>,
+              list: [
+                'Markdown + activation contract',
+                'Loaded conditionally',
+                'Cost: tokens, only when relevant',
+                <>
+                  <em>Add when</em> domain expertise is needed
+                </>,
+              ],
+            },
+          ]}
+        />
+      </DetailPageShell>
 
       {/* ---- Open SKILL.md modal ---- */}
       {selectedSkill && (
@@ -223,25 +251,23 @@ export default function SkillsPanel({
           onClose={() => setSelectedSkill(null)}
         />
       )}
-    </div>
+    </>
   )
 }
 
 
-/* ---- Triangle section ---- */
+/* ---- Triangle section — uses SectionFrame ---- */
 function TriangleSection() {
   return (
-    <section className="sk-triangle">
-      <div className="sk-eyebrow">The mental model</div>
-      <h2 className="sk-section-title">
-        Agents, tools, <em>skills.</em>
-      </h2>
-      <p className="sk-section-desc">
-        Three corners, three responsibilities. Every agent capability
-        is some combination of the three. If you can't tell which one
-        is doing the work, you've muddled them.
-      </p>
-
+    <SectionFrame
+      eyebrow="The mental model"
+      title={
+        <>
+          Agents, tools, <em>skills.</em>
+        </>
+      }
+      description="Three corners, three responsibilities. Every agent capability is some combination of the three. If you can't tell which one is doing the work, you've muddled them."
+    >
       <div className="sk-tri-grid">
         <div>
           <svg
@@ -315,12 +341,12 @@ function TriangleSection() {
           </div>
         </div>
       </div>
-    </section>
+    </SectionFrame>
   )
 }
 
 
-/* ---- Skill library card ---- */
+/* ---- Skill library card — uses StatusBadge ---- */
 function SkillLibraryCard({
   skill,
   state,
@@ -330,7 +356,6 @@ function SkillLibraryCard({
   state: SkillState
   onOpen: () => void
 }) {
-  // Short headline — first sentence of the description, ending at the first period.
   const headline =
     skill.description.split('. ')[0].replace(/\.$/, '') + '.'
   const body = skill.description.slice(headline.length).trim()
@@ -339,10 +364,6 @@ function SkillLibraryCard({
     state === 'active' ? 'Active · this turn'
     : state === 'considered' ? 'Considered'
     : 'Dormant'
-  const statusClass =
-    state === 'active' ? 'sk-status-active'
-    : state === 'considered' ? 'sk-status-considered'
-    : 'sk-status-dormant'
 
   return (
     <article className={`sk-card ${state === 'active' ? 'sk-card-active' : ''}`}>
@@ -357,7 +378,7 @@ function SkillLibraryCard({
           </div>
           <p className="sk-card-desc">{body || skill.description}</p>
         </div>
-        <span className={`sk-card-status ${statusClass}`}>{statusLabel}</span>
+        <StatusBadge variant={state}>{statusLabel}</StatusBadge>
       </div>
       <div className="sk-card-divider" />
       <div className="sk-card-meta">
@@ -425,7 +446,6 @@ function LiveActivationLog({
           Skill router · {routing.elapsed_ms} ms
         </div>
 
-        {/* Loaded skills — checkmark */}
         {routing.loaded_skills.map((name) => {
           const considered = routing.considered.find((c) => c.name === name)
           return (
@@ -443,7 +463,6 @@ function LiveActivationLog({
           )
         })}
 
-        {/* Considered but not loaded — dot */}
         {routing.considered
           .filter((c) => !routing.loaded_skills.includes(c.name))
           .map((c) => (
@@ -473,22 +492,26 @@ function LiveActivationLog({
 }
 
 
-/* ---- Impact section (static teaching example for v1) ---- */
+/* ---- Impact section (static teaching example for v1) — uses SectionFrame ---- */
 function ImpactSection() {
   return (
-    <section className="sk-impact">
-      <div className="sk-eyebrow">The impact</div>
-      <h2 className="sk-section-title">
-        Same agent, same tools, <em>different reply.</em>
-      </h2>
-      <p className="sk-section-desc">
-        The recommendation agent ran identical tool calls in both versions —
-        <span className="sk-mono">semantic_search</span>,{' '}
-        <span className="sk-mono">get_pricing</span>,{' '}
-        <span className="sk-mono">check_inventory</span>. The skills changed
-        only how the result was handled.
-      </p>
-
+    <SectionFrame
+      eyebrow="The impact"
+      title={
+        <>
+          Same agent, same tools, <em>different reply.</em>
+        </>
+      }
+      description={
+        <>
+          The recommendation agent ran identical tool calls in both versions —
+          <span className="sk-mono">semantic_search</span>,{' '}
+          <span className="sk-mono">get_pricing</span>,{' '}
+          <span className="sk-mono">check_inventory</span>. The skills changed
+          only how the result was handled.
+        </>
+      }
+    >
       <div className="sk-impact-grid">
         <div className="sk-impact-card">
           <div className="sk-impact-head sk-impact-head-before">
@@ -564,63 +587,10 @@ function ImpactSection() {
         </span>
         .
       </p>
-    </section>
+    </SectionFrame>
   )
 }
 
-/* ---- Three-layer cheat sheet ---- */
-function DistinctionSection() {
-  return (
-    <section className="sk-distinction">
-      <div className="sk-distinction-eyebrow">When in doubt</div>
-      <h2 className="sk-distinction-title">
-        Three layers, <em>three questions.</em>
-      </h2>
-
-      <div className="sk-distinction-grid">
-        <div className="sk-dist-cell">
-          <div className="sk-dist-key">AGENTS</div>
-          <div className="sk-dist-name">Who handles it?</div>
-          <div className="sk-dist-q">
-            <em>"Which specialist owns this turn?"</em>
-          </div>
-          <ul className="sk-dist-list">
-            <li>Has its own system prompt</li>
-            <li>Decides what to do next</li>
-            <li>Can hand off to other agents</li>
-            <li><em>Add when</em> a new role is needed</li>
-          </ul>
-        </div>
-        <div className="sk-dist-cell">
-          <div className="sk-dist-key">TOOLS</div>
-          <div className="sk-dist-name">What action runs?</div>
-          <div className="sk-dist-q">
-            <em>"Which function returns the data?"</em>
-          </div>
-          <ul className="sk-dist-list">
-            <li>Typed inputs and outputs</li>
-            <li>Deterministic, no opinions</li>
-            <li>Cost: one function call</li>
-            <li><em>Add when</em> new data or action is needed</li>
-          </ul>
-        </div>
-        <div className="sk-dist-cell">
-          <div className="sk-dist-key">SKILLS</div>
-          <div className="sk-dist-name">How do we think about it?</div>
-          <div className="sk-dist-q">
-            <em>"Which expert lens loads here?"</em>
-          </div>
-          <ul className="sk-dist-list">
-            <li>Markdown + activation contract</li>
-            <li>Loaded conditionally</li>
-            <li>Cost: tokens, only when relevant</li>
-            <li><em>Add when</em> domain expertise is needed</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-  )
-}
 
 /* ---- SKILL.md modal ---- */
 function SkillModal({
@@ -630,7 +600,6 @@ function SkillModal({
   skill: SkillMeta
   onClose: () => void
 }) {
-  // Close on Escape.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()

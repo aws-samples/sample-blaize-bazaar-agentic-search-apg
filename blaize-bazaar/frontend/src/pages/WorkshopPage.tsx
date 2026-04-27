@@ -29,6 +29,7 @@
  *     subsequent reloads open to where they last were.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from 'react-resizable-panels'
 import {
@@ -46,6 +47,11 @@ import ObservabilityPanel from '../components/ObservabilityPanel'
 import RuntimeStatusPanel from '../components/RuntimeStatusPanel'
 import IndexPerformanceDashboard from '../components/IndexPerformanceDashboard'
 import SkillsPanel from '../components/SkillsPanel'
+import MemoryArchPage from '../components/atelier-arch/MemoryArchPage'
+import McpArchPage from '../components/atelier-arch/McpArchPage'
+import ToolRegistryArchPage from '../components/atelier-arch/ToolRegistryArchPage'
+import RuntimeArchPage from '../components/atelier-arch/RuntimeArchPage'
+import StateManagementArchPage from '../components/atelier-arch/StateManagementArchPage'
 import type { SkillRouting } from '../hooks/useAgentChat'
 import AtelierHero from '../components/AtelierHero'
 import AtelierSpotlight from '../components/AtelierSpotlight'
@@ -65,7 +71,46 @@ type Tab = 'telemetry' | 'architecture' | 'performance'
 
 type Provenance = 'MANAGED' | 'OWNED' | 'BOTH' | 'TEACHING'
 
-type DetailPanelKey = 'memory' | 'gateway' | 'obs' | 'runtime' | 'bench' | 'skills' | null
+type DetailPanelKey =
+  | 'memory'
+  | 'gateway'
+  | 'obs'
+  | 'runtime'
+  | 'bench'
+  | 'skills'
+  // New architecture detail pages (Phase 2+)
+  | 'arch-memory'
+  | 'arch-mcp'
+  | 'arch-state-management'
+  | 'arch-tool-registry'
+  | 'arch-runtime'
+  | 'arch-evaluations'
+  | null
+
+// URL param <-> DetailPanelKey mapping.
+// The URL shape is ``/atelier/architecture/<section>`` so we use
+// kebab-case segments that read well in address bars. Skills already
+// ships; the new pages use the ``arch-`` prefix internally so they
+// don't collide with the older in-workbench panels (``memory``,
+// ``runtime``, etc. — which open different dashboards).
+const SECTION_TO_PANEL: Record<string, Exclude<DetailPanelKey, null>> = {
+  skills: 'skills',
+  memory: 'arch-memory',
+  mcp: 'arch-mcp',
+  'state-management': 'arch-state-management',
+  'tool-registry': 'arch-tool-registry',
+  runtime: 'arch-runtime',
+  evaluations: 'arch-evaluations',
+}
+const PANEL_TO_SECTION: Partial<Record<Exclude<DetailPanelKey, null>, string>> = {
+  skills: 'skills',
+  'arch-memory': 'memory',
+  'arch-mcp': 'mcp',
+  'arch-state-management': 'state-management',
+  'arch-tool-registry': 'tool-registry',
+  'arch-runtime': 'runtime',
+  'arch-evaluations': 'evaluations',
+}
 
 // Provenance → (pill colors, icon, icon tint). The icon + its tint
 // double-encode the provenance so a card reads correctly even if
@@ -431,8 +476,24 @@ function useTabState(panelCount: number): [Tab, (t: Tab) => void] {
 
 function WorkshopContent() {
   const { openModal } = useUI()
+  const navigate = useNavigate()
+  const { section } = useParams<{ section?: string }>()
   const [events, setEvents] = useState<WorkshopEvent[]>([])
   const [detailPanel, setDetailPanel] = useState<DetailPanelKey>(null)
+
+  // Sync URL :section param → detailPanel on mount and on URL changes.
+  // Tabs stay in component state (Architecture/Telemetry/Performance);
+  // only detail-page opens land in the URL as /atelier/architecture/<name>.
+  useEffect(() => {
+    if (!section) {
+      // Nav'd to /atelier with no section — close any open detail panel
+      // that was opened via a previous deep link.
+      setDetailPanel((prev) => (prev && PANEL_TO_SECTION[prev] ? null : prev))
+      return
+    }
+    const mapped = SECTION_TO_PANEL[section]
+    if (mapped) setDetailPanel(mapped)
+  }, [section])
   // Most recent skill routing decision — persisted by useAgentChat in
   // localStorage so the Atelier Skills panel can read the decision
   // captured by the storefront chat on another route. Polls every
@@ -549,8 +610,19 @@ function WorkshopContent() {
   const detailOpen = detailPanel !== null
   const isBenchModal = detailPanel === 'bench' // IndexPerformanceDashboard stays modal for now
 
-  const closeDetail = () => setDetailPanel(null)
-  const openDetail = (key: Exclude<DetailPanelKey, null>) => setDetailPanel(key)
+  const closeDetail = () => {
+    // If the panel was opened via deep link, nav back to /atelier so
+    // the URL reflects the closed state. Browser back/forward stays
+    // clean. If there's no section param (panel was opened in-page),
+    // only local state changes.
+    setDetailPanel(null)
+    if (section) navigate('/atelier')
+  }
+  const openDetail = (key: Exclude<DetailPanelKey, null>) => {
+    setDetailPanel(key)
+    const urlSection = PANEL_TO_SECTION[key]
+    if (urlSection) navigate(`/atelier/architecture/${urlSection}`)
+  }
 
   const renderDetail = () => {
     if (detailPanel === 'memory') return <MemoryDashboard onClose={closeDetail} />
@@ -561,6 +633,17 @@ function WorkshopContent() {
       return (
         <SkillsDetailWrapper onClose={closeDetail} routing={skillRouting} />
       )
+    // --- New Phase 2/3/4 architecture detail pages ---
+    if (detailPanel === 'arch-memory')
+      return <ArchDetailWrapper title="Memory" onClose={closeDetail}><MemoryArchPage /></ArchDetailWrapper>
+    if (detailPanel === 'arch-mcp')
+      return <ArchDetailWrapper title="MCP" onClose={closeDetail}><McpArchPage /></ArchDetailWrapper>
+    if (detailPanel === 'arch-tool-registry')
+      return <ArchDetailWrapper title="Tool Registry" onClose={closeDetail}><ToolRegistryArchPage /></ArchDetailWrapper>
+    if (detailPanel === 'arch-runtime')
+      return <ArchDetailWrapper title="Runtime" onClose={closeDetail}><RuntimeArchPage /></ArchDetailWrapper>
+    if (detailPanel === 'arch-state-management')
+      return <ArchDetailWrapper title="State Management" onClose={closeDetail}><StateManagementArchPage /></ArchDetailWrapper>
     return null
   }
 
@@ -1067,6 +1150,55 @@ function WorkshopContent() {
         onClose={closeDetail}
       />
     </div>
+  )
+}
+
+/* ---- Architecture detail wrapper ----
+ *
+ * Shared shell for the new architecture detail pages (Memory, MCP,
+ * Tool Registry, State Management, Runtime, Evaluations). Matches the
+ * SkillsDetailWrapper footprint so it slots into the same resizable
+ * panel. The page body (children) is one of the atelier-arch/*
+ * components, which each call DetailPageShell internally for the
+ * crumb + title + meta strip.
+ */
+function ArchDetailWrapper({
+  title,
+  onClose,
+  children,
+}: {
+  title: string
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <section
+      data-testid={`arch-detail-${title.toLowerCase().replace(/\s+/g, '-')}`}
+      className="h-full flex flex-col overflow-hidden rounded-2xl"
+      style={{ background: 'var(--cream-2)', border: `1px solid ${INK_QUIET}30` }}
+    >
+      <div
+        className="flex items-center justify-between px-5 py-[14px] text-[10px] uppercase font-medium flex-shrink-0"
+        style={{
+          background: 'var(--cream-1)',
+          borderBottom: `1px solid ${INK_QUIET}20`,
+          color: 'var(--red-1)',
+          letterSpacing: '0.16em',
+        }}
+      >
+        <span>Atelier · Architecture · {title}</span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={`close ${title.toLowerCase()} panel`}
+          className="px-2 py-1 rounded-md transition-colors hover:bg-[rgba(0,0,0,0.04)] normal-case tracking-normal text-[11px]"
+          style={{ color: 'var(--ink-3)', letterSpacing: 0 }}
+        >
+          Close ✕
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-6 py-6">{children}</div>
+    </section>
   )
 }
 
