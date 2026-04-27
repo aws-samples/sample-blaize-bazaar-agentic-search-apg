@@ -14,6 +14,7 @@ from services.agent_tools import (
     browse_category,
 )
 from skills import inject_skills
+from services.persona_context import inject_persona_preamble
 from storefront_copy import RECOMMENDATION_SYSTEM_PROMPT
 
 
@@ -66,7 +67,9 @@ def recommendation(query: str) -> str:
                 max_tokens=4096,
                 temperature=0.2,
             ),
-            system_prompt=inject_skills(RECOMMENDATION_SYSTEM_PROMPT),
+            system_prompt=inject_persona_preamble(
+                inject_skills(RECOMMENDATION_SYSTEM_PROMPT)
+            ),
             tools=[
                 search_products,
                 trending_products,

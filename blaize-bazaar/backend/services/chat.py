@@ -1598,6 +1598,33 @@ CURRENT REQUEST: {message}"""
                     logger.warning("Skill ContextVar reset failed: %s", exc)
                 skill_token = None
 
+        # --- Persona preamble ContextVar ------------------------------
+        # Mirrors the skill-loading pattern above. The orchestrator
+        # (Haiku, dispatcher) paraphrases the user message when routing
+        # to a specialist, which frequently strips the PERSONA CONTEXT
+        # block from the ``query`` arg. Stashing the preamble in a
+        # ContextVar lets the specialist read it directly when building
+        # its system prompt, so the shopper's history is always visible
+        # even when Haiku's routing forwards only the short phrase.
+        persona_token = None
+        if persona_preamble:
+            try:
+                from services.persona_context import set_persona_preamble
+                persona_token = set_persona_preamble(persona_preamble)
+            except Exception as exc:
+                logger.warning("Persona ContextVar set failed: %s", exc)
+
+        def _reset_persona_token() -> None:
+            """Idempotent reset — safe to call on any exit path."""
+            nonlocal persona_token
+            if persona_token is not None:
+                try:
+                    from services.persona_context import persona_preamble_var
+                    persona_preamble_var.reset(persona_token)
+                except Exception as exc:
+                    logger.warning("Persona ContextVar reset failed: %s", exc)
+                persona_token = None
+
         async def run_orchestrator():
             try:
                 orchestrator_result[0] = await asyncio.to_thread(orchestrator, full_message)
@@ -1731,10 +1758,12 @@ CURRENT REQUEST: {message}"""
         try:
             await task
         finally:
-            # Reset ContextVar as soon as the orchestrator is done —
+            # Reset ContextVars as soon as the orchestrator is done —
             # specialists can no longer run, so nothing else needs the
-            # loaded skills from here on. Safe on exception paths too.
+            # loaded skills or persona preamble from here on. Safe on
+            # exception paths too.
             _reset_skill_token()
+            _reset_persona_token()
 
         if orchestrator_error[0]:
             yield {"type": "error", "error": str(orchestrator_error[0])}

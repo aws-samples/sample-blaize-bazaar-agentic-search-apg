@@ -9,6 +9,7 @@ from strands.models import BedrockModel
 from config import settings
 from services.agent_tools import return_policy, search_products
 from skills import inject_skills
+from services.persona_context import inject_persona_preamble
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,11 @@ def support(query: str) -> str:
         # the router loaded zero skills (the common case for transactional
         # support queries like return policy lookups).
         system_prompt = inject_skills(system_prompt)
+
+        # Also inject the active persona's LTM preamble so support queries
+        # like "can I return the camp shirt I bought?" can reference the
+        # shopper's actual order history. No-op for anonymous sessions.
+        system_prompt = inject_persona_preamble(system_prompt)
 
         if exa_client:
             with exa_client:
