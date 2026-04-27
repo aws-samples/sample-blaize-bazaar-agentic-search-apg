@@ -50,6 +50,7 @@ import ToolRegistryArchPage from '../components/atelier-arch/ToolRegistryArchPag
 import RuntimeArchPage from '../components/atelier-arch/RuntimeArchPage'
 import StateManagementArchPage from '../components/atelier-arch/StateManagementArchPage'
 import EvaluationsArchPage from '../components/atelier-arch/EvaluationsArchPage'
+import GroundingArchPage from '../components/atelier-arch/GroundingArchPage'
 import type { SkillRouting } from '../hooks/useAgentChat'
 import AtelierHero from '../components/AtelierHero'
 import AtelierSpotlight from '../components/AtelierSpotlight'
@@ -80,6 +81,7 @@ type DetailPanelKey =
   | 'arch-tool-registry'
   | 'arch-runtime'
   | 'arch-evaluations'
+  | 'arch-grounding'
   | null
 
 // URL param <-> DetailPanelKey mapping.
@@ -95,6 +97,7 @@ const SECTION_TO_PANEL: Record<string, Exclude<DetailPanelKey, null>> = {
   'tool-registry': 'arch-tool-registry',
   runtime: 'arch-runtime',
   evaluations: 'arch-evaluations',
+  grounding: 'arch-grounding',
 }
 const PANEL_TO_SECTION: Partial<Record<Exclude<DetailPanelKey, null>, string>> = {
   skills: 'skills',
@@ -104,6 +107,7 @@ const PANEL_TO_SECTION: Partial<Record<Exclude<DetailPanelKey, null>, string>> =
   'arch-tool-registry': 'tool-registry',
   'arch-runtime': 'runtime',
   'arch-evaluations': 'evaluations',
+  'arch-grounding': 'grounding',
 }
 
 // Provenance → (pill colors, icon, icon tint). The icon + its tint
@@ -238,7 +242,7 @@ const ARCH_CARDS: ArchCard[] = [
     provenance: 'BOTH',
     description:
       'Bedrock guardrails on the LLM; Aurora-backed approvals queue for sensitive tool calls (place_order, restock). One card because all three fire on the same turn boundary — the answer leaves only if it survives every check.',
-    cta: { kind: 'in-progress' },
+    cta: { kind: 'action', label: 'Open grounding architecture', open: 'arch-grounding' },
     featured: true,
     chapter: 'viii.',
     signature: ['guardrails.check(claims) ; approvals.queue(tool_call)'],
@@ -637,6 +641,8 @@ function WorkshopContent() {
       return <ArchDetailWrapper title="State Management" onClose={closeDetail}><StateManagementArchPage /></ArchDetailWrapper>
     if (detailPanel === 'arch-evaluations')
       return <ArchDetailWrapper title="Evaluations" onClose={closeDetail}><EvaluationsArchPage /></ArchDetailWrapper>
+    if (detailPanel === 'arch-grounding')
+      return <ArchDetailWrapper title="Grounding · Approvals · Guardrails" onClose={closeDetail}><GroundingArchPage /></ArchDetailWrapper>
     return null
   }
 

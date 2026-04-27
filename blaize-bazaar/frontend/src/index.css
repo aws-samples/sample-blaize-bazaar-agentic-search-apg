@@ -37,6 +37,7 @@
     --red-1: #a8423a;
     --red-soft: rgba(168, 66, 58, 0.12);
     --green-1: #6b8c5e;
+    --green-soft: rgba(107, 140, 94, 0.12);
     /* Amber — introduced for Evaluations (telemetry corner).
        Scoped to that surface for now; add usage notes here if
        other pages adopt. */

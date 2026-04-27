@@ -78,6 +78,9 @@ vi.mock('../components/atelier-arch/StateManagementArchPage', () => ({
 vi.mock('../components/atelier-arch/EvaluationsArchPage', () => ({
   default: () => <div data-testid="stub-arch-evaluations">evaluations arch</div>,
 }))
+vi.mock('../components/atelier-arch/GroundingArchPage', () => ({
+  default: () => <div data-testid="stub-arch-grounding">grounding arch</div>,
+}))
 vi.mock('../components/SkillsPanel', () => ({
   default: () => <div data-testid="stub-skills-panel">skills</div>,
 }))
@@ -180,9 +183,9 @@ describe('WorkshopPage — architecture cards render', () => {
     }
   })
 
-  it('renders an action CTA on every card except Grounding', () => {
+  it('renders an action CTA on every card (all 8 chapters wired)', () => {
     renderPage()
-    // All seven architecture chapters open a detail page.
+    // All eight architecture cards open a detail page.
     expect(screen.getByTestId('arch-card-open-memory')).toBeInTheDocument()
     expect(screen.getByTestId('arch-card-open-skills')).toBeInTheDocument()
     expect(screen.getByTestId('arch-card-open-mcp')).toBeInTheDocument()
@@ -190,12 +193,14 @@ describe('WorkshopPage — architecture cards render', () => {
     expect(screen.getByTestId('arch-card-open-tool-registry')).toBeInTheDocument()
     expect(screen.getByTestId('arch-card-open-runtime')).toBeInTheDocument()
     expect(screen.getByTestId('arch-card-open-evaluations')).toBeInTheDocument()
+    expect(screen.getByTestId('arch-card-open-grounding')).toBeInTheDocument()
   })
 
-  it('renders an "In progress" pill on Grounding (detail page deferred)', () => {
+  it('no longer renders an in-progress pill on Grounding — its arch page ships', () => {
     renderPage()
-    expect(screen.getByTestId('arch-card-inprogress-grounding')).toBeInTheDocument()
-    expect(screen.queryByTestId('arch-card-open-grounding')).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('arch-card-inprogress-grounding'),
+    ).not.toBeInTheDocument()
   })
 
   it('MCP body copy resolves the protocol-vs-primitive distinction', () => {
@@ -221,6 +226,7 @@ describe('WorkshopPage — architecture cards open their arch-* detail page inli
     ['arch-card-open-runtime', 'stub-arch-runtime'],
     ['arch-card-open-state', 'stub-arch-state'],
     ['arch-card-open-evaluations', 'stub-arch-evaluations'],
+    ['arch-card-open-grounding', 'stub-arch-grounding'],
   ]
 
   it.each(routes)('%s opens %s inline', async (cta, panel) => {

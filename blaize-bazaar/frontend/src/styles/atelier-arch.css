@@ -1632,3 +1632,651 @@
   color: var(--ink-1);
   font-weight: 500;
 }
+
+
+/* ==========================================================================
+ * Grounding / Approvals / Guardrails page (gt-*) — Template E
+ *
+ * Matches docs/atelier-grounding-architecture.html. Three accent colors
+ * in parallel: green (guardrails), amber (approvals), burgundy
+ * (grounding). The approvals queue section overrides the frame tick
+ * to amber via .gt-queue-wrap .at-frame::before.
+ * ========================================================================== */
+
+/* ---- Gate hero canvas ---- */
+.gt-canvas {
+  margin-top: 8px;
+  background: var(--cream-elev);
+  border: 1px solid var(--rule-1);
+  border-radius: 12px;
+  padding: 32px 28px;
+}
+.gt-canvas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 24px;
+}
+.gt-canvas-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 500;
+}
+.gt-canvas-meta {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+.gt-canvas-num {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Inflow pill */
+.gt-inflow {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.gt-inflow-pill {
+  background: var(--ink-1);
+  color: var(--cream-1);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 16px;
+  padding: 10px 22px;
+  border-radius: 100px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.gt-inflow-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  color: rgba(250, 243, 232, 0.65);
+  font-weight: 500;
+  font-style: normal;
+}
+
+/* Three lanes */
+.gt-lanes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  position: relative;
+  padding: 32px 0 0;
+}
+@media (max-width: 900px) {
+  .gt-lanes { grid-template-columns: 1fr; }
+}
+.gt-lane {
+  background: var(--cream-1);
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
+  padding: 18px 20px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.gt-lane::before,
+.gt-lane::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 1px;
+  height: 32px;
+  background: var(--rule-2);
+  transform: translateX(-0.5px);
+}
+.gt-lane::before {
+  top: -32px;
+}
+.gt-lane::after {
+  bottom: -32px;
+}
+@media (max-width: 900px) {
+  .gt-lane::before,
+  .gt-lane::after { display: none; }
+}
+
+/* Lane status tinting */
+.gt-lane-pass { border-color: var(--green-1); }
+.gt-lane-pass::before,
+.gt-lane-pass::after { background: var(--green-1); }
+.gt-lane-queued { border-color: var(--amber-1); }
+.gt-lane-queued::before,
+.gt-lane-queued::after { background: var(--amber-1); }
+.gt-lane-block { border-color: var(--accent); }
+.gt-lane-block::before,
+.gt-lane-block::after { background: var(--accent); }
+
+.gt-lane-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+.gt-lane-num {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  color: var(--ink-4);
+  font-weight: 500;
+}
+.gt-lane-status {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+.gt-lane-pass .gt-lane-status {
+  background: var(--green-soft, rgba(107, 140, 94, 0.12));
+  color: var(--green-1);
+  border: 1px solid rgba(107, 140, 94, 0.4);
+}
+.gt-lane-queued .gt-lane-status {
+  background: var(--amber-soft, rgba(184, 138, 58, 0.14));
+  color: var(--amber-1);
+  border: 1px solid rgba(184, 138, 58, 0.4);
+}
+.gt-lane-block .gt-lane-status {
+  background: var(--red-soft);
+  color: var(--accent);
+  border: 1px solid rgba(196, 69, 54, 0.4);
+}
+
+.gt-lane-name {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+  color: var(--ink-1);
+}
+.gt-lane-tagline {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--ink-3);
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+.gt-lane-checks {
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule-1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+.gt-lane-check {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-1);
+}
+.gt-lane-mark {
+  font-family: var(--mono);
+  width: 10px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.gt-lane-check-ok .gt-lane-mark { color: var(--green-1); }
+.gt-lane-check-queued .gt-lane-mark { color: var(--amber-1); }
+.gt-lane-check-blocked .gt-lane-mark { color: var(--accent); }
+.gt-lane-check em {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-3);
+}
+
+.gt-lane-foot {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule-1);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--ink-4);
+  letter-spacing: 0.05em;
+}
+.gt-lane-foot-num {
+  color: var(--ink-1);
+  font-weight: 500;
+}
+
+/* Funnel + decision */
+.gt-funnel {
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+.gt-decision {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 28px;
+  background: var(--ink-1);
+  color: var(--cream-1);
+  border-radius: 12px;
+}
+.gt-verdict {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 22px;
+}
+.gt-verdict em {
+  font-style: italic;
+}
+.gt-verdict-rule {
+  width: 1px;
+  height: 28px;
+  background: rgba(250, 243, 232, 0.25);
+}
+.gt-conditions {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: rgba(250, 243, 232, 0.75);
+}
+.gt-conditions em {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--cream-1);
+}
+.gt-foot-caption {
+  margin-top: 18px;
+  text-align: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+.gt-foot-caption em {
+  color: var(--ink-1);
+}
+
+/* ---- Three rules detail ---- */
+.gt-rd-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 1000px) {
+  .gt-rd-grid { grid-template-columns: 1fr; }
+}
+.gt-rd-card {
+  background: var(--cream-1);
+  border: 1px solid var(--rule-1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.gt-rd-head {
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--rule-1);
+  position: relative;
+  background: var(--cream-elev);
+}
+.gt-rd-head::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 22px;
+  width: 24px;
+  height: 1px;
+}
+.gt-rd-head-guardrails::after { background: var(--green-1); }
+.gt-rd-head-approvals::after { background: var(--amber-1); }
+.gt-rd-head-grounding::after { background: var(--accent); }
+
+.gt-rd-key {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+.gt-rd-head-guardrails .gt-rd-key { color: var(--green-1); }
+.gt-rd-head-approvals .gt-rd-key { color: var(--amber-1); }
+.gt-rd-head-grounding .gt-rd-key { color: var(--accent); }
+
+.gt-rd-name {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -0.005em;
+  color: var(--ink-1);
+}
+.gt-rd-tagline {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--ink-3);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.gt-rd-body {
+  padding: 16px 22px;
+}
+.gt-rd-section {
+  margin-bottom: 14px;
+}
+.gt-rd-section:last-child {
+  margin-bottom: 0;
+}
+.gt-rd-section-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.gt-rd-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-family: var(--sans);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-1);
+  padding: 0;
+  margin: 0;
+}
+.gt-rd-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.gt-rd-list li::before {
+  content: '·';
+  color: var(--accent);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.gt-rd-list em {
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--ink-3);
+}
+
+.gt-mono {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  background: var(--cream-2);
+  padding: 1px 6px;
+  border-radius: 3px;
+  color: var(--ink-1);
+}
+
+/* ---- Approvals queue spotlight ---- */
+/* Override the section-frame tick to amber for the approvals scope. */
+.gt-queue-wrap .at-frame::before {
+  background: var(--amber-1);
+}
+.gt-queue-wrap .at-section-eyebrow {
+  color: var(--amber-1);
+}
+.gt-queue-wrap .at-section-eyebrow::before {
+  background: var(--amber-1);
+}
+
+.gt-queue-frame {
+  margin-top: 8px;
+  background: var(--cream-elev);
+  border: 1px solid var(--rule-1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.gt-queue-head {
+  padding: 12px 22px;
+  background: var(--ink-1);
+  color: var(--cream-1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.gt-queue-eyebrow {
+  font-family: var(--sans);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(250, 243, 232, 0.65);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.gt-pulse-amber {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber-1);
+  animation: gt-pulse 1.6s ease-in-out infinite;
+}
+@keyframes gt-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+.gt-queue-title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--cream-1);
+  margin-top: 4px;
+}
+.gt-queue-meta {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: rgba(250, 243, 232, 0.65);
+}
+
+.gt-queue-rows {
+  display: flex;
+  flex-direction: column;
+}
+.gt-q-row {
+  display: grid;
+  grid-template-columns: 80px 110px 1fr 60px 110px;
+  gap: 14px;
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--rule-1);
+  align-items: center;
+}
+.gt-q-row:last-child {
+  border-bottom: none;
+}
+.gt-q-row-head {
+  background: var(--cream-2);
+}
+.gt-q-row-head span {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 500;
+}
+.gt-q-status-col {
+  text-align: center;
+}
+.gt-q-stamp {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+.gt-q-tool {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-1);
+  font-weight: 500;
+}
+.gt-q-args {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-1);
+}
+.gt-q-age {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+.gt-q-age-urgent {
+  color: var(--accent);
+  font-weight: 500;
+}
+.gt-q-status {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-weight: 500;
+  text-align: center;
+}
+.gt-q-status-pending {
+  background: var(--amber-soft, rgba(184, 138, 58, 0.14));
+  color: var(--amber-1);
+  border: 1px solid rgba(184, 138, 58, 0.4);
+}
+.gt-q-status-approved {
+  background: var(--green-soft, rgba(107, 140, 94, 0.12));
+  color: var(--green-1);
+  border: 1px solid rgba(107, 140, 94, 0.4);
+}
+.gt-q-status-denied {
+  background: var(--red-soft);
+  color: var(--accent);
+  border: 1px solid rgba(196, 69, 54, 0.4);
+}
+@media (max-width: 800px) {
+  .gt-q-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 10px 16px;
+  }
+  .gt-q-row-head {
+    display: none;
+  }
+}
+
+/* ---- Live audit rows ---- */
+.gt-audit-rows {
+  display: flex;
+  flex-direction: column;
+}
+.gt-audit-row {
+  display: grid;
+  grid-template-columns: 100px 100px 90px 1fr 60px;
+  gap: 14px;
+  padding: 11px 22px;
+  border-bottom: 1px solid var(--rule-1);
+  align-items: center;
+}
+.gt-audit-row:last-child {
+  border-bottom: none;
+}
+.gt-audit-row-head {
+  background: var(--cream-2);
+}
+.gt-audit-row-head span {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 500;
+}
+.gt-audit-ms-col {
+  text-align: right;
+}
+.gt-audit-stamp {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+}
+.gt-audit-lane {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  text-align: center;
+  font-weight: 500;
+}
+.gt-audit-lane-guardrails {
+  background: var(--green-soft, rgba(107, 140, 94, 0.12));
+  color: var(--green-1);
+}
+.gt-audit-lane-approvals {
+  background: var(--amber-soft, rgba(184, 138, 58, 0.14));
+  color: var(--amber-1);
+}
+.gt-audit-lane-grounding {
+  background: var(--red-soft);
+  color: var(--accent);
+}
+.gt-audit-verdict {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.gt-audit-verdict-pass,
+.gt-audit-verdict-cleared {
+  color: var(--green-1);
+}
+.gt-audit-verdict-block {
+  color: var(--accent);
+}
+.gt-audit-verdict-queued {
+  color: var(--amber-1);
+}
+.gt-audit-detail {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-1);
+}
+.gt-audit-ms {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--accent);
+  text-align: right;
+  font-weight: 500;
+}
+@media (max-width: 800px) {
+  .gt-audit-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 10px 16px;
+  }
+  .gt-audit-row-head {
+    display: none;
+  }
+}
