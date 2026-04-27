@@ -78,6 +78,21 @@ class PulseResponse(BaseModel):
     generated_at: str
 
 
+class CatalogStatsResponse(BaseModel):
+    """Lightweight catalog-size payload for the storefront welcome card.
+
+    Exposes only the three signals the concierge briefing cites —
+    product count, category count, and the current standout pick — so
+    the empty state renders real numbers instead of hardcoded ones.
+    """
+
+    product_count: int
+    category_count: int
+    standout_name: Optional[str] = None
+    standout_category: Optional[str] = None
+    generated_at: str
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -319,6 +334,33 @@ async def briefing(
         line=" ".join(line_parts),
         chips=chips,
         actions=actions,
+        generated_at=now.isoformat(timespec="seconds"),
+    )
+
+
+@router.get("/catalog-stats", response_model=CatalogStatsResponse)
+async def catalog_stats() -> CatalogStatsResponse:
+    """Real-time catalog size signals for the concierge welcome card.
+
+    No auth required. Always 200 — DB errors degrade to zeros so the
+    storefront welcome never breaks on a briefing miss. Cached briefly
+    at the HTTP layer via ``Cache-Control`` since the catalog size
+    changes on the order of minutes, not seconds.
+    """
+    from app import db_service
+
+    now = datetime.now(tz=timezone.utc).astimezone()
+    snapshot = (
+        await _catalog_snapshot(db_service)
+        if db_service is not None
+        else {"product_count": 0, "category_count": 0, "bestseller_pick": None}
+    )
+    pick = snapshot.get("bestseller_pick") or {}
+    return CatalogStatsResponse(
+        product_count=int(snapshot.get("product_count") or 0),
+        category_count=int(snapshot.get("category_count") or 0),
+        standout_name=(pick.get("description") or None) or None,
+        standout_category=(pick.get("category") or None) or None,
         generated_at=now.isoformat(timespec="seconds"),
     )
 

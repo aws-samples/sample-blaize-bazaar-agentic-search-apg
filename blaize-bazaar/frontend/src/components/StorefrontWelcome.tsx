@@ -18,6 +18,7 @@
  */
 import '../styles/storefront-welcome.css'
 import type { PersonaSnapshot } from '../contexts/PersonaContext'
+import { useCatalogStats } from '../hooks/useCatalogStats'
 
 interface StorefrontWelcomeProps {
   onSend: (text: string) => void
@@ -58,23 +59,49 @@ interface PersonaCopy {
    * back."). */
   greetingSuffix: (firstName: string) => string
   /** Short context paragraph that follows the greeting. Grounded in
-   * persona signals so it reads like the storefront remembers them. */
-  context: React.ReactNode
+   * persona signals so it reads like the storefront remembers them.
+   * Receives live catalog stats so copy that cites the catalog size
+   * never goes stale. */
+  context: (stats: CatalogStats | null) => React.ReactNode
   picks: ReadonlyArray<{ label: string; primary: boolean }>
   ps: ReadonlyArray<string>
 }
 
+// Local alias so the import doesn't need to leak into every consumer.
+type CatalogStats = ReturnType<typeof useCatalogStats>
+
 const FRESH_COPY: PersonaCopy = {
   greetingSuffix: () => '',
-  context: (
-    <>
-      I've been watching the floor —{' '}
-      <span className="sf-context-num">444</span> pieces across 9
-      categories. Today's standout is the{' '}
-      <span className="sf-context-product">Featherweight Trail Runner</span>{' '}
-      in Footwear.
-    </>
-  ),
+  context: (stats) => {
+    // During the first paint (stats === null) we keep the sentence
+    // grammatical without numbers — "I've been watching the boutique."
+    // — so the layout doesn't flash.
+    if (!stats || stats.product_count === 0) {
+      return (
+        <>
+          I've been watching the boutique. Tell me what you're after and
+          I'll curate from the floor.
+        </>
+      )
+    }
+    const standout = stats.standout_name?.trim()
+    const category = stats.standout_category?.trim()
+    return (
+      <>
+        I've been watching the floor —{' '}
+        <span className="sf-context-num">{stats.product_count}</span>{' '}
+        pieces across {stats.category_count} categories.
+        {standout && category && (
+          <>
+            {' '}
+            Today's standout is the{' '}
+            <span className="sf-context-product">{standout}</span> in{' '}
+            {category}.
+          </>
+        )}
+      </>
+    )
+  },
   picks: [
     { label: "Show me today's picks", primary: true },
     { label: "What's new since my last visit", primary: false },
@@ -89,7 +116,7 @@ const FRESH_COPY: PersonaCopy = {
 
 const MARCO_COPY: PersonaCopy = {
   greetingSuffix: (firstName) => `, ${firstName}. Welcome back.`,
-  context: (
+  context: () => (
     <>
       It's been three weeks since your last visit. Seven orders in your
       history, with a steady thread of{' '}
@@ -112,7 +139,7 @@ const MARCO_COPY: PersonaCopy = {
 
 const ANNA_COPY: PersonaCopy = {
   greetingSuffix: (firstName) => `, ${firstName}. Welcome back.`,
-  context: (
+  context: () => (
     <>
       Nine days since your last visit. Five orders in your history, all
       gift-shaped across milestone and everyday price bands. A handful of{' '}
@@ -151,6 +178,7 @@ export default function StorefrontWelcome({ onSend, persona }: StorefrontWelcome
   const tod = timeOfDay()
   const firstName = persona ? persona.display_name.split(' ')[0] : ''
   const greeting = `${TOD_GREETING[tod]}${copy.greetingSuffix(firstName)}.`
+  const stats = useCatalogStats()
 
   return (
     <div className="sf-welcome">
@@ -192,7 +220,7 @@ export default function StorefrontWelcome({ onSend, persona }: StorefrontWelcome
         <h2 className="sf-greeting">
           <em>{greeting}</em>
         </h2>
-        <p className="sf-context">{copy.context}</p>
+        <p className="sf-context">{copy.context(stats)}</p>
 
         {/* Pre-vetted picks */}
         <div className="sf-section">
