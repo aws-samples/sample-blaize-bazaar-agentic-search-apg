@@ -297,24 +297,49 @@
   font-weight: 500;
 }
 
-/* Message body */
+/* Message body
+ *
+ * Sans-serif (Inter) for the prose body so long replies read cleanly on
+ * small screens. Fraunces stays reserved for the eyebrow, user-message
+ * italic quotes, and product names — the editorial register that
+ * distinguishes the storefront from an ordinary chat. Premium-concierge
+ * cadence: 15.5px / 1.6 leading / -0.005em tracking.
+ */
 .ec-msg-body {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-weight: 400;
   font-size: 15.5px;
-  line-height: 1.55;
+  line-height: 1.6;
+  letter-spacing: -0.005em;
   color: var(--ink-1);
 }
 .ec-msg-body p { margin-bottom: 10px; }
 .ec-msg-body p:last-child { margin-bottom: 0; }
 
-/* Streaming cursor */
-.ec-cursor::after {
-  content: '\25AE';
-  color: var(--red-1);
-  margin-left: 1px;
-  animation: cursor-blink 1s step-end infinite;
+/* Product names and prices rendered inline as bold get Fraunces italic
+ * so the editorial voice carries through the body text even when the
+ * body is sans. Works with <strong>...</strong> inside MarkdownMessage. */
+.ec-msg-body strong {
+  font-family: var(--serif);
+  font-style: italic;
   font-weight: 500;
+  letter-spacing: 0;
+}
+
+/* Streaming cursor — thin blinking caret, not a block. Reads as a
+ * live typing indicator rather than a retro terminal. */
+.ec-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+  background: var(--red-1);
+  border-radius: 1px;
+  animation: cursor-blink 1s step-end infinite;
+}
+.ec-cursor::after {
+  content: none;
 }
 
 /* Product artifacts stack */
@@ -513,49 +538,51 @@
  *
  * Render only under the most recent complete assistant reply. Each
  * chip is a canned query grounded in the active persona's signals
- * from docs/personas-config.json. The visual language mirrors the
- * welcome state's P.S. chips (italic burgundy bullet, italic serif
- * text, underline on hover) so the surface reads as one continuous
- * editorial register rather than two disconnected UI systems.
+ * from docs/personas-config.json. Horizontal pills (not a bulleted
+ * list) — reads as "what to try next", not an editorial postscript.
+ * Flow-wraps on narrow widths so three chips still fit below a mobile
+ * chat bubble.
  */
 .ec-followups {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 14px;
-  padding-top: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 14px;
   border-top: 1px dashed rgba(45, 24, 16, 0.12);
 }
 .ec-followup {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 14px;
-  color: var(--ink-2);
-  background: none;
-  border: none;
-  padding: 4px 0;
-  cursor: pointer;
-  text-align: left;
-  width: 100%;
-  transition: color 150ms;
-}
-.ec-followup-bullet {
-  color: var(--red-1);
+  font-family: var(--sans);
   font-style: normal;
-  font-size: 14px;
-  flex-shrink: 0;
   font-weight: 500;
-}
-.ec-followup-label {
-  border-bottom: 1px solid transparent;
-  transition: border-color 150ms, color 150ms;
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+  color: var(--ink-2);
+  background: rgba(196, 69, 54, 0.06);
+  border: 1px solid rgba(196, 69, 54, 0.18);
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ec-followup:hover {
-  color: var(--ink-1);
+  background: var(--red-1);
+  border-color: var(--red-1);
+  color: var(--cream-1);
 }
-.ec-followup:hover .ec-followup-label {
-  border-bottom-color: var(--ink-1);
+.ec-followup:focus-visible {
+  outline: 2px solid var(--red-1);
+  outline-offset: 2px;
+}
+/* The bullet and label spans from the previous list-style are no
+ * longer rendered — the chip label is the button's direct text. The
+ * old class names are retained in the component to keep the git diff
+ * scoped to CSS, but they're inert here. */
+.ec-followup-bullet,
+.ec-followup-label {
+  display: contents;
 }

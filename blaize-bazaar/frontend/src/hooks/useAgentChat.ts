@@ -280,6 +280,39 @@ export function useAgentChat(
       setInputValue('')
       setIsLoading(true)
 
+      // Streaming delta buffer + rAF flush.
+      //
+      // Each SSE token arrives ~every few ms. Calling setMessages() for
+      // every token produces 100+ renders/sec and jittery rendering
+      // because React can't batch across microtasks. Instead we collect
+      // deltas into a string buffer and flush it once per animation
+      // frame (~60fps). This lands each frame with the accumulated
+      // chars and lets the browser paint smoothly, like Claude Desktop.
+      let pendingDelta = ''
+      let flushScheduled = false
+      const flushDelta = () => {
+        flushScheduled = false
+        if (!pendingDelta) return
+        const chunk = pendingDelta
+        pendingDelta = ''
+        setMessages(prev => {
+          const updated = [...prev]
+          const lastMsg = updated[updated.length - 1]
+          if (!lastMsg || lastMsg.role !== 'assistant') return prev
+          lastMsg.content = (lastMsg.content || '') + chunk
+          if (lastMsg.agentStatus === 'thinking') {
+            lastMsg.agentStatus = 'streaming'
+            lastMsg.agentExecution = undefined
+          }
+          return updated
+        })
+      }
+      const scheduleFlush = () => {
+        if (flushScheduled) return
+        flushScheduled = true
+        requestAnimationFrame(flushDelta)
+      }
+
       // Cache check
       const cached = getCachedResponse(text)
       if (cached) {
@@ -433,17 +466,12 @@ export function useAgentChat(
                 return updated
               })
             } else if (data.type === 'content_delta') {
-              setMessages(prev => {
-                const updated = [...prev]
-                const lastMsg = updated[updated.length - 1]
-                lastMsg.content = (lastMsg.content || '') + data.delta
-                if (lastMsg.agentStatus === 'thinking') {
-                  lastMsg.agentStatus = 'streaming'
-                  lastMsg.agentExecution = undefined
-                }
-                return [...updated]
-              })
+              pendingDelta += data.delta
+              scheduleFlush()
             } else if (data.type === 'content_reset') {
+              // Drop any buffered deltas on reset so the pre-reset
+              // tokens don't bleed into the post-reset text.
+              pendingDelta = ''
               setMessages(prev => {
                 const updated = [...prev]
                 const lastMsg = updated[updated.length - 1]
@@ -520,6 +548,11 @@ export function useAgentChat(
           guardrailsEnabled,
           persona?.customer_id ?? null,
         )
+
+        // Drain any remaining buffered tokens before settling the
+        // final response — otherwise the last ~1 frame worth of chars
+        // can be overwritten by the complete-event content setter.
+        flushDelta()
 
         if (response.estimated_cost_usd) {
           setSessionCost(prev => prev + response.estimated_cost_usd!)

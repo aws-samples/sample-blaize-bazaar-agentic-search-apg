@@ -1377,6 +1377,7 @@ CURRENT REQUEST: {message}"""
         # persona's actual history. Skipped for anonymous sessions —
         # they get the editorial fallback.
         persona_preamble = ""
+        persona_orders_for_cards: list = []  # hydrated product rows for past-order cards
         if customer_id and self.db_service:
             try:
                 facts_rows = await self.db_service.fetch_all(
@@ -1387,7 +1388,9 @@ CURRENT REQUEST: {message}"""
                     customer_id,
                 )
                 orders_rows = await self.db_service.fetch_all(
-                    'SELECT pc.name, pc.price, pc.category, o.placed_at '
+                    'SELECT pc."productId", pc.name, pc.brand, pc.color, '
+                    'pc.price, pc.category, pc."imgUrl", pc.rating, pc.reviews, '
+                    'o.placed_at '
                     'FROM orders o '
                     'JOIN blaize_bazaar.product_catalog pc ON o.product_id = pc."productId" '
                     "WHERE o.customer_id = %s "
@@ -1416,6 +1419,27 @@ CURRENT REQUEST: {message}"""
                         "respect preferences, avoid asking for info you already know."
                     )
                     persona_preamble = "\n".join(lines) + "\n---\n"
+
+                # Hydrate order rows into the shape ProductArtifactCard
+                # expects. Kept as a dict list so the existing product
+                # emission path (yield {"type": "product", ...}) can
+                # consume them unchanged when retrospective queries hit.
+                for o in (orders_rows or []):
+                    persona_orders_for_cards.append({
+                        "productId": o.get("productId"),
+                        "id": o.get("productId"),
+                        "name": o.get("name") or "",
+                        "brand": o.get("brand") or "",
+                        "color": o.get("color") or "",
+                        "price": float(o.get("price") or 0),
+                        "category": o.get("category") or "",
+                        "imgUrl": o.get("imgUrl") or "",
+                        "rating": float(o.get("rating") or 0),
+                        "reviews": int(o.get("reviews") or 0),
+                        "badge": "From your orders",
+                        "tags": [],
+                    })
+
                 logger.info(
                     f"👤 Persona LTM | {customer_id} | "
                     f"facts={len(facts_rows)} orders={len(orders_rows)}"
@@ -1768,6 +1792,27 @@ CURRENT REQUEST: {message}"""
         if orchestrator_error[0]:
             yield {"type": "error", "error": str(orchestrator_error[0])}
             return
+
+        # --- Inject past-order product cards for retrospective queries ---
+        # When the shopper asks about their history ("what did I buy",
+        # "show me what I saved") we answered the text from the PERSONA
+        # CONTEXT preamble without calling a search tool, so products_
+        # buffered is empty. Hydrate it with the actual rows we already
+        # pulled for the preamble so the UI renders cards with images,
+        # prices, and ratings — not just prose.
+        if (
+            not products_buffered
+            and persona_orders_for_cards
+            and PAST_PURCHASE_PATTERN.search(message)
+        ):
+            # Cap at 3 cards so the chat doesn't scroll forever; the
+            # text already names the highlights. Keep the most recent.
+            for past_product in persona_orders_for_cards[:3]:
+                products_buffered.append(past_product)
+            logger.info(
+                f"🛍 Injected {len(products_buffered)} past-order cards "
+                f"for retrospective query"
+            )
 
         # --- Parse and send final response ---
         response_text = str(orchestrator_result[0]) if orchestrator_result[0] else ""
