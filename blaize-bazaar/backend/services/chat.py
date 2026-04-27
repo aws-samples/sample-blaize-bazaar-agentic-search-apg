@@ -1820,6 +1820,32 @@ CURRENT REQUEST: {message}"""
 
         parsed = await self._parse_agent_response(response_text, message, conversation_history, has_tool_products=bool(products_buffered))
 
+        # --- Prefer specialist prose over orchestrator paraphrase ---
+        # The Strands "Agents as Tools" pattern runs a final
+        # orchestrator cycle after the specialist returns, and Haiku
+        # frequently paraphrases the rich specialist reply into a flat
+        # summary ("Here are some great options!"). When a specialist
+        # produced substantially richer prose, promote it back into the
+        # user-facing text — that preserves the editorial voice the
+        # specialist spent a Opus call composing.
+        if last_specialist_text and parsed.get("text"):
+            orch_len = len(parsed["text"])
+            spec_len = len(last_specialist_text)
+            # Promote when the specialist's prose is at least 2x longer
+            # OR when the orchestrator output is a known flat paraphrase.
+            flat_paraphrase = (
+                "here are some" in parsed["text"].lower()
+                or "here's what i found" in parsed["text"].lower()
+                or "great options" in parsed["text"].lower()
+                or orch_len < 80
+            )
+            if spec_len >= orch_len * 2 or (flat_paraphrase and spec_len > 120):
+                logger.info(
+                    "Preferring specialist prose | orch_chars=%d spec_chars=%d",
+                    orch_len, spec_len,
+                )
+                parsed["text"] = last_specialist_text
+
         # Fallback for empty-orchestrator turns: if the agent chain
         # completed but produced no text and no products, the user
         # sees a blank message. Synthesize a graceful recovery line
