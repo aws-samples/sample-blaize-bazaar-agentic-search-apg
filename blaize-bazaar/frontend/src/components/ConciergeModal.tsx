@@ -55,6 +55,25 @@ const SUGGESTIONS_WORKSHOP = [
   'Compare the Sundress and the Cardigan',
 ]
 
+// Persona-tailored suggestion chips. Each array reflects the persona's
+// actual signals (orders, search_history, ltm_facts) from
+// docs/personas-config.json, so the concierge opens with prompts that
+// already feel like they "know" the shopper. Fresh visitor gets the
+// generic editorial chips.
+const SUGGESTIONS_BY_PERSONA: Record<string, string[]> = {
+  marco: [
+    'what did I buy last time?',
+    'another linen piece for slow Sundays',
+    'something travel-friendly like my Lisbon picks',
+  ],
+  anna: [
+    'a thoughtful gift for my mother',
+    'something milestone-shaped under $200',
+    'help me build a small gift set with wrapping',
+  ],
+  fresh: SUGGESTIONS_STOREFRONT,
+}
+
 // Session id read from the same localStorage key the chat service writes.
 function useSessionId(): string | null {
   const [id, setId] = useState<string | null>(() => localStorage.getItem('blaize-session-id'))
@@ -310,20 +329,24 @@ export default function ConciergeModal() {
   // Initial welcome — per route mode, only used on first mount of this session.
   const initialMessages = useMemo<AgentChatMessage[]>(() => {
     let content: string
+    let suggestions: string[]
     if (isWorkshopRoute) {
       content = WELCOME_WORKSHOP
+      suggestions = SUGGESTIONS_WORKSHOP
     } else if (persona) {
       const firstName = persona.display_name.split(' ')[0]
       content = `${greeting}, ${firstName}. ${WELCOME_STOREFRONT}`
+      suggestions = SUGGESTIONS_BY_PERSONA[persona.id] ?? SUGGESTIONS_STOREFRONT
     } else {
       content = WELCOME_STOREFRONT
+      suggestions = SUGGESTIONS_STOREFRONT
     }
     return [
       {
         role: 'assistant',
         content,
         timestamp: new Date(),
-        suggestions: isWorkshopRoute ? SUGGESTIONS_WORKSHOP : SUGGESTIONS_STOREFRONT,
+        suggestions,
       },
     ]
   }, [isWorkshopRoute, persona, greeting])

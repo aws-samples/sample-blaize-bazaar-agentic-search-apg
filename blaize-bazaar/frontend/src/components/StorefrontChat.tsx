@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import type { AgentChatMessage } from '../hooks/useAgentChat'
 import type { CartItemOrigin } from '../contexts/CartContext'
+import { usePersona } from '../contexts/PersonaContext'
 import MarkdownMessage from './MarkdownMessage'
 import StorefrontWelcome from './StorefrontWelcome'
 import ProductArtifactCard from './ProductArtifactCard'
@@ -66,6 +67,7 @@ export default function StorefrontChat({
 }: StorefrontChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const { persona } = usePersona()
 
   // Auto-scroll only if user is near the bottom.
   useEffect(() => {
@@ -162,7 +164,10 @@ export default function StorefrontChat({
       <div className="ec-conversation" ref={scrollAreaRef}>
         {/* Welcome state */}
         {!hasUserMessages && (
-          <StorefrontWelcome onSend={(text) => void sendMessage(text)} />
+          <StorefrontWelcome
+            persona={persona}
+            onSend={(text) => void sendMessage(text)}
+          />
         )}
 
         {/* Messages — once the user sends a message, render the full
