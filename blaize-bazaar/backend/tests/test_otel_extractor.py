@@ -123,7 +123,7 @@ class _StubOrchestratorAgent:
             # the test does not assert routing identity, only that an
             # orchestrator / specialist / tool span triple is present.
             tools = type(self).last_kwargs.get("tools", [])
-            target_name = "product_recommendation_agent"
+            target_name = "recommendation"
             for t in tools:
                 name = getattr(t, "tool_name", None) or getattr(
                     getattr(t, "__wrapped__", t), "__name__", repr(t)
@@ -146,11 +146,11 @@ def stubbed_specialists(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[str]]
     import agents.orchestrator as orch
 
     calls: dict[str, list[str]] = {
-        "search_agent": [],
-        "product_recommendation_agent": [],
-        "price_optimization_agent": [],
-        "inventory_restock_agent": [],
-        "customer_support_agent": [],
+        "search": [],
+        "recommendation": [],
+        "pricing": [],
+        "inventory": [],
+        "support": [],
     }
 
     def _patch(tool_obj: Any, name: str) -> None:
@@ -186,11 +186,11 @@ def stubbed_specialists(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[str]]
         monkeypatch.setattr(tool_obj, "__wrapped__", _recorder, raising=False)
         monkeypatch.setattr(tool_obj, "_tool_func", _recorder, raising=False)
 
-    _patch(orch.search_agent, "search_agent")
-    _patch(orch.product_recommendation_agent, "product_recommendation_agent")
-    _patch(orch.price_optimization_agent, "price_optimization_agent")
-    _patch(orch.inventory_restock_agent, "inventory_restock_agent")
-    _patch(orch.customer_support_agent, "customer_support_agent")
+    _patch(orch.search, "search")
+    _patch(orch.recommendation, "recommendation")
+    _patch(orch.pricing, "pricing")
+    _patch(orch.inventory, "inventory")
+    _patch(orch.support, "support")
 
     return calls
 
@@ -281,7 +281,7 @@ def test_extract_trace_returns_orchestrator_specialist_and_tool_spans(
         )
 
     # specialistRoute points at the specialist the orchestrator called.
-    assert trace["specialistRoute"] == "product_recommendation_agent", (
+    assert trace["specialistRoute"] == "recommendation", (
         f"specialistRoute SHALL name the routed specialist; got "
         f"{trace['specialistRoute']!r}"
     )
@@ -304,13 +304,13 @@ def test_extract_trace_span_kind_classification(
     with tracer.start_as_current_span("invoke_agent orchestrator") as root:
         root.set_attribute("gen_ai.agent.name", "orchestrator")
         with tracer.start_as_current_span(
-            "execute_tool search_agent"
+            "execute_tool search"
         ) as specialist:
-            specialist.set_attribute("gen_ai.tool.name", "search_agent")
+            specialist.set_attribute("gen_ai.tool.name", "search")
             with tracer.start_as_current_span(
-                "execute_tool get_trending_products"
+                "execute_tool trending_products"
             ) as tool:
-                tool.set_attribute("gen_ai.tool.name", "get_trending_products")
+                tool.set_attribute("gen_ai.tool.name", "trending_products")
 
     trace = extract_trace()
 
@@ -319,9 +319,9 @@ def test_extract_trace_span_kind_classification(
     ): s["kind"] for s in trace["spans"]}
 
     assert kinds["orchestrator"] == "orchestrator"
-    assert kinds["search_agent"] == "specialist"
-    assert kinds["get_trending_products"] == "tool"
-    assert trace["specialistRoute"] == "search_agent"
+    assert kinds["search"] == "specialist"
+    assert kinds["trending_products"] == "tool"
+    assert trace["specialistRoute"] == "search"
 
 
 def test_extract_trace_returns_empty_shape_when_no_spans(

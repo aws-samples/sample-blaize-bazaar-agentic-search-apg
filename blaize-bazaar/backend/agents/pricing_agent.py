@@ -6,7 +6,7 @@ import re
 from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
-from services.agent_tools import get_price_analysis, get_product_by_category, search_products
+from services.agent_tools import price_analysis, browse_category, search_products
 
 
 def _ensure_products_in_output(text: str, tool_results: list) -> str:
@@ -31,7 +31,7 @@ def _ensure_products_in_output(text: str, tool_results: list) -> str:
 
 
 @tool
-def price_optimization_agent(query: str) -> str:
+def pricing(query: str) -> str:
     """
     Analyze product pricing and suggest optimal deals.
     Finds best-value products, compares prices across categories,
@@ -55,10 +55,10 @@ def price_optimization_agent(query: str) -> str:
             system_prompt=(
                 "You are Blaize Bazaar's Pricing Specialist. "
                 "<tools>"
-                "- get_price_analysis: Use for category-level pricing statistics (average, min, max, distribution). "
+                "- price_analysis: Use for category-level pricing statistics (average, min, max, distribution). "
                 "- search_products: Use when the user describes specific products with price constraints "
                 "(e.g. 'laptops under $500'). "
-                "- get_product_by_category: Use to browse products in a category when the user wants to see "
+                "- browse_category: Use to browse products in a category when the user wants to see "
                 "what is available at various price points. "
                 "</tools>"
                 "<output-rules>"
@@ -71,7 +71,7 @@ def price_optimization_agent(query: str) -> str:
                 "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
                 "</output-rules>"
             ),
-            tools=[get_price_analysis, get_product_by_category, search_products],
+            tools=[price_analysis, browse_category, search_products],
         )
 
         # Capture inner tool results so we can guarantee product data in output

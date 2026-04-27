@@ -7,7 +7,7 @@ import re
 from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
-from services.agent_tools import get_return_policy, search_products
+from services.agent_tools import return_policy, search_products
 from skills import inject_skills
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def _ensure_products_in_output(text: str, tool_results: list) -> str:
 
 
 @tool
-def customer_support_agent(query: str) -> str:
+def support(query: str) -> str:
     """
     Handle customer support queries including return policies and troubleshooting.
 
@@ -47,7 +47,7 @@ def customer_support_agent(query: str) -> str:
     """
     try:
         tool_results = []
-        tools = [get_return_policy, search_products]
+        tools = [return_policy, search_products]
 
         # Optional Exa MCP integration for web-based troubleshooting.
         # Requires EXA_API_KEY env var and network egress (not provisioned
@@ -72,14 +72,14 @@ def customer_support_agent(query: str) -> str:
         system_prompt = (
             "You are Blaize Bazaar's Customer Support Specialist. "
             "<tools>"
-            "- get_return_policy: Use for questions about returns, refunds, warranties, or return windows. "
+            "- return_policy: Use for questions about returns, refunds, warranties, or return windows. "
             "Pass the product category name (e.g. 'Electronics', 'Shoes'). "
             "- search_products: Use for product-related support queries when the customer needs help "
             "finding or identifying a product. "
             "</tools>"
             "<chaining>"
             "If the customer mentions a specific product name or ID instead of a category, first use "
-            "search_products to identify the product's category_name, then call get_return_policy with "
+            "search_products to identify the product's category_name, then call return_policy with "
             "that category. "
             "</chaining>"
         )

@@ -68,14 +68,14 @@ SENSITIVE_TOOLS = {"restock_product"}
 # Card 7 to show the provenance of each row ("owned by shopper-agent").
 TOOL_OWNER: Dict[str, str] = {
     "search_products": "shopper",
-    "get_trending_products": "shopper",
-    "get_product_by_category": "shopper",
-    "get_price_analysis": "shopper",
+    "trending_products": "shopper",
+    "browse_category": "shopper",
+    "price_analysis": "shopper",
     "compare_products": "shopper",
-    "get_inventory_health": "inventory",
-    "get_low_stock_products": "inventory",
+    "inventory_health": "inventory",
+    "low_stock": "inventory",
     "restock_product": "inventory",
-    "get_return_policy": "support",
+    "return_policy": "support",
 }
 
 

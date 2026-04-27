@@ -35,7 +35,7 @@ from services.chat import ChatService
 from datetime import datetime
 from services.sql_query_logger import init_query_logger, get_query_logger, QueryLog
 from services.index_performance import get_index_performance_service
-from services.hybrid_search import HybridSearchService
+from services.vector_search import VectorSearch
 from services.cache import init_cache, get_cache
 from routes import (
     agent_router,
@@ -193,9 +193,9 @@ async def lifespan(app: FastAPI):
         logging.getLogger('services.chat').setLevel(logging.INFO)
 
         # Initialize agent tools. The concierge uses pure pgvector
-        # semantic search (``HybridSearchService._vector_search``); the
-        # hybrid + rerank pipeline was removed when the concierge
-        # switched to the Module 1 teaching surface.
+        # semantic search (``VectorSearch.vector_search``); the hybrid
+        # + rerank pipeline was removed when the concierge switched
+        # to the Module 1 teaching surface.
         from services.agent_tools import set_db_service, set_main_loop
         set_db_service(db_service)
         set_main_loop(asyncio.get_event_loop())
@@ -477,13 +477,13 @@ async def list_custom_tools():
     """List all custom business logic tools available"""
     return [
         {"name": "search_products", "description": "Search for products by natural language query with optional filters"},
-        {"name": "get_trending_products", "description": "Get trending products by reviews and ratings"},
-        {"name": "get_product_by_category", "description": "Browse products filtered by category, rating, and price"},
-        {"name": "get_inventory_health", "description": "Check stock levels and inventory alerts"},
-        {"name": "get_price_analysis", "description": "Price analytics by category"},
+        {"name": "trending_products", "description": "Get trending products by reviews and ratings"},
+        {"name": "browse_category", "description": "Browse products filtered by category, rating, and price"},
+        {"name": "inventory_health", "description": "Check stock levels and inventory alerts"},
+        {"name": "price_analysis", "description": "Price analytics by category"},
         {"name": "restock_product", "description": "Update product stock quantities"},
         {"name": "compare_products", "description": "Side-by-side product comparison"},
-        {"name": "get_low_stock_products", "description": "Find products running low on inventory"},
+        {"name": "low_stock", "description": "Find products running low on inventory"},
     ]
 
 
@@ -497,21 +497,21 @@ async def get_trending(
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(db)
-        return await logic.get_trending_products(limit, category)
+        return await logic.trending_products(limit, category)
     except Exception as e:
         logger.error(f"Failed to get trending products: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/tools/inventory-health")
-async def get_inventory_health_endpoint(
+async def inventory_health_endpoint(
     db: DatabaseService = Depends(get_db_service)
 ):
     """Get inventory health using business logic"""
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(db)
-        return await logic.get_inventory_health()
+        return await logic.inventory_health()
     except Exception as e:
         logger.error(f"Failed to get inventory health: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -526,7 +526,7 @@ async def get_price_stats(
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(db)
-        return await logic.get_price_analysis(category)
+        return await logic.price_analysis(category)
     except Exception as e:
         logger.error(f"Failed to get price statistics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -945,6 +945,140 @@ async def list_skills():
     }
 
 
+@app.get("/api/atelier/catalog")
+async def atelier_catalog():
+    """
+    Tool catalog + agent grants for the Atelier Architecture pages.
+
+    Powers three surfaces:
+      - MCP page's tool card grid (Fired / Idle state + p50 latency)
+      - Tool Registry bipartite graph (agent → tool edges with styles)
+      - Tool Registry detail rows (grants per tool)
+
+    The catalog is hardcoded here because Blaize's tools are declared
+    in Python at import time — there isn't a runtime tool-metadata
+    table. If we ever add a real tool table (like the ``tools`` table
+    migration 001 seeds for the Week 2 teaching panel), swap this to
+    read from it.
+
+    ``recent_calls`` and ``last_12_turns`` would come from a real
+    telemetry store. For now we report 0 / 0 — the live strip on each
+    page surfaces the current turn's activity via SSE, which is what
+    matters for a live demo.
+    """
+    # Agent definitions — matches imports in backend/agents/*.py
+    agents = [
+        {"name": "orchestrator", "model": "Haiku", "role": "ROUTES"},
+        {"name": "search", "model": "Opus", "role": "OPUS · 3 GRANTS"},
+        {"name": "recommendation", "model": "Opus", "role": "OPUS · 4 GRANTS"},
+        {"name": "pricing", "model": "Opus", "role": "OPUS · 3 GRANTS"},
+        {"name": "support", "model": "Opus", "role": "OPUS · 2 GRANTS"},
+        {"name": "inventory", "model": "Opus", "role": "OPUS · 3 GRANTS"},
+    ]
+
+    # Tool catalog — headline + description + typical p50.
+    # p50 values are approximate defaults; the live strip surfaces
+    # actual per-call latencies via the existing tool-call SSE.
+    tools = [
+        {
+            "name": "search_products",
+            "version": "v2.1",
+            "headline": "Semantic search across the catalog.",
+            "description": "Natural-language query against pgvector; returns top-k matched products.",
+            "p50_ms": 280,
+        },
+        {
+            "name": "trending_products",
+            "version": "v1.3",
+            "headline": "Current bestsellers and just-ins.",
+            "description": "Returns products tagged BESTSELLER / JUST_IN / EDITORS_PICK from the catalog.",
+            "p50_ms": 120,
+        },
+        {
+            "name": "browse_category",
+            "version": "v1.2",
+            "headline": "Browse by named category.",
+            "description": "Filter-by-category read for shoppers who know what shelf they want.",
+            "p50_ms": 80,
+        },
+        {
+            "name": "compare_products",
+            "version": "v1.0",
+            "headline": "Side-by-side product comparison.",
+            "description": "Takes two product IDs, returns attributes arranged for comparison.",
+            "p50_ms": 180,
+        },
+        {
+            "name": "price_analysis",
+            "version": "v1.1",
+            "headline": "Price trends, deals, and budget fit.",
+            "description": "Analyzes pricing across a category or a specific product family.",
+            "p50_ms": 220,
+        },
+        {
+            "name": "inventory_health",
+            "version": "v1.0",
+            "headline": "Stock levels at a glance.",
+            "description": "Inventory summary by category with low-stock flags.",
+            "p50_ms": 95,
+        },
+        {
+            "name": "low_stock",
+            "version": "v1.0",
+            "headline": "What's running low right now.",
+            "description": "Reads products below the restock threshold, ordered by urgency.",
+            "p50_ms": 110,
+        },
+        {
+            "name": "restock_product",
+            "version": "v1.0",
+            "headline": "Place a restock signal.",
+            "description": "Writes a restock request. Gated — requires explicit user confirmation.",
+            "p50_ms": 145,
+            "gated": True,
+        },
+        {
+            "name": "return_policy",
+            "version": "v1.0",
+            "headline": "Return windows by category.",
+            "description": "Policy lookup used by customer support for returns / refunds questions.",
+            "p50_ms": 45,
+        },
+    ]
+
+    # Agent → tool grants, derived from imports in backend/agents/*.py.
+    # Style: 'solid' = everyday access, 'dashed' = read-only/rare,
+    # 'gated' = requires user confirmation (espresso-dashed in the UI).
+    grants = [
+        # search agent imports
+        {"agent": "search", "tool": "search_products", "style": "solid"},
+        {"agent": "search", "tool": "browse_category", "style": "solid"},
+        {"agent": "search", "tool": "compare_products", "style": "solid"},
+        # recommendation agent imports
+        {"agent": "recommendation", "tool": "search_products", "style": "solid"},
+        {"agent": "recommendation", "tool": "trending_products", "style": "solid"},
+        {"agent": "recommendation", "tool": "compare_products", "style": "solid"},
+        {"agent": "recommendation", "tool": "browse_category", "style": "solid"},
+        # pricing agent imports
+        {"agent": "pricing", "tool": "price_analysis", "style": "solid"},
+        {"agent": "pricing", "tool": "browse_category", "style": "solid"},
+        {"agent": "pricing", "tool": "search_products", "style": "dashed"},
+        # inventory agent imports
+        {"agent": "inventory", "tool": "inventory_health", "style": "solid"},
+        {"agent": "inventory", "tool": "low_stock", "style": "solid"},
+        {"agent": "inventory", "tool": "restock_product", "style": "gated"},
+        # support agent imports
+        {"agent": "support", "tool": "return_policy", "style": "solid"},
+        {"agent": "support", "tool": "search_products", "style": "dashed"},
+    ]
+
+    return {
+        "agents": agents,
+        "tools": tools,
+        "grants": grants,
+    }
+
+
 @app.get("/api/atelier/status")
 async def get_workshop_status():
     """Detect which workshop modules have been completed by inspecting stub source code."""
@@ -957,17 +1091,17 @@ async def get_workshop_status():
             return True
 
     # Module 1 — Smart Search
-    from services.hybrid_search import HybridSearchService
+    from services.vector_search import VectorSearch
     from services.business_logic import BusinessLogic
-    m1a = is_stub(HybridSearchService._vector_search, "# TODO: Your implementation here")
+    m1a = is_stub(VectorSearch.vector_search, "# TODO: Your implementation here")
     m1b = is_stub(BusinessLogic.search_products, "# TODO: Your implementation here")
 
     # Module 2 — Agentic AI (tools + agents + orchestrator)
-    from services.agent_tools import get_trending_products
-    from agents.recommendation_agent import product_recommendation_agent
+    from services.agent_tools import trending_products
+    from agents.recommendation_agent import recommendation
     from agents.orchestrator import create_orchestrator
-    m2_tools = is_stub(get_trending_products, "# TODO: Your implementation here")
-    m2_rec = is_stub(product_recommendation_agent, "# TODO: Your implementation here")
+    m2_tools = is_stub(trending_products, "# TODO: Your implementation here")
+    m2_rec = is_stub(recommendation, "# TODO: Your implementation here")
     m2_orch = is_stub(create_orchestrator, "# TODO: Your implementation here")
 
     # Module 3 — Production Patterns
@@ -983,7 +1117,7 @@ async def get_workshop_status():
             "module1": {"complete": not m1a and not m1b, "label": "Smart Search",
                         "stubs": {"vector_search": not m1a, "search_products": not m1b}},
             "module2": {"complete": not m2_tools and not m2_rec and not m2_orch, "label": "Agentic AI",
-                        "stubs": {"get_trending_products": not m2_tools, "recommendation_agent": not m2_rec, "orchestrator": not m2_orch}},
+                        "stubs": {"trending_products": not m2_tools, "recommendation_agent": not m2_rec, "orchestrator": not m2_orch}},
             "module3": {"complete": not m3_mem and not m3_gw and not m3_pol, "label": "Production Patterns",
                         "stubs": {"memory": not m3_mem, "gateway": not m3_gw, "policy": not m3_pol}},
         }

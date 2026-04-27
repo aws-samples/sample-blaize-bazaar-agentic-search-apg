@@ -45,7 +45,7 @@ import pytest
 #
 # The patterns below are deliberately tight. A query that matches more
 # than one pattern resolves to the highest-priority match. A query that
-# matches none falls through to product_recommendation_agent so the
+# matches none falls through to recommendation so the
 # default branch is covered by the same router.
 
 _PRICING = re.compile(
@@ -78,14 +78,14 @@ def _route(query: str) -> str:
     orchestrator would call for `query`. Mirrors the logic the
     ORCHESTRATOR_SYSTEM_PROMPT asks Haiku 4.5 to perform."""
     if _PRICING.search(query):
-        return "price_optimization_agent"
+        return "pricing"
     if _INVENTORY.search(query):
-        return "inventory_restock_agent"
+        return "inventory"
     if _SUPPORT.search(query):
-        return "customer_support_agent"
+        return "support"
     if _SEARCH.search(query):
-        return "search_agent"
-    return "product_recommendation_agent"
+        return "search"
+    return "recommendation"
 
 
 # ---------------------------------------------------------------------------
@@ -194,11 +194,11 @@ def stubbed_specialists(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[str]]
     import agents.orchestrator as orch
 
     calls: dict[str, list[str]] = {
-        "search_agent": [],
-        "product_recommendation_agent": [],
-        "price_optimization_agent": [],
-        "inventory_restock_agent": [],
-        "customer_support_agent": [],
+        "search": [],
+        "recommendation": [],
+        "pricing": [],
+        "inventory": [],
+        "support": [],
     }
 
     def _patch(tool_obj: Any, name: str) -> None:
@@ -217,11 +217,11 @@ def stubbed_specialists(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[str]]
         monkeypatch.setattr(tool_obj, "__wrapped__", _recorder, raising=False)
         monkeypatch.setattr(tool_obj, "_tool_func", _recorder, raising=False)
 
-    _patch(orch.search_agent, "search_agent")
-    _patch(orch.product_recommendation_agent, "product_recommendation_agent")
-    _patch(orch.price_optimization_agent, "price_optimization_agent")
-    _patch(orch.inventory_restock_agent, "inventory_restock_agent")
-    _patch(orch.customer_support_agent, "customer_support_agent")
+    _patch(orch.search, "search")
+    _patch(orch.recommendation, "recommendation")
+    _patch(orch.pricing, "pricing")
+    _patch(orch.inventory, "inventory")
+    _patch(orch.support, "support")
 
     return calls
 
@@ -274,11 +274,11 @@ def test_orchestrator_registers_exactly_five_specialists(
         names.append(name)
 
     assert set(names) == {
-        "search_agent",
-        "product_recommendation_agent",
-        "price_optimization_agent",
-        "inventory_restock_agent",
-        "customer_support_agent",
+        "search",
+        "recommendation",
+        "pricing",
+        "inventory",
+        "support",
     }, f"unexpected specialist roster: {names!r}"
 
 
@@ -294,11 +294,11 @@ def test_orchestrator_system_prompt_enforces_priority_order(
     assert isinstance(prompt, str) and prompt, "system_prompt SHALL be non-empty"
 
     for tool_name in (
-        "price_optimization_agent",
-        "inventory_restock_agent",
-        "customer_support_agent",
-        "search_agent",
-        "product_recommendation_agent",
+        "pricing",
+        "inventory",
+        "support",
+        "search",
+        "recommendation",
     ):
         assert tool_name in prompt, (
             f"system_prompt SHALL mention {tool_name!r} so Haiku can "
@@ -330,11 +330,11 @@ def test_orchestrator_system_prompt_enforces_priority_order(
 
 
 _REPRESENTATIVE_QUERIES = [
-    ("what are the best deals on linen under $100?", "price_optimization_agent"),
-    ("how many Sundresses do we have left in stock?", "inventory_restock_agent"),
-    ("what is the return policy for shoes I bought last week?", "customer_support_agent"),
-    ("find me the Italian Linen Camp Shirt", "search_agent"),
-    ("something for warm evenings out", "product_recommendation_agent"),
+    ("what are the best deals on linen under $100?", "pricing"),
+    ("how many Sundresses do we have left in stock?", "inventory"),
+    ("what is the return policy for shoes I bought last week?", "support"),
+    ("find me the Italian Linen Camp Shirt", "search"),
+    ("something for warm evenings out", "recommendation"),
 ]
 
 
@@ -391,7 +391,7 @@ def test_priority_order_on_ambiguous_queries(
     stubbed_specialists,
 ) -> None:
     """An ambiguous query matching BOTH pricing and inventory SHALL
-    route to `price_optimization_agent` because pricing outranks
+    route to `pricing` because pricing outranks
     inventory in the priority order (Req 2.4.7)."""
     orchestrator = orchestrator_factory()
 
@@ -401,17 +401,17 @@ def test_priority_order_on_ambiguous_queries(
     ambiguous = "do you have the linen camp shirt in stock under $100"
     orchestrator(ambiguous)
 
-    assert stubbed_specialists["price_optimization_agent"] == [ambiguous], (
+    assert stubbed_specialists["pricing"] == [ambiguous], (
         "ambiguous pricing+inventory query SHALL route to "
-        "price_optimization_agent per Req 2.4.7"
+        "pricing per Req 2.4.7"
     )
-    assert not stubbed_specialists["inventory_restock_agent"], (
-        "inventory_restock_agent SHALL NOT fire when pricing also matches"
+    assert not stubbed_specialists["inventory"], (
+        "inventory SHALL NOT fire when pricing also matches"
     )
 
     # Sanity: the routing decision reflects the higher-priority pick.
     assert _StubAgent.routing_decisions[-1]["selected_agent"] == (
-        "price_optimization_agent"
+        "pricing"
     )
 
 
@@ -427,8 +427,8 @@ def test_priority_order_support_beats_search_when_both_match(
     query = "can I return this sundress and find me a replacement"
     orchestrator(query)
 
-    assert stubbed_specialists["customer_support_agent"] == [query]
-    assert not stubbed_specialists["search_agent"]
+    assert stubbed_specialists["support"] == [query]
+    assert not stubbed_specialists["search"]
 
 
 def test_priority_fallback_to_recommendation_when_nothing_matches(
@@ -436,15 +436,15 @@ def test_priority_fallback_to_recommendation_when_nothing_matches(
     stubbed_specialists,
 ) -> None:
     """When no specialist pattern fires, the default SHALL be
-    product_recommendation_agent per Req 2.4.7 and the order in
+    recommendation per Req 2.4.7 and the order in
     coding-standards.md."""
     orchestrator = orchestrator_factory()
 
     query = "curate a little something for a slow Sunday"
     orchestrator(query)
 
-    assert stubbed_specialists["product_recommendation_agent"] == [query]
+    assert stubbed_specialists["recommendation"] == [query]
     assert not any(
         v for k, v in stubbed_specialists.items()
-        if k != "product_recommendation_agent"
+        if k != "recommendation"
     )

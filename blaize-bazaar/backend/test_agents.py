@@ -216,7 +216,7 @@ def create_single_agent():
     """Create a single-agent (Lab 2 mode) for testing."""
     from strands import Agent
     from strands.models.bedrock import BedrockModel
-    from services.agent_tools import search_products, get_trending_products, get_price_analysis
+    from services.agent_tools import search_products, trending_products, price_analysis
     from config import settings
 
     # Import the prompt from chat.py
@@ -225,31 +225,31 @@ def create_single_agent():
     return Agent(
         model=BedrockModel(model_id=settings.BEDROCK_CHAT_MODEL, max_tokens=8192, temperature=0.0),
         system_prompt=SINGLE_AGENT_PROMPT,
-        tools=[search_products, get_trending_products, get_price_analysis],
+        tools=[search_products, trending_products, price_analysis],
     )
 
 
 def create_recommendation():
-    from agents.recommendation_agent import product_recommendation_agent
+    from agents.recommendation_agent import recommendation
     class _Wrapper:
         def __call__(self, query):
-            return product_recommendation_agent(query)
+            return recommendation(query)
     return _Wrapper()
 
 
 def create_pricing():
-    from agents.pricing_agent import price_optimization_agent
+    from agents.pricing_agent import pricing
     class _Wrapper:
         def __call__(self, query):
-            return price_optimization_agent(query)
+            return pricing(query)
     return _Wrapper()
 
 
 def create_inventory():
-    from agents.inventory_agent import inventory_restock_agent
+    from agents.inventory_agent import inventory
     class _Wrapper:
         def __call__(self, query):
-            return inventory_restock_agent(query)
+            return inventory(query)
     return _Wrapper()
 
 

@@ -119,7 +119,7 @@ class Settings(BaseSettings):
     # External API Keys (optional integrations)
     # ========================================
     # Exa web search for the customer support agent's MCP tool chain.
-    # Leave unset to run with local tools only (get_return_policy,
+    # Leave unset to run with local tools only (return_policy,
     # search_products); the agent skips Exa wiring if this is empty.
     EXA_API_KEY: Optional[str] = None
 

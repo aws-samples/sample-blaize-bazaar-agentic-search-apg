@@ -1,16 +1,13 @@
 """
-Hybrid Search Service — pgvector semantic search.
+Vector Search Service — pgvector semantic search.
 
-Only ``_vector_search`` survives today. The Module 1 teaching surface
-is pure pgvector cosine similarity — the earlier hybrid (vector +
-keyword + RRF) and Cohere Rerank branches were removed after the
-concierge switched to semantic-only retrieval.
+The Module 1 teaching surface is pure pgvector cosine similarity. The
+earlier hybrid (vector + keyword + RRF) and Cohere Rerank branches were
+removed after the concierge switched to semantic-only retrieval.
 
-The class name is retained (rather than renamed to ``VectorSearch``)
-because ``HybridSearchService._vector_search`` is the canonical
-``CHALLENGE 1`` block referenced from ``agent_tools.search_products``
-and from ``tests/test_vector_search.py``. Renaming would ripple into
-the solutions parity diff and workshop module status check.
+``VectorSearch.vector_search`` is the canonical ``CHALLENGE 1`` block
+referenced from ``agent_tools.search_products`` and from
+``tests/test_vector_search.py``.
 """
 import logging
 import time
@@ -23,14 +20,13 @@ from services.sql_query_logger import QueryLog, get_query_logger
 logger = logging.getLogger(__name__)
 
 
-class HybridSearchService:
-    """Pgvector semantic search. Historical name; today it exposes only
-    ``_vector_search``."""
+class VectorSearch:
+    """Pgvector cosine-similarity semantic search over the product catalog."""
 
     def __init__(self, db: DatabaseService):
         self.db = db
 
-    async def _vector_search(
+    async def vector_search(
         self,
         embedding: List[float],
         limit: int,
@@ -67,7 +63,7 @@ class HybridSearchService:
             List of product dicts with similarity scores.
 
         ⏩ SHORT ON TIME? Run:
-           cp solutions/module1/services/hybrid_search.py blaize-bazaar/backend/services/hybrid_search.py
+           cp solutions/module1/services/hybrid_search.py blaize-bazaar/backend/services/vector_search.py
         """
         # === CHALLENGE 1: START ===
         sql = """

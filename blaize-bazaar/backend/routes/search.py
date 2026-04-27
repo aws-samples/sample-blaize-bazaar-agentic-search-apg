@@ -1,12 +1,12 @@
 """``/api/search`` route — storefront vector search (Task 3.7).
 
 Implements Requirement 3.3.6 and 5.1.1 of the blaize-bazaar-storefront
-spec and wires Challenge 1 (``HybridSearchService._vector_search`` from
+spec and wires Challenge 1 (``VectorSearch.vector_search`` from
 Task 2.1) into the public HTTP surface with the ``StorefrontSearchResponse``
 wire shape from Task 1.3.
 
   * ``POST /api/search`` — embed the query via ``EmbeddingService``,
-    call ``HybridSearchService._vector_search``, return a
+    call ``VectorSearch.vector_search``, return a
     ``StorefrontSearchResponse`` with camelCase keys
     (``queryEmbeddingMs``, ``searchMs``, ``totalMs``).
 
@@ -36,7 +36,7 @@ Design notes
   one the 500ms budget measures.
 
 * **Frontend contract.** ``StorefrontSearchResponse`` emits camelCase
-  via its ``alias_generator=to_camel`` config. ``_vector_search``
+  via its ``alias_generator=to_camel`` config. ``vector_search``
   returns legacy product rows with columns like ``"productId"`` and
   ``product_description`` — this layer projects them onto
   ``StorefrontProduct`` so the frontend search pill (Task 4.2) consumes
@@ -53,7 +53,7 @@ Design notes
 * **Catalog source of truth.** Per the spec, product rows and
   embeddings live in ``blaize_bazaar.product_catalog`` owned by the
   ``catalog-enrichment`` sibling spec. This route issues read-only
-  queries through ``HybridSearchService._vector_search`` — no writes.
+  queries through ``VectorSearch.vector_search`` — no writes.
 
 Routes are NOT part of any workshop challenge block. This file ships
 without ``# === CHALLENGE ... ===`` markers.
@@ -71,7 +71,7 @@ from pydantic import BaseModel, Field
 
 from models import StorefrontProduct, StorefrontSearchResponse
 from services.embeddings import EmbeddingService
-from services.hybrid_search import HybridSearchService
+from services.vector_search import VectorSearch
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ _STOREFRONT_CATEGORIES = {
 
 
 def _vector_row_to_storefront_product(row: dict) -> StorefrontProduct:
-    """Project a ``_vector_search`` row onto the storefront wire shape.
+    """Project a ``vector_search`` row onto the storefront wire shape.
 
     The boutique catalog exposes ``name``, ``brand``, ``color``,
     ``category``, ``tags`` and ``badge`` directly, so the projection is
@@ -194,10 +194,10 @@ async def storefront_search(
 
       1. Embed the query via ``EmbeddingService.embed_query``
          (Cohere Embed v4 ``input_type=search_query``).
-      2. Call ``HybridSearchService._vector_search`` with the
-         pre-computed vector. ``_vector_search`` is the C1 method from
-         Task 2.1 — it owns ``SET LOCAL hnsw.ef_search``, the
-         ``iterative_scan`` branch, and the ``<=>`` cosine ordering.
+      2. Call ``VectorSearch.vector_search`` with the pre-computed
+         vector. ``vector_search`` is the C1 method from Task 2.1 — it
+         owns ``SET LOCAL hnsw.ef_search``, the ``iterative_scan``
+         branch, and the ``<=>`` cosine ordering.
       3. Project rows onto ``StorefrontProduct`` and assemble
          ``StorefrontSearchResponse`` with the three timing fields.
 
@@ -225,8 +225,8 @@ async def storefront_search(
 
         # --- 2. Vector search ---------------------------------------
         search_start = time.perf_counter()
-        hybrid_service = HybridSearchService(db)
-        rows = await hybrid_service._vector_search(
+        vector_service = VectorSearch(db)
+        rows = await vector_service.vector_search(
             embedding=embedding,
             limit=payload.limit,
             ef_search=40,

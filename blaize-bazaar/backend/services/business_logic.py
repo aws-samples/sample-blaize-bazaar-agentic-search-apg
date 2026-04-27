@@ -10,7 +10,7 @@ Aligned to the boutique catalog schema:
 Legacy columns that no longer exist (quantity, stars, category_name,
 product_description, "productURL", isBestSeller, boughtInLastMonth) have
 been replaced or removed. Stock-level functions (inventory_health,
-restock_product, get_low_stock_products) return a degraded "not
+restock_product, low_stock) return a degraded "not
 available on this catalog" envelope instead of issuing broken SQL —
 the boutique catalog has no quantity column to drive them.
 """
@@ -46,7 +46,7 @@ class BusinessLogic:
     def __init__(self, db_service):
         self.db = db_service
 
-    async def get_trending_products(self, limit: int = 5, category: str = None) -> Dict[str, Any]:
+    async def trending_products(self, limit: int = 5, category: str = None) -> Dict[str, Any]:
         """Trending products by rating × reviews.
 
         The ``reviews::int`` cast is safe for today's catalog (numeric
@@ -98,11 +98,11 @@ class BusinessLogic:
             },
         }
 
-    async def get_inventory_health(self) -> Dict[str, Any]:
+    async def inventory_health(self) -> Dict[str, Any]:
         """Inventory health is unavailable — boutique catalog has no ``quantity`` column."""
         return {**_NOT_AVAILABLE_ENVELOPE, "health_score": None, "statistics": {}, "critical_items": [], "alerts": []}
 
-    async def get_price_analysis(self, category: str = None) -> Dict[str, Any]:
+    async def price_analysis(self, category: str = None) -> Dict[str, Any]:
         """Per-category price statistics."""
         params: List[Any] = []
         if category:
@@ -313,7 +313,7 @@ class BusinessLogic:
             },
         }
 
-    async def get_low_stock_products(self, limit: int = 5) -> Dict[str, Any]:
+    async def low_stock(self, limit: int = 5) -> Dict[str, Any]:
         """Low-stock lookup is unavailable — boutique catalog has no ``quantity`` column."""
         return {**_NOT_AVAILABLE_ENVELOPE, "limit": limit}
 

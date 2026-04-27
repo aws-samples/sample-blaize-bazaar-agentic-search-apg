@@ -249,7 +249,7 @@ async def query(payload: WorkshopQueryRequest) -> StreamingResponse:
         # --- Triage fast-path ---------------------------------------------
         # Same deterministic short-circuit as /api/chat/stream. Ensures
         # "hi" / "what can you do" / "thanks" demos don't route through
-        # product_recommendation_agent and risk the empty-LLM failure
+        # recommendation and risk the empty-LLM failure
         # mode. Panel emission is skipped entirely; one TRIAGE panel
         # gives the telemetry tab something to render.
         from services.chat import classify_triage, _TRIAGE_REPLIES

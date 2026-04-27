@@ -1,12 +1,12 @@
-"""Relevance test for the Challenge 3 `product_recommendation_agent`.
+"""Relevance test for the Challenge 3 `recommendation` agent.
 
 Validates Requirement 2.4.3-2.4.5 from
 `.kiro/specs/blaize-bazaar-storefront/requirements.md`:
 
   2.4.3  The specialist is a Strands `Agent` wrapping `BedrockModel` with
          `temperature=0.2` and the four tools
-         `[search_products, get_trending_products, compare_products,
-         get_product_by_category]`.
+         `[search_products, trending_products, compare_products,
+         browse_category]`.
   2.4.4  The system prompt emphasizes warm, editorial, catalog-style
          reasoning grounded in specific product attributes.
   2.4.5  Calling the agent with `something for warm evenings out` returns
@@ -136,7 +136,7 @@ def _reset_stub_state() -> Iterable[None]:
 
 @pytest.fixture
 def stubbed_specialist(monkeypatch: pytest.MonkeyPatch):
-    """Return the `product_recommendation_agent` underlying callable with
+    """Return the `recommendation` agent's underlying callable with
     Strands `Agent` + `BedrockModel` swapped for the stubs above."""
     import agents.recommendation_agent as rec
 
@@ -146,9 +146,9 @@ def stubbed_specialist(monkeypatch: pytest.MonkeyPatch):
     # Reach past the @tool decorator to the original function so we can
     # call it directly in a test. Same pattern as test_agent_tools.py.
     fn = getattr(
-        rec.product_recommendation_agent,
+        rec.recommendation,
         "__wrapped__",
-        rec.product_recommendation_agent,
+        rec.recommendation,
     )
     return fn
 
@@ -182,9 +182,9 @@ def test_agent_is_constructed_with_temperature_0_2_and_four_tools(
 
     assert set(unwrapped) == {
         "search_products",
-        "get_trending_products",
+        "trending_products",
         "compare_products",
-        "get_product_by_category",
+        "browse_category",
     }, f"expected the four Req 2.4.3 tools, got {unwrapped!r} / {tool_names!r}"
 
 

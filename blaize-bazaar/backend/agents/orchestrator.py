@@ -3,11 +3,11 @@ Orchestrator Agent - Routes queries to specialized agents with interleaved think
 """
 from strands import Agent
 from strands.models import BedrockModel
-from .inventory_agent import inventory_restock_agent
-from .recommendation_agent import product_recommendation_agent
-from .pricing_agent import price_optimization_agent
-from .customer_support_agent import customer_support_agent
-from .search_agent import search_agent
+from .inventory_agent import inventory
+from .recommendation_agent import recommendation
+from .pricing_agent import pricing
+from .customer_support_agent import support
+from .search_agent import search
 from storefront_copy import ORCHESTRATOR_SYSTEM_PROMPT
 
 
@@ -34,11 +34,11 @@ def create_orchestrator():
         ),
         system_prompt=ORCHESTRATOR_PROMPT,
         tools=[
-            search_agent,
-            product_recommendation_agent,
-            price_optimization_agent,
-            inventory_restock_agent,
-            customer_support_agent,
+            search,
+            recommendation,
+            pricing,
+            inventory,
+            support,
         ],
     )
 # === CHALLENGE 4: Multi-Agent Orchestrator — END ===
@@ -67,11 +67,11 @@ def create_guarded_orchestrator():
         ),
         system_prompt=ORCHESTRATOR_PROMPT + GUARDRAILS_PROMPT_SUFFIX,
         tools=[
-            search_agent,
-            product_recommendation_agent,
-            price_optimization_agent,
-            inventory_restock_agent,
-            customer_support_agent,
+            search,
+            recommendation,
+            pricing,
+            inventory,
+            support,
         ],
     )
 # === END WIRE IT LIVE ===

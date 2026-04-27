@@ -6,7 +6,7 @@ import re
 from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
-from services.agent_tools import search_products, get_product_by_category, compare_products
+from services.agent_tools import search_products, browse_category, compare_products
 from skills import inject_skills
 
 
@@ -17,7 +17,7 @@ _SEARCH_SYSTEM_PROMPT = (
     "(e.g. 'gift for a cook', 'noise-canceling headphones under $200'). "
     "Extract price limits from the query and pass as max_price. "
     "Extract category hints and pass as category. "
-    "- get_product_by_category: Use when the user wants to browse a specific category "
+    "- browse_category: Use when the user wants to browse a specific category "
     "(e.g. 'show me all laptops'). "
     "- compare_products: Use when the user wants a side-by-side comparison of two products. "
     "This tool requires product IDs. If the user mentions product names instead of IDs, "
@@ -57,7 +57,7 @@ def _ensure_products_in_output(text: str, tool_results: list) -> str:
 
 
 @tool
-def search_agent(query: str) -> str:
+def search(query: str) -> str:
     """
     Search for products using natural language, browse categories, or compare products.
 
@@ -77,7 +77,7 @@ def search_agent(query: str) -> str:
                 temperature=0.2,
             ),
             system_prompt=inject_skills(_SEARCH_SYSTEM_PROMPT),
-            tools=[search_products, get_product_by_category, compare_products],
+            tools=[search_products, browse_category, compare_products],
         )
 
         # Capture inner tool results so we can guarantee product data in output

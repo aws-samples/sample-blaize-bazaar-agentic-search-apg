@@ -26,11 +26,11 @@ logger = logging.getLogger(__name__)
 class AgentType(Enum):
     """Agent types with specialized prompt templates"""
     ORCHESTRATOR = "orchestrator"
-    INVENTORY = "inventory_agent"
-    PRICING = "pricing_agent"
-    RECOMMENDATION = "recommendation_agent"
-    CUSTOMER_SUPPORT = "customer_support_agent"
-    SEARCH = "search_agent"
+    INVENTORY = "inventory"
+    PRICING = "pricing"
+    RECOMMENDATION = "recommendation"
+    CUSTOMER_SUPPORT = "support"
+    SEARCH = "search"
 
 
 @dataclass
@@ -483,7 +483,7 @@ Always maintain context from previous interactions and provide coherent, helpful
 
 Your specialization: Stock levels, availability, restocking timelines, and inventory health.
 
-Use the get_inventory_health() tool to access live data. Always provide specific stock numbers and ETAs when available.""",
+Use the inventory_health() tool to access live data. Always provide specific stock numbers and ETAs when available.""",
             "performance_metrics": {
                 "avg_response_time_ms": 620,
                 "success_rate": 0.97
@@ -496,7 +496,7 @@ Use the get_inventory_health() tool to access live data. Always provide specific
 
 Your specialization: Price analysis, value assessment, market comparisons, and deal identification.
 
-Use the get_price_analysis() tool for statistical insights.""",
+Use the price_analysis() tool for statistical insights.""",
             "performance_metrics": {
                 "avg_response_time_ms": 720,
                 "success_rate": 0.92
@@ -522,7 +522,7 @@ Use the search_products() tool for intelligent matching.""",
 
 Your specialization: Return policies, refund inquiries, warranty questions, and general troubleshooting.
 
-Use the get_return_policy() tool for return and refund policy lookups. Use search_products() for product-related support queries.""",
+Use the return_policy() tool for return and refund policy lookups. Use search_products() for product-related support queries.""",
             "performance_metrics": {
                 "avg_response_time_ms": 750,
                 "success_rate": 0.93
@@ -535,7 +535,7 @@ Use the get_return_policy() tool for return and refund policy lookups. Use searc
 
 Your specialization: Product search, category browsing, and product comparisons.
 
-Use search_products() for natural language queries, get_product_by_category() for category browsing, and compare_products() for side-by-side comparisons.""",
+Use search_products() for natural language queries, browse_category() for category browsing, and compare_products() for side-by-side comparisons.""",
             "performance_metrics": {
                 "avg_response_time_ms": 820,
                 "success_rate": 0.92

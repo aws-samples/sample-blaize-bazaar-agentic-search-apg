@@ -29,9 +29,9 @@ try:
     ORCHESTRATOR_PROMPT = """You are the Blaize Bazaar shopping assistant deployed on AgentCore.
 
 You have access to tools discovered via MCP Gateway:
-- Search tools: semantic_search, get_inventory_health, get_low_stock_products, restock_product
-- Pricing tools: find_deals, get_price_analysis, compare_products
-- Recommendation tools: get_recommendations, get_trending_products
+- Search tools: semantic_search, inventory_health, low_stock, restock_product
+- Pricing tools: find_deals, price_analysis, compare_products
+- Recommendation tools: get_recommendations, trending_products
 
 RULES:
 1. Call the right tool for the user's query, then return results directly.

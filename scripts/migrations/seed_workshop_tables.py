@@ -224,15 +224,15 @@ RETURN_POLICIES = [
 ]
 
 TOOLS = [
-    ("search_products",       "Search the product catalog using semantic similarity. Finds products matching natural language descriptions, styles, occasions, or moods.", False, "search_agent"),
-    ("get_trending_products", "Get trending and popular products. Returns best-sellers ranked by recent purchase velocity and review momentum.", False, "recommendation_agent"),
-    ("compare_products",      "Compare two or more products side by side on price, rating, category, and description.", False, "search_agent"),
-    ("get_price_analysis",    "Analyze pricing across categories. Returns min, max, average, and percentile breakdowns.", False, "pricing_agent"),
-    ("get_inventory_health",  "Check inventory levels and stock health. Flags low-stock and out-of-stock items.", False, "inventory_agent"),
-    ("restock_product",       "Restock a product by adding units to inventory. Requires approval for quantities over 50.", True, "inventory_agent"),
-    ("get_return_policy",     "Look up the return policy for a product category. Returns window, conditions, and refund method.", False, "support_agent"),
-    ("get_low_stock_products","List products with critically low inventory that may need restocking.", False, "inventory_agent"),
-    ("get_product_by_category","Browse products filtered by category name. Returns all items in the specified category.", False, "search_agent"),
+    ("search_products",   "Search the product catalog using semantic similarity. Finds products matching natural language descriptions, styles, occasions, or moods.", False, "search_agent"),
+    ("trending_products", "Get trending and popular products. Returns best-sellers ranked by recent purchase velocity and review momentum.", False, "recommendation_agent"),
+    ("compare_products",  "Compare two or more products side by side on price, rating, category, and description.", False, "search_agent"),
+    ("price_analysis",    "Analyze pricing across categories. Returns min, max, average, and percentile breakdowns.", False, "pricing_agent"),
+    ("inventory_health",  "Check inventory levels and stock health. Flags low-stock and out-of-stock items.", False, "inventory_agent"),
+    ("restock_product",   "Restock a product by adding units to inventory. Requires approval for quantities over 50.", True, "inventory_agent"),
+    ("return_policy",     "Look up the return policy for a product category. Returns window, conditions, and refund method.", False, "support_agent"),
+    ("low_stock",         "List products with critically low inventory that may need restocking.", False, "inventory_agent"),
+    ("browse_category",   "Browse products filtered by category name. Returns all items in the specified category.", False, "search_agent"),
 ]
 
 

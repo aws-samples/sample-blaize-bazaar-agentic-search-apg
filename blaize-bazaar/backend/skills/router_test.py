@@ -88,7 +88,7 @@ TEST_CASES: list[tuple[str, set[str], str]] = [
     (
         "how do I return an order?",
         set(),
-        "Policy query — customer_support_agent territory, no skills load.",
+        "Policy query — support agent territory, no skills load.",
     ),
     (
         "what's the Linen Duvet Cover made of?",

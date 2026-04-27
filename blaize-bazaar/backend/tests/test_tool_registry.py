@@ -142,8 +142,8 @@ def test_discover_tools_returns_rows_in_similarity_shape(
                     "similarity": 0.87,
                 },
                 {
-                    "tool_id": "get_trending_products",
-                    "name": "get_trending_products",
+                    "tool_id": "trending_products",
+                    "name": "trending_products",
                     "description": "Bestsellers.",
                     "similarity": 0.42,
                 },
@@ -155,7 +155,7 @@ def test_discover_tools_returns_rows_in_similarity_shape(
 
     assert [r["name"] for r in result["rows"]] == [
         "search_products",
-        "get_trending_products",
+        "trending_products",
     ]
     assert result["rows"][0]["similarity"] == pytest.approx(0.87)
     assert result["total_count"] == 9

@@ -46,13 +46,13 @@ async def discover_tools(
 
     Args:
         db_service: The app's DatabaseService (provides ``get_connection``).
-            Uses the same pool + pgvector registration as hybrid_search.
+            Uses the same pool + pgvector registration as vector_search.
         query_embedding: 1024-float Cohere embedding of the user turn
             (same vector the orchestrator uses for semantic product
             search — emitted once, reused for both).
         limit: Top-K to return. Card 7 shows the top 3 for visual parity
             with typical Gateway ``semantic_search`` result sets.
-        ef_search: HNSW per-query accuracy knob. 40 matches hybrid_search
+        ef_search: HNSW per-query accuracy knob. 40 matches vector_search
             default; tools table is tiny so accuracy is not the concern.
 
     Returns:
