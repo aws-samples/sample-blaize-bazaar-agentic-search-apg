@@ -1,18 +1,17 @@
 /**
- * WorkshopPage tests — /workshop ("The Atelier") coverage.
+ * WorkshopPage tests — /atelier ("The Atelier") coverage.
  *
- * Surface-switching moved to the global SurfaceToggle in Header, so
- * these tests no longer assert on a back-to-storefront pill or the
- * DAT406 kicker. They lock down:
+ * Post–Phase 5 rewrite: the old dashboards (MemoryDashboard,
+ * GatewayToolsPanel, RuntimeStatusPanel) are gone. Every architecture
+ * card with a detail page now opens one of the atelier-arch/* pages
+ * via the ArchDetailWrapper slot. These tests lock down:
  *
- *   1. Chrome renders the Atelier title + subtitle and drops the old
- *      DAT406 / "Workshop · agentic telemetry" / back-to-storefront
- *      elements.
- *   2. Architecture cards render and open detail panels inline (not
- *      as modals) on desktop.
- *   3. Closing the detail panel returns to the two-zone default.
- *   4. Responsive breakpoints select the correct layout variant via
- *      matchMedia — three-zone, tablet-overlay, vertical-stack.
+ *   1. Chrome renders the Atelier title + subtitle.
+ *   2. Seven architecture cards render in the locked chapter order.
+ *   3. Six of them open their arch-* detail page inline (not modal).
+ *   4. Grounding stays "in progress" (no detail page yet).
+ *   5. Responsive breakpoints select the right layout variant.
+ *   6. Tab default + persistence behavior.
  */
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -22,9 +21,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // --- Mocks -----------------------------------------------------------
 
-// AuthContext needs to pass through cleanly. Cognito isn't configured
-// in the test env so AuthGate short-circuits to children — but
-// useAuth still needs to resolve.
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({
     user: null,
@@ -38,34 +34,14 @@ vi.mock('../contexts/AuthContext', () => ({
   }),
 }))
 
-// Stub the heavy child components so the test focuses on layout chrome,
-// not their internal render paths. WorkshopChat kicks off a fetch to
-// /api/workshop/status which we don't want here.
+// Stub the heavy child components so the test focuses on layout
+// chrome, not their internal render paths. WorkshopChat kicks off a
+// fetch to /api/atelier/status which we don't want here.
 vi.mock('../components/WorkshopChat', () => ({
   default: () => <div data-testid="stub-workshop-chat">chat</div>,
 }))
 vi.mock('../components/WorkshopTelemetry', () => ({
   default: () => <div data-testid="stub-workshop-telemetry">telemetry</div>,
-}))
-vi.mock('../components/MemoryDashboard', () => ({
-  default: ({ onClose }: { onClose: () => void }) => (
-    <div data-testid="stub-memory-dashboard">
-      memory
-      <button onClick={onClose} data-testid="stub-memory-close">
-        close
-      </button>
-    </div>
-  ),
-}))
-vi.mock('../components/GatewayToolsPanel', () => ({
-  default: ({ onClose }: { onClose: () => void }) => (
-    <div data-testid="stub-gateway-panel">
-      gateway
-      <button onClick={onClose} data-testid="stub-gateway-close">
-        close
-      </button>
-    </div>
-  ),
 }))
 vi.mock('../components/ObservabilityPanel', () => ({
   default: ({ onClose }: { onClose: () => void }) => (
@@ -77,20 +53,35 @@ vi.mock('../components/ObservabilityPanel', () => ({
     </div>
   ),
 }))
-vi.mock('../components/RuntimeStatusPanel', () => ({
-  default: ({ onClose }: { onClose: () => void }) => (
-    <div data-testid="stub-runtime-panel">
-      runtime
-      <button onClick={onClose} data-testid="stub-runtime-close">
-        close
-      </button>
-    </div>
-  ),
-}))
 vi.mock('../components/IndexPerformanceDashboard', () => ({
   default: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div data-testid="stub-bench-modal">bench</div> : null,
 }))
+
+// Stub each atelier-arch page so the test asserts routing without
+// pulling the full page body (and its shared-catalog fetch, etc.).
+vi.mock('../components/atelier-arch/MemoryArchPage', () => ({
+  default: () => <div data-testid="stub-arch-memory">memory arch</div>,
+}))
+vi.mock('../components/atelier-arch/McpArchPage', () => ({
+  default: () => <div data-testid="stub-arch-mcp">mcp arch</div>,
+}))
+vi.mock('../components/atelier-arch/ToolRegistryArchPage', () => ({
+  default: () => <div data-testid="stub-arch-tool-registry">tool registry arch</div>,
+}))
+vi.mock('../components/atelier-arch/RuntimeArchPage', () => ({
+  default: () => <div data-testid="stub-arch-runtime">runtime arch</div>,
+}))
+vi.mock('../components/atelier-arch/StateManagementArchPage', () => ({
+  default: () => <div data-testid="stub-arch-state">state arch</div>,
+}))
+vi.mock('../components/atelier-arch/EvaluationsArchPage', () => ({
+  default: () => <div data-testid="stub-arch-evaluations">evaluations arch</div>,
+}))
+vi.mock('../components/SkillsPanel', () => ({
+  default: () => <div data-testid="stub-skills-panel">skills</div>,
+}))
+
 vi.mock('../components/Footer', () => ({
   default: () => <div data-testid="stub-footer">footer</div>,
 }))
@@ -167,53 +158,44 @@ describe('WorkshopPage — chrome', () => {
     expect(
       screen.queryByText(/Workshop · agentic telemetry/),
     ).not.toBeInTheDocument()
-    // The compact "Where Blaize works" subtitle was replaced by the
-    // editorial "Where Agents think aloud" epigraph in the hero.
     expect(screen.queryByText(/^Where Blaize works\./)).not.toBeInTheDocument()
   })
 })
 
-describe('WorkshopPage — architecture cards render the right CTA pattern', () => {
-  it('renders 7 cards in the locked order Memory → Tool Registry → MCP → State → Runtime → Grounding → Evaluations', () => {
+describe('WorkshopPage — architecture cards render', () => {
+  it('renders 8 cards covering the seven chapters plus Grounding', () => {
     renderPage()
     const ids = [
       'memory',
-      'tool-registry',
+      'skills',
       'mcp',
       'state',
+      'tool-registry',
       'runtime',
-      'grounding',
       'evaluations',
+      'grounding',
     ]
     for (const id of ids) {
       expect(screen.getByTestId(`arch-card-${id}`)).toBeInTheDocument()
     }
   })
 
-  it('renders an action CTA on Memory, Tool Registry, State, and Runtime', () => {
+  it('renders an action CTA on every card except Grounding', () => {
     renderPage()
+    // All seven architecture chapters open a detail page.
     expect(screen.getByTestId('arch-card-open-memory')).toBeInTheDocument()
-    expect(screen.getByTestId('arch-card-open-tool-registry')).toBeInTheDocument()
+    expect(screen.getByTestId('arch-card-open-skills')).toBeInTheDocument()
+    expect(screen.getByTestId('arch-card-open-mcp')).toBeInTheDocument()
     expect(screen.getByTestId('arch-card-open-state')).toBeInTheDocument()
+    expect(screen.getByTestId('arch-card-open-tool-registry')).toBeInTheDocument()
     expect(screen.getByTestId('arch-card-open-runtime')).toBeInTheDocument()
+    expect(screen.getByTestId('arch-card-open-evaluations')).toBeInTheDocument()
   })
 
-  it('renders an "In progress" pill on Grounding (detail panel is deferred)', () => {
+  it('renders an "In progress" pill on Grounding (detail page deferred)', () => {
     renderPage()
     expect(screen.getByTestId('arch-card-inprogress-grounding')).toBeInTheDocument()
-    // Grounding MUST NOT have an opening action anymore — it used to
-    // mistakenly open RuntimeStatusPanel; Runtime is its own card now.
     expect(screen.queryByTestId('arch-card-open-grounding')).not.toBeInTheDocument()
-  })
-
-  it('renders NO CTA on MCP or Evaluations (concept cards stand on body copy)', () => {
-    renderPage()
-    expect(screen.queryByTestId('arch-card-open-mcp')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('arch-card-inprogress-mcp')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('arch-card-open-evaluations')).not.toBeInTheDocument()
-    expect(
-      screen.queryByTestId('arch-card-inprogress-evaluations'),
-    ).not.toBeInTheDocument()
   })
 
   it('MCP body copy resolves the protocol-vs-primitive distinction', () => {
@@ -231,72 +213,42 @@ describe('WorkshopPage — architecture cards render the right CTA pattern', () 
   })
 })
 
-describe('WorkshopPage — Runtime card opens the RuntimeStatusPanel', () => {
-  it('opens the runtime detail panel when the Runtime card CTA is clicked', async () => {
+describe('WorkshopPage — architecture cards open their arch-* detail page inline', () => {
+  const routes: Array<[string, string]> = [
+    ['arch-card-open-memory', 'stub-arch-memory'],
+    ['arch-card-open-mcp', 'stub-arch-mcp'],
+    ['arch-card-open-tool-registry', 'stub-arch-tool-registry'],
+    ['arch-card-open-runtime', 'stub-arch-runtime'],
+    ['arch-card-open-state', 'stub-arch-state'],
+    ['arch-card-open-evaluations', 'stub-arch-evaluations'],
+  ]
+
+  it.each(routes)('%s opens %s inline', async (cta, panel) => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(screen.getByTestId('arch-card-open-runtime'))
-    await waitFor(() =>
-      expect(screen.getByTestId('stub-runtime-panel')).toBeInTheDocument(),
-    )
-    expect(screen.getByTestId('detail-panel-slot')).toBeInTheDocument()
-  })
-})
-
-describe('WorkshopPage — architecture cards open detail panels inline', () => {
-  it('opens MemoryDashboard when the memory card action is clicked', async () => {
-    const user = userEvent.setup()
-    renderPage()
-
-    // No detail slot before click.
     expect(screen.queryByTestId('detail-panel-slot')).not.toBeInTheDocument()
 
-    await user.click(screen.getByTestId('arch-card-open-memory'))
+    await user.click(screen.getByTestId(cta))
 
     await waitFor(() =>
-      expect(screen.getByTestId('stub-memory-dashboard')).toBeInTheDocument(),
+      expect(screen.getByTestId(panel)).toBeInTheDocument(),
     )
-    // Inline, not modal: the detail-panel-slot wrapper is what marks it.
     expect(screen.getByTestId('detail-panel-slot')).toBeInTheDocument()
   })
 
-  it('swaps to GatewayToolsPanel when the tool-registry card is clicked', async () => {
+  it('swaps panels when a second card is clicked', async () => {
     const user = userEvent.setup()
     renderPage()
 
     await user.click(screen.getByTestId('arch-card-open-memory'))
-    await waitFor(() => screen.getByTestId('stub-memory-dashboard'))
+    await waitFor(() => screen.getByTestId('stub-arch-memory'))
 
     await user.click(screen.getByTestId('arch-card-open-tool-registry'))
     await waitFor(() => {
-      expect(screen.getByTestId('stub-gateway-panel')).toBeInTheDocument()
-      expect(screen.queryByTestId('stub-memory-dashboard')).not.toBeInTheDocument()
+      expect(screen.getByTestId('stub-arch-tool-registry')).toBeInTheDocument()
+      expect(screen.queryByTestId('stub-arch-memory')).not.toBeInTheDocument()
     })
-  })
-
-  it('closing the detail panel returns to the two-zone default', async () => {
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(screen.getByTestId('arch-card-open-memory'))
-    await waitFor(() => screen.getByTestId('stub-memory-dashboard'))
-
-    await user.click(screen.getByTestId('stub-memory-close'))
-    await waitFor(() =>
-      expect(screen.queryByTestId('stub-memory-dashboard')).not.toBeInTheDocument(),
-    )
-    expect(screen.queryByTestId('detail-panel-slot')).not.toBeInTheDocument()
-  })
-
-  it('opens IndexPerformanceDashboard as a modal (not inline) since the perf tab is deferred', async () => {
-    const user = userEvent.setup()
-    renderPage()
-
-    await user.click(screen.getByTestId('arch-card-open-state'))
-    await waitFor(() => expect(screen.getByTestId('stub-bench-modal')).toBeInTheDocument())
-    // The bench is still a modal — NOT inline in the detail slot.
-    expect(screen.queryByTestId('detail-panel-slot')).not.toBeInTheDocument()
   })
 })
 
@@ -367,8 +319,6 @@ describe('WorkshopPage — tab default + persistence', () => {
       screen.getByTestId('workshop-tab-architecture'),
       screen.getByTestId('workshop-tab-performance'),
     ]
-    // Confirm DOM order matches the declared tab order — the second
-    // sibling must be Architecture etc.
     const parent = tabs[0].parentElement!
     expect(parent.children[0]).toBe(tabs[0])
     expect(parent.children[1]).toBe(tabs[1])

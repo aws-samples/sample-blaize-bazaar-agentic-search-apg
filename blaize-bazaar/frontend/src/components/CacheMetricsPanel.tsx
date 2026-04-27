@@ -1,6 +1,6 @@
 /**
  * CacheMetricsPanel — Full-screen overlay showing detailed Valkey/ElastiCache stats.
- * Same pattern as MemoryDashboard / RuntimeStatusPanel.
+ * Same modal pattern as IndexPerformanceDashboard.
  */
 import { useState, useEffect } from 'react'
 import { X, Zap, RefreshCw, Database, Clock, Server, ArrowUpRight } from 'lucide-react'

@@ -41,10 +41,7 @@ import { AuthGate } from '../App'
 import { useUI } from '../contexts/UIContext'
 import WorkshopChat from '../components/WorkshopChat'
 import WorkshopTelemetry from '../components/WorkshopTelemetry'
-import MemoryDashboard from '../components/MemoryDashboard'
-import GatewayToolsPanel from '../components/GatewayToolsPanel'
 import ObservabilityPanel from '../components/ObservabilityPanel'
-import RuntimeStatusPanel from '../components/RuntimeStatusPanel'
 import IndexPerformanceDashboard from '../components/IndexPerformanceDashboard'
 import SkillsPanel from '../components/SkillsPanel'
 import MemoryArchPage from '../components/atelier-arch/MemoryArchPage'
@@ -52,6 +49,7 @@ import McpArchPage from '../components/atelier-arch/McpArchPage'
 import ToolRegistryArchPage from '../components/atelier-arch/ToolRegistryArchPage'
 import RuntimeArchPage from '../components/atelier-arch/RuntimeArchPage'
 import StateManagementArchPage from '../components/atelier-arch/StateManagementArchPage'
+import EvaluationsArchPage from '../components/atelier-arch/EvaluationsArchPage'
 import type { SkillRouting } from '../hooks/useAgentChat'
 import AtelierHero from '../components/AtelierHero'
 import AtelierSpotlight from '../components/AtelierSpotlight'
@@ -72,13 +70,10 @@ type Tab = 'telemetry' | 'architecture' | 'performance'
 type Provenance = 'MANAGED' | 'OWNED' | 'BOTH' | 'TEACHING'
 
 type DetailPanelKey =
-  | 'memory'
-  | 'gateway'
   | 'obs'
-  | 'runtime'
   | 'bench'
   | 'skills'
-  // New architecture detail pages (Phase 2+)
+  // Atelier architecture detail pages (Phase 2+)
   | 'arch-memory'
   | 'arch-mcp'
   | 'arch-state-management'
@@ -89,10 +84,9 @@ type DetailPanelKey =
 
 // URL param <-> DetailPanelKey mapping.
 // The URL shape is ``/atelier/architecture/<section>`` so we use
-// kebab-case segments that read well in address bars. Skills already
-// ships; the new pages use the ``arch-`` prefix internally so they
-// don't collide with the older in-workbench panels (``memory``,
-// ``runtime``, etc. — which open different dashboards).
+// kebab-case segments that read well in address bars. The old
+// in-workbench panels (memory / gateway / runtime dashboards) are
+// gone — the arch-* detail pages replaced them.
 const SECTION_TO_PANEL: Record<string, Exclude<DetailPanelKey, null>> = {
   skills: 'skills',
   memory: 'arch-memory',
@@ -158,7 +152,7 @@ const ARCH_CARDS: ArchCard[] = [
     provenance: 'BOTH',
     description:
       'AgentCore Memory holds short-term conversation state; Aurora pgvector holds long-term semantic + procedural recall. Two tiers, one session id — the agent reads from whichever gives the right context for the turn.',
-    cta: { kind: 'action', label: 'Open memory dashboard', open: 'memory' },
+    cta: { kind: 'action', label: 'Open memory architecture', open: 'arch-memory' },
     featured: true,
     chapter: 'i.',
     signature: [
@@ -186,7 +180,7 @@ const ARCH_CARDS: ArchCard[] = [
     provenance: 'MANAGED',
     description:
       "Model Context Protocol is an open standard; AgentCore Gateway is AWS's managed MCP server. This workshop uses Gateway as the MCP primitive — you could run your own MCP server, but Gateway handles tool publishing, auth, and observability for you.",
-    cta: { kind: 'none' },
+    cta: { kind: 'action', label: 'Open MCP architecture', open: 'arch-mcp' },
     featured: false,
     chapter: 'iii.',
     signature: ['gateway.list_tools() -> MCPToolset'],
@@ -197,7 +191,7 @@ const ARCH_CARDS: ArchCard[] = [
     provenance: 'OWNED',
     description:
       'Session state lives in Postgres — orders, customers, approvals, tool audit. Aurora is the source of truth for domain facts the agents grant themselves access to; AgentCore never tries to own this side of the system.',
-    cta: { kind: 'action', label: 'Open pgvector benchmarks', open: 'bench' },
+    cta: { kind: 'action', label: 'Open state architecture', open: 'arch-state-management' },
     featured: false,
     chapter: 'iv.',
     signature: ['SELECT * FROM orders WHERE customer_id = $1 ...'],
@@ -208,7 +202,7 @@ const ARCH_CARDS: ArchCard[] = [
     provenance: 'BOTH',
     description:
       "AgentCore Gateway publishes tools via MCP to any runtime; the teaching deconstruction shows the same discovery primitive implemented over Aurora pgvector. Both columns rank the same 9 tools — you see what Gateway abstracts for you.",
-    cta: { kind: 'action', label: 'Open tool registry', open: 'gateway' },
+    cta: { kind: 'action', label: 'Open tool registry', open: 'arch-tool-registry' },
     featured: true,
     chapter: 'v.',
     signature: [
@@ -222,7 +216,7 @@ const ARCH_CARDS: ArchCard[] = [
     provenance: 'MANAGED',
     description:
       "AgentCore Runtime runs the orchestrator inside a managed microVM — scale, cold-start, and VPC wiring are AWS's problem. Flip USE_AGENTCORE_RUNTIME on to promote the same code from local FastAPI to the hosted runtime without touching the orchestrator.",
-    cta: { kind: 'action', label: 'Open runtime status', open: 'runtime' },
+    cta: { kind: 'action', label: 'Open runtime architecture', open: 'arch-runtime' },
     featured: false,
     chapter: 'vi.',
     signature: ['runtime.invoke(orchestrator, payload)'],
@@ -233,7 +227,7 @@ const ARCH_CARDS: ArchCard[] = [
     provenance: 'MANAGED',
     description:
       "AgentCore Evaluations scores every turn using LLM-as-a-Judge over the OpenTelemetry traces Strands already emits. Built-in evaluators measure helpfulness, tool accuracy, and consistency; custom evaluators let you add domain-specific checks. Online mode scores live traffic; on-demand mode runs a dataset batch for regression.",
-    cta: { kind: 'none' },
+    cta: { kind: 'action', label: 'Open evaluations architecture', open: 'arch-evaluations' },
     featured: false,
     chapter: 'vii.',
     signature: ['evaluations.run(traces) -> {helpfulness, tool_accuracy, consistency}'],
@@ -625,15 +619,12 @@ function WorkshopContent() {
   }
 
   const renderDetail = () => {
-    if (detailPanel === 'memory') return <MemoryDashboard onClose={closeDetail} />
-    if (detailPanel === 'gateway') return <GatewayToolsPanel onClose={closeDetail} />
     if (detailPanel === 'obs') return <ObservabilityPanel onClose={closeDetail} />
-    if (detailPanel === 'runtime') return <RuntimeStatusPanel onClose={closeDetail} />
     if (detailPanel === 'skills')
       return (
         <SkillsDetailWrapper onClose={closeDetail} routing={skillRouting} />
       )
-    // --- New Phase 2/3/4 architecture detail pages ---
+    // --- Atelier architecture detail pages (Phase 2+) ---
     if (detailPanel === 'arch-memory')
       return <ArchDetailWrapper title="Memory" onClose={closeDetail}><MemoryArchPage /></ArchDetailWrapper>
     if (detailPanel === 'arch-mcp')
@@ -644,6 +635,8 @@ function WorkshopContent() {
       return <ArchDetailWrapper title="Runtime" onClose={closeDetail}><RuntimeArchPage /></ArchDetailWrapper>
     if (detailPanel === 'arch-state-management')
       return <ArchDetailWrapper title="State Management" onClose={closeDetail}><StateManagementArchPage /></ArchDetailWrapper>
+    if (detailPanel === 'arch-evaluations')
+      return <ArchDetailWrapper title="Evaluations" onClose={closeDetail}><EvaluationsArchPage /></ArchDetailWrapper>
     return null
   }
 
@@ -1206,8 +1199,8 @@ function ArchDetailWrapper({
  *
  * Matches the other detail-panel component shape (a container with a
  * header + close button) so it slots into the same resizable panel
- * slot as MemoryDashboard, GatewayToolsPanel, etc. The SkillsPanel
- * body is the canonical architecture view from Phase 4.
+ * slot as the ArchDetailWrapper used by the other arch pages. The
+ * SkillsPanel body is the canonical architecture view from Phase 4.
  */
 function SkillsDetailWrapper({
   onClose,

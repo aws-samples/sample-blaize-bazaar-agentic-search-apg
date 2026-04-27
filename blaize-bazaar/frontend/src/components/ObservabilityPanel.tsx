@@ -8,7 +8,7 @@
  *
  * Kept narrow — the cross-cutting role means attendees dip in for a
  * trace id and dip out. The content surface is intentionally smaller
- * than MemoryDashboard / GatewayToolsPanel.
+ * than the atelier-arch/* detail pages.
  */
 import { useCallback, useEffect, useState } from 'react'
 import { Activity, ExternalLink, RefreshCw, CheckCircle2, XCircle, X } from 'lucide-react'
