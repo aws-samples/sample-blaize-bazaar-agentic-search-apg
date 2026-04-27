@@ -22,6 +22,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { CartProvider } from './contexts/CartContext'
 import { UIProvider } from './contexts/UIContext'
 import { LayoutProvider } from './contexts/LayoutContext'
+import { PersonaProvider } from './contexts/PersonaContext'
 import AuthModal from './components/AuthModal'
 import PreferencesModal from './components/PreferencesModal'
 import ConciergeModal from './components/ConciergeModal'
@@ -93,6 +94,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 function App() {
   return (
     <AuthProvider>
+      <PersonaProvider>
       <LayoutProvider>
         <CartProvider>
           <UIProvider>
@@ -150,6 +152,7 @@ function App() {
           </UIProvider>
         </CartProvider>
       </LayoutProvider>
+      </PersonaProvider>
     </AuthProvider>
   )
 }

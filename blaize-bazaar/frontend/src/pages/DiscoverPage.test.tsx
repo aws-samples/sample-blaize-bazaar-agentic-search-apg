@@ -53,6 +53,15 @@ vi.mock('../contexts/CartContext', () => ({
   }),
 }))
 
+vi.mock('../contexts/PersonaContext', () => ({
+  usePersona: () => ({
+    persona: null,
+    switchPersona: vi.fn(),
+    signOut: vi.fn(),
+    switching: false,
+  }),
+}))
+
 vi.mock('../contexts/UIContext', () => ({
   useUI: () => ({
     activeModal: null,

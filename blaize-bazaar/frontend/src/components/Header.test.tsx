@@ -48,6 +48,17 @@ vi.mock('../contexts/CartContext', () => ({
   }),
 }))
 
+// usePersona — Header now uses the persona pill instead of AccountButton.
+let mockPersona: { id: string; display_name: string; avatar_initial: string; avatar_color: string; customer_id: string; role_tag: string; stats: any } | null = null
+vi.mock('../contexts/PersonaContext', () => ({
+  usePersona: () => ({
+    persona: mockPersona,
+    switchPersona: vi.fn(),
+    signOut: vi.fn(),
+    switching: false,
+  }),
+}))
+
 // Import Header AFTER mocks so the mocked hooks are bound inside the module.
 import Header from './Header'
 
@@ -72,12 +83,11 @@ beforeEach(() => {
 
 // --- Tests -------------------------------------------------------------
 
-describe('Header — 5 nav items', () => {
-  it('renders exactly five nav items in the documented order', () => {
+describe('Header — nav items + persona pill', () => {
+  it('renders four text nav items plus the persona pill', () => {
     renderHeader()
 
     const navItems = screen.getAllByRole('button', { name: /^(Home|Shop|Storyboard|Discover)$/ })
-    // 4 text nav links …
     expect(navItems).toHaveLength(4)
     expect(navItems.map(el => el.textContent)).toEqual([
       'Home',
@@ -86,9 +96,9 @@ describe('Header — 5 nav items', () => {
       'Discover',
     ])
 
-    // … plus the Account button as the 5th nav item.
-    const account = screen.getByTestId('account-button')
-    expect(account).toBeInTheDocument()
+    // The persona pill replaces the old Account button.
+    const pill = screen.getByTestId('persona-pill')
+    expect(pill).toBeInTheDocument()
   })
 
   it('renders the Blaize Bazaar wordmark centered', () => {
@@ -142,27 +152,28 @@ describe('Header — concierge entry point consolidation', () => {
   })
 })
 
-describe('Header — Account label swaps on auth state (Req 1.2.2, 1.2.3)', () => {
-  it('shows "Account" when signed out', () => {
-    mockUser = null
+describe('Header — Persona pill swaps on persona state', () => {
+  it('shows "Sign in" when no persona is active', () => {
+    mockPersona = null
     renderHeader()
-    const account = screen.getByTestId('account-button')
-    expect(account).toHaveTextContent('Account')
-    expect(account).not.toHaveTextContent(/^Hi,/)
+    const pill = screen.getByTestId('persona-pill')
+    expect(pill).toHaveTextContent('Sign in')
   })
 
-  it('shows "Hi, {givenName}" when signed in with a given_name claim', () => {
-    mockUser = { sub: 'abc-123', email: 'ada@example.com', givenName: 'Ada' }
+  it('shows the espresso pill with persona name when signed in', () => {
+    mockPersona = {
+      id: 'marco',
+      display_name: 'Marco',
+      avatar_initial: 'M',
+      avatar_color: '#5a3528',
+      customer_id: 'CUST-MARCO',
+      role_tag: 'Returning',
+      stats: { visits: 11, orders: 7, last_seen_days: 21 },
+    }
     renderHeader()
-    expect(screen.getByTestId('account-button')).toHaveTextContent('Hi, Ada')
-  })
-
-  it('falls back to email local-part when given_name is not yet available', () => {
-    // Pre-C9 AuthContext carries only sub + email; the button should still
-    // reflect a signed-in state rather than displaying the signed-out label.
-    mockUser = { sub: 'abc-123', email: 'grace@example.com' }
-    renderHeader()
-    expect(screen.getByTestId('account-button')).toHaveTextContent('Hi, grace')
+    const pill = screen.getByTestId('persona-pill')
+    expect(pill).toHaveTextContent('Marco')
+    expect(pill).toHaveTextContent('SIGNED IN AS')
   })
 })
 

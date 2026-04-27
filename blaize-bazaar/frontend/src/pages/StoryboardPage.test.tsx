@@ -49,6 +49,16 @@ vi.mock('../contexts/CartContext', () => ({
   }),
 }))
 
+// usePersona - Header uses the persona pill.
+vi.mock('../contexts/PersonaContext', () => ({
+  usePersona: () => ({
+    persona: null,
+    switchPersona: vi.fn(),
+    signOut: vi.fn(),
+    switching: false,
+  }),
+}))
+
 // useUI - CommandPill reads toggleConcierge + activeModal.
 const toggleConcierge = vi.fn()
 vi.mock('../contexts/UIContext', () => ({

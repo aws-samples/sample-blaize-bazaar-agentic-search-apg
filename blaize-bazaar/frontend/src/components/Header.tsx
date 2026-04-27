@@ -14,10 +14,12 @@
  * lives in the Footer per `storefront.md`.
  */
 import { useCart } from '../contexts/CartContext'
-import { useAuth } from '../contexts/AuthContext'
-import { NAV, ACCOUNT_LABEL_SIGNED_OUT, accountLabelSignedIn } from '../copy'
-import { ShoppingBag, User as UserIcon } from 'lucide-react'
+import { usePersona } from '../contexts/PersonaContext'
+import { NAV } from '../copy'
+import { ShoppingBag, User as UserIcon, ChevronDown } from 'lucide-react'
 import SurfaceToggle from './SurfaceToggle'
+import PersonaModal from './PersonaModal'
+import { useState } from 'react'
 
 // Warm palette from `storefront.md`. Kept inline as hex until a design-token
 // stylesheet lands workspace-wide.
@@ -32,47 +34,100 @@ interface HeaderProps {
   current?: NavItem
   /** Optional click handler fired when any nav link is activated. */
   onNavigate?: (item: NavItem) => void
-  /** Optional click handler for the Account button. Default opens the auth modal. */
-  onAccountClick?: () => void
 }
 
 /**
- * AccountButton — toggles label based on `useAuth().user`.
+ * PersonaPill — replaces the old AccountButton.
  *
- * Signed out: icon + "Account" (copy.ACCOUNT_LABEL_SIGNED_OUT).
- * Signed in:  icon + "Hi, {givenName}" via copy.accountLabelSignedIn().
- *
- * The user's `givenName` comes from the Cognito `given_name` claim. If the
- * auth payload only carries an email (pre-C9 state), we fall back to the
- * email's local-part so the "signed in" branch remains truthful rather than
- * silently showing the signed-out label.
+ * Signed out: outlined pill with person icon + "Sign in".
+ * Signed in: espresso-filled pill with avatar monogram + "SIGNED IN AS" +
+ * name + chevron. Click opens the persona modal.
  */
-function AccountButton({ onClick }: { onClick?: () => void }) {
-  const auth = useAuth()
-  const user = auth.user as
-    | (typeof auth.user & { givenName?: string; given_name?: string; email?: string })
-    | null
+function PersonaPill({ onClick }: { onClick: () => void }) {
+  const { persona } = usePersona()
 
-  const signedIn = Boolean(user)
-  const givenName =
-    (user && (user.givenName || user.given_name)) ||
-    (user?.email ? user.email.split('@')[0] : undefined)
+  if (!persona) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        data-testid="persona-pill"
+        className="flex items-center gap-2 text-[13.5px] font-medium transition-all"
+        style={{
+          color: INK,
+          background: 'transparent',
+          border: '1px solid rgba(45, 24, 16, 0.18)',
+          borderRadius: 100,
+          padding: '7px 14px',
+          cursor: 'pointer',
+        }}
+      >
+        <UserIcon className="w-3.5 h-3.5" aria-hidden />
+        <span>Sign in</span>
+      </button>
+    )
+  }
 
-  const label = signedIn && givenName
-    ? accountLabelSignedIn(givenName)
-    : ACCOUNT_LABEL_SIGNED_OUT
-
+  const isFresh = persona.id === 'fresh'
   return (
     <button
       type="button"
       onClick={onClick}
-      data-testid="account-button"
-      aria-label={label}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium transition-opacity hover:opacity-80"
-      style={{ color: INK, background: 'transparent' }}
+      data-testid="persona-pill"
+      className="flex items-center gap-2 text-[13.5px] transition-all"
+      style={{
+        background: INK,
+        color: CREAM,
+        border: `1px solid ${INK}`,
+        borderRadius: 100,
+        padding: '5px 14px 5px 5px',
+        cursor: 'pointer',
+      }}
     >
-      <UserIcon className="w-4 h-4" aria-hidden="true" />
-      <span>{label}</span>
+      <span
+        className="flex items-center justify-center rounded-full"
+        style={{
+          width: 24,
+          height: 24,
+          background: isFresh ? 'transparent' : CREAM,
+          color: isFresh ? 'rgba(250,243,232,0.5)' : INK,
+          border: isFresh ? '1px dashed rgba(250,243,232,0.3)' : 'none',
+          fontFamily: 'Fraunces, serif',
+          fontWeight: 500,
+          fontSize: 12,
+          fontStyle: 'italic',
+        }}
+      >
+        {persona.avatar_initial}
+      </span>
+      <span className="flex flex-col items-start" style={{ lineHeight: 1.1 }}>
+        <span
+          style={{
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: 8.5,
+            letterSpacing: '0.22em',
+            color: 'rgba(250,243,232,0.6)',
+            fontWeight: 500,
+          }}
+        >
+          SIGNED IN AS
+        </span>
+        <span
+          style={{
+            fontFamily: 'Fraunces, serif',
+            fontStyle: 'italic',
+            fontSize: 13.5,
+            color: CREAM,
+            marginTop: 1,
+          }}
+        >
+          {persona.display_name}
+        </span>
+      </span>
+      <ChevronDown
+        size={12}
+        style={{ color: 'rgba(250,243,232,0.6)', marginLeft: 2 }}
+      />
     </button>
   )
 }
@@ -149,10 +204,10 @@ function NavLink({ item, label, current, onClick }: NavLinkProps) {
 export default function Header({
   current = 'home',
   onNavigate,
-  onAccountClick,
 }: HeaderProps = {}) {
   const { items: cartItems, setCartOpen } = useCart()
   const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
+  const [modalOpen, setModalOpen] = useState(false)
 
   return (
     <header
@@ -209,8 +264,9 @@ export default function Header({
               <SurfaceToggle />
             </div>
 
-            {/* Account button — nav item #5. Its label swaps on auth state. */}
-            <AccountButton onClick={onAccountClick} />
+            {/* Persona pill — replaces the old Account button. Opens the
+                shared persona modal on click. */}
+            <PersonaPill onClick={() => setModalOpen(true)} />
 
             <button
               type="button"
@@ -234,6 +290,8 @@ export default function Header({
           </div>
         </div>
       </nav>
+
+      <PersonaModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </header>
   )
 }

@@ -84,6 +84,14 @@ vi.mock('../components/Header', () => ({
 vi.mock('../contexts/UIContext', () => ({
   useUI: () => ({ openModal: vi.fn() }),
 }))
+vi.mock('../contexts/PersonaContext', () => ({
+  usePersona: () => ({
+    persona: null,
+    switchPersona: vi.fn(),
+    signOut: vi.fn(),
+    switching: false,
+  }),
+}))
 
 // matchMedia is jsdom-missing by default. We control it per-test so we
 // can drive the three responsive bands deterministically.

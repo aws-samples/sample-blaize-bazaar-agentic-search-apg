@@ -38,7 +38,6 @@ import {
 import Footer from '../components/Footer'
 import Header from '../components/Header'
 import { AuthGate } from '../App'
-import { useUI } from '../contexts/UIContext'
 import WorkshopChat from '../components/WorkshopChat'
 import WorkshopTelemetry from '../components/WorkshopTelemetry'
 import IndexPerformanceDashboard from '../components/IndexPerformanceDashboard'
@@ -470,7 +469,6 @@ function useTabState(panelCount: number): [Tab, (t: Tab) => void] {
 }
 
 function WorkshopContent() {
-  const { openModal } = useUI()
   const navigate = useNavigate()
   const { section } = useParams<{ section?: string }>()
   const [events, setEvents] = useState<WorkshopEvent[]>([])
@@ -1032,7 +1030,6 @@ function WorkshopContent() {
           the surface-switch toggle has a permanent home. */}
       <Header
         current="home"
-        onAccountClick={() => openModal('auth')}
       />
 
       {/* Editorial hero + atmosphere ticker + live metrics row,

@@ -134,9 +134,9 @@ describe('App - provider wiring (Task 6.2 / Req 7.2.1)', () => {
     const wordmark = await screen.findByTestId('wordmark')
     expect(wordmark).toHaveTextContent(/Blaize Bazaar/i)
 
-    // Account button is the other canonical home-page marker; confirms
-    // the auth-dependent branch of the header mounted.
-    expect(screen.getByTestId('account-button')).toBeInTheDocument()
+    // Persona pill is the other canonical home-page marker; confirms
+    // the persona-dependent branch of the header mounted.
+    expect(screen.getByTestId('persona-pill')).toBeInTheDocument()
   })
 
   it('mounts AuthModal + PreferencesModal as hidden singletons at the App root', async () => {

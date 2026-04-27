@@ -67,7 +67,6 @@ export default function StorefrontPage() {
       <Header
         current="home"
         onNavigate={handleNavigate}
-        onAccountClick={() => openModal('auth')}
       />
       <main>
         <HeroHeadline />
