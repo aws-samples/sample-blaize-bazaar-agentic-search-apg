@@ -508,3 +508,54 @@
   margin-top: 6px;
   margin-bottom: -2px;
 }
+
+/* ---- Persona-tailored follow-up chips ----
+ *
+ * Render only under the most recent complete assistant reply. Each
+ * chip is a canned query grounded in the active persona's signals
+ * from docs/personas-config.json. The visual language mirrors the
+ * welcome state's P.S. chips (italic burgundy bullet, italic serif
+ * text, underline on hover) so the surface reads as one continuous
+ * editorial register rather than two disconnected UI systems.
+ */
+.ec-followups {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(45, 24, 16, 0.12);
+}
+.ec-followup {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-2);
+  background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: color 150ms;
+}
+.ec-followup-bullet {
+  color: var(--red-1);
+  font-style: normal;
+  font-size: 14px;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.ec-followup-label {
+  border-bottom: 1px solid transparent;
+  transition: border-color 150ms, color 150ms;
+}
+.ec-followup:hover {
+  color: var(--ink-1);
+}
+.ec-followup:hover .ec-followup-label {
+  border-bottom-color: var(--ink-1);
+}

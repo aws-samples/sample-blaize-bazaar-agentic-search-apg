@@ -19,6 +19,7 @@ import { X } from 'lucide-react'
 import type { AgentChatMessage } from '../hooks/useAgentChat'
 import type { CartItemOrigin } from '../contexts/CartContext'
 import { usePersona } from '../contexts/PersonaContext'
+import type { PersonaSnapshot } from '../contexts/PersonaContext'
 import MarkdownMessage from './MarkdownMessage'
 import StorefrontWelcome from './StorefrontWelcome'
 import ProductArtifactCard from './ProductArtifactCard'
@@ -83,6 +84,15 @@ export default function StorefrontChat({
   }, [messages])
 
   const hasUserMessages = messages.some((m) => m.role === 'user')
+
+  // Index of the final assistant message in the list. Used to scope the
+  // persona-tailored follow-up chips to the most recent reply only.
+  const lastAssistantIndex = (() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') return i
+    }
+    return -1
+  })()
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
@@ -191,6 +201,9 @@ export default function StorefrontChat({
                 <AgentMessage
                   message={message}
                   addToCart={addToCart}
+                  persona={persona}
+                  isLastAssistantMessage={index === lastAssistantIndex}
+                  onFollowUp={(text) => void sendMessage(text)}
                 />
               )}
             </motion.div>
@@ -318,12 +331,51 @@ function formatAttribution(loadedSkills: string[]): string {
   return `Drawing from ${head}, and the ${names[names.length - 1]}`
 }
 
+/**
+ * Persona-tailored follow-up chips shown under every assistant reply.
+ * These are canned queries that consistently exercise the persona's LTM
+ * preamble and produce beautiful replies — grounded in each persona's
+ * signals from docs/personas-config.json. Fresh visitors see neutral
+ * editorial prompts that work without any profile context.
+ *
+ * Kept to three chips per persona to stay inside the editorial chat's
+ * horizontal rhythm; more than three starts to look like a form.
+ */
+const FOLLOWUPS_BY_PERSONA: Record<string, string[]> = {
+  marco: [
+    'what did I buy last time?',
+    'something similar in sage or oat',
+    'pieces that travel well for Lisbon',
+  ],
+  anna: [
+    'a thoughtful gift for my mother',
+    'help me build a small gift set',
+    'milestone pieces under $200',
+  ],
+  fresh: [
+    'something for long summer walks',
+    "what's trending tonight",
+    'pieces that travel well',
+  ],
+}
+
+function followupsForPersona(persona?: PersonaSnapshot | null): string[] {
+  if (!persona) return FOLLOWUPS_BY_PERSONA.fresh
+  return FOLLOWUPS_BY_PERSONA[persona.id] ?? FOLLOWUPS_BY_PERSONA.fresh
+}
+
 function AgentMessage({
   message,
   addToCart,
+  onFollowUp,
+  persona,
+  isLastAssistantMessage,
 }: {
   message: AgentChatMessage
   addToCart: StorefrontChatProps['addToCart']
+  onFollowUp: (text: string) => void
+  persona: PersonaSnapshot | null
+  isLastAssistantMessage: boolean
 }) {
   const isThinking = message.agentStatus === 'thinking' && !message.content
   const isStreaming = message.agentStatus === 'streaming'
@@ -466,6 +518,26 @@ function AgentMessage({
                 }}
               />
             </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Persona-tailored follow-up chips — render only under the most
+          recent complete assistant reply so we don't clutter earlier
+          turns. Each chip is a canned query that reliably exercises the
+          persona's LTM preamble end to end. */}
+      {isComplete && isLastAssistantMessage && (
+        <div className="ec-followups">
+          {followupsForPersona(persona).map((chip) => (
+            <button
+              key={chip}
+              type="button"
+              className="ec-followup"
+              onClick={() => onFollowUp(chip)}
+            >
+              <span className="ec-followup-bullet">&middot;</span>
+              <span className="ec-followup-label">{chip}</span>
+            </button>
           ))}
         </div>
       )}
