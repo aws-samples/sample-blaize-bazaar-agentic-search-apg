@@ -547,6 +547,11 @@ export function useAgentChat(
           mode === 'storefront' ? undefined : workshopMode,
           guardrailsEnabled,
           persona?.customer_id ?? null,
+          // Pattern selector — storefront uses the dispatcher (direct
+          // specialist invocation, no orchestrator, no paraphrase),
+          // atelier uses the Haiku orchestrator (Pattern I). Commit 2
+          // adds a user-facing toggle in the Atelier for 'graph'.
+          mode === 'storefront' ? 'dispatcher' : 'agents_as_tools',
         )
 
         // Drain any remaining buffered tokens before settling the

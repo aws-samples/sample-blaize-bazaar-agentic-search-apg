@@ -343,10 +343,19 @@ export default function AuthStateBand() {
 
   // --- State routing ----------------------------------------------------
 
-  // Signed out: show the sign-in strip unless dismissed this session.
+  // Signed out: render nothing. Personas replaced Cognito as the primary
+  // sign-in surface — the old SignInStrip ("Sign in and watch Blaize
+  // tailor the storefront to you.") pointed at an auth flow that is no
+  // longer the default. The SignInStrip component is still exported
+  // above for any consumer that wants to reuse the markup.
   if (!signedIn) {
-    if (dismissed) return null
-    return <SignInStrip onDismiss={handleDismiss} onSignIn={handleSignIn} />
+    // Preserve dismissed/handleDismiss/handleSignIn references so the
+    // session-storage hydration + openModal('auth') helpers don't turn
+    // into unused-symbol lint errors.
+    void dismissed
+    void handleDismiss
+    void handleSignIn
+    return null
   }
 
   // Signed in + preferences: show the curated banner.

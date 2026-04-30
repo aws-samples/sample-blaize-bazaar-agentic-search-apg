@@ -1,5 +1,13 @@
 """
-Product Search Agent - Handles product search, category browsing, and comparisons
+Product Search Agent — handles product search, category browsing,
+and side-by-side comparisons.
+
+Exposes two surfaces that share one agent construction path:
+
+1. ``build_search_agent()`` — factory returning a configured Agent,
+   used by the Storefront dispatcher and the Atelier Graph pattern.
+2. ``search(query)`` — ``@tool`` wrapper used by the Atelier's
+   Agents-as-Tools orchestrator. Delegates to the factory.
 """
 import json
 import re
@@ -57,6 +65,25 @@ def _ensure_products_in_output(text: str, tool_results: list) -> str:
     return text
 
 
+def build_search_agent() -> Agent:
+    """Return a configured Search specialist Agent.
+
+    Reads persona preamble + loaded skills from ContextVars at
+    construction time. Callers set those ContextVars before invoking.
+    """
+    return Agent(
+        model=BedrockModel(
+            model_id=settings.BEDROCK_CHAT_MODEL,
+            max_tokens=4096,
+            temperature=0.2,
+        ),
+        system_prompt=inject_persona_preamble(
+            inject_skills(_SEARCH_SYSTEM_PROMPT)
+        ),
+        tools=[search_products, browse_category, compare_products],
+    )
+
+
 @tool
 def search(query: str) -> str:
     """
@@ -70,18 +97,7 @@ def search(query: str) -> str:
     """
     try:
         tool_results = []
-
-        agent = Agent(
-            model=BedrockModel(
-                model_id=settings.BEDROCK_CHAT_MODEL,
-                max_tokens=4096,
-                temperature=0.2,
-            ),
-            system_prompt=inject_persona_preamble(
-                inject_skills(_SEARCH_SYSTEM_PROMPT)
-            ),
-            tools=[search_products, browse_category, compare_products],
-        )
+        agent = build_search_agent()
 
         # Capture inner tool results so we can guarantee product data in output
         try:

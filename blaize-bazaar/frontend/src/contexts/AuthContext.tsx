@@ -264,11 +264,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Always try the cookie-backed /api/auth/me path too — the C9 flow
-      // sets httpOnly cookies the SPA can't see directly. If the fetch
-      // 401s we clear; if it succeeds we overwrite with the canonical
-      // server-side claims.
-      await refresh()
+      // Cookie-backed /api/auth/me path — only fire when we have
+      // evidence of an active Cognito session (legacy token present
+      // or an auth callback just ran). Firing on every cold mount
+      // produces a noisy 401 for every storefront visit, which is
+      // the common case now that personas replaced Cognito as the
+      // primary sign-in mechanism. When Cognito IS wired, the hash
+      // path above populates user/accessToken and we still want to
+      // cross-check server claims.
+      if (tokens || accessToken) {
+        await refresh()
+      }
 
       if (!cancelled) setLoading(false)
     }

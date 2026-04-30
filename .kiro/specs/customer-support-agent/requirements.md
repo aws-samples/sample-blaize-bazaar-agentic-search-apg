@@ -76,16 +76,18 @@ Blaize Bazaar is a multi-agent e-commerce shopping assistant built with the Stra
 4. THE `get_graph_structure` function SHALL include a new node for the Search_Agent with id "search", label "Product Search", type "agent", a description referencing product search, category browsing, and product comparison, and model "Claude Opus 4.6".
 5. THE `get_graph_structure` function SHALL include a new edge from the "router" node to the "search" node with a descriptive label such as "search queries".
 
-### Requirement 5: Exa MCP Tool Integration (Optional / Stretch)
+### ~~Requirement 5: Exa MCP Tool Integration (Optional / Stretch)~~
 
-**User Story:** As a customer, I want the support agent to optionally search the web for troubleshooting answers, so that I can get help with issues not covered by the product catalog.
+> **Removed · 2026-04-27 · three-pattern refactor.** Exa MCP integration for live web search in the support agent was cut from the workshop codebase. Workshop scope is agentic search over Aurora pgvector; live web retrieval was out of scope, unconfigured in every workshop environment (`EXA_API_KEY` unset), and it was the only thing forcing the specialist-factory pattern to be inconsistent across the five specialists. The support agent now runs purely against the local tool set (`return_policy`, `search_products`). See `docs/PATTERNS_NOTES.md` for the broader refactor context. Requirement retained here (struck through) as spec history, not spec drift.
 
-#### Acceptance Criteria
+~~**User Story:** As a customer, I want the support agent to optionally search the web for troubleshooting answers, so that I can get help with issues not covered by the product catalog.~~
 
-1. WHERE the Exa MCP server is configured with a valid API key and network egress is available, THE Customer_Support_Agent SHALL load Exa MCP tools using the Strands SDK MCP client configuration.
-2. WHEN a troubleshooting query cannot be answered using the local tools alone, THE Customer_Support_Agent system prompt SHALL instruct the model to use Exa_MCP_Tools for web search.
-3. IF the Exa MCP server is unavailable, the API key is not configured, or the MCP client fails to initialize, THEN THE Customer_Support_Agent SHALL continue to function using only the local data tools (get_return_policy, search_products) and log a warning.
-4. THE Customer_Support_Agent module SHALL document that Exa MCP integration requires an `EXA_API_KEY` environment variable and outbound network access, neither of which are provisioned by the default workshop bootstrap scripts.
+#### ~~Acceptance Criteria~~
+
+1. ~~WHERE the Exa MCP server is configured with a valid API key and network egress is available, THE Customer_Support_Agent SHALL load Exa MCP tools using the Strands SDK MCP client configuration.~~
+2. ~~WHEN a troubleshooting query cannot be answered using the local tools alone, THE Customer_Support_Agent system prompt SHALL instruct the model to use Exa_MCP_Tools for web search.~~
+3. ~~IF the Exa MCP server is unavailable, the API key is not configured, or the MCP client fails to initialize, THEN THE Customer_Support_Agent SHALL continue to function using only the local data tools (get_return_policy, search_products) and log a warning.~~
+4. ~~THE Customer_Support_Agent module SHALL document that Exa MCP integration requires an `EXA_API_KEY` environment variable and outbound network access, neither of which are provisioned by the default workshop bootstrap scripts.~~
 
 ### Requirement 6: Intent Classification Update
 

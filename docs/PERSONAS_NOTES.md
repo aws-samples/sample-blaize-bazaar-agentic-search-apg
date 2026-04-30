@@ -58,6 +58,12 @@ Frontend: usePersona() context
 - Phase 4 (context propagation) is not yet verified end-to-end. The wiring is in place but the 5 acceptance demos need a live backend to confirm.
 - The gift-concierge skill's router description may not reliably trigger for Anna's queries — flagged for tuning in a separate PR.
 
+## Modal portal — why createPortal
+
+`PersonaModal` wraps its JSX in `ReactDOM.createPortal(..., document.body)`. Required because the storefront `<header>` has `position: sticky` + `backdrop-filter: blur(12px)`, and `backdrop-filter` establishes a new containing block for `position: fixed` descendants. Without the portal, the modal's `inset: 0` anchors to the header's containing block rather than the viewport — symptom: modal extends above the viewport, backdrop doesn't cover the page.
+
+The portal decouples the modal from the trigger's stacking context. A regression test lives at `e2e/persona-modal.spec.ts` and asserts the backdrop's bounding rect matches the viewport; if a future ancestor introduces another containing-block creator (`transform`, `filter`, `contain`, etc.), that test catches it.
+
 ## Curated query catalog
 
 See `docs/persona-demo-queries.md` for 5 queries per persona, each mapped to an architectural concept.

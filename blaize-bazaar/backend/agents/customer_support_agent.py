@@ -1,5 +1,19 @@
 """
-Customer Support Agent - Handles return policies, troubleshooting, and general support
+Customer Support Agent — return policies, troubleshooting, and
+general post-purchase questions.
+
+Exposes two surfaces that share one agent construction path:
+
+1. ``build_support_agent()`` — factory returning a configured Agent,
+   used by the Storefront dispatcher and the Atelier Graph pattern.
+2. ``support(query)`` — ``@tool`` wrapper used by the Atelier's
+   Agents-as-Tools orchestrator. Delegates to the factory.
+
+Exa MCP integration was removed in the three-patterns refactor. It
+was unset in every workshop environment (EXA_API_KEY blank in
+``.env.example``), forced the factory pattern to be inconsistent,
+and isn't part of the workshop's teaching surface. The specialist
+now runs purely against the local tool set.
 """
 import json
 import logging
@@ -12,6 +26,30 @@ from skills import inject_skills
 from services.persona_context import inject_persona_preamble
 
 logger = logging.getLogger(__name__)
+
+
+_SUPPORT_SYSTEM_PROMPT = (
+    "You are Blaize Bazaar's Customer Support Specialist. "
+    "<tools>"
+    "- return_policy: Use for questions about returns, refunds, warranties, or return windows. "
+    "Pass the product category name (e.g. 'Electronics', 'Shoes'). "
+    "- search_products: Use for product-related support queries when the customer needs help "
+    "finding or identifying a product. "
+    "</tools>"
+    "<chaining>"
+    "If the customer mentions a specific product name or ID instead of a category, first use "
+    "search_products to identify the product's category_name, then call return_policy with "
+    "that category. "
+    "</chaining>"
+    "<output-rules>"
+    "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
+    "After receiving tool results, write 1-2 short sentences as a conversational intro. "
+    "Products render as visual cards automatically — do not list them in text. "
+    "If the tool returns zero results or an error, say what went wrong briefly "
+    "(e.g. 'I could not find a return policy for that category.'). "
+    "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
+    "</output-rules>"
+)
 
 
 def _ensure_products_in_output(text: str, tool_results: list) -> str:
@@ -35,6 +73,28 @@ def _ensure_products_in_output(text: str, tool_results: list) -> str:
     return text
 
 
+def build_support_agent() -> Agent:
+    """Return a configured Customer Support specialist Agent.
+
+    Reads persona preamble + loaded skills from ContextVars at
+    construction time. A persona-aware preamble lets queries like
+    "can I return the camp shirt I bought?" ground in the shopper's
+    actual order history; both injections are no-ops for anonymous
+    sessions.
+    """
+    return Agent(
+        model=BedrockModel(
+            model_id=settings.BEDROCK_CHAT_MODEL,
+            max_tokens=4096,
+            temperature=0.2,
+        ),
+        system_prompt=inject_persona_preamble(
+            inject_skills(_SUPPORT_SYSTEM_PROMPT)
+        ),
+        tools=[return_policy, search_products],
+    )
+
+
 @tool
 def support(query: str) -> str:
     """
@@ -48,131 +108,26 @@ def support(query: str) -> str:
     """
     try:
         tool_results = []
-        tools = [return_policy, search_products]
+        agent = build_support_agent()
 
-        # Optional Exa MCP integration for web-based troubleshooting.
-        # Requires EXA_API_KEY env var and network egress (not provisioned
-        # by default workshop bootstrap scripts).
-        exa_client = None
+        # Capture inner tool results so we can guarantee product data in output
         try:
-            from strands.tools.mcp import MCPClient
-            from mcp import StdioServerParameters
+            from strands.hooks.events import AfterToolCallEvent
 
-            exa_api_key = settings.EXA_API_KEY
-            if exa_api_key:
-                exa_client = MCPClient(
-                    lambda: StdioServerParameters(
-                        command="npx",
-                        args=["-y", "exa-mcp-server"],
-                        env={"EXA_API_KEY": exa_api_key},
-                    )
-                )
-        except Exception:
-            logger.warning("Exa MCP tools unavailable — continuing with local tools only")
+            def capture_result(event: AfterToolCallEvent):
+                if hasattr(event, 'result') and event.result:
+                    raw = event.result
+                    if isinstance(raw, dict) and 'content' in raw:
+                        for block in raw.get('content', []):
+                            if isinstance(block, dict) and 'text' in block:
+                                tool_results.append(block['text'])
 
-        system_prompt = (
-            "You are Blaize Bazaar's Customer Support Specialist. "
-            "<tools>"
-            "- return_policy: Use for questions about returns, refunds, warranties, or return windows. "
-            "Pass the product category name (e.g. 'Electronics', 'Shoes'). "
-            "- search_products: Use for product-related support queries when the customer needs help "
-            "finding or identifying a product. "
-            "</tools>"
-            "<chaining>"
-            "If the customer mentions a specific product name or ID instead of a category, first use "
-            "search_products to identify the product's category_name, then call return_policy with "
-            "that category. "
-            "</chaining>"
-        )
+            agent.add_hook(capture_result)
+        except ImportError:
+            pass
 
-        if exa_client:
-            system_prompt += (
-                "Use Exa web search tools for troubleshooting questions that cannot be answered "
-                "using the local tools alone. "
-            )
-
-        system_prompt += (
-            "<output-rules>"
-            "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
-            "After receiving tool results, write 1-2 short sentences as a conversational intro. "
-            "Products render as visual cards automatically — do not list them in text. "
-            "If the tool returns zero results or an error, say what went wrong briefly "
-            "(e.g. 'I could not find a return policy for that category.'). "
-            "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
-            "</output-rules>"
-        )
-
-        # Inject per-turn skills into the composed base prompt. No-op when
-        # the router loaded zero skills (the common case for transactional
-        # support queries like return policy lookups).
-        system_prompt = inject_skills(system_prompt)
-
-        # Also inject the active persona's LTM preamble so support queries
-        # like "can I return the camp shirt I bought?" can reference the
-        # shopper's actual order history. No-op for anonymous sessions.
-        system_prompt = inject_persona_preamble(system_prompt)
-
-        if exa_client:
-            with exa_client:
-                exa_tools = exa_client.list_tools_sync()
-                agent = Agent(
-                    model=BedrockModel(
-                        model_id=settings.BEDROCK_CHAT_MODEL,
-                        max_tokens=4096,
-                        temperature=0.2,
-                    ),
-                    system_prompt=system_prompt,
-                    tools=tools + exa_tools,
-                )
-
-                # Capture inner tool results for _ensure_products_in_output
-                try:
-                    from strands.hooks.events import AfterToolCallEvent
-
-                    def capture_result(event: AfterToolCallEvent):
-                        if hasattr(event, 'result') and event.result:
-                            raw = event.result
-                            if isinstance(raw, dict) and 'content' in raw:
-                                for block in raw.get('content', []):
-                                    if isinstance(block, dict) and 'text' in block:
-                                        tool_results.append(block['text'])
-
-                    agent.add_hook(capture_result)
-                except ImportError:
-                    pass
-
-                result = agent(query)
-                text = str(result)
-                return _ensure_products_in_output(text, tool_results)
-        else:
-            agent = Agent(
-                model=BedrockModel(
-                    model_id=settings.BEDROCK_CHAT_MODEL,
-                    max_tokens=4096,
-                    temperature=0.2,
-                ),
-                system_prompt=system_prompt,
-                tools=tools,
-            )
-
-            # Capture inner tool results for _ensure_products_in_output
-            try:
-                from strands.hooks.events import AfterToolCallEvent
-
-                def capture_result(event: AfterToolCallEvent):
-                    if hasattr(event, 'result') and event.result:
-                        raw = event.result
-                        if isinstance(raw, dict) and 'content' in raw:
-                            for block in raw.get('content', []):
-                                if isinstance(block, dict) and 'text' in block:
-                                    tool_results.append(block['text'])
-
-                agent.add_hook(capture_result)
-            except ImportError:
-                pass
-
-            result = agent(query)
-            text = str(result)
-            return _ensure_products_in_output(text, tool_results)
+        result = agent(query)
+        text = str(result)
+        return _ensure_products_in_output(text, tool_results)
     except Exception as e:
         return json.dumps({"error": f"Support agent error: {str(e)}"})

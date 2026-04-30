@@ -98,6 +98,16 @@ class ChatRequest(BaseModel):
     workshop_mode: Optional[str] = Field(default=None, description="Workshop progression mode: 'legacy', 'search', 'agentic', 'production'")
     guardrails_enabled: bool = Field(default=False, description="Enable content moderation guardrails")
     customer_id: Optional[str] = Field(default=None, description="Persona customer id (e.g. 'CUST-MARCO'). None = anonymous.")
+    pattern: Optional[str] = Field(
+        default=None,
+        description=(
+            "Agent orchestration pattern for this turn. "
+            "'dispatcher' — Storefront production path; direct specialist invocation. "
+            "'agents_as_tools' — Atelier Pattern I; Haiku orchestrator + @tool specialists. "
+            "'graph' — Atelier Pattern II (commit 2); Strands GraphBuilder with conditional edges. "
+            "None defaults to 'agents_as_tools' for backwards compatibility."
+        ),
+    )
 
 
 class ChatResponse(BaseModel):

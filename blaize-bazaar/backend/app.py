@@ -609,7 +609,8 @@ async def chat_stream(request: ChatRequest, user=Depends(get_current_user)):
                 session_id=request.session_id,
                 workshop_mode=request.workshop_mode,
                 guardrails_enabled=request.guardrails_enabled,
-                user=effective_user or None
+                user=effective_user or None,
+                pattern=request.pattern,
             ):
                 yield f"data: {json.dumps(event, ensure_ascii=False, default=str)}\n\n"
         except Exception as e:

@@ -2,15 +2,18 @@
  * PersonaModal — the shared persona switcher.
  *
  * One component, two entry points: the storefront header pill and the
- * Atelier breadcrumb indicator both open this same modal. Matches
- * docs/persona-switcher.html.
+ * Atelier breadcrumb indicator both open this same modal. Structure
+ * matches docs/persona-switcher.html byte-for-byte; styling lives in
+ * src/styles/persona-modal.css.
  *
- * Three persona cards as buttons. Active persona gets a burgundy ring.
- * Closes via: X button, backdrop click, Escape key.
+ * Three persona cards as buttons. Active persona gets a burgundy ring
+ * + inner box-shadow. Closes via: X button, backdrop click, Escape.
  */
 import { useCallback, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { usePersona, type PersonaListItem } from '../contexts/PersonaContext'
+import '../styles/persona-modal.css'
 
 interface PersonaModalProps {
   open: boolean
@@ -30,7 +33,7 @@ export default function PersonaModal({ open, onClose }: PersonaModalProps) {
       .catch(() => {})
   }, [open, personas.length])
 
-  // Escape key
+  // Escape key closes the modal
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => {
@@ -55,75 +58,23 @@ export default function PersonaModal({ open, onClose }: PersonaModalProps) {
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="pm-backdrop"
       data-testid="persona-modal-backdrop"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
-      style={{ background: 'rgba(31, 20, 16, 0.18)' }}
     >
-      <div
-        className="w-full max-w-[540px] mx-4 overflow-hidden"
-        data-testid="persona-modal"
-        style={{
-          background: 'var(--cream-1)',
-          borderRadius: 16,
-          boxShadow:
-            '0 30px 80px -20px rgba(31, 20, 16, 0.40), 0 0 0 1px var(--rule-1)',
-        }}
-      >
-        {/* Header */}
-        <div
-          className="relative flex items-start justify-between gap-4"
-          style={{
-            padding: '26px 28px 18px',
-            borderBottom: '1px solid var(--rule-1)',
-          }}
-        >
-          {/* Burgundy tick */}
-          <span
-            className="absolute bottom-[-1px] left-[28px] h-[1px] w-[28px]"
-            style={{ background: 'var(--accent, #c44536)' }}
-            aria-hidden
-          />
+      <div className="pm-card" data-testid="persona-modal">
+        {/* Head */}
+        <div className="pm-head">
           <div>
-            <div
-              style={{
-                fontFamily: 'var(--mono)',
-                fontSize: 9.5,
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase' as const,
-                color: 'var(--accent, #c44536)',
-                fontWeight: 500,
-                marginBottom: 8,
-              }}
-            >
-              Sign in
-            </div>
-            <h2
-              style={{
-                fontFamily: 'var(--serif)',
-                fontWeight: 400,
-                fontSize: 30,
-                lineHeight: 1.05,
-                letterSpacing: '-0.02em',
-                marginBottom: 6,
-              }}
-            >
+            <div className="pm-eyebrow">Sign in</div>
+            <h2 className="pm-title">
               Choose a <em>persona to inhabit.</em>
             </h2>
-            <p
-              style={{
-                fontFamily: 'var(--serif)',
-                fontStyle: 'italic',
-                fontWeight: 300,
-                fontSize: 14.5,
-                lineHeight: 1.5,
-                color: 'var(--ink-3)',
-              }}
-            >
+            <p className="pm-sub">
               Three histories. The boutique shifts depending on who you are.
             </p>
           </div>
@@ -131,26 +82,15 @@ export default function PersonaModal({ open, onClose }: PersonaModalProps) {
             type="button"
             onClick={onClose}
             data-testid="persona-modal-close"
-            className="flex items-center justify-center rounded-full transition-colors"
-            style={{
-              width: 28,
-              height: 28,
-              background: 'transparent',
-              color: 'var(--ink-3)',
-              flexShrink: 0,
-              border: 'none',
-              cursor: 'pointer',
-            }}
+            className="pm-close"
+            aria-label="Close"
           >
             <X size={14} />
           </button>
         </div>
 
-        {/* Persona list */}
-        <div
-          className="flex flex-col gap-2.5"
-          style={{ padding: '18px 22px 22px' }}
-        >
+        {/* List */}
+        <div className="pm-list">
           {personas.map((p) => {
             const isActive = persona?.id === p.id
             const isFresh = p.id === 'fresh'
@@ -161,206 +101,73 @@ export default function PersonaModal({ open, onClose }: PersonaModalProps) {
                 disabled={switching}
                 data-testid={`persona-card-${p.id}`}
                 onClick={() => handleSelect(p.id)}
-                className="w-full text-left transition-all"
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '44px 1fr auto',
-                  gap: 14,
-                  alignItems: 'center',
-                  padding: '14px 16px',
-                  borderRadius: 12,
-                  border: isActive
-                    ? '1px solid var(--accent, #c44536)'
-                    : '1px solid var(--rule-2)',
-                  background: isActive ? 'var(--cream-elev)' : 'transparent',
-                  boxShadow: isActive
-                    ? '0 0 0 1px var(--accent, #c44536)'
-                    : 'none',
-                  cursor: switching ? 'wait' : 'pointer',
-                  fontFamily: 'inherit',
-                }}
+                className={`pm-card-btn${isActive ? ' active' : ''}`}
               >
-                {/* Avatar */}
                 <span
-                  className="flex items-center justify-center rounded-full"
-                  style={{
-                    width: 44,
-                    height: 44,
-                    background: isFresh ? 'transparent' : p.avatar_color,
-                    color: isFresh ? 'var(--ink-3)' : 'var(--cream-1, #faf3e8)',
-                    border: isFresh
-                      ? '1px dashed var(--rule-3, rgba(31,20,16,0.28))'
-                      : 'none',
-                    fontFamily: 'var(--serif)',
-                    fontStyle: 'italic',
-                    fontWeight: 400,
-                    fontSize: 20,
-                    flexShrink: 0,
-                  }}
+                  className={`pm-avatar ${isFresh ? 'fresh' : p.id}`}
+                  aria-hidden
                 >
                   {p.avatar_initial}
                 </span>
 
-                {/* Content */}
-                <div className="flex flex-col gap-0.5 min-w-0">
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    <span
-                      style={{
-                        fontFamily: 'var(--serif)',
-                        fontWeight: 400,
-                        fontSize: 18,
-                        letterSpacing: '-0.005em',
-                        color: 'var(--ink-1)',
-                      }}
-                    >
+                <span className="pm-content">
+                  <span className="pm-name-row">
+                    <span className="pm-name">
                       <em>{p.display_name}</em>
                     </span>
-                    <span
-                      style={{
-                        fontFamily: 'var(--sans)',
-                        fontSize: 9.5,
-                        fontWeight: 500,
-                        letterSpacing: '0.18em',
-                        textTransform: 'uppercase' as const,
-                        color: isFresh
-                          ? 'var(--ink-4)'
-                          : 'var(--accent, #c44536)',
-                        padding: '2px 7px',
-                        border: isFresh
-                          ? '1px solid var(--rule-2)'
-                          : '1px solid rgba(196, 69, 54, 0.4)',
-                        borderRadius: 3,
-                      }}
-                    >
+                    <span className={`pm-tag${isFresh ? ' fresh' : ''}`}>
                       {p.role_tag}
                     </span>
-                  </div>
-                  <span
-                    style={{
-                      fontFamily: 'var(--serif)',
-                      fontStyle: 'italic',
-                      fontSize: 13,
-                      lineHeight: 1.45,
-                      color: 'var(--ink-3)',
-                      marginTop: 3,
-                    }}
-                  >
-                    {p.blurb}
                   </span>
-                  <div
-                    className="flex items-baseline gap-3.5"
-                    style={{ marginTop: 8 }}
-                  >
-                    <MetaItem label="visits" value={p.stats.visits} />
-                    <MetaItem label="orders" value={p.stats.orders} />
-                    <MetaItem
-                      label="last seen"
-                      value={
-                        p.stats.last_seen_days === null
+                  <span className="pm-blurb">{p.blurb}</span>
+                  <span className="pm-meta-row">
+                    <span className="pm-meta-item">
+                      visits ·{' '}
+                      <span className="num">{p.stats.visits}</span>
+                    </span>
+                    <span className="pm-meta-item">
+                      orders ·{' '}
+                      <span className="num">{p.stats.orders}</span>
+                    </span>
+                    <span className="pm-meta-item">
+                      last seen ·{' '}
+                      <span className="num">
+                        {p.stats.last_seen_days === null
                           ? 'never'
-                          : `${p.stats.last_seen_days}d ago`
-                      }
-                    />
-                  </div>
-                </div>
+                          : `${p.stats.last_seen_days}d ago`}
+                      </span>
+                    </span>
+                  </span>
+                </span>
 
-                {/* Arrow */}
-                <span
-                  style={{
-                    fontFamily: 'var(--mono)',
-                    fontSize: 14,
-                    color: isActive
-                      ? 'var(--accent, #c44536)'
-                      : 'var(--ink-4)',
-                    flexShrink: 0,
-                  }}
-                >
+                <span className="pm-arrow" aria-hidden>
                   →
                 </span>
               </button>
             )
           })}
 
-          {/* Sign out row — only when a persona is active */}
           {persona && (
             <button
               type="button"
               onClick={handleSignOut}
               data-testid="persona-sign-out"
-              className="self-start text-[12px] transition-opacity hover:opacity-70"
-              style={{
-                fontFamily: 'var(--sans)',
-                color: 'var(--ink-4)',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                marginTop: 4,
-                padding: '4px 0',
-              }}
+              className="pm-signout"
             >
               Sign out
             </button>
           )}
         </div>
 
-        {/* Footer */}
-        <div
-          className="flex items-center justify-between gap-3.5"
-          style={{
-            padding: '14px 28px 18px',
-            borderTop: '1px solid var(--rule-1)',
-            background: 'var(--cream-2)',
-          }}
-        >
-          <span
-            style={{
-              fontFamily: 'var(--serif)',
-              fontStyle: 'italic',
-              fontSize: 13,
-              color: 'var(--ink-3)',
-              lineHeight: 1.4,
-            }}
-          >
-            <em style={{ color: 'var(--ink-1)', fontWeight: 500 }}>
-              Three curated identities
-            </em>{' '}
-            — switch any time from the header.
-          </span>
-          <span
-            style={{
-              fontFamily: 'var(--mono)',
-              fontSize: 9.5,
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase' as const,
-              color: 'var(--ink-4)',
-            }}
-          >
-            v1.0
-          </span>
+        {/* Foot */}
+        <div className="pm-foot">
+          <div className="pm-foot-text">
+            <em>Three curated identities</em> — switch any time from the header.
+          </div>
+          <div className="pm-foot-meta">v1.0</div>
         </div>
       </div>
-    </div>
-  )
-}
-
-function MetaItem({
-  label,
-  value,
-}: {
-  label: string
-  value: string | number
-}) {
-  return (
-    <span
-      style={{
-        fontFamily: 'var(--mono)',
-        fontSize: 10,
-        letterSpacing: '0.05em',
-        color: 'var(--ink-4)',
-      }}
-    >
-      {label} ·{' '}
-      <span style={{ color: 'var(--ink-1)', fontWeight: 500 }}>{value}</span>
-    </span>
+    </div>,
+    document.body,
   )
 }

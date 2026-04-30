@@ -85,7 +85,8 @@ export async function sendChatMessageStreaming(
   onUpdate: (data: any) => void,
   workshopMode?: string,
   guardrailsEnabled?: boolean,
-  customerId?: string | null
+  customerId?: string | null,
+  pattern?: 'dispatcher' | 'agents_as_tools' | 'graph' | null,
 ): Promise<ChatResponse> {
   try {
     const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
@@ -100,7 +101,8 @@ export async function sendChatMessageStreaming(
         session_id: getSessionId(),
         workshop_mode: workshopMode || null,
         guardrails_enabled: guardrailsEnabled || false,
-        customer_id: customerId || null
+        customer_id: customerId || null,
+        pattern: pattern || null,
       }),
     })
 

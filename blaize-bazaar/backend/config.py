@@ -116,14 +116,6 @@ class Settings(BaseSettings):
     BEDROCK_GUARDRAIL_VERSION: str = "DRAFT"
 
     # ========================================
-    # External API Keys (optional integrations)
-    # ========================================
-    # Exa web search for the customer support agent's MCP tool chain.
-    # Leave unset to run with local tools only (return_policy,
-    # search_products); the agent skips Exa wiring if this is empty.
-    EXA_API_KEY: Optional[str] = None
-
-    # ========================================
     # AgentCore Configuration (Lab 4)
     # ========================================
     # 4a — Identity (Cognito)

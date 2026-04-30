@@ -1,5 +1,12 @@
 """
-Price Optimization Agent - Analyzes pricing and suggests deals
+Price Optimization Agent — analyzes pricing and surfaces deals.
+
+Exposes two surfaces that share one agent construction path:
+
+1. ``build_pricing_agent()`` — factory returning a configured Agent,
+   used by the Storefront dispatcher and the Atelier Graph pattern.
+2. ``pricing(query)`` — ``@tool`` wrapper used by the Atelier's
+   Agents-as-Tools orchestrator. Delegates to the factory.
 """
 import json
 import re
@@ -7,6 +14,29 @@ from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
 from services.agent_tools import price_analysis, browse_category, search_products
+from skills import inject_skills
+from services.persona_context import inject_persona_preamble
+
+
+_PRICING_SYSTEM_PROMPT = (
+    "You are Blaize Bazaar's Pricing Specialist. "
+    "<tools>"
+    "- price_analysis: Use for category-level pricing statistics (average, min, max, distribution). "
+    "- search_products: Use when the user describes specific products with price constraints "
+    "(e.g. 'laptops under $500'). "
+    "- browse_category: Use to browse products in a category when the user wants to see "
+    "what is available at various price points. "
+    "</tools>"
+    "<output-rules>"
+    "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
+    "Call at most 2 tools per query. "
+    "After receiving tool results, write 1-2 short sentences as a conversational intro. "
+    "Products render as visual cards automatically — do not list them in text. "
+    "If the tool returns zero products or an error, say what went wrong briefly "
+    "(e.g. 'No pricing data available for that category right now.'). "
+    "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
+    "</output-rules>"
+)
 
 
 def _ensure_products_in_output(text: str, tool_results: list) -> str:
@@ -30,6 +60,29 @@ def _ensure_products_in_output(text: str, tool_results: list) -> str:
     return text
 
 
+def build_pricing_agent() -> Agent:
+    """Return a configured Pricing specialist Agent.
+
+    Reads persona preamble + loaded skills from ContextVars at
+    construction time. The pricing specialist didn't read these in
+    earlier revisions; adding them in the factory keeps behavior
+    consistent across all five specialists without changing anonymous
+    atelier output (both injections are no-ops when their
+    ContextVars are empty).
+    """
+    return Agent(
+        model=BedrockModel(
+            model_id=settings.BEDROCK_CHAT_MODEL,
+            max_tokens=4096,
+            temperature=0.2,
+        ),
+        system_prompt=inject_persona_preamble(
+            inject_skills(_PRICING_SYSTEM_PROMPT)
+        ),
+        tools=[price_analysis, browse_category, search_products],
+    )
+
+
 @tool
 def pricing(query: str) -> str:
     """
@@ -45,34 +98,7 @@ def pricing(query: str) -> str:
     """
     try:
         tool_results = []
-
-        agent = Agent(
-            model=BedrockModel(
-                model_id=settings.BEDROCK_CHAT_MODEL,
-                max_tokens=4096,
-                temperature=0.2,
-            ),
-            system_prompt=(
-                "You are Blaize Bazaar's Pricing Specialist. "
-                "<tools>"
-                "- price_analysis: Use for category-level pricing statistics (average, min, max, distribution). "
-                "- search_products: Use when the user describes specific products with price constraints "
-                "(e.g. 'laptops under $500'). "
-                "- browse_category: Use to browse products in a category when the user wants to see "
-                "what is available at various price points. "
-                "</tools>"
-                "<output-rules>"
-                "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
-                "Call at most 2 tools per query. "
-                "After receiving tool results, write 1-2 short sentences as a conversational intro. "
-                "Products render as visual cards automatically — do not list them in text. "
-                "If the tool returns zero products or an error, say what went wrong briefly "
-                "(e.g. 'No pricing data available for that category right now.'). "
-                "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
-                "</output-rules>"
-            ),
-            tools=[price_analysis, browse_category, search_products],
-        )
+        agent = build_pricing_agent()
 
         # Capture inner tool results so we can guarantee product data in output
         try:

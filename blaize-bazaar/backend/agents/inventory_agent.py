@@ -1,5 +1,13 @@
 """
-Inventory Restock Agent - Monitors stock levels and suggests restocking
+Inventory Restock Agent — monitors stock levels and surfaces restock
+recommendations.
+
+Exposes two surfaces that share one agent construction path:
+
+1. ``build_inventory_agent()`` — factory returning a configured Agent,
+   used by the Storefront dispatcher and the Atelier Graph pattern.
+2. ``inventory(query)`` — ``@tool`` wrapper used by the Atelier's
+   Agents-as-Tools orchestrator. Delegates to the factory.
 """
 import json
 import re
@@ -7,6 +15,27 @@ from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
 from services.agent_tools import inventory_health, restock_product, low_stock
+from skills import inject_skills
+from services.persona_context import inject_persona_preamble
+
+
+_INVENTORY_SYSTEM_PROMPT = (
+    "You are Blaize Bazaar's Inventory Specialist. "
+    "<tools>"
+    "- inventory_health: Use for overall stock statistics and warehouse health overview. "
+    "- low_stock: Use to find items that need restocking, prioritized by demand. "
+    "- restock_product: Use when the user provides a specific product ID and quantity to restock. "
+    "If the user mentions a product by name instead of ID, inform them you need the product ID. "
+    "</tools>"
+    "<output-rules>"
+    "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
+    "After receiving tool results, write 1-2 short sentences summarizing stock status. "
+    "Products render as visual cards automatically — do not list them in text. "
+    "If the tool returns zero products or an error, say what went wrong briefly "
+    "(e.g. 'Could not retrieve inventory data right now.'). "
+    "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
+    "</output-rules>"
+)
 
 
 def _ensure_products_in_output(text: str, tool_results: list) -> str:
@@ -30,6 +59,28 @@ def _ensure_products_in_output(text: str, tool_results: list) -> str:
     return text
 
 
+def build_inventory_agent() -> Agent:
+    """Return a configured Inventory specialist Agent.
+
+    Reads persona preamble + loaded skills from ContextVars at
+    construction time. Both injections are no-ops when their
+    ContextVars are empty, so anonymous atelier behavior is
+    unchanged by consolidating the five factories onto the same
+    substrate.
+    """
+    return Agent(
+        model=BedrockModel(
+            model_id=settings.BEDROCK_CHAT_MODEL,
+            max_tokens=4096,
+            temperature=0.2,
+        ),
+        system_prompt=inject_persona_preamble(
+            inject_skills(_INVENTORY_SYSTEM_PROMPT)
+        ),
+        tools=[inventory_health, restock_product, low_stock],
+    )
+
+
 @tool
 def inventory(query: str) -> str:
     """
@@ -44,32 +95,7 @@ def inventory(query: str) -> str:
     """
     try:
         tool_results = []
-
-        agent = Agent(
-            model=BedrockModel(
-                model_id=settings.BEDROCK_CHAT_MODEL,
-                max_tokens=4096,
-                temperature=0.2,
-            ),
-            system_prompt=(
-                "You are Blaize Bazaar's Inventory Specialist. "
-                "<tools>"
-                "- inventory_health: Use for overall stock statistics and warehouse health overview. "
-                "- low_stock: Use to find items that need restocking, prioritized by demand. "
-                "- restock_product: Use when the user provides a specific product ID and quantity to restock. "
-                "If the user mentions a product by name instead of ID, inform them you need the product ID. "
-                "</tools>"
-                "<output-rules>"
-                "ALWAYS call a tool first. Do NOT write any text before calling a tool. "
-                "After receiving tool results, write 1-2 short sentences summarizing stock status. "
-                "Products render as visual cards automatically — do not list them in text. "
-                "If the tool returns zero products or an error, say what went wrong briefly "
-                "(e.g. 'Could not retrieve inventory data right now.'). "
-                "Never use markdown tables, numbered lists, headers, or emojis. Never ask follow-up questions."
-                "</output-rules>"
-            ),
-            tools=[inventory_health, restock_product, low_stock],
-        )
+        agent = build_inventory_agent()
 
         # Capture inner tool results so we can guarantee product data in output
         try:

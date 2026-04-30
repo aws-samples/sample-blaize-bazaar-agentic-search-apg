@@ -112,64 +112,17 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-// --- 1.4.1: signed out → SignInStrip -----------------------------------
-describe('AuthStateBand — signed out (Req 1.4.1)', () => {
-  it('renders the SignInStrip when the user is signed out and not dismissed', () => {
+// --- Signed out → nothing renders ---------------------------------------
+// Personas replaced Cognito as the primary sign-in surface, so the old
+// SignInStrip no longer shows. The SignInStrip component is still exported
+// for any consumer that wants to mount it directly, but AuthStateBand does
+// not render it for the anonymous path.
+describe('AuthStateBand — signed out', () => {
+  it('renders nothing when the user is signed out', () => {
     mockUser = null
     renderBand()
 
-    expect(screen.getByTestId('signin-strip')).toBeInTheDocument()
-    expect(screen.queryByTestId('curated-banner')).not.toBeInTheDocument()
-
-    // Required strip contents from storefront.md: eyebrow + italic headline
-    // + CTA + Not now dismiss.
-    expect(screen.getByText('PERSONALIZED VISIONS')).toBeInTheDocument()
-    expect(
-      screen.getByText(/Sign in and watch Blaize tailor/),
-    ).toBeInTheDocument()
-    expect(screen.getByTestId('signin-strip-cta')).toHaveTextContent(
-      'Sign in for personalized visions',
-    )
-    expect(screen.getByTestId('signin-strip-dismiss')).toHaveTextContent(
-      'Not now',
-    )
-  })
-
-  it('clicking the strip CTA opens the auth modal via UIContext', async () => {
-    mockUser = null
-    const user = userEvent.setup()
-    renderBand()
-
-    expect(screen.getByTestId('active-modal')).toHaveTextContent('none')
-
-    await user.click(screen.getByTestId('signin-strip-cta'))
-    expect(screen.getByTestId('active-modal')).toHaveTextContent('auth')
-  })
-})
-
-// --- 1.4.2: dismissal persists to sessionStorage ------------------------
-describe('AuthStateBand — dismissal persistence (Req 1.4.2)', () => {
-  it('writes sessionStorage on dismiss and hides the strip', async () => {
-    mockUser = null
-    const user = userEvent.setup()
-    renderBand()
-
-    await user.click(screen.getByTestId('signin-strip-dismiss'))
-
-    expect(
-      window.sessionStorage.getItem('blaize.signinStrip.dismissed'),
-    ).toBe('true')
-    // Same mount: strip is gone.
     expect(screen.queryByTestId('signin-strip')).not.toBeInTheDocument()
-  })
-
-  it('does not render the strip when sessionStorage already holds the dismiss flag', () => {
-    mockUser = null
-    window.sessionStorage.setItem('blaize.signinStrip.dismissed', 'true')
-
-    renderBand()
-    expect(screen.queryByTestId('signin-strip')).not.toBeInTheDocument()
-    // Nor anything else; signed-out + dismissed is the "render nothing" path.
     expect(screen.queryByTestId('curated-banner')).not.toBeInTheDocument()
   })
 })

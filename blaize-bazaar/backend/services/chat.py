@@ -486,7 +486,10 @@ class EnhancedChatService:
 ---
 CURRENT REQUEST: {message}"""
 
-            # Deterministic intent classification
+            # Deterministic intent classification. The previous
+            # ``[ROUTING DIRECTIVE: call the X tool]`` prefix injection
+            # was deleted in the three-pattern refactor — see
+            # ``chat_stream()`` for context.
             intent = classify_intent(message)
             intent_hint = {
                 "pricing": "pricing",
@@ -495,10 +498,6 @@ CURRENT REQUEST: {message}"""
                 "search": "search",
                 "recommendation": "recommendation",
             }[intent]
-            full_message = (
-                f"[ROUTING DIRECTIVE: call the {intent_hint} tool. "
-                f"Do not call any other specialist.]\n{full_message}"
-            )
             logger.info(f"🎯 Intent: {intent} → {intent_hint}")
             
             # Invoke orchestrator with timing
@@ -1178,17 +1177,36 @@ CURRENT REQUEST: {message}"""
         session_id: Optional[str] = None,
         workshop_mode: Optional[str] = None,
         guardrails_enabled: bool = False,
-        user: Optional[Dict[str, Any]] = None
+        user: Optional[Dict[str, Any]] = None,
+        pattern: Optional[str] = None,
     ):
         """
         Async generator yielding SSE events with real-time agent streaming.
 
-        Uses asyncio.Queue to bridge the synchronous orchestrator thread
-        with the async SSE generator. Hooks capture tool results so products
-        are sent the moment a tool completes, not after the full chain finishes.
+        Uses asyncio.Queue to bridge the synchronous agent thread with the
+        async SSE generator. Hooks capture tool results so products are
+        sent the moment a tool completes, not after the full chain finishes.
+
+        The ``pattern`` parameter selects the orchestration model:
+          - ``'dispatcher'`` — Storefront production path. Deterministic
+            classifier picks one specialist; that specialist runs
+            directly via its factory. One LLM call per turn. Voice
+            preserved (no paraphrase cycle).
+          - ``'agents_as_tools'`` — Atelier Pattern I. Haiku orchestrator
+            + five ``@tool`` specialists. Two LLM calls per turn.
+          - ``'graph'`` — Atelier Pattern II (commit 2, not yet wired).
+          - ``None`` → ``'agents_as_tools'`` for backwards compatibility.
         """
         import asyncio
         import time
+
+        # Pattern defaults to agents_as_tools for backwards compat.
+        pattern = (pattern or "agents_as_tools").lower()
+        if pattern not in ("dispatcher", "agents_as_tools", "graph"):
+            logger.warning(
+                "Unknown pattern %r; falling back to agents_as_tools", pattern
+            )
+            pattern = "agents_as_tools"
 
         # Resolve the effective customer_id for this turn. Personas
         # stash their customer_id in user["customer_id"] from the
@@ -1326,32 +1344,49 @@ CURRENT REQUEST: {message}"""
             if not session_manager:
                 logger.info("ℹ️ No session manager for streaming — agent runs stateless")
 
-        # Use guarded orchestrator when guardrails enabled (Lab 3)
-        if guardrails_enabled:
-            orchestrator = create_guarded_orchestrator()
-        else:
-            orchestrator = create_orchestrator()
+        # Agent construction — Pattern I (Agents-as-Tools) builds the
+        # orchestrator here. Pattern III (Dispatcher) defers construction
+        # until after persona + skill ContextVars are set below, so the
+        # specialist factory picks them up at build time.
+        orchestrator = None
+        if pattern == "agents_as_tools":
+            if guardrails_enabled:
+                orchestrator = create_guarded_orchestrator()
+            else:
+                orchestrator = create_orchestrator()
 
-        # Graceful fallback if orchestrator not implemented yet (Module 3b TODO)
-        if orchestrator is None:
-            yield {
-                "type": "error",
-                "error": "🔧 The AI agent orchestrator isn't wired up yet. "
-                         "Complete Module 3b to enable the chat assistant."
-            }
-            return
+            # Graceful fallback if orchestrator not implemented yet (Module 3b TODO)
+            if orchestrator is None:
+                yield {
+                    "type": "error",
+                    "error": "🔧 The AI agent orchestrator isn't wired up yet. "
+                             "Complete Module 3b to enable the chat assistant."
+                }
+                return
+        # For dispatcher/graph, ``orchestrator`` is bound later once
+        # ContextVars are live. We reuse the ``orchestrator`` name so the
+        # existing streaming/hook pipeline treats specialist or graph
+        # invocations identically — every code path downstream expects a
+        # Strands Agent with ``callback_handler``, ``add_hook``,
+        # ``trace_attributes``, and a callable signature.
 
-        orchestrator.trace_attributes = {
+        # Trace attributes are applied once ``orchestrator`` is bound.
+        # For ``agents_as_tools`` that's here; for ``dispatcher`` that's
+        # after the specialist factory call below.
+        trace_attributes = {
             "session.id": session_id or "anonymous",
             "session.user": user.get("email", "anonymous") if user else "anonymous",
             "user.query": message[:100],
             "workshop": "blaize-bazaar",
-            "service": "blaize-bazaar"
+            "service": "blaize-bazaar",
+            "pattern": pattern,
         }
 
-        if session_manager:
-            orchestrator.session_manager = session_manager
-            session_manager.register_hooks(orchestrator)
+        if orchestrator is not None:
+            orchestrator.trace_attributes = trace_attributes
+            if session_manager:
+                orchestrator.session_manager = session_manager
+                session_manager.register_hooks(orchestrator)
 
         # Build conversation context
         conversation_context = ""
@@ -1450,7 +1485,22 @@ CURRENT REQUEST: {message}"""
         if persona_preamble:
             full_message = persona_preamble + full_message
 
-        # Deterministic intent classification — tells the orchestrator which agent to use
+        # Deterministic intent classification.
+        #
+        # Its output has two consumers:
+        #   1. Pattern III (Dispatcher) uses ``intent_hint`` to pick
+        #      which specialist factory to build.
+        #   2. Telemetry (``📨 chat_stream`` log, Atelier panels) uses
+        #      the classification for the routing annotation.
+        #
+        # The previous ``[ROUTING DIRECTIVE: call the X tool]`` prefix
+        # injection was deleted in the three-pattern refactor. It
+        # existed to override Haiku's routing in Pattern I when the
+        # Haiku orchestrator drifted from the classifier's verdict —
+        # a workaround for the "Agents-as-Tools paraphrases" failure
+        # mode. Pattern I now runs with the unmodified user message;
+        # Pattern III skips Haiku entirely and dispatches by the
+        # classifier directly.
         intent_t0 = time.perf_counter()
         intent = classify_intent(message)
         intent_hint = {
@@ -1460,15 +1510,6 @@ CURRENT REQUEST: {message}"""
             "search": "search",
             "recommendation": "recommendation",
         }[intent]
-        # Authoritative routing directive — Haiku 4.5 at temp 0.0 reads
-        # this as the final word, overriding its own tie-break instincts.
-        # Persona-shaped queries ("what did I buy last time") land on
-        # recommendation with the LTM preamble instead of drifting to
-        # support, which has no order-history tool.
-        full_message = (
-            f"[ROUTING DIRECTIVE: call the {intent_hint} tool. "
-            f"Do not call any other specialist.]\n{full_message}"
-        )
         timing["intent"] = (time.perf_counter() - intent_t0) * 1000
         logger.info(f"🎯 Intent: {intent} → {intent_hint}")
 
@@ -1509,7 +1550,7 @@ CURRENT REQUEST: {message}"""
         loop = asyncio.get_running_loop()
         queue: asyncio.Queue = asyncio.Queue()
 
-        # Callback handler: forward text tokens from the orchestrator thread
+        # Callback handler: forward text tokens from the agent thread.
         def streaming_callback(**kwargs):
             if "data" in kwargs:
                 try:
@@ -1519,50 +1560,63 @@ CURRENT REQUEST: {message}"""
                 except Exception:
                     pass
 
-        orchestrator.callback_handler = streaming_callback
+        # Hook factories — produce the two BeforeToolCall / AfterToolCall
+        # callbacks that push tool lifecycle events onto the queue.
+        # Extracted into a helper so the dispatcher path can attach the
+        # same hooks to its specialist agent without duplicating code.
+        def _attach_streaming_and_hooks(agent) -> None:
+            """Attach the shared streaming callback + tool lifecycle
+            hooks to any Strands Agent. Same SSE surface regardless of
+            pattern."""
+            agent.callback_handler = streaming_callback
+            try:
+                from strands.hooks.events import BeforeToolCallEvent, AfterToolCallEvent
 
-        # Register hooks for tool lifecycle events
-        try:
-            from strands.hooks.events import BeforeToolCallEvent, AfterToolCallEvent
+                def on_before_tool(event: BeforeToolCallEvent):
+                    tool_name = ""
+                    if hasattr(event, 'tool_use') and isinstance(event.tool_use, dict):
+                        tool_name = event.tool_use.get("name", "")
+                    if tool_name:
+                        try:
+                            asyncio.run_coroutine_threadsafe(
+                                queue.put({"_tool_start": tool_name}), loop
+                            ).result(timeout=5)
+                        except Exception:
+                            pass
 
-            def on_before_tool(event: BeforeToolCallEvent):
-                tool_name = ""
-                if hasattr(event, 'tool_use') and isinstance(event.tool_use, dict):
-                    tool_name = event.tool_use.get("name", "")
-                if tool_name:
+                def on_after_tool(event: AfterToolCallEvent):
+                    tool_name = ""
+                    if hasattr(event, 'tool_use') and isinstance(event.tool_use, dict):
+                        tool_name = event.tool_use.get("name", "")
+                    # Extract the actual tool result text from the Strands SDK result structure
+                    result_str = ""
+                    if hasattr(event, 'result') and event.result is not None:
+                        raw = event.result
+                        if isinstance(raw, dict) and 'content' in raw:
+                            for block in raw.get('content', []):
+                                if isinstance(block, dict) and 'text' in block:
+                                    result_str = block['text']
+                                    break
+                        if not result_str:
+                            result_str = str(raw)
                     try:
                         asyncio.run_coroutine_threadsafe(
-                            queue.put({"_tool_start": tool_name}), loop
-                        ).result(timeout=5)
+                            queue.put({"_tool_done": tool_name, "_result": result_str}), loop
+                        ).result(timeout=10)
                     except Exception:
                         pass
 
-            def on_after_tool(event: AfterToolCallEvent):
-                tool_name = ""
-                if hasattr(event, 'tool_use') and isinstance(event.tool_use, dict):
-                    tool_name = event.tool_use.get("name", "")
-                # Extract the actual tool result text from the Strands SDK result structure
-                result_str = ""
-                if hasattr(event, 'result') and event.result is not None:
-                    raw = event.result
-                    if isinstance(raw, dict) and 'content' in raw:
-                        for block in raw.get('content', []):
-                            if isinstance(block, dict) and 'text' in block:
-                                result_str = block['text']
-                                break
-                    if not result_str:
-                        result_str = str(raw)
-                try:
-                    asyncio.run_coroutine_threadsafe(
-                        queue.put({"_tool_done": tool_name, "_result": result_str}), loop
-                    ).result(timeout=10)
-                except Exception:
-                    pass
+                agent.add_hook(on_before_tool)
+                agent.add_hook(on_after_tool)
+            except (ImportError, AttributeError) as e:
+                logger.warning(f"Strands hooks not available, falling back: {e}")
 
-            orchestrator.add_hook(on_before_tool)
-            orchestrator.add_hook(on_after_tool)
-        except (ImportError, AttributeError) as e:
-            logger.warning(f"Strands hooks not available, falling back: {e}")
+        # For Pattern I (``agents_as_tools``) the orchestrator is
+        # already constructed at this point; attach the streaming and
+        # hooks to it now. Pattern III attaches after the specialist is
+        # built below (once persona + skill ContextVars are live).
+        if orchestrator is not None:
+            _attach_streaming_and_hooks(orchestrator)
 
         # --- Yield initial SSE events ---
         yield {"type": "start", "content": "Initializing agent..."}
@@ -1649,6 +1703,37 @@ CURRENT REQUEST: {message}"""
                     logger.warning("Persona ContextVar reset failed: %s", exc)
                 persona_token = None
 
+        # Pattern III (Dispatcher) builds the specialist here — AFTER
+        # the persona + skill ContextVars are live, so the factory
+        # picks them up at construction time. The specialist replaces
+        # the orchestrator for the downstream streaming pipeline;
+        # everything after this point treats ``orchestrator`` as a
+        # plain Strands Agent regardless of pattern.
+        if pattern == "dispatcher":
+            from agents.search_agent import build_search_agent
+            from agents.recommendation_agent import build_recommendation_agent
+            from agents.pricing_agent import build_pricing_agent
+            from agents.inventory_agent import build_inventory_agent
+            from agents.customer_support_agent import build_support_agent
+
+            _DISPATCHER_FACTORIES = {
+                "search": build_search_agent,
+                "recommendation": build_recommendation_agent,
+                "pricing": build_pricing_agent,
+                "inventory": build_inventory_agent,
+                "support": build_support_agent,
+            }
+            # intent_hint is one of {pricing, inventory, support,
+            # search, recommendation} — guaranteed to be in the map.
+            factory = _DISPATCHER_FACTORIES[intent_hint]
+            orchestrator = factory()
+            orchestrator.trace_attributes = trace_attributes
+            if session_manager:
+                orchestrator.session_manager = session_manager
+                session_manager.register_hooks(orchestrator)
+            _attach_streaming_and_hooks(orchestrator)
+            logger.info(f"🎯 Dispatcher | specialist={intent_hint}")
+
         async def run_orchestrator():
             try:
                 orchestrator_result[0] = await asyncio.to_thread(orchestrator, full_message)
@@ -1663,20 +1748,6 @@ CURRENT REQUEST: {message}"""
         products_sent = []
         products_buffered = []  # Hold products until text streams first
         current_tool = None
-        # Track the most recent stream segment (reset on content_reset).
-        # Used as a fallback when orchestrator_result is empty but
-        # specialist tokens were streamed.
-        streamed_text_buffer: List[str] = []
-        # Preserve the content from the last pre-reset segment. When a
-        # specialist handles the reply inline (all tokens produced
-        # during its tool invocation, then content_reset clears them),
-        # this holds the richest content we saw. Used as fallback
-        # when nothing arrives after the reset.
-        pre_reset_buffer: List[str] = []
-        # The most recent specialist tool_result text — the canonical
-        # source for the user-facing reply when the specialist handles
-        # composition inline. Captured from _result in tool_done events.
-        last_specialist_text: str = ""
         price_limit = self._extract_price_limit(message)
 
         while True:
@@ -1727,22 +1798,15 @@ CURRENT REQUEST: {message}"""
                             and (p.get("name") or p.get("product_description")) not in sent_names
                         ]
                         products_buffered.extend(new_products)
-                    # If the specialist returned editorial text (not a
-                    # JSON product envelope), capture it as a fallback
-                    # for when orchestrator_result comes back empty.
-                    # Only trust results from specialist agents — leaf
-                    # tools return JSON blobs, not prose.
-                    _SPECIALIST_TOOLS = {
-                        "search", "recommendation", "pricing",
-                        "inventory", "support",
-                    }
-                    if (
-                        tool_name in _SPECIALIST_TOOLS
-                        and not raw_products
-                        and result_str
-                        and not result_str.lstrip().startswith(("{", "["))
-                    ):
-                        last_specialist_text = result_str.strip()
+                    # NOTE: the three-pattern refactor deleted the
+                    # ``last_specialist_text`` capture here — it used
+                    # to snapshot specialist prose so the empty-
+                    # response recovery ladder (workaround #3) could
+                    # recover it when Haiku's final cycle came back
+                    # blank. Dispatcher has no paraphrase cycle;
+                    # Agents-as-Tools still runs but no longer needs
+                    # the promotion path because the orchestrator's
+                    # Haiku output is the user-facing reply, period.
 
                 tool_ms = int(
                     (time.time() - tool_starts.pop(tool_name, time.time())) * 1000
@@ -1761,21 +1825,15 @@ CURRENT REQUEST: {message}"""
                     "action": "Done",
                     "status": "completed"
                 }
-                # Reset streamed content — the orchestrator will now generate its final response
-                # and we don't want pre-tool thinking text mixed with post-tool response
+                # Reset streamed content — the agent will now generate
+                # its final text response. We don't want pre-tool
+                # thinking text mixed with post-tool response.
                 yield {"type": "content_reset"}
-                # Preserve whatever was streamed during this tool's
-                # execution. If the orchestrator produces nothing
-                # afterwards, we recover this as the user-facing text.
-                if streamed_text_buffer:
-                    pre_reset_buffer = list(streamed_text_buffer)
-                streamed_text_buffer.clear()
 
             elif "_text" in event:
                 # Stream text tokens to the client in real time
                 if not ttft_mark:
                     ttft_mark.append(time.perf_counter())
-                streamed_text_buffer.append(event["_text"])
                 yield {"type": "content_delta", "delta": event["_text"]}
 
         # --- Await orchestrator completion ---
@@ -1820,85 +1878,22 @@ CURRENT REQUEST: {message}"""
 
         parsed = await self._parse_agent_response(response_text, message, conversation_history, has_tool_products=bool(products_buffered))
 
-        # --- Prefer specialist prose over orchestrator paraphrase ---
-        # The Strands "Agents as Tools" pattern runs a final
-        # orchestrator cycle after the specialist returns, and Haiku
-        # frequently paraphrases the rich specialist reply into a flat
-        # summary ("Here are some great options!"). When a specialist
-        # produced substantially richer prose, promote it back into the
-        # user-facing text — that preserves the editorial voice the
-        # specialist spent a Opus call composing.
-        if last_specialist_text and parsed.get("text"):
-            orch_len = len(parsed["text"])
-            spec_len = len(last_specialist_text)
-            # Promote when the specialist's prose is at least 2x longer
-            # OR when the orchestrator output is a known flat paraphrase.
-            flat_paraphrase = (
-                "here are some" in parsed["text"].lower()
-                or "here's what i found" in parsed["text"].lower()
-                or "great options" in parsed["text"].lower()
-                or orch_len < 80
-            )
-            if spec_len >= orch_len * 2 or (flat_paraphrase and spec_len > 120):
-                logger.info(
-                    "Preferring specialist prose | orch_chars=%d spec_chars=%d",
-                    orch_len, spec_len,
-                )
-                parsed["text"] = last_specialist_text
-
-        # Fallback for empty-orchestrator turns: if the agent chain
-        # completed but produced no text and no products, the user
-        # sees a blank message. Synthesize a graceful recovery line
-        # so the chat never strands on silence. The fallback depends
-        # on whether we had any tool activity — informative failure
-        # beats a mystery blank.
+        # Minimal empty-response fallback. The aggressive recovery
+        # ladder (specialist-over-orchestrator promotion and the
+        # pre/post content_reset buffer walk) was deleted in the
+        # three-pattern refactor — it existed to compensate for Haiku's
+        # paraphrase in Pattern I, but the Dispatcher has no paraphrase
+        # cycle and the Graph mode routes deterministically. A single
+        # generic line covers the pathological case where Bedrock
+        # itself returns nothing at all.
         if not parsed["text"] and not products_buffered and not parsed["products"]:
-            # Recovery priority:
-            # 1. last_specialist_text — the specialist's tool_result
-            #    prose. Canonical when a specialist composes the reply
-            #    inline (most common when persona context is active).
-            # 2. streamed buffers — either post-reset (orchestrator's
-            #    final synthesis) or pre-reset (specialist's inline
-            #    streaming). Pick whichever is longer.
-            # 3. Generic fallback.
-            recovered = ""
-            recovery_source = ""
-            if last_specialist_text and len(last_specialist_text) > 40:
-                recovered = last_specialist_text
-                recovery_source = "specialist_tool_result"
-            else:
-                post_reset = "".join(streamed_text_buffer).strip()
-                pre_reset = "".join(pre_reset_buffer).strip()
-                streamed = post_reset if len(post_reset) > len(pre_reset) else pre_reset
-                if streamed and len(streamed) > 40:
-                    recovered = streamed
-                    recovery_source = f"streamed_buffer (pre={len(pre_reset)}, post={len(post_reset)})"
-
-            if recovered:
-                parsed["text"] = recovered
-                logger.info(
-                    "chat_stream recovered | source=%s chars=%d",
-                    recovery_source, len(recovered),
-                )
-            elif tool_trace:
-                # Tools fired but produced nothing — likely "no matches".
-                parsed["text"] = (
-                    "I looked through the catalog but didn't land on a clear pick for that one. "
-                    "Want to narrow it down — a price range, a category, or a vibe?"
-                )
-                logger.warning(
-                    "chat_stream empty-response fallback fired | tools=%d products=%d",
-                    len(tool_trace), len(products_buffered),
-                )
-            else:
-                parsed["text"] = (
-                    "I'm not sure I caught that — could you give me a bit more to go on? "
-                    "A price range, a category, or what you'd use it for?"
-                )
-                logger.warning(
-                    "chat_stream empty-response fallback fired | tools=%d products=%d",
-                    len(tool_trace), len(products_buffered),
-                )
+            parsed["text"] = (
+                "I couldn't land on a clear answer — try rephrasing or narrowing the ask."
+            )
+            logger.warning(
+                "chat_stream empty response | pattern=%s tools=%d",
+                pattern, len(tool_trace),
+            )
 
         # Send clean text content FIRST (before product cards)
         if parsed["text"]:

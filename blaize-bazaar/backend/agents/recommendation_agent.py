@@ -1,5 +1,18 @@
 """
-Product Recommendation Agent - Suggests products based on user preferences
+Product Recommendation Agent — suggests pieces based on the shopper's
+preferences and, when a persona is active, their LTM + past orders.
+
+Exposes two surfaces that share one agent construction path:
+
+1. ``build_recommendation_agent()`` — factory returning a configured
+   ``Agent`` instance. Used by the Storefront dispatcher (Pattern III)
+   and the Atelier Graph pattern (Pattern II). Reads the persona
+   preamble and skill ContextVars at construction time, same as the
+   ``@tool`` path does.
+
+2. ``recommendation(query)`` — ``@tool``-decorated wrapper used by the
+   Atelier's Agents-as-Tools orchestrator (Pattern I). Delegates to
+   the factory so both surfaces produce identical agents.
 """
 import json
 import re
@@ -39,6 +52,39 @@ def _ensure_products_in_output(text: str, tool_results: list) -> str:
     return text
 
 
+def build_recommendation_agent() -> Agent:
+    """Return a configured Recommendation specialist Agent.
+
+    Reads the current turn's persona preamble and loaded skills from
+    their ContextVars at construction time. Callers are responsible
+    for setting those ContextVars before invoking this factory — the
+    chat pipeline in ``services/chat.py`` does so on every turn.
+
+    === CHALLENGE 3: START ===
+    inject_skills() and inject_persona_preamble() are no-ops when
+    their ContextVars are empty (the common case in atelier smoke
+    tests and anonymous sessions), so this factory produces the same
+    agent as before in those scenarios.
+    === CHALLENGE 3: END ===
+    """
+    return Agent(
+        model=BedrockModel(
+            model_id=settings.BEDROCK_CHAT_MODEL,
+            max_tokens=4096,
+            temperature=0.2,
+        ),
+        system_prompt=inject_persona_preamble(
+            inject_skills(RECOMMENDATION_SYSTEM_PROMPT)
+        ),
+        tools=[
+            search_products,
+            trending_products,
+            compare_products,
+            browse_category,
+        ],
+    )
+
+
 @tool
 def recommendation(query: str) -> str:
     """
@@ -55,29 +101,7 @@ def recommendation(query: str) -> str:
     """
     try:
         tool_results = []
-
-        # === CHALLENGE 3: START ===
-        # inject_skills() reads the current turn's loaded skills from the
-        # ContextVar set by chat.chat_stream(). When zero skills are loaded
-        # (the common case), this is a no-op and returns the base prompt
-        # unchanged. Agent-agnostic — see backend/skills/context.py.
-        agent = Agent(
-            model=BedrockModel(
-                model_id=settings.BEDROCK_CHAT_MODEL,
-                max_tokens=4096,
-                temperature=0.2,
-            ),
-            system_prompt=inject_persona_preamble(
-                inject_skills(RECOMMENDATION_SYSTEM_PROMPT)
-            ),
-            tools=[
-                search_products,
-                trending_products,
-                compare_products,
-                browse_category,
-            ],
-        )
-        # === CHALLENGE 3: END ===
+        agent = build_recommendation_agent()
 
         # Capture inner tool results so we can guarantee product data in output
         try:
