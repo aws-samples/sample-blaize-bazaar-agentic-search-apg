@@ -192,11 +192,6 @@ export function IntentInfoCard({ intent, product }: IntentInfoCardProps) {
   )
 }
 
-// SearchPill was removed in the storefront hero-drawer redesign.
-// The floating CommandPill + ⌘K shortcut + suggestion pills are now
-// the three entry points to the chat drawer. The inline search bar
-// over the cover photo is gone — the cover gets to breathe.
-
 interface IntentTickerProps {
   intents: Intent[]
   activeIndex: number

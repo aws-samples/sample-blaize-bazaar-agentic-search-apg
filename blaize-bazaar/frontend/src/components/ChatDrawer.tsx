@@ -18,7 +18,7 @@
  * Reuses ``useAgentChat`` for state, streaming, and persistence.
  * The Atelier's ConciergeModal is unaffected by this component.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
@@ -120,9 +120,23 @@ export default function ChatDrawer() {
     openerRef.current = null
   }, [isOpen])
 
-  // Consume pending query (from suggestion pill click)
-  useEffect(() => {
-    if (!isOpen) return
+  // Consume pending query (from suggestion pill click).
+  //
+  // Uses useLayoutEffect (not useEffect) so the pending query is
+  // consumed and sendMessage fires BEFORE the browser paints the first
+  // frame. This prevents a one-frame flicker where the empty-state
+  // ("What can Blaize help you find today?") renders before the user
+  // message appears. sendMessage adds the user message to state
+  // synchronously (via setMessages) so the first visible paint already
+  // shows the user bubble + the "thinking" placeholder.
+  const hasConsumedRef = useRef(false)
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      hasConsumedRef.current = false
+      return
+    }
+    if (hasConsumedRef.current) return
+    hasConsumedRef.current = true
     const seeded = consumePendingQuery()
     if (seeded) {
       void sendMessage(seeded)
