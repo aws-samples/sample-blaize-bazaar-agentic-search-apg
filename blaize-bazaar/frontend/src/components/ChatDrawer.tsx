@@ -96,12 +96,24 @@ export default function ChatDrawer() {
     setInputValue,
     isLoading,
     sendMessage,
+    clearChat,
   } = useAgentChat({
     mode: 'storefront',
     guardrailsEnabled,
     initialMessages,
     persistKey: 'blaize-drawer-storefront',
   })
+
+  // Clear the conversation when the persona changes so the new
+  // persona's welcome screen and LTM context take effect immediately.
+  const prevPersonaId = useRef(persona?.id ?? null)
+  useEffect(() => {
+    const currentId = persona?.id ?? null
+    if (prevPersonaId.current !== currentId) {
+      prevPersonaId.current = currentId
+      clearChat(initialMessages)
+    }
+  }, [persona?.id, clearChat, initialMessages])
 
   // Turn count (user messages only)
   const turnCount = messages.filter(m => m.role === 'user').length

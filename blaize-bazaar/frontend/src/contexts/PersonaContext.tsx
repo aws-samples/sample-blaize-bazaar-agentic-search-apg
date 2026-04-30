@@ -107,6 +107,8 @@ export function PersonaProvider({ children }: { children: ReactNode }) {
       // the next open instead of being shadowed by a stale cached reply.
       localStorage.removeItem('blaize-concierge-storefront')
       localStorage.removeItem('blaize-concierge-atelier')
+      // ChatDrawer uses its own persist key.
+      localStorage.removeItem('blaize-drawer-storefront')
 
       setPersona(data.persona)
     } catch (err) {
@@ -124,6 +126,7 @@ export function PersonaProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('blaize-atelier-chat')
     localStorage.removeItem('blaize-concierge-storefront')
     localStorage.removeItem('blaize-concierge-atelier')
+    localStorage.removeItem('blaize-drawer-storefront')
   }, [])
 
   return (
