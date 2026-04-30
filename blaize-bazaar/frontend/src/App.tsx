@@ -26,6 +26,7 @@ import { PersonaProvider } from './contexts/PersonaContext'
 import AuthModal from './components/AuthModal'
 import PreferencesModal from './components/PreferencesModal'
 import ConciergeModal from './components/ConciergeModal'
+import ChatDrawer from './components/ChatDrawer'
 import ComparisonHost from './components/ComparisonHost'
 import SignInPage from './components/SignInPage'
 import StorefrontPage from './pages/StorefrontPage'
@@ -115,6 +116,7 @@ function App() {
               }}
             >
               <ConciergeModal />
+              <ChatDrawer />
               <ComparisonHost />
               <Routes>
                 {/*

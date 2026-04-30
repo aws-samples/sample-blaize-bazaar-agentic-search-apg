@@ -82,7 +82,7 @@ vi.mock('../components/Header', () => ({
   default: () => <div data-testid="stub-header">header</div>,
 }))
 vi.mock('../contexts/UIContext', () => ({
-  useUI: () => ({ openModal: vi.fn() }),
+  useUI: () => ({ openModal: vi.fn(), setChatSurface: vi.fn() }),
 }))
 vi.mock('../contexts/PersonaContext', () => ({
   usePersona: () => ({

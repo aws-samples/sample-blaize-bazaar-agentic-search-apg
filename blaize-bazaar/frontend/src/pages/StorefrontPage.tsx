@@ -18,6 +18,7 @@
  * `savePreferences` advances the counter, React tears down the grid and
  * the parallax observer re-fires on mount.
  */
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AnnouncementBar from '../components/AnnouncementBar'
 import Header, { type NavItem } from '../components/Header'
@@ -48,8 +49,14 @@ const NAV_ROUTES: Record<NavItem, string> = {
 
 export default function StorefrontPage() {
   const { prefsVersion } = useAuth()
-  const { openModal } = useUI()
+  const { openModal, setChatSurface } = useUI()
   const navigate = useNavigate()
+
+  // Tell UIProvider that ⌘K should open the drawer (not the concierge
+  // modal) while on storefront routes.
+  useEffect(() => {
+    setChatSurface('drawer')
+  }, [setChatSurface])
 
   const handleNavigate = (item: NavItem) => {
     if (item === 'account') {

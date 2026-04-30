@@ -50,6 +50,7 @@ import StateManagementArchPage from '../components/atelier-arch/StateManagementA
 import EvaluationsArchPage from '../components/atelier-arch/EvaluationsArchPage'
 import GroundingArchPage from '../components/atelier-arch/GroundingArchPage'
 import type { SkillRouting } from '../hooks/useAgentChat'
+import { useUI } from '../contexts/UIContext'
 import AtelierHero from '../components/AtelierHero'
 import AtelierSpotlight from '../components/AtelierSpotlight'
 import AtmosphereStrip from '../components/AtmosphereStrip'
@@ -473,6 +474,13 @@ function WorkshopContent() {
   const { section } = useParams<{ section?: string }>()
   const [events, setEvents] = useState<WorkshopEvent[]>([])
   const [detailPanel, setDetailPanel] = useState<DetailPanelKey>(null)
+
+  // Tell UIProvider that ⌘K should open the concierge modal (not the
+  // drawer) while on atelier routes.
+  const { setChatSurface } = useUI()
+  useEffect(() => {
+    setChatSurface('concierge')
+  }, [setChatSurface])
 
   // Sync URL :section param → detailPanel on mount and on URL changes.
   // Tabs stay in component state (Architecture/Telemetry/Performance);

@@ -74,25 +74,25 @@ describe('UIContext modal singleton', () => {
 })
 
 describe('UIContext global keyboard shortcuts', () => {
-  it('Cmd+K toggles the concierge open and closed', async () => {
+  it('Cmd+K toggles the chat surface open and closed (default: drawer)', async () => {
     const user = userEvent.setup()
     render(<Probe />, { wrapper })
 
     expect(screen.getByTestId('active')).toHaveTextContent('none')
 
     await user.keyboard('{Meta>}k{/Meta}')
-    expect(screen.getByTestId('active')).toHaveTextContent('concierge')
+    expect(screen.getByTestId('active')).toHaveTextContent('drawer')
 
     await user.keyboard('{Meta>}k{/Meta}')
     expect(screen.getByTestId('active')).toHaveTextContent('none')
   })
 
-  it('Ctrl+K also toggles the concierge (non-mac shortcut)', async () => {
+  it('Ctrl+K also toggles the chat surface (non-mac shortcut)', async () => {
     const user = userEvent.setup()
     render(<Probe />, { wrapper })
 
     await user.keyboard('{Control>}k{/Control}')
-    expect(screen.getByTestId('active')).toHaveTextContent('concierge')
+    expect(screen.getByTestId('active')).toHaveTextContent('drawer')
 
     await user.keyboard('{Control>}k{/Control}')
     expect(screen.getByTestId('active')).toHaveTextContent('none')

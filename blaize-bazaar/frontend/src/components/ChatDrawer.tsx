@@ -1,0 +1,315 @@
+/**
+ * ChatDrawer — right-side chat drawer for the storefront.
+ *
+ * Replaces the centered ConciergeModal on storefront routes. Slides in
+ * from the right at 240ms ease-out; backdrop dims the storefront to 35%
+ * espresso. Matches docs/storefront-hero-drawer.html State 3.
+ *
+ * Three entry points (all external — the drawer itself is passive):
+ *   1. Floating CommandPill click → ``activeModal === 'drawer'``
+ *   2. ⌘K shortcut → same (UIProvider routes to 'drawer' on storefront)
+ *   3. Suggestion pill click → ``openDrawerWithQuery(text)``
+ *
+ * Mounts via ``createPortal(..., document.body)`` — mandatory because
+ * the storefront header's ``backdrop-filter: blur(12px)`` creates a
+ * containing block that traps ``position: fixed`` descendants (same
+ * bug we hit with PersonaModal).
+ *
+ * Reuses ``useAgentChat`` for state, streaming, and persistence.
+ * The Atelier's ConciergeModal is unaffected by this component.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { X } from 'lucide-react'
+import { useUI } from '../contexts/UIContext'
+import { useLayout } from '../contexts/LayoutContext'
+import { useCart } from '../contexts/CartContext'
+import { usePersona } from '../contexts/PersonaContext'
+import {
+  useAgentChat,
+  type AgentChatMessage,
+} from '../hooks/useAgentChat'
+import StorefrontChatBody from './StorefrontChatBody'
+import '../styles/chat-drawer.css'
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const WELCOME_STOREFRONT =
+  "Tell me what you're after. Linen for a slow Sunday, a piece that travels, a gift that lands."
+
+// ---------------------------------------------------------------------------
+// Platform detection for keyboard hint
+// ---------------------------------------------------------------------------
+
+function detectMac(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const uaData = (navigator as unknown as {
+    userAgentData?: { platform?: string }
+  }).userAgentData
+  const platform = uaData?.platform ?? navigator.platform ?? ''
+  return /mac|iphone|ipad|ipod/i.test(platform)
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export default function ChatDrawer() {
+  const { activeModal, closeModal, consumePendingQuery } = useUI()
+  const { guardrailsEnabled } = useLayout()
+  const { addToCart } = useCart()
+  const { persona } = usePersona()
+
+  const isOpen = activeModal === 'drawer'
+  const [isMac, setIsMac] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const openerRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    setIsMac(detectMac())
+  }, [])
+
+  // Initial welcome message
+  const initialMessages = useMemo<AgentChatMessage[]>(() => {
+    const firstName = persona ? persona.display_name.split(' ')[0] : ''
+    const h = new Date().getHours()
+    const tod = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+    const content = persona
+      ? `${tod}, ${firstName}. ${WELCOME_STOREFRONT}`
+      : WELCOME_STOREFRONT
+    return [
+      {
+        role: 'assistant',
+        content,
+        timestamp: new Date(),
+      },
+    ]
+  }, [persona])
+
+  const {
+    messages,
+    inputValue,
+    setInputValue,
+    isLoading,
+    sendMessage,
+  } = useAgentChat({
+    mode: 'storefront',
+    guardrailsEnabled,
+    initialMessages,
+    persistKey: 'blaize-drawer-storefront',
+  })
+
+  // Turn count (user messages only)
+  const turnCount = messages.filter(m => m.role === 'user').length
+
+  // Focus input on open
+  useEffect(() => {
+    if (!isOpen) return
+    openerRef.current = document.activeElement as HTMLElement
+    const t = setTimeout(() => inputRef.current?.focus(), 50)
+    return () => clearTimeout(t)
+  }, [isOpen])
+
+  // Return focus on close
+  useEffect(() => {
+    if (isOpen) return
+    openerRef.current?.focus()
+    openerRef.current = null
+  }, [isOpen])
+
+  // Consume pending query (from suggestion pill click)
+  useEffect(() => {
+    if (!isOpen) return
+    const seeded = consumePendingQuery()
+    if (seeded) {
+      void sendMessage(seeded)
+    }
+  }, [isOpen, consumePendingQuery, sendMessage])
+
+  // Auto-scroll
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!isOpen) return
+    const el = scrollAreaRef.current
+    if (!el) return
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+    if (nearBottom) {
+      const t = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }, 50)
+      return () => clearTimeout(t)
+    }
+  }, [messages, isOpen])
+
+  // Focus trap: Tab/Shift+Tab cycle within drawer
+  const drawerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!isOpen) return
+    const el = drawerRef.current
+    if (!el) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+      const focusable = el.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [isOpen])
+
+  const handleKeyPress = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+        e.preventDefault()
+        sendMessage()
+      }
+    },
+    [isLoading, sendMessage],
+  )
+
+  const hasUserMessages = messages.some(m => m.role === 'user')
+  const keycap = isMac ? '⌘K' : 'Ctrl+K'
+
+  return createPortal(
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            className="cd-backdrop"
+            data-testid="chat-drawer-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.24 }}
+            onClick={closeModal}
+          />
+
+          {/* Drawer */}
+          <motion.div
+            ref={drawerRef}
+            className="cd-drawer"
+            data-testid="chat-drawer"
+            role="dialog"
+            aria-label="Chat with Blaize"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ duration: 0.24, ease: [0.4, 0, 0.2, 1] }}
+          >
+            {/* Mobile drag handle (decorative) */}
+            <div className="cd-drag-handle" aria-hidden />
+
+            {/* Header */}
+            <div className="cd-head">
+              <div className="cd-head-stack">
+                <div className="cd-head-eyebrow">Concierge</div>
+                <h3 className="cd-head-title">
+                  Ask <em>Blaize.</em>
+                </h3>
+                <div className="cd-head-meta">
+                  {persona && persona.id !== 'fresh' && (
+                    <>
+                      <span className="cd-persona-mark">
+                        <span
+                          className="cd-persona-av"
+                          style={{
+                            background: persona.avatar_color,
+                            color: '#faf3e8',
+                          }}
+                        >
+                          {persona.avatar_initial}
+                        </span>
+                        <span className="cd-persona-name">
+                          {persona.display_name.split(' ')[0]}
+                        </span>
+                      </span>
+                      <span className="cd-meta-sep">·</span>
+                    </>
+                  )}
+                  <span>
+                    turn {String(turnCount).padStart(2, '0')}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="cd-close"
+                aria-label="Close drawer"
+                onClick={closeModal}
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="cd-body" ref={scrollAreaRef}>
+              {!hasUserMessages && (
+                <p className="cd-empty-state">
+                  What can Blaize help you find today?
+                </p>
+              )}
+              {hasUserMessages && (
+                <StorefrontChatBody
+                  messages={messages}
+                  sendMessage={sendMessage}
+                  addToCart={addToCart}
+                  persona={persona}
+                />
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Footer */}
+            <div className="cd-foot">
+              <div className="cd-input-row">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  className="cd-input"
+                  value={inputValue}
+                  onChange={e => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  placeholder={
+                    hasUserMessages
+                      ? 'Continue the conversation…'
+                      : "Tell Blaize what you're looking for…"
+                  }
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  className="cd-send"
+                  disabled={!inputValue.trim() || isLoading}
+                  aria-label="Send"
+                  onClick={() => sendMessage()}
+                >
+                  Ask
+                </button>
+              </div>
+              <div className="cd-foot-meta">
+                <span>Esc to close · {keycap} to focus</span>
+                <span>Conversation persists this session</span>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>,
+    document.body,
+  )
+}

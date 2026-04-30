@@ -29,6 +29,7 @@ import type { WorkshopMode } from './LayoutContext'
 
 export type ModalName =
   | 'concierge'
+  | 'drawer'
   | 'auth'
   | 'preferences'
   | 'cart'
@@ -60,10 +61,18 @@ interface UIContextValue {
   closeModal: () => void
   toggleConcierge: () => void
 
+  // Chat drawer (storefront-only surface). Route-aware components call
+  // ``setChatSurface('drawer')`` on mount so the global ⌘K handler
+  // opens the right surface without needing useLocation() in UIProvider.
+  chatSurface: 'concierge' | 'drawer'
+  setChatSurface: (s: 'concierge' | 'drawer') => void
+  toggleDrawer: () => void
+  openDrawerWithQuery: (text: string) => void
+
   // Pending concierge query — the hero search pill seeds this when the
-  // user submits, then ConciergeModal consumes it on open (and clears it
-  // via `consumePendingQuery`). Keeps the handoff one-way so the hero
-  // form doesn't also need to hold onto the value.
+  // user submits, then ConciergeModal/ChatDrawer consumes it on open
+  // (and clears it via `consumePendingQuery`). Keeps the handoff
+  // one-way so the hero form doesn't also need to hold onto the value.
   pendingConciergeQuery: string | null
   openConciergeWithQuery: (text: string) => void
   consumePendingQuery: () => string | null
@@ -99,6 +108,12 @@ export function UIProvider({ children }: { children: ReactNode }) {
     string | null
   >(null)
 
+  // Chat surface preference — route-aware components set this on mount
+  // so the global ⌘K handler opens the right surface without needing
+  // useLocation() (UIProvider sits above BrowserRouter).
+  // StorefrontPage sets 'drawer'; WorkshopPage sets 'concierge'.
+  const [chatSurface, setChatSurface] = useState<'concierge' | 'drawer'>('drawer')
+
   const openModal = useCallback((name: ModalName) => {
     // Opening any modal closes the previous one first (Req 1.11.4).
     setActiveModal(name)
@@ -119,6 +134,10 @@ export function UIProvider({ children }: { children: ReactNode }) {
     setActiveModal(prev => (prev === 'concierge' ? null : 'concierge'))
   }, [])
 
+  const toggleDrawer = useCallback(() => {
+    setActiveModal(prev => (prev === 'drawer' ? null : 'drawer'))
+  }, [])
+
   const openComparison = useCallback((products: ComparisonProduct[]) => {
     setComparisonProducts(products)
     setActiveModal('comparison')
@@ -129,6 +148,13 @@ export function UIProvider({ children }: { children: ReactNode }) {
     if (!trimmed) return
     setPendingConciergeQuery(trimmed)
     setActiveModal('concierge')
+  }, [])
+
+  const openDrawerWithQuery = useCallback((text: string) => {
+    const trimmed = text.trim()
+    if (!trimmed) return
+    setPendingConciergeQuery(trimmed)
+    setActiveModal('drawer')
   }, [])
 
   // Read-and-clear so the concierge only dispatches the seeded query once,
@@ -145,10 +171,14 @@ export function UIProvider({ children }: { children: ReactNode }) {
   // Global keyboard shortcuts (Req 1.11.2, 1.11.3, 1.11.5).
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Cmd+K on macOS, Ctrl+K elsewhere: toggle concierge.
+      // Cmd+K on macOS, Ctrl+K elsewhere: toggle the active chat surface.
+      // ``chatSurface`` is set by route-aware components (StorefrontPage
+      // sets 'drawer', WorkshopPage sets 'concierge') so this handler
+      // doesn't need useLocation().
       if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
         e.preventDefault()
-        setActiveModal(prev => (prev === 'concierge' ? null : 'concierge'))
+        const target = chatSurface
+        setActiveModal(prev => (prev === target ? null : target))
         return
       }
       // Escape: close comparison back to concierge, or close whichever other
@@ -162,7 +192,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [chatSurface])
 
   // --- Legacy helpers ------------------------------------------------------
   // AIAssistant owns its local isOpen state and syncs outward to LayoutContext.
@@ -193,6 +223,10 @@ export function UIProvider({ children }: { children: ReactNode }) {
       openModal,
       closeModal,
       toggleConcierge,
+      chatSurface,
+      setChatSurface,
+      toggleDrawer,
+      openDrawerWithQuery,
       pendingConciergeQuery,
       openConciergeWithQuery,
       consumePendingQuery,
@@ -207,6 +241,10 @@ export function UIProvider({ children }: { children: ReactNode }) {
       openModal,
       closeModal,
       toggleConcierge,
+      chatSurface,
+      setChatSurface,
+      toggleDrawer,
+      openDrawerWithQuery,
       pendingConciergeQuery,
       openConciergeWithQuery,
       consumePendingQuery,

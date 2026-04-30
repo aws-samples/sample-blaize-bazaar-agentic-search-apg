@@ -39,15 +39,23 @@ function detectMac(): boolean {
 }
 
 export default function CommandPill() {
-  const { toggleConcierge, activeModal } = useUI()
+  const { toggleDrawer, toggleConcierge, activeModal, chatSurface } = useUI()
   const [isMac, setIsMac] = useState(false)
 
   useEffect(() => {
     setIsMac(detectMac())
   }, [])
 
+  // Hide the pill while the drawer is open — no reason for two entry
+  // points to the same surface to be visible simultaneously.
+  if (activeModal === 'drawer') return null
+
   const pressed = activeModal === 'concierge'
   const keycap = isMac ? COMMAND_PILL.KEY_CAP_MAC : COMMAND_PILL.KEY_CAP_WIN
+
+  // On storefront routes chatSurface is 'drawer'; on atelier it's
+  // 'concierge'. The pill always opens whichever is active.
+  const handleClick = chatSurface === 'drawer' ? toggleDrawer : toggleConcierge
 
   return (
     <button
@@ -55,7 +63,7 @@ export default function CommandPill() {
       data-testid="command-pill"
       aria-label={`${COMMAND_PILL.LABEL} (${keycap})`}
       aria-pressed={pressed}
-      onClick={toggleConcierge}
+      onClick={handleClick}
       className="concierge-glow"
       style={{
         position: 'fixed',
