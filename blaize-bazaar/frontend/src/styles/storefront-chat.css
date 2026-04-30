@@ -281,12 +281,18 @@
   flex-shrink: 0;
 }
 
-/* Thinking inline */
+/* Thinking inline — premium concierge feel.
+ *
+ * Three staggered dots with a soft pulse, plus a "Considering" label
+ * in small-caps burgundy. The dots use a custom ease-in-out-back
+ * timing so they feel organic, not mechanical. The label fades in
+ * with a 200ms delay so the dots lead the eye.
+ */
 .ec-thinking-inline {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 0;
+  padding: 12px 0 8px;
 }
 .ec-thinking-label {
   font-family: var(--sans);
@@ -295,6 +301,12 @@
   text-transform: uppercase;
   color: var(--red-1);
   font-weight: 500;
+  animation: thinking-label-in 400ms ease-out both;
+  animation-delay: 200ms;
+}
+@keyframes thinking-label-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 /* Message body
@@ -326,20 +338,37 @@
   letter-spacing: 0;
 }
 
-/* Streaming cursor — thin blinking caret, not a block. Reads as a
- * live typing indicator rather than a retro terminal. */
+/* Streaming cursor — thin blinking caret with a soft glow. Reads as
+ * a live typing indicator. The glow is a 4px burgundy box-shadow that
+ * pulses in sync with the blink — subtle enough to feel alive without
+ * being distracting. */
 .ec-cursor {
   display: inline-block;
   width: 2px;
-  height: 1em;
+  height: 1.1em;
   vertical-align: text-bottom;
   margin-left: 2px;
   background: var(--red-1);
   border-radius: 1px;
-  animation: cursor-blink 1s step-end infinite;
+  animation: cursor-glow 1.2s ease-in-out infinite;
 }
 .ec-cursor::after {
   content: none;
+}
+@keyframes cursor-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(168, 66, 58, 0.4); }
+  50% { opacity: 0.3; box-shadow: 0 0 0px rgba(168, 66, 58, 0); }
+}
+
+/* Streaming body — words fade in with a subtle opacity transition
+ * as the rAF buffer flushes new content. The transition is on the
+ * container, not individual words, so it's cheap. */
+.ec-msg-streaming {
+  animation: streaming-breathe 2s ease-in-out infinite;
+}
+@keyframes streaming-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.92; }
 }
 
 /* Product artifacts stack */
@@ -479,6 +508,11 @@
   font-size: 12px;
   color: var(--ink-3);
   border-bottom: 1px dashed var(--rule-1);
+  animation: toolcall-slide-in 300ms ease-out both;
+}
+@keyframes toolcall-slide-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 .ec-toolcall:last-child {
   border-bottom: none;

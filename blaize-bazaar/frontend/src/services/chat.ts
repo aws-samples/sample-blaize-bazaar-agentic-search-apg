@@ -101,8 +101,8 @@ export async function sendChatMessageStreaming(
         session_id: getSessionId(),
         workshop_mode: workshopMode || null,
         guardrails_enabled: guardrailsEnabled || false,
-        customer_id: customerId || null,
-        pattern: pattern || null,
+        customer_id: customerId ?? null,
+        pattern: pattern ?? null,
       }),
     })
 

@@ -31,6 +31,7 @@ import {
   type AgentChatMessage,
 } from '../hooks/useAgentChat'
 import StorefrontChatBody from './StorefrontChatBody'
+import StorefrontWelcome from './StorefrontWelcome'
 import '../styles/chat-drawer.css'
 
 // ---------------------------------------------------------------------------
@@ -273,9 +274,10 @@ export default function ChatDrawer() {
             {/* Body */}
             <div className="cd-body" ref={scrollAreaRef}>
               {!hasUserMessages && (
-                <p className="cd-empty-state">
-                  What can Blaize help you find today?
-                </p>
+                <StorefrontWelcome
+                  persona={persona}
+                  onSend={(text) => void sendMessage(text)}
+                />
               )}
               {hasUserMessages && (
                 <StorefrontChatBody
