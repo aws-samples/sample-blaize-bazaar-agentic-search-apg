@@ -19,6 +19,7 @@
 import '../styles/storefront-welcome.css'
 import type { PersonaSnapshot } from '../contexts/PersonaContext'
 import { useCatalogStats } from '../hooks/useCatalogStats'
+import { SHOWCASE_PRODUCTS } from '../data/showcaseProducts'
 
 interface StorefrontWelcomeProps {
   onSend: (text: string) => void
@@ -180,25 +181,26 @@ export default function StorefrontWelcome({ onSend, persona }: StorefrontWelcome
   const greeting = `${TOD_GREETING[tod]}${copy.greetingSuffix(firstName)}.`
   const stats = useCatalogStats()
 
+  // Resolve a real product image for the cover. Match the standout
+  // product name from the catalog stats against the showcase products;
+  // fall back to the first showcase product if no match.
+  const standoutMatch = stats?.standout_name
+    ? SHOWCASE_PRODUCTS.find(p =>
+        p.name.toLowerCase().includes(stats.standout_name!.toLowerCase()) ||
+        stats.standout_name!.toLowerCase().includes(p.name.toLowerCase())
+      )
+    : null
+  const coverProduct = standoutMatch ?? SHOWCASE_PRODUCTS[0]
+
   return (
     <div className="sf-welcome">
-      {/* Cover image — CSS-only vessel still life */}
+      {/* Cover image — real product photo from the catalog */}
       <div className="sf-cover">
-        <div className="sf-cover-floor" />
-        <div className="sf-cover-shapes">
-          <div className="sf-vessel-wrap">
-            <div className="sf-vessel sf-vessel-tall" />
-            <div className="sf-vessel-shadow" />
-          </div>
-          <div className="sf-vessel-wrap">
-            <div className="sf-vessel sf-vessel-short" />
-            <div className="sf-vessel-shadow" />
-          </div>
-          <div className="sf-vessel-wrap">
-            <div className="sf-vessel sf-vessel-med" />
-            <div className="sf-vessel-shadow" />
-          </div>
-        </div>
+        <img
+          src={coverProduct.imageUrl}
+          alt={coverProduct.name}
+          className="sf-cover-img"
+        />
         <div className="sf-cover-overlay">
           <div className="sf-cover-eyebrow">
             <span className="sf-cover-dot" />
