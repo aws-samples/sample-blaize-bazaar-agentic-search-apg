@@ -352,8 +352,7 @@ function AgentMessage({
               className="ec-followup"
               onClick={() => onFollowUp(chip)}
             >
-              <span className="ec-followup-bullet">&middot;</span>
-              <span className="ec-followup-label">{chip}</span>
+              {chip}
             </button>
           ))}
         </div>

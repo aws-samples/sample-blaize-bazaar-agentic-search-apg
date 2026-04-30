@@ -612,11 +612,3 @@
   outline: 2px solid var(--red-1);
   outline-offset: 2px;
 }
-/* The bullet and label spans from the previous list-style are no
- * longer rendered — the chip label is the button's direct text. The
- * old class names are retained in the component to keep the git diff
- * scoped to CSS, but they're inert here. */
-.ec-followup-bullet,
-.ec-followup-label {
-  display: contents;
-}
