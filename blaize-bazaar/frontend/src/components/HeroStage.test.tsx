@@ -13,9 +13,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import HeroStage, { matchIntent } from './HeroStage'
 import { INTENTS } from '../copy'
 
-// HeroStage reads `useUI()` to route the SearchPill submission into the
-// concierge modal. The real provider lives behind the full app context tree,
-// so stub it out with a no-op seed function — these tests cover hero
+// HeroStage no longer reads `useUI()` — the SearchPill was removed in
+// the storefront hero-drawer redesign. The mock below is kept for any
+// remaining consumers in the test tree that render inside UIProvider.
 // rotation / ticker behavior, not concierge wiring.
 const mockOpenConciergeWithQuery = vi.fn()
 vi.mock('../contexts/UIContext', () => ({
@@ -212,55 +212,10 @@ describe('HeroStage — ticker click jumps and resets timer (Req 1.3.8)', () => 
   })
 })
 
-describe('HeroStage — search pill keyword match jumps to intent (Req 1.3.9)', () => {
-  it('jumps to the running-gift intent when the user types "footwear" and submits', () => {
-    render(<HeroStage />)
-
-    const input = screen.getByTestId('search-pill-input') as HTMLInputElement
-    const form = screen.getByTestId('search-pill')
-
-    act(() => {
-      fireEvent.change(input, { target: { value: 'footwear' } })
-      fireEvent.submit(form)
-    })
-
-    // Intent 2 carries `footwear` in its matchedOn tags. The search pill
-    // matches against both the query text and matchedOn tags.
-    expect(screen.getByTestId('intent-query')).toHaveTextContent(
-      'a thoughtful gift for someone who runs',
-    )
-  })
-
-  it('jumps to the travel intent when the user types "travel"', () => {
-    render(<HeroStage />)
-    const input = screen.getByTestId('search-pill-input') as HTMLInputElement
-    const form = screen.getByTestId('search-pill')
-
-    act(() => {
-      fireEvent.change(input, { target: { value: 'travel' } })
-      fireEvent.submit(form)
-    })
-
-    expect(screen.getByTestId('intent-query')).toHaveTextContent(
-      'pieces that travel well',
-    )
-  })
-
-  it('stays on the active intent when no keyword matches', () => {
-    render(<HeroStage />)
-    const input = screen.getByTestId('search-pill-input') as HTMLInputElement
-    const form = screen.getByTestId('search-pill')
-
-    act(() => {
-      fireEvent.change(input, { target: { value: 'zzzzzzzz' } })
-      fireEvent.submit(form)
-    })
-
-    expect(screen.getByTestId('intent-query')).toHaveTextContent(
-      INTENTS[0].query,
-    )
-  })
-})
+// SearchPill was removed in the storefront hero-drawer redesign.
+// The keyword-match tests below are no longer applicable — the
+// search pill is gone, replaced by the floating CommandPill + ⌘K
+// shortcut + suggestion pills as drawer entry points.
 
 describe('HeroStage — responsive breadcrumb (Req 1.3.10)', () => {
   it('renders the mobile-only dark glass breadcrumb marked hidden above md', () => {

@@ -24,12 +24,9 @@ import {
   HERO_BREADCRUMB,
   CURATED_FOR_YOU_CHIP,
   OTHERS_ARE_ASKING_LABEL,
-  SEARCH_PILL_PLACEHOLDER,
-  NAV,
   type Intent,
 } from '../copy'
 import { SHOWCASE_PRODUCTS } from '../data/showcaseProducts'
-import { useUI } from '../contexts/UIContext'
 
 // Rotation cadence (Req 1.3.1).
 const INTENT_INTERVAL_MS = 7500
@@ -194,47 +191,10 @@ export function IntentInfoCard({ intent, product }: IntentInfoCardProps) {
   )
 }
 
-interface SearchPillProps {
-  onSubmit: (query: string) => void
-}
-
-export function SearchPill({ onSubmit }: SearchPillProps) {
-  const [value, setValue] = useState('')
-  return (
-    <form
-      data-testid="search-pill"
-      className="pointer-events-auto absolute bottom-6 left-1/2 z-20 flex w-[min(90%,560px)] -translate-x-1/2 items-center gap-3 rounded-full bg-[#fbf4e8]/90 px-5 py-3 shadow-[0_12px_40px_rgba(45,24,16,0.15)] backdrop-blur-md"
-      onSubmit={e => {
-        e.preventDefault()
-        onSubmit(value)
-      }}
-    >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2d1810] font-[Fraunces] text-sm text-[#fbf4e8]">
-        B
-      </span>
-      <input
-        data-testid="search-pill-input"
-        type="text"
-        value={value}
-        onChange={e => setValue(e.target.value)}
-        placeholder={SEARCH_PILL_PLACEHOLDER}
-        className="flex-1 bg-transparent text-sm text-[#2d1810] placeholder:text-[#a68668] focus:outline-none"
-        aria-label="Ask Blaize"
-      />
-      {/* Blinking terracotta caret indicator (Req 1.3.5) */}
-      <span
-        aria-hidden="true"
-        className="h-4 w-[2px] animate-pulse bg-[#c44536]"
-      />
-      <button
-        type="submit"
-        className="shrink-0 rounded-full bg-[#2d1810] px-4 py-1.5 text-sm font-medium text-[#fbf4e8] transition-colors hover:bg-[#3d2518]"
-      >
-        {NAV.ASK_BLAIZE}
-      </button>
-    </form>
-  )
-}
+// SearchPill was removed in the storefront hero-drawer redesign.
+// The floating CommandPill + ⌘K shortcut + suggestion pills are now
+// the three entry points to the chat drawer. The inline search bar
+// over the cover photo is gone — the cover gets to breathe.
 
 interface IntentTickerProps {
   intents: Intent[]
@@ -427,22 +387,6 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
     setProgressPercent(0)
   }, [intents.length])
 
-  const { openConciergeWithQuery } = useUI()
-
-  // Hero pill now routes every submission to the concierge so there is one
-  // chat surface on the page. We still nudge the ticker to the matching
-  // intent so the stage feels responsive while the modal opens.
-  const handleSearchSubmit = useCallback(
-    (query: string) => {
-      const trimmed = query.trim()
-      if (!trimmed) return
-      const idx = matchIntent(trimmed, intents)
-      if (idx >= 0) jumpTo(idx)
-      openConciergeWithQuery(trimmed)
-    },
-    [intents, jumpTo, openConciergeWithQuery],
-  )
-
   const activeIntent = intents[activeIndex]
   const activeProduct = useMemo(() => resolveProduct(activeIntent), [activeIntent])
   const displayedProduct = useMemo(
@@ -519,9 +463,6 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
 
           {/* Info card floats over the image on desktop; stacks below on mobile. */}
           <IntentInfoCard intent={activeIntent} product={activeProduct} />
-
-          {/* Search pill floats at bottom-center. */}
-          <SearchPill onSubmit={handleSearchSubmit} />
         </div>
 
         {/* Progress bar + ticker strip as a sibling of the image panel so
