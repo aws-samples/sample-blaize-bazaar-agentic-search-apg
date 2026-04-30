@@ -580,14 +580,22 @@ export function useAgentChat(
         setMessages(prev => {
           const updated = [...prev]
           const lastMsg = updated[updated.length - 1]
+          // Prefer the streamed content (built from content_delta events)
+          // over the complete event's response.response when the streamed
+          // version is substantially richer. The backend's
+          // _parse_agent_response sometimes produces a generic fallback
+          // ("Here are some great options!") when it strips JSON blocks
+          // from the AgentResult — but the specialist's actual prose was
+          // already streamed to the bubble via content_delta.
           if (response.response) {
-            lastMsg.content = response.response
+            const streamed = lastMsg.content || ''
+            const final_ = response.response
+            const streamedIsRicher =
+              streamed.length > 80 && streamed.length > final_.length * 1.5
+            if (!streamedIsRicher) {
+              lastMsg.content = final_
+            }
           } else if (!lastMsg.content) {
-            // Defense in depth: the backend synthesizes a fallback
-            // line when the orchestrator returns empty, but if
-            // something slips through (older backend, mid-stream
-            // reconnect) don't leave the user staring at a blank
-            // bubble.
             lastMsg.content =
               "I couldn't land on a clear answer — try rephrasing or narrowing the ask."
           }

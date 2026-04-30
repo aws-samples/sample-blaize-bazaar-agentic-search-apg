@@ -1895,8 +1895,24 @@ CURRENT REQUEST: {message}"""
                 pattern, len(tool_trace),
             )
 
-        # Send clean text content FIRST (before product cards)
-        if parsed["text"]:
+        # Send clean text content FIRST (before product cards).
+        #
+        # In the dispatcher path, the specialist's prose was already
+        # streamed to the client via content_delta events. The
+        # ``content`` event here would overwrite it with whatever
+        # ``_parse_agent_response`` extracted from ``str(AgentResult)``
+        # — which is often a generic fallback ("Here are some great
+        # options!") because the parser strips JSON blocks and the
+        # remaining text is short. Skip the ``content`` event when
+        # deltas already streamed; the frontend's ``content_delta``
+        # handler already built the reply in the bubble.
+        #
+        # For Pattern I (agents_as_tools), the content event is still
+        # useful because the orchestrator's final cycle may produce a
+        # different summary than what was streamed during the
+        # specialist's tool invocation.
+        has_streamed_deltas = bool(ttft_mark)
+        if parsed["text"] and not has_streamed_deltas:
             yield {"type": "content", "content": parsed["text"]}
 
         # Now send buffered products (collected from tool hooks during execution)
