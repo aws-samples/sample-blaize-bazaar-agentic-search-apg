@@ -27,6 +27,7 @@ import {
   type Intent,
 } from '../copy'
 import { SHOWCASE_PRODUCTS } from '../data/showcaseProducts'
+import { useUI } from '../contexts/UIContext'
 
 // Rotation cadence (Req 1.3.1).
 const INTENT_INTERVAL_MS = 7500
@@ -200,9 +201,11 @@ interface IntentTickerProps {
   intents: Intent[]
   activeIndex: number
   onSelect: (index: number) => void
+  /** Opens the chat drawer with this intent's query already streaming. */
+  onOpenDrawer?: (query: string) => void
 }
 
-export function IntentTicker({ intents, activeIndex, onSelect }: IntentTickerProps) {
+export function IntentTicker({ intents, activeIndex, onSelect, onOpenDrawer }: IntentTickerProps) {
   return (
     <div
       data-testid="intent-ticker"
@@ -227,7 +230,10 @@ export function IntentTicker({ intents, activeIndex, onSelect }: IntentTickerPro
             type="button"
             data-testid={`ticker-chip-${i}`}
             data-active={selected}
-            onClick={() => onSelect(i)}
+            onClick={() => {
+              onSelect(i)
+              onOpenDrawer?.(intent.query)
+            }}
             className={
               'shrink-0 rounded-full border px-3 py-1 text-[11px] italic transition-colors ' +
               (selected
@@ -387,6 +393,8 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
     setProgressPercent(0)
   }, [intents.length])
 
+  const { openDrawerWithQuery } = useUI()
+
   const activeIntent = intents[activeIndex]
   const activeProduct = useMemo(() => resolveProduct(activeIntent), [activeIntent])
   const displayedProduct = useMemo(
@@ -479,6 +487,7 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
             intents={intents}
             activeIndex={activeIndex}
             onSelect={jumpTo}
+            onOpenDrawer={openDrawerWithQuery}
           />
         </div>
       </div>

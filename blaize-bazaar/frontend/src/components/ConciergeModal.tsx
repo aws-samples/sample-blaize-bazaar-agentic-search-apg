@@ -29,7 +29,6 @@ import { useAgentChat, type AgentBadge, type AgentChatMessage } from '../hooks/u
 import { AGENT_IDENTITIES, type AgentType } from '../utils/agentIdentity'
 import ProductCardConcierge from './ProductCardConcierge'
 import MarkdownMessage from './MarkdownMessage'
-import StorefrontChat from './StorefrontChat'
 
 // Warm palette from storefront.md §"Design tokens".
 const CREAM = '#fbf4e8'
@@ -315,7 +314,10 @@ export default function ConciergeModal() {
 
   const isOpen = activeModal === 'concierge'
   const isWorkshopRoute = location.pathname.startsWith('/atelier')
-  const mode = isWorkshopRoute ? 'atelier' : 'storefront'
+
+  // After the storefront hero-drawer redesign, the ConciergeModal only
+  // renders on atelier routes. Storefront chat is handled by ChatDrawer.
+  const mode: 'storefront' | 'atelier' = 'atelier'
 
   // Time-of-day greeting for the personalized storefront welcome. Boundaries
   // match the house style guide's "Good morning/afternoon/evening" rotation.
@@ -403,6 +405,10 @@ export default function ConciergeModal() {
     }
   }
 
+  // Gate: ConciergeModal only renders on atelier routes after the
+  // storefront hero-drawer redesign. Storefront chat is ChatDrawer.
+  if (!isWorkshopRoute) return null
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -420,7 +426,7 @@ export default function ConciergeModal() {
             data-testid="concierge-modal"
             className="relative flex flex-col w-full max-w-[560px] h-[min(680px,calc(100vh-4rem))] rounded-3xl overflow-hidden shadow-2xl"
             style={{
-              background: mode === 'storefront' ? 'var(--cream-1)' : CREAM,
+              background: CREAM,
               border: '1px solid rgba(45, 24, 16, 0.08)',
             }}
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
@@ -429,24 +435,10 @@ export default function ConciergeModal() {
             transition={{ type: 'spring', stiffness: 320, damping: 28 }}
             onClick={e => e.stopPropagation()}
           >
-            {mode === 'storefront' ? (
-              <StorefrontChat
-                messages={messages}
-                inputValue={inputValue}
-                setInputValue={setInputValue}
-                isLoading={isLoading}
-                backendOnline={backendOnline}
-                sendMessage={sendMessage}
-                clearChat={clearChat}
-                initialMessages={initialMessages}
-                closeModal={closeModal}
-                addToCart={(item) => addToCart(item)}
-              />
-            ) : (
-              /* ============================================================
-               * ATELIER MODE — untouched from pre-editorial-redesign.
-               * Everything below is the original workshop rendering.
-               * ============================================================ */
+              {/* ============================================================
+               * ATELIER MODE — the only mode ConciergeModal renders now.
+               * Storefront chat is handled by ChatDrawer.
+               * ============================================================ */}
               <>
             {/* Header */}
             <div
@@ -713,7 +705,6 @@ export default function ConciergeModal() {
               )}
             </div>
               </>
-            )}
           </motion.div>
         </motion.div>
       )}
