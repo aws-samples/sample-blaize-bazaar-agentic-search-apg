@@ -166,6 +166,7 @@ function mapProduct(p: any): ChatProduct {
     inStock: p.inStock,
     originalPrice: p.originalPrice,
     discountPercent: p.discountPercent,
+    variant: p.variant,
   }
 }
 
@@ -303,17 +304,44 @@ export function useAgentChat(
       // React 18's automatic batching already coalesces rapid
       // setState calls within the same microtask, so the render
       // frequency is naturally throttled.
-      const appendDelta = (delta: string) => {
+      //
+      // CRITICAL: every updater below must be PURE. React 18 StrictMode
+      // double-invokes state updaters in dev to surface impurity — any
+      // mutation of `prev[i]` leaks across invocations and doubles
+      // additive operations (content += delta). We shallow-clone the
+      // last message into a new object before writing, so the second
+      // StrictMode invocation re-reads the original `prev` state and
+      // produces the same output.
+      const updateLast = (
+        patch: (msg: AgentChatMessage) => AgentChatMessage | null,
+      ) => {
         setMessages(prev => {
-          const updated = [...prev]
-          const lastMsg = updated[updated.length - 1]
-          if (!lastMsg || lastMsg.role !== 'assistant') return prev
-          lastMsg.content = (lastMsg.content || '') + delta
-          if (lastMsg.agentStatus === 'thinking') {
-            lastMsg.agentStatus = 'streaming'
-            lastMsg.agentExecution = undefined
-          }
+          if (prev.length === 0) return prev
+          const lastIdx = prev.length - 1
+          const lastMsg = prev[lastIdx]
+          const next = patch(lastMsg)
+          if (next === null || next === lastMsg) return prev
+          const updated = prev.slice()
+          updated[lastIdx] = next
           return updated
+        })
+      }
+
+      const appendDelta = (delta: string) => {
+        updateLast(lastMsg => {
+          if (lastMsg.role !== 'assistant') return null
+          return {
+            ...lastMsg,
+            content: (lastMsg.content || '') + delta,
+            agentStatus:
+              lastMsg.agentStatus === 'thinking'
+                ? 'streaming'
+                : lastMsg.agentStatus,
+            agentExecution:
+              lastMsg.agentStatus === 'thinking'
+                ? undefined
+                : lastMsg.agentExecution,
+          }
         })
       }
 
@@ -388,14 +416,11 @@ export function useAgentChat(
               // assistant message (the thinking placeholder) so both
               // the storefront attribution line and the Atelier
               // activation log can read it.
-              setMessages(prev => {
-                const updated = [...prev]
-                const lastMsg = updated[updated.length - 1]
-                if (lastMsg && lastMsg.role === 'assistant') {
-                  lastMsg.skillRouting = data.routing
-                }
-                return [...updated]
-              })
+              updateLast(lastMsg =>
+                lastMsg.role === 'assistant'
+                  ? { ...lastMsg, skillRouting: data.routing }
+                  : null,
+              )
               // Persist the most recent routing to localStorage so the
               // Atelier Skills panel (which lives on a different route)
               // can render the live activation log without plumbing
@@ -410,26 +435,40 @@ export function useAgentChat(
               }
             } else if (data.type === 'agent_step') {
               if (!showInstrumentation) return
-              setMessages(prev => {
-                const updated = [...prev]
-                const lastMsg = updated[updated.length - 1]
-                if (lastMsg.agentStatus === 'thinking' && lastMsg.agentExecution) {
-                  const existing = lastMsg.agentExecution.agent_steps.find(
-                    s => s.agent === data.agent,
+              updateLast(lastMsg => {
+                if (
+                  lastMsg.agentStatus !== 'thinking' ||
+                  !lastMsg.agentExecution
+                ) {
+                  return null
+                }
+                const existingIdx = lastMsg.agentExecution.agent_steps.findIndex(
+                  s => s.agent === data.agent,
+                )
+                let nextSteps
+                if (existingIdx >= 0) {
+                  nextSteps = lastMsg.agentExecution.agent_steps.map((s, i) =>
+                    i === existingIdx ? { ...s, status: data.status } : s,
                   )
-                  if (existing) {
-                    existing.status = data.status
-                  } else {
-                    lastMsg.agentExecution.agent_steps.push({
+                } else {
+                  nextSteps = [
+                    ...lastMsg.agentExecution.agent_steps,
+                    {
                       agent: data.agent,
                       action: data.action,
                       status: data.status,
                       timestamp: Date.now(),
                       duration_ms: 0,
-                    })
-                  }
+                    },
+                  ]
                 }
-                return updated
+                return {
+                  ...lastMsg,
+                  agentExecution: {
+                    ...lastMsg.agentExecution,
+                    agent_steps: nextSteps,
+                  },
+                }
               })
             } else if (data.type === 'tool_call') {
               // Always persist tool calls to localStorage so the
@@ -457,18 +496,28 @@ export function useAgentChat(
                 // quota / private mode — non-fatal
               }
               if (!showInstrumentation) return
-              setMessages(prev => {
-                const updated = [...prev]
-                const lastMsg = updated[updated.length - 1]
-                if (lastMsg.agentStatus === 'thinking' && lastMsg.agentExecution) {
-                  lastMsg.agentExecution.tool_calls.push({
-                    tool: data.tool,
-                    timestamp: Date.now(),
-                    duration_ms: 0,
-                    status: data.status,
-                  })
+              updateLast(lastMsg => {
+                if (
+                  lastMsg.agentStatus !== 'thinking' ||
+                  !lastMsg.agentExecution
+                ) {
+                  return null
                 }
-                return updated
+                return {
+                  ...lastMsg,
+                  agentExecution: {
+                    ...lastMsg.agentExecution,
+                    tool_calls: [
+                      ...lastMsg.agentExecution.tool_calls,
+                      {
+                        tool: data.tool,
+                        timestamp: Date.now(),
+                        duration_ms: 0,
+                        status: data.status,
+                      },
+                    ],
+                  },
+                }
               })
             } else if (data.type === 'content_delta') {
               // Diagnostic: log every delta received for stuttering investigation
@@ -479,51 +528,50 @@ export function useAgentChat(
             } else if (data.type === 'content_reset') {
               // Clear the bubble for Pattern I's post-tool response.
               // Pattern III (dispatcher) skips this event server-side.
-              setMessages(prev => {
-                const updated = [...prev]
-                const lastMsg = updated[updated.length - 1]
-                lastMsg.content = ''
-                if (lastMsg.agentStatus === 'streaming') {
-                  lastMsg.agentStatus = 'thinking'
-                }
-                return [...updated]
-              })
+              updateLast(lastMsg => ({
+                ...lastMsg,
+                content: '',
+                agentStatus:
+                  lastMsg.agentStatus === 'streaming'
+                    ? 'thinking'
+                    : lastMsg.agentStatus,
+              }))
             } else if (data.type === 'content') {
-              setMessages(prev => {
-                const updated = [...prev]
-                const lastMsg = updated[updated.length - 1]
+              updateLast(lastMsg => {
                 if (
                   lastMsg.agentStatus === 'streaming' &&
                   lastMsg.content &&
                   (!data.content ||
                     data.content.length < lastMsg.content.length * 0.5)
                 ) {
-                  lastMsg.agentStatus = 'complete'
-                  lastMsg.agentExecution = undefined
-                } else {
-                  lastMsg.content = data.content
-                  lastMsg.agentStatus = 'complete'
-                  lastMsg.agentExecution = undefined
+                  return {
+                    ...lastMsg,
+                    agentStatus: 'complete',
+                    agentExecution: undefined,
+                  }
                 }
-                return [...updated]
+                return {
+                  ...lastMsg,
+                  content: data.content,
+                  agentStatus: 'complete',
+                  agentExecution: undefined,
+                }
               })
             } else if (data.type === 'product') {
-              setMessages(prev => {
-                const updated = [...prev]
-                const lastMsg = updated[updated.length - 1]
-                if (!lastMsg.products) lastMsg.products = []
+              updateLast(lastMsg => {
+                const existing = lastMsg.products ?? []
                 const chatProduct = mapProduct(data.product)
-                const isDupe = lastMsg.products.some(
-                  existing =>
-                    (existing.id && existing.id === chatProduct.id) ||
-                    (existing.name && existing.name === chatProduct.name),
+                const isDupe = existing.some(
+                  p =>
+                    (p.id && p.id === chatProduct.id) ||
+                    (p.name && p.name === chatProduct.name),
                 )
-                if (!isDupe) {
-                  lastMsg.products = [...lastMsg.products, chatProduct]
+                return {
+                  ...lastMsg,
+                  products: isDupe ? existing : [...existing, chatProduct],
+                  agentStatus: 'complete',
+                  agentExecution: undefined,
                 }
-                lastMsg.agentStatus = 'complete'
-                lastMsg.agentExecution = undefined
-                return [...updated]
               })
             } else if (data.type === 'runtime_timing') {
               // Per-layer wall-clock timing for the most recent turn.
@@ -582,9 +630,7 @@ export function useAgentChat(
           }
         }
 
-        setMessages(prev => {
-          const updated = [...prev]
-          const lastMsg = updated[updated.length - 1]
+        updateLast(lastMsg => {
           // Prefer the streamed content (built from content_delta events)
           // over the complete event's response.response when the streamed
           // version is substantially richer. The backend's
@@ -592,28 +638,32 @@ export function useAgentChat(
           // ("Here are some great options!") when it strips JSON blocks
           // from the AgentResult — but the specialist's actual prose was
           // already streamed to the bubble via content_delta.
+          let nextContent = lastMsg.content
           if (response.response) {
             const streamed = lastMsg.content || ''
             const final_ = response.response
             const streamedIsRicher =
               streamed.length > 80 && streamed.length > final_.length * 1.5
             if (!streamedIsRicher) {
-              lastMsg.content = final_
+              nextContent = final_
             }
           } else if (!lastMsg.content) {
-            lastMsg.content =
+            nextContent =
               "I couldn't land on a clear answer — try rephrasing or narrowing the ask."
           }
-          if (response.products?.length) {
-            lastMsg.products = response.products.map(mapProduct)
+          return {
+            ...lastMsg,
+            content: nextContent,
+            products: response.products?.length
+              ? response.products.map(mapProduct)
+              : lastMsg.products,
+            suggestions: response.suggestions,
+            agent: agentType,
+            agentStatus: 'complete',
+            agentExecution: showInstrumentation
+              ? response.agent_execution
+              : undefined,
           }
-          lastMsg.suggestions = response.suggestions
-          lastMsg.agent = agentType
-          lastMsg.agentStatus = 'complete'
-          lastMsg.agentExecution = showInstrumentation
-            ? response.agent_execution
-            : undefined
-          return [...updated]
         })
         setBackendOnline(true)
 
@@ -633,15 +683,13 @@ export function useAgentChat(
           })
         }
       } catch {
-        setMessages(prev => {
-          const updated = [...prev]
-          const lastMsg = updated[updated.length - 1]
-          lastMsg.content =
-            'Unable to connect. Please check that the backend is running.'
-          lastMsg.agentStatus = 'complete'
-          lastMsg.agentExecution = undefined
-          return [...updated]
-        })
+        updateLast(lastMsg => ({
+          ...lastMsg,
+          content:
+            'Unable to connect. Please check that the backend is running.',
+          agentStatus: 'complete',
+          agentExecution: undefined,
+        }))
         setBackendOnline(false)
       } finally {
         setIsLoading(false)
