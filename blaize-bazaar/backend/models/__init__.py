@@ -1,10 +1,20 @@
 """
 Pydantic models for Blaize Bazaar Backend
 """
+import re
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
+
+
+# Email format regex — RFC 5322 lite. We don't use Pydantic's ``EmailStr``
+# because it pulls in the ``email-validator`` package transitively and
+# that's a runtime-install liability for workshop attendees. The upstream
+# (Cognito JWT verification) already validates email format before a
+# ``VerifiedUser`` is ever constructed, so this check is defense-in-depth
+# against hand-built model instances in tests and internal callers.
+_EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 
 from .product import Product, ProductWithScore, ProductSearchResult, ProductFilters
 from .search import (
@@ -57,13 +67,20 @@ class VerifiedUser(BaseModel):
     """
 
     user_id: str
-    email: EmailStr
+    email: str
     given_name: str
 
     model_config = ConfigDict(
         alias_generator=to_camel,
         populate_by_name=True,
     )
+
+    @field_validator("email")
+    @classmethod
+    def _email_format(cls, v: str) -> str:
+        if not _EMAIL_RE.match(v):
+            raise ValueError("email is not a well-formed address")
+        return v
 
 
 __all__ = [
