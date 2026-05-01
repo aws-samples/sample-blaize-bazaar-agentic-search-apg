@@ -53,6 +53,26 @@ const ICON_MAP = {
 
 const MODE_ORDER: WorkshopMode[] = ['legacy', 'search', 'agentic', 'production']
 
+// Rewrite the `w=` parameter on an Unsplash URL so the request
+// matches the rendered size on the wire. The demo cards used to
+// fetch `w=200` and render at ~460px × 2x DPR = 920px, which is why
+// the images looked upscaled and blurred. Called by the <img>
+// srcSet ladder below to return per-breakpoint widths.
+//
+// Returns the URL unchanged for non-Unsplash hosts so the helper is
+// safe to wrap any card.image value.
+function withUnsplashSize(url: string, width: number): string {
+  if (!url.includes('images.unsplash.com')) return url
+  try {
+    const u = new URL(url)
+    u.searchParams.set('w', String(width))
+    u.searchParams.set('q', '85')
+    return u.toString()
+  } catch {
+    return url
+  }
+}
+
 // ─── Slide Data ───
 
 // Editorial palette tokens — every slide uses the same burgundy eyebrow
@@ -79,8 +99,8 @@ const DEMO_SLIDES: DemoSlide[] = [
     ],
     aiResponseText: 'Two pieces that earn their place on a working kitchen counter — the cast-iron starter for the heat, the bamboo board for the quiet.',
     productCards: [
-      { name: 'Lodge Cast Iron Starter Gift Set', price: '$79.99', rating: '4.8', image: 'https://images.unsplash.com/photo-1602031939964-2854d8c32447?w=200&q=80' },
-      { name: 'Cuisinart Bamboo Cutting Board Set', price: '$28.99', rating: '4.2', image: 'https://images.unsplash.com/photo-1633536705119-bcc37bf6c84e?w=200&q=80' },
+      { name: 'Lodge Cast Iron Starter Gift Set', price: '$79.99', rating: '4.8', image: 'https://images.unsplash.com/photo-1602031939964-2854d8c32447?w=1600&q=85' },
+      { name: 'Cuisinart Bamboo Cutting Board Set', price: '$28.99', rating: '4.2', image: 'https://images.unsplash.com/photo-1633536705119-bcc37bf6c84e?w=1600&q=85' },
     ],
     minMode: 'agentic',
   },
@@ -99,8 +119,8 @@ const DEMO_SLIDES: DemoSlide[] = [
     ],
     aiResponseText: 'Two Citizens sit well inside your ceiling — the Skyhawk for weight on the wrist, the Eco-Drive for days that want quieter things.',
     productCards: [
-      { name: 'Citizen Promaster Skyhawk AT', price: '$425.00', rating: '4.9', image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=200&q=80' },
-      { name: 'Citizen Eco-Drive Silhouette Crystal', price: '$245.00', rating: '4.9', image: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?w=200&q=80' },
+      { name: 'Citizen Promaster Skyhawk AT', price: '$425.00', rating: '4.9', image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=1600&q=85' },
+      { name: 'Citizen Eco-Drive Silhouette Crystal', price: '$245.00', rating: '4.9', image: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?w=1600&q=85' },
     ],
     minMode: 'agentic',
   },
@@ -627,7 +647,11 @@ const DemoChatCarousel = ({
                             Pulled for you
                           </div>
 
-                          {/* Image */}
+                          {/* Image — srcSet lets the browser pick a
+                              resolution that matches the device pixel
+                              ratio. The card renders ~460px wide so
+                              the 600px / 900px / 1600px ladder covers
+                              1x / 2x / 3x displays without upscaling. */}
                           <div
                             style={{
                               margin: '10px 16px 0',
@@ -638,7 +662,15 @@ const DemoChatCarousel = ({
                             }}
                           >
                             <img
-                              src={card.image}
+                              src={withUnsplashSize(card.image, 900)}
+                              srcSet={[
+                                `${withUnsplashSize(card.image, 600)} 600w`,
+                                `${withUnsplashSize(card.image, 900)} 900w`,
+                                `${withUnsplashSize(card.image, 1600)} 1600w`,
+                              ].join(', ')}
+                              sizes="(min-width: 1024px) 460px, (min-width: 640px) 60vw, 90vw"
+                              loading="lazy"
+                              decoding="async"
                               alt={card.name}
                               style={{
                                 width: '100%',
