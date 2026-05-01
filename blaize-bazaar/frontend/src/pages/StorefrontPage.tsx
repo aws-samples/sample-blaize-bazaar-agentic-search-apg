@@ -26,6 +26,7 @@ import HeroHeadline from '../components/HeroHeadline'
 import HeroStage from '../components/HeroStage'
 import AuthStateBand from '../components/AuthStateBand'
 import LiveStatusStrip from '../components/LiveStatusStrip'
+import DemoChatCarousel from '../components/DemoChatCarousel'
 import CategoryChips from '../components/CategoryChips'
 import ProductGridHeader from '../components/ProductGridHeader'
 import ProductGrid from '../components/ProductGrid'
@@ -35,6 +36,7 @@ import Footer from '../components/Footer'
 import CommandPill from '../components/CommandPill'
 import StorefrontSpotlight from '../components/StorefrontSpotlight'
 import { useAuth } from '../contexts/AuthContext'
+import { usePersona } from '../contexts/PersonaContext'
 import { useUI } from '../contexts/UIContext'
 
 const CREAM = '#fbf4e8'
@@ -50,6 +52,7 @@ const NAV_ROUTES: Record<NavItem, string> = {
 export default function StorefrontPage() {
   const { prefsVersion } = useAuth()
   const { openModal, setChatSurface } = useUI()
+  const { persona } = usePersona()
   const navigate = useNavigate()
 
   // Tell UIProvider that ⌘K should open the drawer (not the concierge
@@ -80,6 +83,11 @@ export default function StorefrontPage() {
         <HeroStage />
         <AuthStateBand />
         <LiveStatusStrip />
+        <DemoChatCarousel
+          onOpenChat={() => openModal('drawer')}
+          workshopMode="agentic"
+          personaId={persona?.id ?? null}
+        />
         <CategoryChips />
         <ProductGridHeader />
         <ProductGrid key={prefsVersion} />

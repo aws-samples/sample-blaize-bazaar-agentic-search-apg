@@ -236,17 +236,93 @@ interface DemoChatCarouselProps {
   onOpenChat: () => void
   compact?: boolean
   workshopMode?: WorkshopMode
+  /** Active persona id. Reorders the slide deck so the first slide
+   * matches the persona's clearest signal (Marco → semantic search;
+   * Anna → multi-agent gift flow) and swaps the lead slide's
+   * userMessage so the demo reads tailored-to-you. Omit for the
+   * default rotation. */
+  personaId?: string | null
 }
 
-const DemoChatCarousel = ({ onOpenChat, compact = false, workshopMode = 'agentic' }: DemoChatCarouselProps) => {
+// Slide ordering hints per persona. Each entry is a list of slide ids
+// in the order they should appear for that persona. Ids missing from
+// the list (or not in the deck for the current workshop mode) fall
+// through to their natural order at the tail.
+const PERSONA_SLIDE_ORDER: Record<string, readonly string[]> = {
+  marco: [
+    'semantic-search',
+    'conversation-memory',
+    'inventory-awareness',
+    'price-intelligence',
+    'customer-support',
+    'multi-agent',
+    'cedar-policy',
+  ],
+  anna: [
+    'multi-agent',
+    'price-intelligence',
+    'semantic-search',
+    'inventory-awareness',
+    'customer-support',
+    'conversation-memory',
+    'cedar-policy',
+  ],
+}
+
+// One persona-tailored override per persona: the userMessage on the
+// lead slide. Keeps the demo feeling chosen-for-you on first glance
+// without rewriting every slide.
+const PERSONA_LEAD_MESSAGE: Record<string, string> = {
+  marco: 'A linen piece that travels well.',
+  anna: 'A thoughtful milestone gift, under two hundred.',
+}
+
+export function reorderForPersona(
+  slides: DemoSlide[],
+  personaId: string | null | undefined,
+): DemoSlide[] {
+  if (!personaId) return slides
+  const order = PERSONA_SLIDE_ORDER[personaId]
+  if (!order) return slides
+
+  const byId = new Map(slides.map((s) => [s.id, s]))
+  const ordered: DemoSlide[] = []
+  for (const id of order) {
+    const s = byId.get(id)
+    if (s) {
+      ordered.push(s)
+      byId.delete(id)
+    }
+  }
+  // Any remaining slides (ids not in the persona order, or ids added
+  // after this map last) append in their original order.
+  for (const s of slides) {
+    if (byId.has(s.id)) ordered.push(s)
+  }
+
+  // Swap the lead slide's userMessage if we have a tailored one.
+  const leadMessage = PERSONA_LEAD_MESSAGE[personaId]
+  if (leadMessage && ordered.length > 0) {
+    ordered[0] = { ...ordered[0], userMessage: leadMessage }
+  }
+  return ordered
+}
+
+const DemoChatCarousel = ({
+  onOpenChat,
+  compact = false,
+  workshopMode = 'agentic',
+  personaId = null,
+}: DemoChatCarouselProps) => {
   const [activeIndex, setActiveIndex] = useState(0)
   const [direction, setDirection] = useState(1)
   const [isPaused, setIsPaused] = useState(false)
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Filter slides based on current workshop mode
+  // Filter slides by workshop mode, then reorder per persona signal.
   const modeIdx = MODE_ORDER.indexOf(workshopMode)
-  const visibleSlides = DEMO_SLIDES.filter(s => MODE_ORDER.indexOf(s.minMode) <= modeIdx)
+  const modeSlides = DEMO_SLIDES.filter(s => MODE_ORDER.indexOf(s.minMode) <= modeIdx)
+  const visibleSlides = reorderForPersona(modeSlides, personaId)
 
   // Status strip copy shifts by mode; everything else uses the single
   // editorial palette. The old mode accent colours (blue/purple/green)
@@ -267,10 +343,12 @@ const DemoChatCarousel = ({ onOpenChat, compact = false, workshopMode = 'agentic
     return () => clearInterval(timer)
   }, [isPaused, visibleSlides.length])
 
-  // Reset activeIndex when mode changes and slides shrink
+  // Reset activeIndex when mode or persona changes so the first slide
+  // the viewer sees is the lead slide curated for them, not whatever
+  // was mid-cycle before the switch.
   useEffect(() => {
     setActiveIndex(0)
-  }, [workshopMode])
+  }, [workshopMode, personaId])
 
   const goToSlide = useCallback((index: number) => {
     setDirection(index > activeIndex ? 1 : -1)
