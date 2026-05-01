@@ -282,46 +282,27 @@ export function useAgentChat(
 
       // Streaming delta buffer + rAF flush.
       //
-      // Each SSE token arrives ~every few ms. Calling setMessages() for
-      // every token produces 100+ renders/sec and jittery rendering
-      // because React can't batch across microtasks. Instead we collect
-      // deltas into a string buffer and flush it once per animation
-      // frame (~60fps). This lands each frame with the accumulated
-      // chars and lets the browser paint smoothly, like Claude Desktop.
+      // Streaming text handling — direct state update per delta.
       //
-      // Generation counter: incremented on every content_reset. A
-      // flush callback that was scheduled before the reset checks the
-      // generation and drops itself if it's stale — this prevents the
-      // "stuttering" bug where a pre-reset rAF fires after the reset
-      // and re-adds old tokens into the cleared message.
-      let pendingDelta = ''
-      let flushScheduled = false
-      let flushGeneration = 0
-      const flushDelta = () => {
-        flushScheduled = false
-        if (!pendingDelta) return
-        const chunk = pendingDelta
-        const gen = flushGeneration
-        pendingDelta = ''
+      // Previous approach used a requestAnimationFrame buffer to batch
+      // deltas at 60fps. This caused a persistent "stuttering" bug
+      // where pre-tool tokens leaked through content_reset boundaries
+      // via stale rAF callbacks. The direct approach is simpler and
+      // React 18's automatic batching already coalesces rapid
+      // setState calls within the same microtask, so the render
+      // frequency is naturally throttled.
+      const appendDelta = (delta: string) => {
         setMessages(prev => {
-          // Stale flush — a content_reset happened after this flush
-          // was scheduled. Drop the chunk silently.
-          if (gen !== flushGeneration) return prev
           const updated = [...prev]
           const lastMsg = updated[updated.length - 1]
           if (!lastMsg || lastMsg.role !== 'assistant') return prev
-          lastMsg.content = (lastMsg.content || '') + chunk
+          lastMsg.content = (lastMsg.content || '') + delta
           if (lastMsg.agentStatus === 'thinking') {
             lastMsg.agentStatus = 'streaming'
             lastMsg.agentExecution = undefined
           }
           return updated
         })
-      }
-      const scheduleFlush = () => {
-        if (flushScheduled) return
-        flushScheduled = true
-        requestAnimationFrame(flushDelta)
       }
 
       // Cache check
@@ -477,16 +458,10 @@ export function useAgentChat(
                 return updated
               })
             } else if (data.type === 'content_delta') {
-              pendingDelta += data.delta
-              scheduleFlush()
+              appendDelta(data.delta)
             } else if (data.type === 'content_reset') {
-              // Drop any buffered deltas AND cancel any scheduled rAF
-              // flush so pre-reset tokens don't bleed into the post-
-              // reset text. Increment the generation counter so any
-              // already-queued rAF callback drops itself on fire.
-              pendingDelta = ''
-              flushScheduled = false
-              flushGeneration++
+              // Clear the bubble for Pattern I's post-tool response.
+              // Pattern III (dispatcher) skips this event server-side.
               setMessages(prev => {
                 const updated = [...prev]
                 const lastMsg = updated[updated.length - 1]
@@ -571,11 +546,6 @@ export function useAgentChat(
           // adds a user-facing toggle in the Atelier for 'graph'.
           mode === 'storefront' ? 'dispatcher' : 'agents_as_tools',
         )
-
-        // Drain any remaining buffered tokens before settling the
-        // final response — otherwise the last ~1 frame worth of chars
-        // can be overwritten by the complete-event content setter.
-        flushDelta()
 
         if (response.estimated_cost_usd) {
           setSessionCost(prev => prev + response.estimated_cost_usd!)
