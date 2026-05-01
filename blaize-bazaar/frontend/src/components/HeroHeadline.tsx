@@ -42,8 +42,8 @@ export default function HeroHeadline() {
 
       <p
         data-testid="hero-headline-subhead"
-        className="mx-auto mt-4 max-w-[560px] font-[Fraunces] italic text-[15px] leading-snug md:text-[17px]"
-        style={{ color: INK_SOFT, fontWeight: 400 }}
+        className="mx-auto mt-5 max-w-[620px] font-[Fraunces] italic text-[16px] leading-[1.6]"
+        style={{ color: INK_SOFT, fontWeight: 600 }}
       >
         {HERO_HEADLINE.SUBHEADLINE}
       </p>

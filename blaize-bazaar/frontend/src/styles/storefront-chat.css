@@ -219,8 +219,8 @@
 .ec-msg-user-text {
   font-family: var(--serif);
   font-style: italic;
-  font-size: 16px;
-  line-height: 1.4;
+  font-size: 15px;
+  line-height: 1.5;
   color: var(--ink-1);
   background: var(--cream-2);
   padding: 10px 16px;
@@ -311,19 +311,21 @@
 
 /* Message body
  *
- * Sans-serif (Inter) for the prose body so long replies read cleanly on
- * small screens. Fraunces stays reserved for the eyebrow, user-message
- * italic quotes, and product names — the editorial register that
- * distinguishes the storefront from an ordinary chat. Premium-concierge
- * cadence: 15.5px / 1.6 leading / -0.005em tracking.
+ * Canonical chat prose for both Storefront and Atelier. Inter at
+ * 15px / 1.7 leading / -0.003em is the Claude-desktop register —
+ * reads cleanly on any width and leaves enough air between lines
+ * that a streamed reply doesn't feel cramped. Fraunces stays
+ * reserved for the eyebrow, user-message italic quotes, and the
+ * <strong> emphasis on product names.
  */
 .ec-msg-body {
   font-family: var(--sans);
   font-weight: 400;
-  font-size: 15.5px;
-  line-height: 1.6;
-  letter-spacing: -0.005em;
+  font-size: 15px;
+  line-height: 1.7;
+  letter-spacing: -0.003em;
   color: var(--ink-1);
+  font-feature-settings: 'ss01', 'cv11';
 }
 .ec-msg-body p { margin-bottom: 10px; }
 .ec-msg-body p:last-child { margin-bottom: 0; }
@@ -338,37 +340,16 @@
   letter-spacing: 0;
 }
 
-/* Streaming cursor — thin blinking caret with a soft glow. Reads as
- * a live typing indicator. The glow is a 4px burgundy box-shadow that
- * pulses in sync with the blink — subtle enough to feel alive without
- * being distracting. */
-.ec-cursor {
-  display: inline-block;
-  width: 2px;
-  height: 1.1em;
-  vertical-align: text-bottom;
-  margin-left: 2px;
-  background: var(--red-1);
-  border-radius: 1px;
-  animation: cursor-glow 1.2s ease-in-out infinite;
-}
-.ec-cursor::after {
-  content: none;
-}
-@keyframes cursor-glow {
-  0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(168, 66, 58, 0.4); }
-  50% { opacity: 0.3; box-shadow: 0 0 0px rgba(168, 66, 58, 0); }
-}
-
-/* Streaming body — words fade in with a subtle opacity transition
- * as the rAF buffer flushes new content. The transition is on the
- * container, not individual words, so it's cheap. */
+/* Streaming body — the prose grows in place, no cursor. We keep a
+ * whisper of a breathing animation so the bubble feels live during
+ * long tool-call pauses; the amplitude is small enough not to read
+ * as motion while text is actually landing. */
 .ec-msg-streaming {
-  animation: streaming-breathe 2s ease-in-out infinite;
+  animation: streaming-breathe 2.4s ease-in-out infinite;
 }
 @keyframes streaming-breathe {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.92; }
+  50% { opacity: 0.96; }
 }
 
 /* Product artifacts stack */
@@ -580,22 +561,28 @@
 .ec-followups {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   margin-top: 18px;
   padding-top: 14px;
   border-top: 1px dashed rgba(45, 24, 16, 0.12);
 }
+/* Canonical follow-up pill — shared shape between Storefront
+ * (persona chips) and Atelier (quick-query chips). Sans 12.5px /
+ * 500 weight / -0.003em, neutral cream background with a hair of
+ * red on hover. The Atelier side lives on the Tailwind classes
+ * inside QuickQueryChips.tsx; keep the two in lockstep.
+ */
 .ec-followup {
   font-family: var(--sans);
   font-style: normal;
   font-weight: 500;
   font-size: 12.5px;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.003em;
   color: var(--ink-2);
-  background: rgba(196, 69, 54, 0.06);
-  border: 1px solid rgba(196, 69, 54, 0.18);
+  background: var(--cream-1);
+  border: 1px solid rgba(45, 24, 16, 0.14);
   border-radius: 999px;
-  padding: 7px 14px;
+  padding: 6px 13px;
   cursor: pointer;
   transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
   white-space: nowrap;
@@ -604,9 +591,9 @@
   text-overflow: ellipsis;
 }
 .ec-followup:hover {
-  background: var(--red-1);
-  border-color: var(--red-1);
-  color: var(--cream-1);
+  background: rgba(196, 69, 54, 0.08);
+  border-color: rgba(196, 69, 54, 0.4);
+  color: var(--red-1);
 }
 .ec-followup:focus-visible {
   outline: 2px solid var(--red-1);

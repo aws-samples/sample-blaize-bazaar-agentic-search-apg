@@ -183,11 +183,13 @@
   outline: none;
   font-family: var(--serif);
   font-style: italic;
-  font-size: 14px;
+  font-size: 15px;
+  line-height: 1.5;
   color: var(--ink-1);
 }
 .cd-input::placeholder {
   color: var(--ink-4);
+  font-style: italic;
 }
 .cd-input:disabled {
   opacity: 0.5;

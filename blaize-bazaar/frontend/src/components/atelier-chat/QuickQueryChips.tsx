@@ -45,14 +45,15 @@ export default function QuickQueryChips({
             data-testid={`quick-query-chip-${q}`}
             disabled={disabled}
             onClick={() => onPick(q)}
-            className="px-3 py-[5px] rounded-full text-[11px] italic transition-opacity hover:opacity-80 disabled:opacity-40"
+            className="px-[13px] py-[6px] rounded-full text-[12.5px] font-medium transition-colors hover:border-[rgba(196,69,54,0.4)] hover:text-[#c44536] hover:bg-[rgba(196,69,54,0.08)] disabled:opacity-40"
             style={{
               background: 'white',
               color: INK_SOFT,
               border: '1px solid rgba(45, 24, 16, 0.14)',
+              letterSpacing: '-0.003em',
             }}
           >
-            "{q}"
+            {q}
           </button>
         ))}
       </div>

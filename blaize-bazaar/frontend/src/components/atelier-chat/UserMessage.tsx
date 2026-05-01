@@ -29,7 +29,7 @@ export default function UserMessage({ text, variant = 'default' }: UserMessagePr
       className="flex justify-end mb-4"
     >
       <div
-        className={`max-w-[80%] text-[14px] px-[14px] py-[10px] ${isResumed ? 'italic' : ''}`}
+        className={`max-w-[80%] text-[15px] leading-[1.5] px-[14px] py-[10px] ${isResumed ? 'italic' : ''}`}
         style={
           isResumed
             ? {
@@ -37,11 +37,13 @@ export default function UserMessage({ text, variant = 'default' }: UserMessagePr
                 color: INK_QUIET,
                 border: `1px dashed ${INK_QUIET}50`,
                 borderRadius: '14px 14px 4px 14px',
+                letterSpacing: '-0.003em',
               }
             : {
                 background: INK,
                 color: CREAM,
                 borderRadius: '14px 14px 4px 14px',
+                letterSpacing: '-0.003em',
               }
         }
       >

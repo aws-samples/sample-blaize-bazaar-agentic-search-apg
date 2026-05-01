@@ -86,8 +86,8 @@ export default function AssistantText({
   return (
     <div
       data-testid="assistant-text"
-      className="mb-4 text-[14px] leading-[1.75]"
-      style={{ color: INK, paddingLeft: 2 }}
+      className="mb-4 text-[15px] leading-[1.7]"
+      style={{ color: INK, paddingLeft: 2, letterSpacing: '-0.003em' }}
     >
       {text.split('\n').map((line, i) => renderLineWithCitations(line, i))}
       {/* Trailing pills fallback — shown when citations exist but no

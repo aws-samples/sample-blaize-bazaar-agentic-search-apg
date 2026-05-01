@@ -520,13 +520,14 @@ export default function ConciergeModal() {
                     {!(message.products && message.products.length > 0) && (
                       <div className={message.role === 'assistant' ? 'self-start max-w-[90%]' : 'self-end max-w-[85%]'}>
                         <div
-                          className={`px-4 py-3 text-[14px] leading-relaxed ${
+                          className={`px-4 py-3 text-[15px] leading-[1.7] ${
                             message.role === 'user' ? 'rounded-2xl rounded-br-sm' : 'rounded-2xl rounded-bl-sm'
                           }`}
                           style={{
                             background: message.role === 'user' ? INK : CREAM_WARM,
                             color: message.role === 'user' ? CREAM : INK,
                             border: message.role === 'assistant' ? '1px solid rgba(45, 24, 16, 0.06)' : 'none',
+                            letterSpacing: '-0.003em',
                           }}
                         >
                           {mode === 'atelier' && message.role === 'assistant' && message.agent && message.agentStatus !== 'thinking' && (
@@ -542,17 +543,12 @@ export default function ConciergeModal() {
                               <span className="text-[13px]" style={{ color: INK_SOFT }}>Thinking...</span>
                             </div>
                           ) : message.role === 'assistant' ? (
-                            <>
-                              <MarkdownMessage content={message.content} />
-                              {message.agentStatus === 'streaming' && (
-                                <motion.span
-                                  className="inline-block w-2 h-4 ml-0.5 align-middle rounded-sm"
-                                  style={{ background: ACCENT }}
-                                  animate={{ opacity: [1, 0] }}
-                                  transition={{ duration: 0.6, repeat: Infinity, repeatType: 'reverse' }}
-                                />
-                              )}
-                            </>
+                            // Streaming cursor intentionally removed —
+                            // see StorefrontChatBody for rationale. The
+                            // prose growing in place is the indicator;
+                            // a blinking caret on top fights the
+                            // Claude-desktop feel we're matching.
+                            <MarkdownMessage content={message.content} />
                           ) : (
                             <span style={{ whiteSpace: 'pre-wrap' }}>{message.content}</span>
                           )}
@@ -625,19 +621,24 @@ export default function ConciergeModal() {
                       )}
 
                     {message.suggestions && message.suggestions.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-wrap gap-1.5">
                         {message.suggestions.map((suggestion, i) => (
                           <motion.button
                             key={i}
                             onClick={() => sendMessage(suggestion)}
                             disabled={isLoading}
-                            className="px-3.5 py-2 rounded-full text-[13px] font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                            style={{ background: CREAM_WARM, border: `1px solid rgba(45, 24, 16, 0.08)`, color: INK }}
+                            className="px-[13px] py-[6px] rounded-full text-[12.5px] font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            style={{
+                              background: CREAM,
+                              border: '1px solid rgba(45, 24, 16, 0.14)',
+                              color: INK_SOFT,
+                              letterSpacing: '-0.003em',
+                            }}
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: i * 0.06, type: 'spring', stiffness: 400, damping: 25 }}
-                            whileHover={{ scale: 1.04 }}
-                            whileTap={{ scale: 0.96 }}
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
                           >
                             {suggestion}
                           </motion.button>
@@ -666,11 +667,12 @@ export default function ConciergeModal() {
                         : "Tell Blaize what you're looking for..."
                   }
                   disabled={isLoading}
-                  className="flex-1 px-4 py-3 rounded-xl text-sm disabled:opacity-40 focus:outline-none"
+                  className="flex-1 px-4 py-3 rounded-xl text-[15px] leading-[1.5] disabled:opacity-40 focus:outline-none"
                   style={{
                     background: '#ffffff',
                     border: '1px solid rgba(45, 24, 16, 0.12)',
                     color: INK,
+                    letterSpacing: '-0.003em',
                   }}
                 />
                 <motion.button
