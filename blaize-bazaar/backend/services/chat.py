@@ -1852,25 +1852,19 @@ CURRENT REQUEST: {message}"""
             return
 
         # --- Inject past-order product cards for retrospective queries ---
-        # When the shopper asks about their history ("what did I buy",
-        # "show me what I saved") we answered the text from the PERSONA
-        # CONTEXT preamble without calling a search tool, so products_
-        # buffered is empty. Hydrate it with the actual rows we already
-        # pulled for the preamble so the UI renders cards with images,
-        # prices, and ratings — not just prose.
-        if (
-            not products_buffered
-            and persona_orders_for_cards
-            and PAST_PURCHASE_PATTERN.search(message)
-        ):
-            # Cap at 3 cards so the chat doesn't scroll forever; the
-            # text already names the highlights. Keep the most recent.
-            for past_product in persona_orders_for_cards[:3]:
-                products_buffered.append(past_product)
-            logger.info(
-                f"🛍 Injected {len(products_buffered)} past-order cards "
-                f"for retrospective query"
-            )
+        #
+        # Disabled in the three-pattern refactor. The blunt "top 3 by
+        # placed_at" injection often showed cards that didn't match the
+        # specialist's prose (the specialist highlights specific orders
+        # from the LTM preamble; the injection grabbed the most recent
+        # regardless). The specialist can call search_products if it
+        # wants to surface product cards; for retrospective queries
+        # answered from the preamble, the prose is the answer.
+        #
+        # Kept as a comment block so the pattern is recoverable if a
+        # future iteration wants smarter card injection (e.g., extract
+        # product names from the specialist's prose and match them
+        # against persona_orders_for_cards).
 
         # --- Parse and send final response ---
         response_text = str(orchestrator_result[0]) if orchestrator_result[0] else ""

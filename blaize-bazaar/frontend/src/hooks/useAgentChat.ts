@@ -469,13 +469,21 @@ export function useAgentChat(
               pendingDelta += data.delta
               scheduleFlush()
             } else if (data.type === 'content_reset') {
-              // Drop any buffered deltas on reset so the pre-reset
-              // tokens don't bleed into the post-reset text.
+              // Drop any buffered deltas AND cancel any scheduled rAF
+              // flush so pre-reset tokens don't bleed into the post-
+              // reset text. The flush might fire between our clear and
+              // the setMessages call otherwise, re-adding old tokens.
               pendingDelta = ''
+              flushScheduled = false
               setMessages(prev => {
                 const updated = [...prev]
                 const lastMsg = updated[updated.length - 1]
                 lastMsg.content = ''
+                if (lastMsg.agentStatus === 'streaming') {
+                  // Reset back to thinking so the post-reset text
+                  // starts fresh with the streaming animation.
+                  lastMsg.agentStatus = 'thinking'
+                }
                 return [...updated]
               })
             } else if (data.type === 'content') {
