@@ -2,29 +2,51 @@
 
 Curated queries guaranteed to demo well for each persona. Each maps to a specific architectural concept the workshop demonstrates.
 
+## Memory tier demos
+
+The workshop teaches a two-tier memory model. These two queries demonstrate each tier explicitly:
+
+**Query A — Pure LTM:** "what did I buy last time?"
+
+- Demonstrates: Long-Term Memory (Aurora pgvector) — episodic facts + order history
+- Specialist reads the PERSONA CONTEXT preamble, names actual orders with prices
+- No tool call, no product cards — the prose IS the demo
+- Telemetry: LTM read visible; STM read is empty/trivial
+- Atelier Memory page lights up showing LTM activity
+
+**Query B — LTM + Search:** "something similar to what I bought last time"
+
+- Demonstrates: LTM composing with retrieval to ground search
+- Specialist reads preamble for past orders + preferences, calls search_products
+- Product cards render — grounded in the shopper's history
+- Telemetry: both LTM read and tool call visible
+- Atelier Memory page + Tool Registry page both light up
+
+**STM note:** AgentCore Memory (STM) requires `AGENTCORE_MEMORY_ID` to be set in `.env`. When configured, multi-turn context persists server-side. When unset (current default), multi-turn works via client-side conversation history passthrough — functional but not demonstrating the AgentCore STM tier.
+
 ---
 
 ## Marco (returning · linen · 7 orders)
 
+**Query:** "what did I buy last time?"
+**What demos:** Pure LTM recall. Episodic memory + order history from Aurora.
+**Expected reply shape:** Names his actual orders (Italian Linen Camp Shirt $128, Relaxed Oxford Shirt $88, etc.) with prices. No fabrication — only references facts verbatim from the PERSONA CONTEXT block.
+
+**Query:** "something similar to what I bought last time"
+**What demos:** LTM + search. Reads history, calls search_products with matching attributes.
+**Expected reply shape:** Product cards for linen/natural-fiber pieces similar to his past orders. References his preferences.
+
 **Query:** "a linen piece for slow Sundays"
 **What demos:** LTM recall + style-advisor skill. Memory page shows his oat-tones, natural-fibers facts.
-**Expected reply shape:** References past Maren purchase; recommends Pellier shirt; size M assumed.
+**Expected reply shape:** References past Maren purchase; recommends similar pieces; size M assumed.
 
-**Query:** "something that travels well"
+**Query:** "pieces that travel well for Lisbon"
 **What demos:** LTM + order history continuity. Agent sees his Lisbon trip browsing history.
 **Expected reply shape:** Leans into wrinkle-resistant fabrics; references his travel-fabric inquiry.
-
-**Query:** "what did I buy last time?"
-**What demos:** Order history tool. Procedural memory panel shows 7 orders.
-**Expected reply shape:** Lists his recent purchases by name; no fabrication.
 
 **Query:** "compare the Pellier and the Maren"
 **What demos:** compare_products tool. Tool Registry page shows the grant firing.
 **Expected reply shape:** Side-by-side on weight, drape, price; references his size M.
-
-**Query:** "place an order for the Pellier in M"
-**What demos:** Approvals queue (Grounding page). State-changing tool call gets queued.
-**Expected reply shape:** Confirmation card in chat; Grounding audit log shows the queued item.
 
 ---
 

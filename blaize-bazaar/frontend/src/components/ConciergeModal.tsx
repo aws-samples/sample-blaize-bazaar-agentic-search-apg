@@ -62,13 +62,13 @@ const SUGGESTIONS_WORKSHOP = [
 const SUGGESTIONS_BY_PERSONA: Record<string, string[]> = {
   marco: [
     'what did I buy last time?',
-    'another linen piece for slow Sundays',
-    'something travel-friendly like my Lisbon picks',
+    'something similar to what I bought last time',
+    'pieces that travel well for Lisbon',
   ],
   anna: [
     'a thoughtful gift for my mother',
-    'something milestone-shaped under $200',
-    'help me build a small gift set with wrapping',
+    'something similar to what I bought last time',
+    'milestone pieces under $200',
   ],
   fresh: SUGGESTIONS_STOREFRONT,
 }

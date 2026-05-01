@@ -95,12 +95,12 @@ function formatAttribution(loadedSkills: string[]): string {
 const FOLLOWUPS_BY_PERSONA: Record<string, string[]> = {
   marco: [
     'what did I buy last time?',
-    'something similar in sage or oat',
+    'something similar to what I bought last time',
     'pieces that travel well for Lisbon',
   ],
   anna: [
     'a thoughtful gift for my mother',
-    'help me build a small gift set',
+    'something similar to what I bought last time',
     'milestone pieces under $200',
   ],
   fresh: [

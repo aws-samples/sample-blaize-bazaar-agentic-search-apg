@@ -133,8 +133,8 @@ const MARCO_COPY: PersonaCopy = {
   ],
   ps: [
     'what did I buy last time?',
-    'another linen piece for slow Sundays',
-    'something travel-friendly like my Lisbon picks',
+    'something similar to what I bought last time',
+    'pieces that travel well for Lisbon',
   ],
 }
 
