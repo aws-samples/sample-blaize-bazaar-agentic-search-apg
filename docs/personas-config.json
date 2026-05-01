@@ -50,6 +50,30 @@
       ]
     },
     {
+      "id": "theo",
+      "display_name": "Theo",
+      "role_tag": "Home + slow craft",
+      "blurb": "Keeps a short list of quiet pieces — ceramics, linen throws, stoneware. Finishes what he buys, slowly.",
+      "avatar_color": "#5a4535",
+      "avatar_initial": "T",
+      "customer_id": "CUST-THEO",
+      "size_preference": null,
+      "stats": { "visits": 8, "orders": 4, "last_seen_days": 14 },
+      "ltm_facts": [
+        { "summary_text": "Gravitates to home goods — ceramics, stoneware, natural textiles", "ts_offset_days": -55 },
+        { "summary_text": "Last purchase: Ceramic Tumbler Set, kept for six months before the second order", "ts_offset_days": -40 },
+        { "summary_text": "Asked about kiln provenance and whether the pieces are dishwasher-safe", "ts_offset_days": -30 },
+        { "summary_text": "Browsed linen throws and stoneware serving bowls together", "ts_offset_days": -18 },
+        { "summary_text": "Spends mornings in the kitchen — pieces need to wear in, not wear out", "ts_offset_days": -10 }
+      ],
+      "order_product_ids": [8, 3, 7],
+      "search_history": [
+        "ceramic pieces that wear in well",
+        "linen throws for a small living room",
+        "stoneware bowls for serving"
+      ]
+    },
+    {
       "id": "fresh",
       "display_name": "A new visitor",
       "role_tag": "Empty",

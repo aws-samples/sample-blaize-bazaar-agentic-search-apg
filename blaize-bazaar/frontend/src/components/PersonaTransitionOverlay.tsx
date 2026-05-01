@@ -31,6 +31,7 @@ const SIGN_OUT_DURATION_MS = 1600
 const WELCOME_TAGLINES: Record<string, string> = {
   marco: 'Your thread is still warm — linen and oat tones await.',
   anna: 'Gifts, wrapped and waiting where you left them.',
+  theo: 'Quiet pieces, kept ready — ceramics and stoneware wait.',
   fresh: 'The floor is yours — tell Blaize what catches your eye.',
 }
 

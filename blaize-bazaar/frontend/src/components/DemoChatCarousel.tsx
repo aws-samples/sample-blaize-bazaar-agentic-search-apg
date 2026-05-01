@@ -267,6 +267,15 @@ const PERSONA_SLIDE_ORDER: Record<string, readonly string[]> = {
     'conversation-memory',
     'cedar-policy',
   ],
+  theo: [
+    'semantic-search',
+    'inventory-awareness',
+    'customer-support',
+    'conversation-memory',
+    'price-intelligence',
+    'multi-agent',
+    'cedar-policy',
+  ],
 }
 
 // One persona-tailored override per persona: the userMessage on the
@@ -275,6 +284,7 @@ const PERSONA_SLIDE_ORDER: Record<string, readonly string[]> = {
 const PERSONA_LEAD_MESSAGE: Record<string, string> = {
   marco: 'A linen piece that travels well.',
   anna: 'A thoughtful milestone gift, under two hundred.',
+  theo: 'Stoneware that wears in, not out.',
 }
 
 export function reorderForPersona(

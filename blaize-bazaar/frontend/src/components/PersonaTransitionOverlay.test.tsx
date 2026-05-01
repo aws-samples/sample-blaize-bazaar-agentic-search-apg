@@ -69,6 +69,22 @@ describe('PersonaTransitionOverlay', () => {
     expect(screen.getByText(/SIGNED IN/i)).toBeInTheDocument()
   })
 
+  it('shows Theo-specific tagline on sign-in', () => {
+    const theo: PersonaTransition['persona'] = {
+      id: 'theo',
+      display_name: 'Theo',
+      role_tag: '',
+      avatar_color: '#5a4535',
+      avatar_initial: 'T',
+      customer_id: 'cust-theo',
+      stats: { visits: 8, orders: 4, last_seen_days: 14 },
+    }
+    mockTransition = { id: 10, kind: 'sign-in', persona: theo }
+    render(<PersonaTransitionOverlay />)
+    expect(screen.getByText(/Welcome back, Theo\./)).toBeInTheDocument()
+    expect(screen.getByText(/Quiet pieces, kept ready/)).toBeInTheDocument()
+  })
+
   it('shows the sign-out card without a tagline', () => {
     mockTransition = { id: 2, kind: 'sign-out', persona: marco() }
     render(<PersonaTransitionOverlay />)

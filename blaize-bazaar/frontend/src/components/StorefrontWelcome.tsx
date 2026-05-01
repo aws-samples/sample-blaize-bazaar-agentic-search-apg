@@ -84,8 +84,14 @@ const PERSONA_COVERS: Record<string, PersonaCover> = {
     eyebrow: 'Matched to your thread',
   },
   anna: {
-    coverName: 'Ceramic Tumbler Set',
+    // Swapped from Ceramic Tumbler Set (now Theo's) to the Straw
+    // Tote — bestseller, under $100, reads as a considered gift.
+    coverName: 'Signature Straw Tote',
     eyebrow: 'A gift, ready to go',
+  },
+  theo: {
+    coverName: 'Ceramic Tumbler Set',
+    eyebrow: 'Quiet pieces for slow days',
   },
 }
 
@@ -233,6 +239,28 @@ const ANNA_COPY: PersonaCopy = {
   ],
 }
 
+const THEO_COPY: PersonaCopy = {
+  greetingSuffix: (firstName) => `, ${firstName}. Good to see you.`,
+  context: () => (
+    <>
+      Two weeks since your last visit. Four orders in your history, all{' '}
+      <span className="sf-context-product">ceramics, linen, and stoneware</span>.
+      A new run of serving bowls landed last week that sits beside your
+      tumbler set as if they were fired together.
+    </>
+  ),
+  picks: [
+    { label: 'New home arrivals since my last visit', primary: true },
+    { label: 'Stoneware pieces that wear in', primary: false },
+    { label: 'Linen throws for a small room', primary: false },
+  ],
+  ps: [
+    'pieces that wear in slowly',
+    'something for quiet mornings',
+    'stoneware for serving, not just display',
+  ],
+}
+
 function copyForPersona(persona?: PersonaSnapshot | null): PersonaCopy {
   if (!persona) return FRESH_COPY
   switch (persona.id) {
@@ -240,6 +268,8 @@ function copyForPersona(persona?: PersonaSnapshot | null): PersonaCopy {
       return MARCO_COPY
     case 'anna':
       return ANNA_COPY
+    case 'theo':
+      return THEO_COPY
     case 'fresh':
     default:
       return FRESH_COPY

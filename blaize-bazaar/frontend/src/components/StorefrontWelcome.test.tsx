@@ -43,6 +43,19 @@ const CATALOG: StorefrontProduct[] = [
     reasoning: { style: 'picked', text: 'placeholder' },
   },
   {
+    id: 3,
+    brand: 'Blaize Editions',
+    name: 'Signature Straw Tote',
+    color: 'Sand',
+    price: 68,
+    rating: 4.9,
+    reviewCount: 402,
+    category: 'Accessories',
+    imageUrl: 'https://example.test/tote.jpg',
+    tags: ['accessories'],
+    reasoning: { style: 'picked', text: 'placeholder' },
+  },
+  {
     id: 8,
     brand: 'Blaize Home',
     name: 'Ceramic Tumbler Set',
@@ -66,22 +79,32 @@ const STATS: CatalogStats = {
 }
 
 describe('resolveCover', () => {
-  it('anna gets the Ceramic Tumbler Set and a gift-framed eyebrow regardless of time-of-day', () => {
+  it('anna gets the Straw Tote and a gift-framed eyebrow regardless of time-of-day', () => {
     const morning = resolveCover(persona('anna'), STATS, 'morning', CATALOG)
     const evening = resolveCover(persona('anna'), STATS, 'evening', CATALOG)
 
-    expect(morning.product.name).toBe('Ceramic Tumbler Set')
+    expect(morning.product.name).toBe('Signature Straw Tote')
     expect(morning.eyebrow).toBe('A gift, ready to go')
-    expect(evening.product.name).toBe('Ceramic Tumbler Set')
+    expect(evening.product.name).toBe('Signature Straw Tote')
     expect(evening.eyebrow).toBe('A gift, ready to go')
   })
 
   it("anna's gift cover wins even when the catalog standout is set to something else", () => {
     const result = resolveCover(persona('anna'), STATS, 'afternoon', CATALOG)
     // The standout in STATS is the Italian Linen Camp Shirt — Anna
-    // should still see the Ceramic Tumbler Set.
-    expect(result.product.name).toBe('Ceramic Tumbler Set')
+    // should still see the Straw Tote.
+    expect(result.product.name).toBe('Signature Straw Tote')
     expect(result.product.name).not.toBe(STATS.standout_name)
+  })
+
+  it('theo gets the Ceramic Tumbler Set and the "Quiet pieces" eyebrow regardless of time-of-day', () => {
+    const morning = resolveCover(persona('theo'), STATS, 'morning', CATALOG)
+    const evening = resolveCover(persona('theo'), STATS, 'evening', CATALOG)
+
+    expect(morning.product.name).toBe('Ceramic Tumbler Set')
+    expect(morning.eyebrow).toBe('Quiet pieces for slow days')
+    expect(evening.product.name).toBe('Ceramic Tumbler Set')
+    expect(evening.eyebrow).toBe('Quiet pieces for slow days')
   })
 
   it('marco gets the Italian Linen Camp Shirt + "Matched to your thread" regardless of time-of-day', () => {
@@ -123,7 +146,7 @@ describe('resolveCover', () => {
   })
 
   it("anna falls through to the global path if the pinned piece is missing from the catalog", () => {
-    const catalogWithoutGift = CATALOG.filter((p) => p.name !== 'Ceramic Tumbler Set')
+    const catalogWithoutGift = CATALOG.filter((p) => p.name !== 'Signature Straw Tote')
     const result = resolveCover(persona('anna'), STATS, 'morning', catalogWithoutGift)
     expect(result.product.name).toBe('Italian Linen Camp Shirt')
     expect(result.eyebrow).toBe("This morning's standout")

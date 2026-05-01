@@ -103,6 +103,11 @@ const FOLLOWUPS_BY_PERSONA: Record<string, string[]> = {
     'something similar to what I bought last time',
     'milestone pieces under $200',
   ],
+  theo: [
+    'what did I buy last time?',
+    'stoneware that wears in well',
+    'linen throws for a small room',
+  ],
   fresh: [
     'something for long summer walks',
     "what's trending tonight",

@@ -53,9 +53,15 @@ describe('reorderForPersona', () => {
     )
   })
 
+  it('leads with semantic-search for Theo and uses the stoneware tailored message', () => {
+    const result = reorderForPersona(makeSlides(), 'theo')
+    expect(result[0].id).toBe('semantic-search')
+    expect(result[0].userMessage).toBe('Stoneware that wears in, not out.')
+  })
+
   it('preserves every slide in the deck (no drops, no dupes)', () => {
     const slides = makeSlides()
-    for (const personaId of ['marco', 'anna']) {
+    for (const personaId of ['marco', 'anna', 'theo']) {
       const result = reorderForPersona(slides, personaId)
       expect(result).toHaveLength(slides.length)
       const ids = result.map((s) => s.id).sort()
