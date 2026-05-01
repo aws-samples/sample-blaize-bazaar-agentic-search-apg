@@ -123,7 +123,10 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
     }
   }
 
-  // Celebration card — full-screen centered modal
+  // Celebration card — editorial cream card on espresso scrim.
+  // Mirrors the storefront's Fraunces-italic + Inter register; no iOS
+  // dark-mode carry-over. Red-1 for the primary action, mono for
+  // meta, cream-1 for the card body.
   const celebrationCard = (
     <motion.div
       className="fixed inset-0 z-[2500] flex items-center justify-center"
@@ -132,53 +135,99 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="absolute inset-0" style={{ background: 'rgba(0, 0, 0, 0.8)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }} onClick={endTour} />
+      <div
+        className="absolute inset-0"
+        style={{ background: 'rgba(31, 20, 16, 0.55)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+        onClick={endTour}
+      />
       <motion.div
-        className="relative w-[460px] max-w-[90vw]"
-        initial={{ opacity: 0, scale: 0.9, y: 24 }}
+        className="relative w-[480px] max-w-[92vw]"
+        initial={{ opacity: 0, scale: 0.95, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 240, damping: 24, delay: 0.1 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 26, delay: 0.08 }}
       >
         <div
-          className="rounded-2xl p-8 text-center"
+          className="rounded-2xl px-10 py-9 text-center"
           style={{
-            background: 'rgba(28, 28, 30, 0.98)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            boxShadow: '0 24px 80px -12px rgba(0, 0, 0, 0.7)',
+            background: 'var(--cream-1)',
+            border: '1px solid var(--rule-1)',
+            boxShadow: '0 24px 80px -16px rgba(31, 20, 16, 0.35)',
           }}
         >
-          {/* Animated checkmark */}
+          {/* Eyebrow — mono edition stamp, matches the hero register */}
+          <div
+            className="mb-6"
+            style={{
+              fontFamily: 'var(--mono)',
+              fontSize: 10.5,
+              letterSpacing: '0.24em',
+              textTransform: 'uppercase',
+              color: 'var(--red-1)',
+              fontWeight: 500,
+            }}
+          >
+            <span aria-hidden>●</span>&nbsp;&nbsp;The workshop&nbsp;&nbsp;<span aria-hidden>●</span>
+          </div>
+
+          {/* Animated check — ink circle with cream check, editorial */}
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+            transition={{ delay: 0.18, type: 'spring', stiffness: 220 }}
             style={{
-              width: 64, height: 64, borderRadius: 20, margin: '0 auto 20px',
-              background: 'linear-gradient(135deg, #30D158, #34C759)',
+              width: 56, height: 56, borderRadius: '50%', margin: '0 auto 18px',
+              background: 'var(--ink-1)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 8px 24px rgba(48, 209, 88, 0.3)',
             }}
           >
-            <Check className="h-8 w-8" style={{ color: '#fff', strokeWidth: 3 }} />
+            <Check className="h-6 w-6" style={{ color: 'var(--cream-1)', strokeWidth: 2.5 }} />
           </motion.div>
 
-          <h2 className="text-2xl font-semibold mb-2 text-white" style={{ letterSpacing: '-0.02em' }}>
+          <h2
+            className="mb-3"
+            style={{
+              fontFamily: 'var(--serif)',
+              fontStyle: 'italic',
+              fontWeight: 400,
+              fontSize: 30,
+              lineHeight: 1.1,
+              color: 'var(--ink-1)',
+              letterSpacing: '-0.01em',
+            }}
+          >
             {currentStep.title}
           </h2>
 
-          <p className="text-[14px] leading-relaxed mb-8" style={{ color: 'rgba(255, 255, 255, 0.55)', maxWidth: 360, margin: '0 auto' }}>
+          <p
+            className="mb-7"
+            style={{
+              fontFamily: 'var(--sans)',
+              fontSize: 14,
+              lineHeight: 1.6,
+              letterSpacing: '-0.003em',
+              color: 'var(--ink-3)',
+              maxWidth: 380,
+              margin: '0 auto',
+            }}
+          >
             {currentStep.description}
           </p>
 
-          {/* Tech stack — minimal pills */}
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {['Aurora PostgreSQL', 'pgvector', 'Amazon Bedrock', 'Strands SDK', 'AgentCore'].map(tech => (
+          {/* Tech stack — editorial pill strip */}
+          <div className="flex flex-wrap justify-center gap-1.5 mb-7">
+            {['Aurora PostgreSQL', 'pgvector', 'Bedrock', 'Strands', 'AgentCore'].map(tech => (
               <span
                 key={tech}
-                className="px-3 py-1 rounded-full text-[11px] font-medium"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.06)',
-                  color: 'rgba(255, 255, 255, 0.5)',
+                  fontFamily: 'var(--mono)',
+                  fontSize: 10,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--ink-4)',
+                  background: 'var(--cream-2)',
+                  border: '1px solid var(--rule-1)',
+                  padding: '4px 10px',
+                  borderRadius: 999,
                 }}
               >
                 {tech}
@@ -186,33 +235,44 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
             ))}
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center gap-2.5">
             <a
               href="https://github.com/aws-samples/sample-blaize-bazaar-agentic-search-apg"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-all hover:bg-white/10"
+              className="flex items-center gap-1.5 transition-colors"
               style={{
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: 'rgba(255, 255, 255, 0.7)',
+                fontFamily: 'var(--sans)',
+                fontSize: 13,
+                fontWeight: 500,
+                letterSpacing: '-0.003em',
+                padding: '9px 18px',
+                borderRadius: 999,
+                background: 'transparent',
+                border: '1px solid var(--rule-2)',
+                color: 'var(--ink-2)',
               }}
             >
-              <Github className="h-4 w-4" />
-              Source Code
+              <Github className="h-3.5 w-3.5" />
+              Source
             </a>
             <button
               onClick={advanceTour}
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-medium transition-all"
+              className="flex items-center gap-1.5 transition-transform"
               style={{
-                background: '#0A84FF',
-                color: '#ffffff',
-                boxShadow: '0 4px 12px rgba(10, 132, 255, 0.3)',
+                fontFamily: 'var(--sans)',
+                fontSize: 13,
+                fontWeight: 500,
+                letterSpacing: '-0.003em',
+                padding: '9px 20px',
+                borderRadius: 999,
+                background: 'var(--red-1)',
+                color: 'var(--cream-1)',
+                boxShadow: '0 4px 12px rgba(196, 69, 54, 0.25)',
               }}
             >
-              <PartyPopper className="h-4 w-4" />
-              Start Exploring
+              <PartyPopper className="h-3.5 w-3.5" />
+              Start exploring
             </button>
           </div>
         </div>
@@ -230,11 +290,11 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.25 }}
     >
-      {/* Dark overlay with cutout */}
+      {/* Espresso scrim with cutout — matches editorial palette */}
       <div
         className="absolute inset-0"
         onClick={endTour}
-        style={{ background: 'rgba(0, 0, 0, 0.7)' }}
+        style={{ background: 'rgba(31, 20, 16, 0.62)' }}
       />
 
       {/* Spotlight cutout */}
@@ -247,22 +307,22 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
             width: targetRect.width,
             height: targetRect.height,
             borderRadius: 14,
-            boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.7)',
+            boxShadow: '0 0 0 9999px rgba(31, 20, 16, 0.62)',
             pointerEvents: 'none',
           }}
           initial={{ opacity: 0, scale: 0.97 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: 'spring', stiffness: 300, damping: 28 }}
         >
-          {/* Subtle ring */}
+          {/* Subtle ring — burgundy, in register with the storefront */}
           <motion.div
             className="absolute inset-0"
             style={{ borderRadius: 14 }}
             animate={{
               boxShadow: [
-                '0 0 0 2px rgba(10, 132, 255, 0.4), 0 0 16px rgba(10, 132, 255, 0.15)',
-                '0 0 0 2px rgba(10, 132, 255, 0.6), 0 0 24px rgba(10, 132, 255, 0.2)',
-                '0 0 0 2px rgba(10, 132, 255, 0.4), 0 0 16px rgba(10, 132, 255, 0.15)',
+                '0 0 0 2px rgba(196, 69, 54, 0.45), 0 0 18px rgba(196, 69, 54, 0.18)',
+                '0 0 0 2px rgba(196, 69, 54, 0.65), 0 0 26px rgba(196, 69, 54, 0.24)',
+                '0 0 0 2px rgba(196, 69, 54, 0.45), 0 0 18px rgba(196, 69, 54, 0.18)',
               ],
             }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
@@ -285,40 +345,46 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
         transition={{ type: 'spring', stiffness: 300, damping: 28, delay: 0.08 }}
       >
         <div
-          className="rounded-2xl p-5"
+          className="rounded-2xl"
           style={{
-            background: 'rgba(28, 28, 30, 0.98)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            boxShadow: '0 16px 48px -8px rgba(0, 0, 0, 0.6)',
+            background: 'var(--cream-1)',
+            border: '1px solid var(--rule-1)',
+            boxShadow: '0 16px 48px -8px rgba(31, 20, 16, 0.35)',
+            padding: '18px 20px 16px',
           }}
         >
-          {/* Header row: progress + close */}
+          {/* Header row: edition stamp + close */}
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span
-                className="text-[11px] font-semibold px-2 py-0.5 rounded-md"
-                style={{ background: 'rgba(10, 132, 255, 0.15)', color: 'rgba(10, 132, 255, 0.9)' }}
-              >
-                {tourStep + 1}/{totalSteps}
-              </span>
-            </div>
+            <span
+              style={{
+                fontFamily: 'var(--mono)',
+                fontSize: 10,
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+                color: 'var(--red-1)',
+                fontWeight: 500,
+              }}
+            >
+              No. {String(tourStep + 1).padStart(2, '0')} / {String(totalSteps).padStart(2, '0')}
+            </span>
             <button
               onClick={endTour}
-              className="p-1.5 rounded-lg transition-colors hover:bg-white/10"
+              className="p-1 rounded-full transition-colors"
               aria-label="Close tour"
+              style={{ color: 'var(--ink-4)' }}
             >
-              <X className="h-3.5 w-3.5" style={{ color: 'rgba(255, 255, 255, 0.35)' }} />
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          {/* Progress bar */}
+          {/* Progress rule — thin burgundy line, not a progress bar */}
           <div
-            className="h-[3px] rounded-full mb-4 overflow-hidden"
-            style={{ background: 'rgba(255, 255, 255, 0.08)' }}
+            className="mb-4 overflow-hidden"
+            style={{ height: 1, background: 'var(--rule-1)' }}
           >
             <motion.div
-              className="h-full rounded-full"
-              style={{ background: '#0A84FF' }}
+              className="h-full"
+              style={{ background: 'var(--red-1)' }}
               initial={{ width: 0 }}
               animate={{ width: `${((tourStep + 1) / totalSteps) * 100}%` }}
               transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -326,10 +392,30 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
           </div>
 
           {/* Content */}
-          <h3 className="text-[16px] font-semibold mb-2" style={{ color: '#ffffff', letterSpacing: '-0.01em' }}>
+          <h3
+            className="mb-2"
+            style={{
+              fontFamily: 'var(--serif)',
+              fontStyle: 'italic',
+              fontWeight: 400,
+              fontSize: 19,
+              lineHeight: 1.15,
+              letterSpacing: '-0.005em',
+              color: 'var(--ink-1)',
+            }}
+          >
             {currentStep.title}
           </h3>
-          <p className="text-[13px] leading-relaxed mb-5" style={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+          <p
+            className="mb-5"
+            style={{
+              fontFamily: 'var(--sans)',
+              fontSize: 13.5,
+              lineHeight: 1.6,
+              letterSpacing: '-0.003em',
+              color: 'var(--ink-3)',
+            }}
+          >
             {currentStep.description}
           </p>
 
@@ -343,11 +429,17 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
                 }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-medium"
+                className="flex items-center gap-1.5"
                 style={{
-                  background: '#0A84FF',
-                  color: '#ffffff',
-                  boxShadow: '0 2px 8px rgba(10, 132, 255, 0.3)',
+                  fontFamily: 'var(--sans)',
+                  fontSize: 12.5,
+                  fontWeight: 500,
+                  letterSpacing: '-0.003em',
+                  padding: '8px 16px',
+                  borderRadius: 999,
+                  background: 'var(--red-1)',
+                  color: 'var(--cream-1)',
+                  boxShadow: '0 2px 8px rgba(196, 69, 54, 0.25)',
                 }}
               >
                 <Sparkles className="h-3.5 w-3.5" />
@@ -358,11 +450,17 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
               onClick={advanceTour}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-1 px-4 py-2 rounded-xl text-[13px] font-medium ml-auto"
+              className="flex items-center gap-1 ml-auto"
               style={{
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: 'rgba(255, 255, 255, 0.8)',
+                fontFamily: 'var(--sans)',
+                fontSize: 12.5,
+                fontWeight: 500,
+                letterSpacing: '-0.003em',
+                padding: '8px 14px',
+                borderRadius: 999,
+                background: 'var(--cream-2)',
+                border: '1px solid var(--rule-2)',
+                color: 'var(--ink-2)',
               }}
             >
               {isLastStep ? 'Done' : 'Next'}
@@ -374,8 +472,14 @@ const SpotlightWalkthrough = ({ onAction }: SpotlightWalkthroughProps) => {
           {!isLastStep && (
             <button
               onClick={endTour}
-              className="mt-3 text-[11px] transition-colors hover:text-white/50 block mx-auto"
-              style={{ color: 'rgba(255, 255, 255, 0.25)' }}
+              className="mt-3 block mx-auto transition-colors"
+              style={{
+                fontFamily: 'var(--mono)',
+                fontSize: 10,
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: 'var(--ink-4)',
+              }}
             >
               Skip tour
             </button>
