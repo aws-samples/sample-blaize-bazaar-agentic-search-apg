@@ -1,26 +1,24 @@
 /**
- * Footer - 5-column site footer.
+ * Footer — brand + three live columns + bottom strip.
  *
- * Validates Requirements 1.10.1, 1.10.2, 1.10.3.
+ * Earlier footer shipped with five columns and a newsletter form.
+ * Every link pointed to a placeholder route. Replaced with three
+ * live surfaces that map 1:1 to routes that exist in the router:
  *
- * Contract:
- *   - Exactly 5 columns in order: Brand, Shop, About, Service,
- *     Storyboard newsletter (Req 1.10.1).
- *   - The About column carries `Our story`, `Makers we love`,
- *     `Sustainability`, `Press` - these live here rather than in the
- *     top nav (Req 1.10.2, 1.2.4).
- *   - Bottom strip shows the copyright line plus `Privacy`, `Terms`,
- *     `Accessibility` (Req 1.10.3).
+ *   - Brand column: "Blaize Bazaar" mark + tagline (unchanged).
+ *   - Explore:      The floor (`/#shop`), Discover, Storyboard.
+ *   - Storyboard:   Italic blurb + a real link to `/storyboard`.
+ *   - Atelier:      Italic blurb + a real link to `/atelier`.
+ *   - Bottom strip: Copyright + current year. No Privacy/Terms/
+ *                   Accessibility stubs — those were the same dead
+ *                   links this rewrite is eliminating.
  *
- * Copy comes from the `FOOTER` block in copy.ts so the scanner in
- * `src/__tests__/copy.test.ts` keeps it honest. The newsletter form
- * is intentionally client-only: subscribing is wired downstream.
+ * Copy from `FOOTER` in copy.ts.
  */
-import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { FOOTER } from '../copy'
 
-// --- Design tokens (storefront.md) ---------------------------------------
 const CREAM = '#fbf4e8'
 const CREAM_WARM = '#f5e8d3'
 const INK = '#2d1810'
@@ -30,8 +28,6 @@ const ACCENT = '#c44536'
 
 const INTER_STACK = 'Inter, system-ui, sans-serif'
 const FRAUNCES_STACK = 'Fraunces, Georgia, serif'
-
-// --- Public component ----------------------------------------------------
 
 export default function Footer() {
   const year = new Date().getFullYear()
@@ -54,37 +50,33 @@ export default function Footer() {
           data-testid="footer-columns"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
             gap: 48,
             paddingBottom: 48,
           }}
         >
           <BrandColumn />
-          <LinkColumn
-            testId="footer-column-shop"
-            heading={FOOTER.SHOP.HEADING}
-            items={FOOTER.SHOP.ITEMS}
+          <ExploreColumn />
+          <EditorialColumn
+            testId="footer-column-storyboard"
+            heading={FOOTER.STORYBOARD.HEADING}
+            copy={FOOTER.STORYBOARD.COPY}
+            ctaLabel={FOOTER.STORYBOARD.CTA_LABEL}
+            ctaHref={FOOTER.STORYBOARD.CTA_HREF}
           />
-          <LinkColumn
-            testId="footer-column-about"
-            heading={FOOTER.ABOUT.HEADING}
-            items={FOOTER.ABOUT.ITEMS}
+          <EditorialColumn
+            testId="footer-column-atelier"
+            heading={FOOTER.ATELIER.HEADING}
+            copy={FOOTER.ATELIER.COPY}
+            ctaLabel={FOOTER.ATELIER.CTA_LABEL}
+            ctaHref={FOOTER.ATELIER.CTA_HREF}
           />
-          <LinkColumn
-            testId="footer-column-service"
-            heading={FOOTER.SERVICE.HEADING}
-            items={FOOTER.SERVICE.ITEMS}
-          />
-          <NewsletterColumn />
         </div>
-
         <BottomStrip copyrightLine={copyrightLine} />
       </div>
     </footer>
   )
 }
-
-// --- Brand column -------------------------------------------------------
 
 function BrandColumn() {
   return (
@@ -136,15 +128,80 @@ function BrandColumn() {
   )
 }
 
-// --- Generic link column -----------------------------------------------
-
-interface LinkColumnProps {
-  testId: string
-  heading: string
-  items: readonly string[]
+function ExploreColumn() {
+  return (
+    <section
+      data-testid="footer-column-explore"
+      aria-labelledby="footer-column-explore-heading"
+      style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+    >
+      <h3
+        id="footer-column-explore-heading"
+        style={{
+          fontFamily: INTER_STACK,
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          color: INK_QUIET,
+          margin: 0,
+        }}
+      >
+        {FOOTER.EXPLORE.HEADING}
+      </h3>
+      <ul
+        role="list"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          margin: 0,
+          padding: 0,
+          listStyle: 'none',
+        }}
+      >
+        {FOOTER.EXPLORE.ITEMS.map(({ label, href }) => (
+          <li key={label}>
+            <Link
+              to={href}
+              data-testid={`footer-explore-link-${label.toLowerCase().replace(/\s+/g, '-')}`}
+              style={{
+                color: INK,
+                fontSize: 14,
+                textDecoration: 'none',
+                transition: 'color 180ms ease-out',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = ACCENT
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = INK
+              }}
+            >
+              {label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
 }
 
-function LinkColumn({ testId, heading, items }: LinkColumnProps) {
+interface EditorialColumnProps {
+  testId: string
+  heading: string
+  copy: string
+  ctaLabel: string
+  ctaHref: string
+}
+
+function EditorialColumn({
+  testId,
+  heading,
+  copy,
+  ctaLabel,
+  ctaHref,
+}: EditorialColumnProps) {
   return (
     <section
       data-testid={testId}
@@ -165,154 +222,47 @@ function LinkColumn({ testId, heading, items }: LinkColumnProps) {
       >
         {heading}
       </h3>
-      <ul
-        role="list"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-          margin: 0,
-          padding: 0,
-          listStyle: 'none',
-        }}
-      >
-        {items.map((label) => (
-          <li key={label}>
-            <a
-              href="#"
-              style={{
-                color: INK,
-                fontSize: 14,
-                textDecoration: 'none',
-                transition: 'color 180ms ease-out',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = ACCENT
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = INK
-              }}
-            >
-              {label}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
-}
-
-// --- Newsletter column --------------------------------------------------
-
-function NewsletterColumn() {
-  const [email, setEmail] = useState('')
-  const [submitted, setSubmitted] = useState(false)
-
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (email.trim().length === 0) return
-    setSubmitted(true)
-  }
-
-  return (
-    <section
-      data-testid="footer-column-newsletter"
-      aria-labelledby="footer-column-newsletter-heading"
-      style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
-    >
-      <h3
-        id="footer-column-newsletter-heading"
-        style={{
-          fontFamily: INTER_STACK,
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-          color: INK_QUIET,
-          margin: 0,
-        }}
-      >
-        {FOOTER.STORYBOARD_NEWSLETTER.HEADING}
-      </h3>
       <p
         style={{
           fontFamily: FRAUNCES_STACK,
           fontStyle: 'italic',
           fontWeight: 400,
           fontSize: 15,
-          lineHeight: 1.5,
+          lineHeight: 1.55,
           color: INK,
           margin: 0,
         }}
       >
-        {FOOTER.STORYBOARD_NEWSLETTER.COPY}
+        {copy}
       </p>
-      <form
-        data-testid="footer-newsletter-form"
-        onSubmit={onSubmit}
+      <Link
+        to={ctaHref}
+        data-testid={`${testId}-cta`}
         style={{
-          display: 'flex',
-          alignItems: 'stretch',
-          gap: 8,
+          fontFamily: INTER_STACK,
+          fontSize: 13,
+          fontWeight: 500,
+          letterSpacing: '-0.003em',
+          color: ACCENT,
+          textDecoration: 'none',
           marginTop: 4,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.textDecoration = 'underline'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.textDecoration = 'none'
         }}
       >
-        <label htmlFor="footer-newsletter-email" className="sr-only">
-          {FOOTER.STORYBOARD_NEWSLETTER.EMAIL_PLACEHOLDER}
-        </label>
-        <input
-          id="footer-newsletter-email"
-          data-testid="footer-newsletter-email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder={FOOTER.STORYBOARD_NEWSLETTER.EMAIL_PLACEHOLDER}
-          required
-          style={{
-            flex: 1,
-            minWidth: 0,
-            padding: '10px 12px',
-            border: `1px solid ${INK_QUIET}`,
-            borderRadius: 2,
-            background: CREAM,
-            color: INK,
-            fontFamily: INTER_STACK,
-            fontSize: 13,
-          }}
-        />
-        <button
-          type="submit"
-          data-testid="footer-newsletter-submit"
-          style={{
-            padding: '10px 16px',
-            background: INK,
-            color: CREAM,
-            border: 'none',
-            borderRadius: 2,
-            fontFamily: INTER_STACK,
-            fontSize: 13,
-            fontWeight: 500,
-            letterSpacing: '0.02em',
-            cursor: 'pointer',
-          }}
-        >
-          {FOOTER.STORYBOARD_NEWSLETTER.SUBMIT}
-        </button>
-      </form>
-      {submitted ? (
-        <p
-          data-testid="footer-newsletter-ack"
-          role="status"
-          style={{ fontSize: 12, color: INK_SOFT, margin: 0 }}
-        >
-          Thank you. The next letter lands soon.
-        </p>
-      ) : null}
+        {ctaLabel}
+        <span aria-hidden>&rarr;</span>
+      </Link>
     </section>
   )
 }
-
-// --- Bottom strip -------------------------------------------------------
 
 interface BottomStripProps {
   copyrightLine: string
@@ -324,7 +274,6 @@ function BottomStrip({ copyrightLine }: BottomStripProps) {
       data-testid="footer-bottom-strip"
       style={{
         display: 'flex',
-        flexWrap: 'wrap',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 16,
@@ -338,39 +287,17 @@ function BottomStrip({ copyrightLine }: BottomStripProps) {
       >
         {copyrightLine}
       </span>
-      <ul
-        role="list"
+      <span
         style={{
-          display: 'flex',
-          gap: 20,
-          margin: 0,
-          padding: 0,
-          listStyle: 'none',
+          fontFamily: INTER_STACK,
+          fontSize: 11,
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          color: INK_QUIET,
         }}
       >
-        {FOOTER.BOTTOM_STRIP.LINKS.map((label) => (
-          <li key={label}>
-            <a
-              data-testid={`footer-bottom-link-${label.toLowerCase()}`}
-              href="#"
-              style={{
-                fontSize: 12,
-                color: INK_QUIET,
-                textDecoration: 'none',
-                transition: 'color 180ms ease-out',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = ACCENT
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = INK_QUIET
-              }}
-            >
-              {label}
-            </a>
-          </li>
-        ))}
-      </ul>
+        Made for the workshop
+      </span>
     </div>
   )
 }

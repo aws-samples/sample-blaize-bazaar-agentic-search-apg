@@ -312,32 +312,40 @@ export const DISCOVER_PAGE_SIGNED_OUT =
   "Discover is tailored to you. Sign in and watch the storefront tune itself.";
 export const DISCOVER_PAGE_COMING_SOON = STORYBOARD_PAGE_COMING_SOON;
 
-// Footer (Requirement 1.10)
+// Footer \u2014 three live columns + a brand + a bottom strip.
+//
+// Earlier iterations carried four product/editorial columns with a
+// dozen links, a newsletter form, and a bottom strip. Every one of
+// those links was a stub. Replaced with three columns pointing at
+// routes that actually exist: Explore (the three real storefront
+// routes), Storyboard (editorial entry), Atelier (the workshop).
+// Fewer promises, every promise kept.
 export const FOOTER = {
   BRAND: {
     TAGLINE: "Carefully curated goods from makers who care about craft",
   },
-  SHOP: {
-    HEADING: "Shop",
-    ITEMS: ["New arrivals", "Summer Edit", "Gift guide", "Sale"],
+  EXPLORE: {
+    HEADING: "Explore",
+    ITEMS: [
+      { label: "The floor", href: "/#shop" },
+      { label: "Discover", href: "/discover" },
+      { label: "Storyboard", href: "/storyboard" },
+    ],
   },
-  ABOUT: {
-    HEADING: "About",
-    ITEMS: ["Our story", "Makers we love", "Sustainability", "Press"],
-  },
-  SERVICE: {
-    HEADING: "Service",
-    ITEMS: ["Shipping", "Returns", "Contact", "FAQ"],
-  },
-  STORYBOARD_NEWSLETTER: {
+  STORYBOARD: {
     HEADING: "Storyboard",
-    COPY: "A weekly letter on craft, makers, and a slower kind of shopping",
-    EMAIL_PLACEHOLDER: "Your email",
-    SUBMIT: "Subscribe",
+    COPY: "Field notes from a slower kind of shopping \u2014 one short essay at a time.",
+    CTA_LABEL: "Read the latest",
+    CTA_HREF: "/storyboard",
+  },
+  ATELIER: {
+    HEADING: "Atelier",
+    COPY: "Behind the curtain \u2014 every tool call, every reasoning step, on display.",
+    CTA_LABEL: "Open the Atelier",
+    CTA_HREF: "/atelier",
   },
   BOTTOM_STRIP: {
     COPYRIGHT: "\u00a9 Blaize Bazaar",
-    LINKS: ["Privacy", "Terms", "Accessibility"],
   },
 } as const;
 
