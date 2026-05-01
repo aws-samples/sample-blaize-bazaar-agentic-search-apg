@@ -1849,10 +1849,18 @@ CURRENT REQUEST: {message}"""
                     "action": "Done",
                     "status": "completed"
                 }
-                # Reset streamed content — the agent will now generate
-                # its final text response. We don't want pre-tool
-                # thinking text mixed with post-tool response.
-                yield {"type": "content_reset"}
+                # Reset streamed content — tells the frontend to clear
+                # the bubble so the agent's final text response starts
+                # fresh. Only needed for Pattern I (agents_as_tools)
+                # where Haiku's pre-tool thinking text must be cleared
+                # before the specialist's response. In Pattern III
+                # (dispatcher), the specialist's tool call is internal
+                # — tokens before and after the tool are part of one
+                # continuous response, so resetting would cause the
+                # specialist to re-stream its full output into an
+                # already-populated bubble (the "stuttering" bug).
+                if pattern != "dispatcher":
+                    yield {"type": "content_reset"}
 
             elif "_text" in event:
                 # Stream text tokens to the client in real time
