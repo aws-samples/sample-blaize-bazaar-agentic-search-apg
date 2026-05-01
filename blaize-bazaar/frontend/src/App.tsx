@@ -24,6 +24,7 @@ import { UIProvider } from './contexts/UIContext'
 import { LayoutProvider } from './contexts/LayoutContext'
 import { PersonaProvider } from './contexts/PersonaContext'
 import AuthModal from './components/AuthModal'
+import PersonaTransitionOverlay from './components/PersonaTransitionOverlay'
 import PreferencesModal from './components/PreferencesModal'
 import ConciergeModal from './components/ConciergeModal'
 import ChatDrawer from './components/ChatDrawer'
@@ -109,6 +110,7 @@ function App() {
              */}
             <AuthModal />
             <PreferencesModal />
+            <PersonaTransitionOverlay />
             <BrowserRouter
               future={{
                 v7_startTransition: true,
