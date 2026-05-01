@@ -288,14 +288,25 @@ export function useAgentChat(
       // deltas into a string buffer and flush it once per animation
       // frame (~60fps). This lands each frame with the accumulated
       // chars and lets the browser paint smoothly, like Claude Desktop.
+      //
+      // Generation counter: incremented on every content_reset. A
+      // flush callback that was scheduled before the reset checks the
+      // generation and drops itself if it's stale — this prevents the
+      // "stuttering" bug where a pre-reset rAF fires after the reset
+      // and re-adds old tokens into the cleared message.
       let pendingDelta = ''
       let flushScheduled = false
+      let flushGeneration = 0
       const flushDelta = () => {
         flushScheduled = false
         if (!pendingDelta) return
         const chunk = pendingDelta
+        const gen = flushGeneration
         pendingDelta = ''
         setMessages(prev => {
+          // Stale flush — a content_reset happened after this flush
+          // was scheduled. Drop the chunk silently.
+          if (gen !== flushGeneration) return prev
           const updated = [...prev]
           const lastMsg = updated[updated.length - 1]
           if (!lastMsg || lastMsg.role !== 'assistant') return prev
@@ -471,17 +482,16 @@ export function useAgentChat(
             } else if (data.type === 'content_reset') {
               // Drop any buffered deltas AND cancel any scheduled rAF
               // flush so pre-reset tokens don't bleed into the post-
-              // reset text. The flush might fire between our clear and
-              // the setMessages call otherwise, re-adding old tokens.
+              // reset text. Increment the generation counter so any
+              // already-queued rAF callback drops itself on fire.
               pendingDelta = ''
               flushScheduled = false
+              flushGeneration++
               setMessages(prev => {
                 const updated = [...prev]
                 const lastMsg = updated[updated.length - 1]
                 lastMsg.content = ''
                 if (lastMsg.agentStatus === 'streaming') {
-                  // Reset back to thinking so the post-reset text
-                  // starts fresh with the streaming animation.
                   lastMsg.agentStatus = 'thinking'
                 }
                 return [...updated]
