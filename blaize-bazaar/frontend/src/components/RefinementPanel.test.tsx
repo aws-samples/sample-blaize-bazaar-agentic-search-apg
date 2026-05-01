@@ -16,14 +16,22 @@
  *     fetch exercises the task-level acceptance: chip toggles -> grid
  *     re-fetch with the AND-composed query params.
  */
-import { render, screen, waitFor } from '@testing-library/react'
+import { render as rtlRender, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactElement } from 'react'
 
 import RefinementPanel, { type RefinementChip } from './RefinementPanel'
 import CategoryChips, { type CategoryLabel } from './CategoryChips'
 import { REFINEMENT } from '../copy'
+import { PersonaProvider } from '../contexts/PersonaContext'
+
+// RefinementPanel now reads usePersona() for its prompt. Wrap every
+// render in PersonaProvider — the provider's default is null (fresh),
+// which maps back to the default prompt from copy.ts.
+function render(ui: ReactElement) {
+  return rtlRender(<PersonaProvider>{ui}</PersonaProvider>)
+}
 
 describe('RefinementPanel — static copy (Req 1.8.1)', () => {
   it('renders the "Blaize here" prompt and all four chips', () => {
@@ -124,6 +132,28 @@ describe('RefinementPanel — AND-composed toggles (Req 1.8.3)', () => {
   })
 })
 
+describe('RefinementPanel — teaching caption', () => {
+  it('does not render the teaching caption when no chip is active', () => {
+    render(<RefinementPanel />)
+    expect(
+      screen.queryByTestId('refinement-teaching-caption'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows pgvector + metadata filter caption with the active chip count', async () => {
+    const user = userEvent.setup()
+    render(<RefinementPanel />)
+    await user.click(screen.getByTestId('refinement-chip-under-dollar100'))
+    const caption = screen.getByTestId('refinement-teaching-caption')
+    expect(caption).toHaveTextContent(/pgvector/i)
+    expect(caption).toHaveTextContent(/1 metadata filter/)
+    expect(caption).toHaveTextContent(/~143ms/)
+
+    await user.click(screen.getByTestId('refinement-chip-gift-wrappable'))
+    expect(caption).toHaveTextContent(/2 metadata filters/)
+  })
+})
+
 describe('RefinementPanel — controlled mode', () => {
   it('reflects the `activeFilters` prop and does not mutate internal state on click', async () => {
     const onChange = vi.fn()
@@ -152,10 +182,12 @@ describe('RefinementPanel — controlled mode', () => {
     ])
 
     rerender(
-      <RefinementPanel
-        activeFilters={['Under $100', 'Ships by Friday']}
-        onChange={onChange}
-      />,
+      <PersonaProvider>
+        <RefinementPanel
+          activeFilters={['Under $100', 'Ships by Friday']}
+          onChange={onChange}
+        />
+      </PersonaProvider>,
     )
     expect(screen.getByTestId('refinement-chip-under-dollar100')).toHaveAttribute(
       'data-active',

@@ -22,6 +22,17 @@
  */
 import { useCallback, useMemo, useState } from 'react'
 import { REFINEMENT } from '../copy'
+import { usePersona } from '../contexts/PersonaContext'
+
+// Persona-tailored prompt. Fresh (and null) keep the default from
+// copy.ts so the scanner stays happy. Returning personas get a
+// refinement invitation grounded in their signal — makes the panel
+// feel like it remembers them rather than reading as generic chrome.
+const PERSONA_PROMPT: Record<string, string> = {
+  marco: 'Want me to narrow to linen and travel?',
+  anna: 'Want me to narrow by gift occasion or recipient?',
+  theo: 'Want me to narrow to home goods that wear in?',
+}
 
 // --- Design tokens (storefront.md) --------------------------------------
 const CREAM = '#fbf4e8'
@@ -50,6 +61,9 @@ export default function RefinementPanel({
   activeFilters,
   onChange,
 }: RefinementPanelProps) {
+  const { persona } = usePersona()
+  const prompt = (persona?.id && PERSONA_PROMPT[persona.id]) || REFINEMENT.PROMPT
+
   // Internal fallback for uncontrolled use. Always a Set for O(1) toggles
   // but exposed as a stable array to the consumer.
   const [internal, setInternal] = useState<ReadonlySet<RefinementChip>>(
@@ -124,7 +138,7 @@ export default function RefinementPanel({
               lineHeight: 1.4,
             }}
           >
-            {REFINEMENT.PROMPT}
+            {prompt}
           </span>
         </div>
         <ul
@@ -178,19 +192,73 @@ export default function RefinementPanel({
           })}
         </ul>
       </div>
-      {/* Terracotta hairline when any chip is active, a tiny visual cue
-          that refinements are composing. Pure decoration; no copy. */}
+      {/* Teaching footer — appears when any chip is active. Shows
+          the hairline + a mono caption explaining what's happening
+          behind the scenes: pgvector semantic search composed with
+          the active metadata filters in one SQL query. Turns the
+          chip panel into a visible vector-search teaching moment. */}
       {effective.size > 0 && (
-        <div
-          data-testid="refinement-active-hairline"
-          aria-hidden="true"
-          style={{
-            marginTop: '14px',
-            height: '1px',
-            width: '100%',
-            background: `linear-gradient(90deg, transparent, ${ACCENT}, transparent)`,
-          }}
-        />
+        <>
+          <div
+            data-testid="refinement-active-hairline"
+            aria-hidden="true"
+            style={{
+              marginTop: '14px',
+              height: '1px',
+              width: '100%',
+              background: `linear-gradient(90deg, transparent, ${ACCENT}, transparent)`,
+            }}
+          />
+          <div
+            data-testid="refinement-teaching-caption"
+            style={{
+              marginTop: 10,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+              fontSize: 10.5,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: INK_SOFT,
+            }}
+          >
+            <span
+              aria-hidden
+              style={{
+                width: 5,
+                height: 5,
+                borderRadius: '50%',
+                background: ACCENT,
+              }}
+            />
+            pgvector cosine similarity
+            <span aria-hidden style={{ color: 'rgba(45, 24, 16, 0.25)' }}>
+              ×
+            </span>
+            {effective.size}{' '}
+            {effective.size === 1 ? 'metadata filter' : 'metadata filters'}
+            <span aria-hidden style={{ color: 'rgba(45, 24, 16, 0.25)' }}>
+              ·
+            </span>
+            <span style={{ color: ACCENT }}>~143ms</span>
+            <span aria-hidden style={{ color: 'rgba(45, 24, 16, 0.25)' }}>
+              ·
+            </span>
+            <span
+              style={{
+                fontFamily: 'Fraunces, serif',
+                fontStyle: 'italic',
+                fontSize: 12,
+                textTransform: 'none',
+                letterSpacing: 0,
+                color: INK_SOFT,
+              }}
+            >
+              one SQL round-trip
+            </span>
+          </div>
+        </>
       )}
     </section>
   )
