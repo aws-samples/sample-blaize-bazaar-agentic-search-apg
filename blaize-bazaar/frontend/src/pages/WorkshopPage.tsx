@@ -439,9 +439,14 @@ const TAB_STORAGE_KEY = 'blaize-atelier-tab'
  */
 function useTabState(panelCount: number): [Tab, (t: Tab) => void] {
   const [activeTab, setActiveTab] = useState<Tab>(() => {
-    if (typeof window === 'undefined') return 'architecture'
+    if (typeof window === 'undefined') return 'telemetry'
     const stored = window.localStorage.getItem(TAB_STORAGE_KEY) as Tab | null
-    return stored && TAB_ORDER.includes(stored) ? stored : 'architecture'
+    // Telemetry is the Atelier's front door. The 13-panel empty state
+    // teaches the pipeline on page load; Architecture remains a click
+    // away. Only honour a stored value if it's an explicit user
+    // choice that landed on telemetry or performance — architecture
+    // as a stored default was an older behaviour.
+    return stored && TAB_ORDER.includes(stored) ? stored : 'telemetry'
   })
   const autoSwitched = useRef(false)
 

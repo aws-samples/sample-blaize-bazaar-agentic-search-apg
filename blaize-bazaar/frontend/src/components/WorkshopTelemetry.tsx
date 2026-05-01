@@ -20,6 +20,7 @@
  * emitters don't change with this polish pass.
  */
 import { useMemo } from 'react'
+import { motion } from 'framer-motion'
 import type {
   WorkshopEvent,
   WorkshopPanelEvent,
@@ -430,12 +431,46 @@ export default function WorkshopTelemetry({ events }: { events: WorkshopEvent[] 
     )
   }
 
+  // Top-to-bottom cascade: plan card lands first with a soft fade,
+  // then each telemetry panel fades in beneath it at a 120ms stagger
+  // so the eye follows the agent's reasoning down the page. Each
+  // panel still has its own inner `fadeSlide`/`rowIn` keyframe for
+  // within-card reveal (sql rows, meta lines); the outer stagger
+  // sequences the panels themselves.
   return (
-    <div className="flex flex-col gap-3">
-      {plan && <PlanCard plan={plan} />}
+    <motion.div
+      className="flex flex-col gap-3"
+      initial="hidden"
+      animate="visible"
+      variants={{
+        visible: { transition: { staggerChildren: 0.12, delayChildren: 0.08 } },
+      }}
+    >
+      {plan && (
+        <motion.div
+          variants={{
+            hidden: { opacity: 0, y: 8 },
+            visible: { opacity: 1, y: 0, transition: { duration: 0.36, ease: 'easeOut' } },
+          }}
+        >
+          <PlanCard plan={plan} />
+        </motion.div>
+      )}
       {panels.map((ev, i) => (
-        <PanelCard key={i} ev={ev} />
+        <motion.div
+          key={i}
+          variants={{
+            hidden: { opacity: 0, y: 10 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              transition: { duration: 0.32, ease: [0.2, 0.9, 0.3, 1.05] },
+            },
+          }}
+        >
+          <PanelCard ev={ev} />
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   )
 }

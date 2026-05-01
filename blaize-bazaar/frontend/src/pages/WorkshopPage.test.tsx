@@ -116,7 +116,19 @@ function installMatchMedia(matches: MatchFactory) {
 
 import WorkshopPage from './WorkshopPage'
 
-function renderPage() {
+function renderPage(opts: { startTab?: 'telemetry' | 'architecture' | 'performance' } = {}) {
+  // The Atelier now defaults to the telemetry tab. Tests that care
+  // about architecture content need to seed localStorage so the
+  // architecture tab is already selected on first paint. Omit the
+  // option to exercise the new default.
+  const startTab = opts.startTab
+  if (startTab) {
+    try {
+      localStorage.setItem('blaize-atelier-tab', startTab)
+    } catch {
+      // jsdom quirks — fall through.
+    }
+  }
   return render(
     <MemoryRouter initialEntries={['/atelier']} future={TEST_ROUTER_FUTURE_FLAGS}>
       <WorkshopPage />
@@ -164,6 +176,12 @@ describe('WorkshopPage — chrome', () => {
 })
 
 describe('WorkshopPage — architecture cards render', () => {
+  // Architecture tab is no longer the default — seed the stored
+  // preference so the cards render on first paint.
+  beforeEach(() => {
+    try { localStorage.setItem('blaize-atelier-tab', 'architecture') } catch { /* noop */ }
+  })
+
   it('renders 8 cards covering the seven chapters plus Grounding', () => {
     renderPage()
     const ids = [
@@ -217,6 +235,10 @@ describe('WorkshopPage — architecture cards render', () => {
 })
 
 describe('WorkshopPage — architecture cards open their arch-* detail page inline', () => {
+  beforeEach(() => {
+    try { localStorage.setItem('blaize-atelier-tab', 'architecture') } catch { /* noop */ }
+  })
+
   const routes: Array<[string, string]> = [
     ['arch-card-open-memory', 'stub-arch-memory'],
     ['arch-card-open-mcp', 'stub-arch-mcp'],
@@ -257,6 +279,12 @@ describe('WorkshopPage — architecture cards open their arch-* detail page inli
 })
 
 describe('WorkshopPage — responsive breakpoints', () => {
+  // Layout tests that inspect the detail panel need to land on the
+  // architecture tab where the panel lives.
+  beforeEach(() => {
+    try { localStorage.setItem('blaize-atelier-tab', 'architecture') } catch { /* noop */ }
+  })
+
   it('selects "three-zone" layout on ≥ 1280px viewports', () => {
     installMatchMedia((q) => q.includes('min-width: 1280px'))
     renderPage()
@@ -306,13 +334,13 @@ describe('WorkshopPage — tab default + persistence', () => {
     localStorage.clear()
   })
 
-  it('defaults to the Architecture tab on first load (no stored preference)', () => {
+  it('defaults to the Telemetry tab on first load (no stored preference)', () => {
     renderPage()
     expect(
-      screen.getByTestId('workshop-tab-architecture').getAttribute('aria-selected'),
+      screen.getByTestId('workshop-tab-telemetry').getAttribute('aria-selected'),
     ).toBe('true')
     expect(
-      screen.getByTestId('workshop-tab-telemetry').getAttribute('aria-selected'),
+      screen.getByTestId('workshop-tab-architecture').getAttribute('aria-selected'),
     ).toBe('false')
   })
 
