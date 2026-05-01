@@ -344,17 +344,19 @@ describe('WorkshopPage — tab default + persistence', () => {
     ).toBe('false')
   })
 
-  it('renders tabs in the order Telemetry → Architecture → Performance', () => {
+  it('renders tabs in the order Telemetry → Architecture → Patterns → Performance', () => {
     renderPage()
     const tabs = [
       screen.getByTestId('workshop-tab-telemetry'),
       screen.getByTestId('workshop-tab-architecture'),
+      screen.getByTestId('workshop-tab-patterns'),
       screen.getByTestId('workshop-tab-performance'),
     ]
     const parent = tabs[0].parentElement!
     expect(parent.children[0]).toBe(tabs[0])
     expect(parent.children[1]).toBe(tabs[1])
     expect(parent.children[2]).toBe(tabs[2])
+    expect(parent.children[3]).toBe(tabs[3])
   })
 
   it("persists the user's explicit tab choice to localStorage", async () => {

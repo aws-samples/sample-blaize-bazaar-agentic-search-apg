@@ -38,6 +38,7 @@ import {
 import Footer from '../components/Footer'
 import Header from '../components/Header'
 import { AuthGate } from '../App'
+import PatternsTab from '../components/PatternsTab'
 import WorkshopChat from '../components/WorkshopChat'
 import WorkshopTelemetry from '../components/WorkshopTelemetry'
 import IndexPerformanceDashboard from '../components/IndexPerformanceDashboard'
@@ -65,7 +66,7 @@ const INK_QUIET = '#a68668'
 const CREAM_WARM = '#f5e8d3'
 const ACCENT = '#c44536'
 
-type Tab = 'telemetry' | 'architecture' | 'performance'
+type Tab = 'telemetry' | 'architecture' | 'patterns' | 'performance'
 
 type Provenance = 'MANAGED' | 'OWNED' | 'BOTH'
 
@@ -418,7 +419,7 @@ function useMediaQuery(query: string): boolean {
 // actually test a query). Default active tab is Architecture so the
 // first-time visitor gets orientation before dissection — see
 // ``useTabState`` below.
-const TAB_ORDER: Tab[] = ['telemetry', 'architecture', 'performance']
+const TAB_ORDER: Tab[] = ['telemetry', 'architecture', 'patterns', 'performance']
 
 const TAB_STORAGE_KEY = 'blaize-atelier-tab'
 
@@ -827,6 +828,7 @@ function WorkshopContent() {
           </div>
         )}
         {activeTab === 'telemetry' && <WorkshopTelemetry events={events} />}
+        {activeTab === 'patterns' && <PatternsTab />}
         {activeTab === 'performance' && (
           <div className="flex flex-col gap-5">
             {/* Hero */}
