@@ -1851,16 +1851,20 @@ CURRENT REQUEST: {message}"""
                 }
                 # Reset streamed content — tells the frontend to clear
                 # the bubble so the agent's final text response starts
-                # fresh. Only needed for Pattern I (agents_as_tools)
-                # where Haiku's pre-tool thinking text must be cleared
-                # before the specialist's response. In Pattern III
-                # (dispatcher), the specialist's tool call is internal
-                # — tokens before and after the tool are part of one
-                # continuous response, so resetting would cause the
-                # specialist to re-stream its full output into an
-                # already-populated bubble (the "stuttering" bug).
-                if pattern != "dispatcher":
-                    yield {"type": "content_reset"}
+                # fresh. Emitted for BOTH patterns.
+                #
+                # An earlier fix (a9338b0) skipped this for the
+                # dispatcher on the theory that specialists stream
+                # once continuously. That's wrong for any specialist
+                # that hits a tool — Bedrock's event loop runs two
+                # cycles (pre-tool reasoning, post-tool summary) and
+                # both fire the callback. Without the reset, the
+                # post-tool prose concatenates onto the pre-tool
+                # tokens and the bubble shows duplicated phrases
+                # with sub-word overlaps at the boundary. The reset
+                # clears the pre-tool leakage so only the final
+                # summary shows.
+                yield {"type": "content_reset"}
 
             elif "_text" in event:
                 # Stream text tokens to the client in real time
