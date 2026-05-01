@@ -448,7 +448,6 @@ export const ERRORS = {
   AUTH_INTERRUPTED: "Something interrupted the sign-in. Try again.",
   EMPTY_SEARCH_RESULT: "Nothing yet. Try a different wording.",
   SILENT_REFRESH_SAY: "",
-  STATUS_STRIP_STALE: "Catalog refreshing...",
   SEARCH_FALLBACK_LOADING: "Blaize is thinking...",
 } as const;
 

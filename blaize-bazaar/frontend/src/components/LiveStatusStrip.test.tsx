@@ -1,46 +1,23 @@
 /**
- * LiveStatusStrip tests — the reassuring status line above the category chips.
+ * LiveStatusStrip tests — reassuring status line above the category
+ * chips.
  *
- * Validates Requirements 1.5.1 and 1.5.2.
- *
- * Coverage:
- *   - Renders the verbatim `LIVE_STATUS` copy plus the Shipping /
- *     Returns / Secure checkout links (Req 1.5.1).
- *   - Calls `GET /api/inventory` exactly once on mount.
- *   - Hides the stale-data warning when the endpoint returns `stale: false`
- *     (Req 1.5.2).
- *   - Shows the stale-data warning when the endpoint returns `stale: true`
- *     (task 4.5 acceptance).
- *   - Tolerates fetch failures: the base strip still renders and the
- *     warning is absent.
+ * The previous version fetched /api/inventory and rendered an amber
+ * "Catalog refreshing…" warning when stale=true. That warning showed
+ * up too often in demo envs and distracted from the boutique voice,
+ * so it was removed along with the network round-trip. The test spec
+ * is rewritten here as a living contract around what the component
+ * does now — render three pieces of static copy — and an explicit
+ * negative assertion that the stale-warning element is gone.
  */
-import { render, screen, waitFor } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
 
-import LiveStatusStrip, {
-  INVENTORY_ENDPOINT,
-  type InventorySignal,
-} from './LiveStatusStrip'
+import LiveStatusStrip from './LiveStatusStrip'
 
-function mockFetchWith(body: InventorySignal, { ok = true }: { ok?: boolean } = {}) {
-  return vi.fn().mockResolvedValue({
-    ok,
-    status: ok ? 200 : 500,
-    json: () => Promise.resolve(body),
-  } as unknown as Response)
-}
-
-describe('LiveStatusStrip — static copy (Req 1.5.1)', () => {
-  it('renders the LIVE_STATUS line and the three right-side links', async () => {
-    const fetchImpl = mockFetchWith({
-      last_refreshed: new Date().toISOString(),
-      counts: { Linen: 2 },
-      stale: false,
-    })
-
-    render(<LiveStatusStrip fetchImpl={fetchImpl as unknown as typeof fetch} />)
-
-    // Static strip copy is present before any network work.
+describe('LiveStatusStrip — static copy', () => {
+  it('renders the LIVE_STATUS line and the three right-side links', () => {
+    render(<LiveStatusStrip />)
     expect(screen.getByTestId('live-status-copy')).toHaveTextContent(
       /Live inventory/,
     )
@@ -59,89 +36,15 @@ describe('LiveStatusStrip — static copy (Req 1.5.1)', () => {
     expect(screen.getByTestId('live-status-secure')).toHaveTextContent(
       'Secure checkout',
     )
-
-    // Let the effect resolve so vitest doesn't warn about act().
-    await waitFor(() => {
-      expect(fetchImpl).toHaveBeenCalled()
-    })
-  })
-})
-
-describe('LiveStatusStrip — fetch contract (Req 1.5.2)', () => {
-  it('calls /api/inventory exactly once on mount', async () => {
-    const fetchImpl = mockFetchWith({
-      last_refreshed: new Date().toISOString(),
-      counts: {},
-      stale: false,
-    })
-
-    render(<LiveStatusStrip fetchImpl={fetchImpl as unknown as typeof fetch} />)
-
-    await waitFor(() => {
-      expect(fetchImpl).toHaveBeenCalledTimes(1)
-    })
-    expect(fetchImpl).toHaveBeenCalledWith(INVENTORY_ENDPOINT)
   })
 
-  it('does NOT show the stale warning when stale=false (Req 1.5.2)', async () => {
-    const fetchImpl = mockFetchWith({
-      last_refreshed: new Date().toISOString(),
-      counts: { Linen: 5 },
-      stale: false,
-    })
-
-    render(<LiveStatusStrip fetchImpl={fetchImpl as unknown as typeof fetch} />)
-
-    // Wait for the fetch to resolve and state to settle.
-    await waitFor(() => expect(fetchImpl).toHaveBeenCalled())
-
+  it('no longer renders the "Catalog refreshing…" stale warning', () => {
+    render(<LiveStatusStrip />)
+    // Negative assertion — the stale-warning element was removed
+    // when the /api/inventory polling was retired.
     expect(
       screen.queryByTestId('live-status-stale-warning'),
     ).not.toBeInTheDocument()
-  })
-
-  it('shows the stale warning copy when stale=true', async () => {
-    const fetchImpl = mockFetchWith({
-      last_refreshed: new Date(Date.now() - 48 * 3600_000).toISOString(),
-      counts: { Linen: 5 },
-      stale: true,
-    })
-
-    render(<LiveStatusStrip fetchImpl={fetchImpl as unknown as typeof fetch} />)
-
-    const warning = await screen.findByTestId('live-status-stale-warning')
-    expect(warning).toHaveTextContent(/Catalog refreshing/)
-  })
-})
-
-describe('LiveStatusStrip — resilience', () => {
-  it('leaves the base strip visible when the fetch rejects', async () => {
-    const fetchImpl = vi.fn().mockRejectedValue(new Error('offline'))
-
-    render(<LiveStatusStrip fetchImpl={fetchImpl as unknown as typeof fetch} />)
-
-    await waitFor(() => expect(fetchImpl).toHaveBeenCalled())
-
-    expect(screen.getByTestId('live-status-strip')).toBeInTheDocument()
-    expect(
-      screen.queryByTestId('live-status-stale-warning'),
-    ).not.toBeInTheDocument()
-  })
-
-  it('leaves the base strip visible when the response is non-ok', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-      json: () => Promise.resolve({}),
-    } as unknown as Response)
-
-    render(<LiveStatusStrip fetchImpl={fetchImpl as unknown as typeof fetch} />)
-
-    await waitFor(() => expect(fetchImpl).toHaveBeenCalled())
-
-    expect(screen.getByTestId('live-status-strip')).toBeInTheDocument()
-    expect(
-      screen.queryByTestId('live-status-stale-warning'),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByText(/Catalog refreshing/)).not.toBeInTheDocument()
   })
 })
