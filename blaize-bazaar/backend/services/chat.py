@@ -302,6 +302,30 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _safe_register_hooks(session_manager, agent) -> None:
+    """Register session manager hooks on an agent, handling the API
+    mismatch between ``bedrock-agentcore`` (calls ``add_callback``)
+    and ``strands-agents`` 1.36+ (uses ``add_hook``).
+
+    Falls back gracefully — STM still works via the ``session_manager``
+    property even if hook registration fails; the hooks are an
+    optimization for batch flushing, not a hard requirement.
+    """
+    try:
+        session_manager.register_hooks(agent)
+    except AttributeError as exc:
+        # bedrock-agentcore calls registry.add_callback() but Strands
+        # 1.36+ renamed it to add_hook(). The session_manager property
+        # is sufficient for basic STM — hooks are for batch flush.
+        logger.debug(
+            "session_manager.register_hooks failed (API mismatch): %s — "
+            "STM still works via session_manager property",
+            exc,
+        )
+    except Exception as exc:
+        logger.warning("session_manager.register_hooks failed: %s", exc)
+
+
 class EnhancedChatService:
     """Enhanced chat service with product card support"""
     
@@ -465,7 +489,7 @@ class EnhancedChatService:
             # Add session manager if provided
             if session_manager:
                 orchestrator.session_manager = session_manager
-                session_manager.register_hooks(orchestrator)
+                _safe_register_hooks(session_manager, orchestrator)
             
             # Build conversation context
             conversation_context = ""
@@ -1386,7 +1410,7 @@ CURRENT REQUEST: {message}"""
             orchestrator.trace_attributes = trace_attributes
             if session_manager:
                 orchestrator.session_manager = session_manager
-                session_manager.register_hooks(orchestrator)
+                _safe_register_hooks(session_manager, orchestrator)
 
         # Build conversation context
         conversation_context = ""
@@ -1730,7 +1754,7 @@ CURRENT REQUEST: {message}"""
             orchestrator.trace_attributes = trace_attributes
             if session_manager:
                 orchestrator.session_manager = session_manager
-                session_manager.register_hooks(orchestrator)
+                _safe_register_hooks(session_manager, orchestrator)
             _attach_streaming_and_hooks(orchestrator)
             logger.info(f"🎯 Dispatcher | specialist={intent_hint}")
 
