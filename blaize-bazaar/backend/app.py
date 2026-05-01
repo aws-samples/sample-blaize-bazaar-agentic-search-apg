@@ -1160,7 +1160,9 @@ async def switch_persona(req: PersonaSwitchRequest):
         raise HTTPException(status_code=404, detail=f"Unknown persona: {req.persona_id}")
 
     import uuid
-    new_session_id = f"persona-{req.persona_id}-{uuid.uuid4().hex[:8]}"
+    # AgentCore Memory requires session IDs ≥33 chars. Use the full
+    # uuid4 hex (32 chars) plus the prefix to guarantee compliance.
+    new_session_id = f"persona-{req.persona_id}-{uuid.uuid4().hex}"
 
     # Track the mapping so /api/persona/current can resolve it.
     _session_persona[new_session_id] = req.persona_id
