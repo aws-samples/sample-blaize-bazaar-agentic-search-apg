@@ -576,62 +576,159 @@ const DemoChatCarousel = ({
                     </div>
                   </motion.div>
 
-                  {/* Product pills — echoes ProductPhotoPill from the
-                      live chat so the demo reads as a preview of the
-                      real thing. */}
+                  {/* Product cards — full artifact-card shape matching
+                      the live Storefront chat (ProductArtifactCard):
+                      red-dot "PULLED FOR YOU" eyebrow, 160px image,
+                      category eyebrow in mono, italic serif name,
+                      price + rating row, compact "Add to bag" pill.
+                      The demo now previews what a real turn produces
+                      instead of a cheaper pill shorthand. */}
                   {slide.productCards && (
-                    <motion.div className="flex flex-wrap gap-2" variants={msgFromBelow}>
+                    <motion.div
+                      className="flex flex-col gap-3"
+                      variants={msgFromBelow}
+                    >
                       {slide.productCards.map((card, i) => (
                         <div
                           key={i}
-                          className="inline-flex items-center gap-2.5"
                           style={{
-                            padding: '5px 13px 5px 5px',
                             background: 'var(--cream-1)',
                             border: '1px solid var(--rule-1)',
-                            borderRadius: 999,
+                            borderRadius: 12,
+                            overflow: 'hidden',
+                            boxShadow:
+                              '0 8px 20px -8px rgba(31, 20, 16, 0.08)',
                           }}
                         >
-                          <img
-                            src={card.image}
-                            alt=""
+                          {/* Eyebrow row */}
+                          <div
                             style={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: '50%',
-                              objectFit: 'cover',
-                              flexShrink: 0,
+                              padding: '11px 16px 0',
+                              fontFamily: 'var(--mono)',
+                              fontSize: 9.5,
+                              letterSpacing: '0.22em',
+                              textTransform: 'uppercase',
+                              color: 'var(--red-1)',
+                              fontWeight: 500,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 6,
+                            }}
+                          >
+                            <span
+                              aria-hidden
+                              style={{
+                                width: 5,
+                                height: 5,
+                                borderRadius: '50%',
+                                background: 'var(--red-1)',
+                              }}
+                            />
+                            Pulled for you
+                          </div>
+
+                          {/* Image */}
+                          <div
+                            style={{
+                              margin: '10px 16px 0',
+                              height: 140,
+                              borderRadius: 8,
+                              overflow: 'hidden',
                               background: 'var(--cream-2)',
                             }}
-                          />
-                          <span
+                          >
+                            <img
+                              src={card.image}
+                              alt={card.name}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                display: 'block',
+                              }}
+                            />
+                          </div>
+
+                          {/* Body */}
+                          <div
                             style={{
-                              fontFamily: 'var(--serif)',
-                              fontStyle: 'italic',
-                              fontSize: 13,
-                              lineHeight: 1.2,
-                              color: 'var(--ink-1)',
-                              letterSpacing: '-0.003em',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              maxWidth: 200,
+                              padding: '10px 16px 14px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 4,
                             }}
                           >
-                            {card.name}
-                          </span>
-                          <span
-                            style={{
-                              fontFamily: 'var(--sans)',
-                              fontSize: 12,
-                              fontWeight: 500,
-                              color: 'var(--ink-3)',
-                              letterSpacing: '-0.003em',
-                              flexShrink: 0,
-                            }}
-                          >
-                            {card.price}
-                          </span>
+                            <div
+                              style={{
+                                fontFamily: 'var(--mono)',
+                                fontSize: 9.5,
+                                letterSpacing: '0.2em',
+                                textTransform: 'uppercase',
+                                color: 'var(--ink-4)',
+                                fontWeight: 500,
+                              }}
+                            >
+                              Blaize Editions
+                            </div>
+                            <div
+                              style={{
+                                fontFamily: 'var(--serif)',
+                                fontStyle: 'italic',
+                                fontSize: 16,
+                                lineHeight: 1.2,
+                                color: 'var(--ink-1)',
+                                letterSpacing: '-0.003em',
+                              }}
+                            >
+                              {card.name}
+                            </div>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12,
+                                marginTop: 4,
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontFamily: 'var(--sans)',
+                                  fontSize: 13,
+                                  fontWeight: 500,
+                                  color: 'var(--ink-1)',
+                                }}
+                              >
+                                {card.price}
+                              </span>
+                              {card.rating && (
+                                <span
+                                  style={{
+                                    fontFamily: 'var(--sans)',
+                                    fontSize: 12,
+                                    color: 'var(--ink-3)',
+                                  }}
+                                >
+                                  ★ {card.rating}
+                                </span>
+                              )}
+                              <span
+                                aria-hidden
+                                style={{
+                                  marginLeft: 'auto',
+                                  fontFamily: 'var(--sans)',
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  padding: '6px 14px',
+                                  borderRadius: 999,
+                                  background: 'var(--ink-1)',
+                                  color: 'var(--cream-1)',
+                                  letterSpacing: '-0.003em',
+                                }}
+                              >
+                                Add to bag
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </motion.div>
