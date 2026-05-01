@@ -18,8 +18,9 @@
  */
 import '../styles/storefront-welcome.css'
 import type { PersonaSnapshot } from '../contexts/PersonaContext'
-import { useCatalogStats } from '../hooks/useCatalogStats'
+import { useCatalogStats, type CatalogStats } from '../hooks/useCatalogStats'
 import { SHOWCASE_PRODUCTS } from '../data/showcaseProducts'
+import type { StorefrontProduct } from '../services/types'
 
 interface StorefrontWelcomeProps {
   onSend: (text: string) => void
@@ -53,6 +54,77 @@ const TOD_COVER_EYEBROW: Record<TimeOfDay, string> = {
   evening: "Tonight's standout",
 }
 
+// ---------------------------------------------------------------------------
+// Cover resolution — picks the cover product + its eyebrow per persona.
+//
+// Each returning persona gets a pinned cover piece anchored to their
+// clearest signal, with an eyebrow that swaps the newsroom "standout"
+// language for something that reads as curated-for-them. Fresh users
+// (and null) fall through to the global standout from the catalog-
+// stats endpoint with the time-of-day eyebrow — no signal to tailor
+// against, so the boutique voice stays honest.
+//
+// If a pinned piece isn't found in the provided catalog (defensive
+// guard against future showcase edits), the persona falls through to
+// the global path so the cover never disappears.
+// ---------------------------------------------------------------------------
+
+interface PersonaCover {
+  /** Product name to find in the catalog (exact match on `name`). */
+  coverName: string
+  /** Eyebrow copy that replaces the time-of-day "standout" line. */
+  eyebrow: string
+}
+
+// Pinned covers keyed by persona id. Extending this is the one-line
+// way to tailor a new persona's welcome cover.
+const PERSONA_COVERS: Record<string, PersonaCover> = {
+  marco: {
+    coverName: 'Italian Linen Camp Shirt',
+    eyebrow: 'Matched to your thread',
+  },
+  anna: {
+    coverName: 'Ceramic Tumbler Set',
+    eyebrow: 'A gift, ready to go',
+  },
+}
+
+export interface CoverResolution {
+  product: StorefrontProduct
+  eyebrow: string
+}
+
+export function resolveCover(
+  persona: PersonaSnapshot | null | undefined,
+  stats: CatalogStats | null,
+  tod: TimeOfDay,
+  catalog: readonly StorefrontProduct[] = SHOWCASE_PRODUCTS,
+): CoverResolution {
+  // Persona-specific cover path. Try the pinned piece; fall through if
+  // it isn't in the catalog.
+  const pinned = persona?.id ? PERSONA_COVERS[persona.id] : undefined
+  if (pinned) {
+    const product = catalog.find((p) => p.name === pinned.coverName)
+    if (product) {
+      return { product, eyebrow: pinned.eyebrow }
+    }
+  }
+
+  // Global standout — match the stats endpoint's standout_name against
+  // the showcase catalog, otherwise fall back to the first piece.
+  const standoutMatch = stats?.standout_name
+    ? catalog.find(
+        (p) =>
+          p.name.toLowerCase().includes(stats.standout_name!.toLowerCase()) ||
+          stats.standout_name!.toLowerCase().includes(p.name.toLowerCase()),
+      )
+    : undefined
+  return {
+    product: standoutMatch ?? catalog[0],
+    eyebrow: TOD_COVER_EYEBROW[tod],
+  }
+}
+
 interface PersonaCopy {
   /** Greeting line without time-of-day prefix. For fresh visitors this
    * is empty and the time-of-day stands alone ("Good evening."). For
@@ -68,8 +140,8 @@ interface PersonaCopy {
   ps: ReadonlyArray<string>
 }
 
-// Local alias so the import doesn't need to leak into every consumer.
-type CatalogStats = ReturnType<typeof useCatalogStats>
+// CatalogStats is imported from the hook module so resolveCover and
+// PersonaCopy.context can both reference the same shape.
 
 const FRESH_COPY: PersonaCopy = {
   greetingSuffix: () => '',
@@ -181,16 +253,14 @@ export default function StorefrontWelcome({ onSend, persona }: StorefrontWelcome
   const greeting = `${TOD_GREETING[tod]}${copy.greetingSuffix(firstName)}.`
   const stats = useCatalogStats()
 
-  // Resolve a real product image for the cover. Match the standout
-  // product name from the catalog stats against the showcase products;
-  // fall back to the first showcase product if no match.
-  const standoutMatch = stats?.standout_name
-    ? SHOWCASE_PRODUCTS.find(p =>
-        p.name.toLowerCase().includes(stats.standout_name!.toLowerCase()) ||
-        stats.standout_name!.toLowerCase().includes(p.name.toLowerCase())
-      )
-    : null
-  const coverProduct = standoutMatch ?? SHOWCASE_PRODUCTS[0]
+  // Resolve cover product + eyebrow per persona. Anna's gift branch
+  // diverges from Marco/Fresh (who get the global standout); the
+  // helper is the single place that encodes that rule.
+  const { product: coverProduct, eyebrow: coverEyebrow } = resolveCover(
+    persona,
+    stats,
+    tod,
+  )
 
   return (
     <div className="sf-welcome">
@@ -204,7 +274,7 @@ export default function StorefrontWelcome({ onSend, persona }: StorefrontWelcome
         <div className="sf-cover-overlay">
           <div className="sf-cover-eyebrow">
             <span className="sf-cover-dot" />
-            {TOD_COVER_EYEBROW[tod]}
+            {coverEyebrow}
           </div>
           <div className="sf-cover-edition">No. 06</div>
         </div>
