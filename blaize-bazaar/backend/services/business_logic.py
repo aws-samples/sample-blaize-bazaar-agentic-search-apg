@@ -1,18 +1,17 @@
 """
 Business Logic Layer for Blaize Bazaar
-Contains custom business logic for pricing, trending, and category analysis.
+Contains custom business logic for pricing, trending, inventory, and
+category analysis.
 
 Aligned to the boutique catalog schema:
     productId, name, brand, color, price, description, category, tags,
     rating, reviews (TEXT), "imgUrl", badge, tier, image_verified,
-    embedding, created_at, updated_at
+    quantity, embedding, created_at, updated_at
 
-Legacy columns that no longer exist (quantity, stars, category_name,
-product_description, "productURL", isBestSeller, boughtInLastMonth) have
-been replaced or removed. Stock-level functions (inventory_health,
-restock_product, low_stock) return a degraded "not
-available on this catalog" envelope instead of issuing broken SQL —
-the boutique catalog has no quantity column to drive them.
+The ``quantity`` column was added by migration 004_add_quantity.sql
+with realistic stock numbers seeded by tier + rating. Stock-level
+functions (inventory_health, low_stock, restock_product) now issue
+real SQL against this column.
 """
 from typing import Dict, Any, List
 from decimal import Decimal
@@ -27,17 +26,6 @@ def convert_decimals(obj):
     elif isinstance(obj, list):
         return [convert_decimals(item) for item in obj]
     return obj
-
-
-_NOT_AVAILABLE_ENVELOPE = {
-    "status": "not_available",
-    "message": (
-        "The boutique catalog doesn't track stock quantities, so this "
-        "inventory operation is unavailable in the current workshop mode."
-    ),
-    "products": [],
-    "count": 0,
-}
 
 
 class BusinessLogic:
@@ -99,8 +87,45 @@ class BusinessLogic:
         }
 
     async def inventory_health(self) -> Dict[str, Any]:
-        """Inventory health is unavailable — boutique catalog has no ``quantity`` column."""
-        return {**_NOT_AVAILABLE_ENVELOPE, "health_score": None, "statistics": {}, "critical_items": [], "alerts": []}
+        """Overall inventory health — stock counts, low-stock alerts, health score."""
+        stats = await self.db.fetch_one("""
+            SELECT
+                COUNT(*)                                  AS total_products,
+                SUM(quantity)                             AS total_units,
+                COUNT(*) FILTER (WHERE quantity <= 5)     AS low_stock_count,
+                COUNT(*) FILTER (WHERE quantity = 0)      AS out_of_stock_count,
+                ROUND(AVG(quantity), 1)                   AS avg_quantity
+            FROM blaize_bazaar.product_catalog
+        """)
+        stats = convert_decimals(dict(stats))
+
+        critical = await self.db.fetch_all("""
+            SELECT "productId", name, category, price, quantity
+            FROM blaize_bazaar.product_catalog
+            WHERE quantity <= 5
+            ORDER BY quantity ASC, rating DESC
+            LIMIT 5
+        """)
+        critical_items = [convert_decimals(dict(r)) for r in critical]
+
+        alerts = []
+        for r in critical_items[:3]:
+            qty = r.get("quantity", 0)
+            label = "OUT OF STOCK" if qty == 0 else f"only {qty} left"
+            alerts.append(f"{r['name']} — {label}")
+
+        total = stats.get("total_products", 1) or 1
+        low = stats.get("low_stock_count", 0)
+        oos = stats.get("out_of_stock_count", 0)
+        health_score = round(max(0, 100 - oos * 10 - low * 3), 1)
+
+        return {
+            "status": "success",
+            "health_score": health_score,
+            "statistics": stats,
+            "critical_items": critical_items,
+            "alerts": alerts,
+        }
 
     async def price_analysis(self, category: str = None) -> Dict[str, Any]:
         """Per-category price statistics."""
@@ -160,14 +185,36 @@ class BusinessLogic:
         }
 
     async def restock_product(self, product_id: int, quantity: int) -> Dict[str, Any]:
-        """Restock is unavailable — boutique catalog has no ``quantity`` column."""
+        """Add `quantity` units to a product's stock. Returns the new total."""
+        if quantity <= 0:
+            return {"status": "error", "message": "Quantity must be positive."}
+        if quantity > 500:
+            return {
+                "status": "policy_blocked",
+                "message": (
+                    f"Restock of {quantity} units exceeds the 500-unit policy "
+                    "limit. Split the order or get manager approval."
+                ),
+                "product_id": product_id,
+            }
+
+        row = await self.db.fetch_one(
+            'UPDATE blaize_bazaar.product_catalog '
+            'SET quantity = quantity + %s, updated_at = NOW() '
+            'WHERE "productId" = %s '
+            'RETURNING "productId", name, quantity',
+            quantity, product_id,
+        )
+        if not row:
+            return {"status": "error", "message": f"Product {product_id} not found."}
+
+        result = convert_decimals(dict(row))
         return {
-            "status": "not_available",
-            "message": (
-                "Stock management isn't part of the boutique catalog — "
-                "use the admin tools on the underlying catalog-enrichment system."
-            ),
-            "product_id": product_id,
+            "status": "success",
+            "product_id": result["productId"],
+            "name": result["name"],
+            "new_quantity": result["quantity"],
+            "added": quantity,
         }
 
     async def search_products(
@@ -314,8 +361,30 @@ class BusinessLogic:
         }
 
     async def low_stock(self, limit: int = 5) -> Dict[str, Any]:
-        """Low-stock lookup is unavailable — boutique catalog has no ``quantity`` column."""
-        return {**_NOT_AVAILABLE_ENVELOPE, "limit": limit}
+        """Products running low on stock, sorted by quantity ascending."""
+        rows = await self.db.fetch_all(
+            """
+            SELECT "productId", name, category, price, rating, quantity
+            FROM blaize_bazaar.product_catalog
+            WHERE quantity <= 10
+            ORDER BY quantity ASC, rating DESC
+            LIMIT %s
+            """,
+            limit,
+        )
+        products = [convert_decimals(dict(r)) for r in rows]
+        for p in products:
+            qty = p.get("quantity", 0)
+            p["restock_urgency"] = (
+                "critical" if qty <= 2
+                else "low" if qty <= 5
+                else "watch"
+            )
+        return {
+            "status": "success",
+            "count": len(products),
+            "products": products,
+        }
 
     async def personalized_search(
         self,

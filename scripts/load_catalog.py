@@ -414,6 +414,7 @@ CREATE TABLE blaize_bazaar.product_catalog (
     badge TEXT,
     tier SMALLINT NOT NULL CHECK (tier IN (1, 2, 3)),
     image_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    quantity SMALLINT NOT NULL DEFAULT 20 CHECK (quantity >= 0 AND quantity <= 9999),
     embedding vector(1024) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
