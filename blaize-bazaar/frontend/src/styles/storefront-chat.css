@@ -216,35 +216,32 @@
   align-items: center;
   gap: 6px;
 }
+/* User message bubble.
+ *
+ * Typed questions and chip-sourced messages both land in the same
+ * bubble. Historically this rendered italic Fraunces with red quote
+ * marks, which was beautiful for the three welcome-screen P.S. chips
+ * ("something for long summer walks") but off-key for real
+ * questions users type ("Which headphones are running low and how
+ * do the prices stack up?"). The italic register made typed
+ * questions feel performative.
+ *
+ * Switched to the canonical sans-serif chat spec (Inter 15/1.5)
+ * with a slightly tighter tracking that matches the body copy of
+ * assistant replies. The red decorative quote marks are gone —
+ * italic P.S. chips on the welcome screen still carry the typographic
+ * flourish there where it earns its place.
+ */
 .ec-msg-user-text {
-  font-family: var(--serif);
-  font-style: italic;
+  font-family: var(--sans);
   font-size: 15px;
   line-height: 1.5;
+  letter-spacing: -0.003em;
   color: var(--ink-1);
   background: var(--cream-2);
   padding: 10px 16px;
   border-radius: 14px 14px 4px 14px;
   border: 1px solid var(--rule-1);
-  position: relative;
-}
-.ec-msg-user-text::before {
-  content: '\201C';
-  color: var(--red-1);
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 22px;
-  margin-right: 2px;
-  opacity: 0.7;
-}
-.ec-msg-user-text::after {
-  content: '\201D';
-  color: var(--red-1);
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 22px;
-  margin-left: 2px;
-  opacity: 0.7;
 }
 
 /* ---- Agent message ---- */
