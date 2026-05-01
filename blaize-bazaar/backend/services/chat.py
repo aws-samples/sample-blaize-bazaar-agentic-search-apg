@@ -1968,17 +1968,21 @@ CURRENT REQUEST: {message}"""
         elif persona_orders_for_cards:
             # Retrospective path: the specialist answered from the LTM
             # preamble without calling search_products, so no tool
-            # products were buffered. Surface up to 3 past-order
-            # thumbnails whose product names appear in the specialist's
-            # prose — the pills read as visual footnotes to the
-            # reference ("your Italian Linen Camp Shirt"). Marked
-            # variant="pill" so the frontend renders compact photo
-            # chips instead of full artifact cards.
+            # products were buffered. Surface up to 3 past-order cards
+            # whose product names appear literally in the specialist's
+            # prose — evidence for "your Italian Linen Camp Shirt"
+            # references.
             #
             # This replaces the blunt "top 3 by placed_at" injection
             # the refactor deleted. Name matching is tight: a product
             # only surfaces if its full name OR its head (name before
-            # any " — " separator) literally appears in the prose.
+            # any " — " separator) literally appears in the prose, so
+            # no card shows up that the specialist didn't name.
+            #
+            # Products flow into the same render path as forward-
+            # looking tool results — full ProductArtifactCard on the
+            # frontend — so retrospective and forward turns look the
+            # same to the shopper.
             prose = (parsed["text"] or response_text or "").lower()
             matched: list = []
             seen_ids: set = set()
@@ -1994,7 +1998,7 @@ CURRENT REQUEST: {message}"""
                     if pid in seen_ids:
                         continue
                     seen_ids.add(pid)
-                    matched.append({**order, "variant": "pill"})
+                    matched.append(order)
                 if len(matched) >= 3:
                     break
             if matched:

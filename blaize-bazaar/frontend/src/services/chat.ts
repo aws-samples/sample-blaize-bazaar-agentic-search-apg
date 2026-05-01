@@ -50,12 +50,6 @@ export interface ChatProduct {
   inStock?: boolean
   originalPrice?: number
   discountPercent?: number
-  /** Rendering hint from the backend. "pill" means render as a
-   * compact photo chip (thumbnail + name + price) — used for past-
-   * order references that should sit as visual footnotes to the
-   * specialist's prose rather than full artifact cards. Absent means
-   * render the default ProductArtifactCard. */
-  variant?: 'pill' | 'card'
 }
 
 export interface AgentExecution {

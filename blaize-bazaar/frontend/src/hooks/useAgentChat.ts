@@ -166,7 +166,6 @@ function mapProduct(p: any): ChatProduct {
     inStock: p.inStock,
     originalPrice: p.originalPrice,
     discountPercent: p.discountPercent,
-    variant: p.variant,
   }
 }
 

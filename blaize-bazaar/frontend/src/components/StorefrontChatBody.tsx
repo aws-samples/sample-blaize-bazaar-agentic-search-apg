@@ -17,7 +17,6 @@ import type { PersonaSnapshot } from '../contexts/PersonaContext'
 import type { CartItemOrigin } from '../contexts/CartContext'
 import MarkdownMessage from './MarkdownMessage'
 import ProductArtifactCard from './ProductArtifactCard'
-import ProductPhotoPill from './ProductPhotoPill'
 import '../styles/storefront-chat.css'
 
 // ---------------------------------------------------------------------------
@@ -318,79 +317,41 @@ function AgentMessage({
         </div>
       )}
 
-      {/* Product rendering — pills vs full artifact cards.
-       *
-       * When the backend marks products with variant="pill" (the
-       * persona past-order match path), render them as a compact
-       * photo-pill row that reads as a footnote to the prose. Mixed
-       * batches are unusual but handled: pill rows first, then cards.
-       */}
-      {message.products && message.products.length > 0 && (() => {
-        const pills = message.products.filter((p) => p.variant === 'pill')
-        const cards = message.products.filter((p) => p.variant !== 'pill')
-        return (
-          <>
-            {pills.length > 0 && (
-              <div className="pp-row">
-                {pills.map((product, pIdx) => (
-                  <motion.div
-                    key={`pill-${product.id || pIdx}`}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      delay: pIdx * 0.08,
-                      duration: 0.28,
-                      ease: [0.2, 0.9, 0.3, 1.05],
-                    }}
-                  >
-                    <ProductPhotoPill
-                      product={product}
-                      onAddToCart={() => {
-                        addToCart({
-                          productId: product.id,
-                          name: product.name,
-                          price: product.price,
-                          image: product.image || '',
-                          origin: 'chat',
-                        })
-                      }}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            )}
-            {cards.length > 0 && (
-              <div className="ec-artifacts">
-                {cards.map((product, pIdx) => (
-                  <motion.div
-                    key={`card-${product.id || pIdx}`}
-                    initial={{ opacity: 0, y: 8, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{
-                      delay: pIdx * 0.1,
-                      duration: 0.38,
-                      ease: [0.2, 0.9, 0.3, 1.05],
-                    }}
-                  >
-                    <ProductArtifactCard
-                      product={product}
-                      onAddToCart={() => {
-                        addToCart({
-                          productId: product.id,
-                          name: product.name,
-                          price: product.price,
-                          image: product.image || '',
-                          origin: 'chat',
-                        })
-                      }}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </>
-        )
-      })()}
+      {/* Product cards — one render path for all products regardless
+       * of origin. Past-order references (backend persona-match
+       * injection) and forward-looking recs (tool-returned inventory)
+       * both surface as full ProductArtifactCards. Keeps the chat's
+       * visual register consistent across retrospective and
+       * forward-looking turns. */}
+      {message.products && message.products.length > 0 && (
+        <div className="ec-artifacts">
+          {message.products.map((product, pIdx) => (
+            <motion.div
+              key={product.id || pIdx}
+              initial={{ opacity: 0, y: 8, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{
+                delay: pIdx * 0.1,
+                duration: 0.38,
+                ease: [0.2, 0.9, 0.3, 1.05],
+              }}
+            >
+              <ProductArtifactCard
+                product={product}
+                onAddToCart={() => {
+                  addToCart({
+                    productId: product.id,
+                    name: product.name,
+                    price: product.price,
+                    image: product.image || '',
+                    origin: 'chat',
+                  })
+                }}
+              />
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       {/* Follow-up chips */}
       {isComplete && isLastAssistantMessage && (
