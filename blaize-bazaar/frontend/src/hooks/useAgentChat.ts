@@ -245,6 +245,9 @@ export function useAgentChat(
   // Keep a ref of the latest messages so sendMessage can read history
   // without re-creating the callback on every message update.
   const messagesRef = useRef(messages)
+  // Synchronous guard against parallel sendMessage calls (React 18
+  // StrictMode double-fires effects in dev mode).
+  const sendingRef = useRef(false)
   useEffect(() => {
     messagesRef.current = messages
   }, [messages])
@@ -270,6 +273,15 @@ export function useAgentChat(
     async (customText?: string) => {
       const text = (customText ?? inputValue).trim()
       if (!text || isLoading) return
+
+      // Synchronous guard against double-invocation. React 18
+      // StrictMode double-fires effects in dev mode; if two
+      // sendMessage calls race past the isLoading state check
+      // (which is async), they'd open parallel SSE streams and
+      // interleave tokens into the same message bubble. The ref
+      // is set synchronously so the second call always sees it.
+      if (sendingRef.current) return
+      sendingRef.current = true
 
       const userMessage: AgentChatMessage = {
         role: 'user',
@@ -321,6 +333,7 @@ export function useAgentChat(
           },
         ])
         setIsLoading(false)
+        sendingRef.current = false
         return
       }
 
@@ -458,6 +471,10 @@ export function useAgentChat(
                 return updated
               })
             } else if (data.type === 'content_delta') {
+              // Diagnostic: log every delta received for stuttering investigation
+              if (typeof window !== 'undefined' && (window as any).__BLAIZE_DEBUG_DELTAS) {
+                console.log(`[delta] ${JSON.stringify(data.delta).slice(0, 40)}`)
+              }
               appendDelta(data.delta)
             } else if (data.type === 'content_reset') {
               // Clear the bubble for Pattern I's post-tool response.
@@ -628,6 +645,7 @@ export function useAgentChat(
         setBackendOnline(false)
       } finally {
         setIsLoading(false)
+        sendingRef.current = false
       }
     },
     [inputValue, isLoading, mode, workshopMode, guardrailsEnabled, persona?.customer_id],
