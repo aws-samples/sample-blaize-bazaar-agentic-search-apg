@@ -445,7 +445,7 @@ export default function ConciergeModal() {
               className="px-5 py-4 flex items-center justify-between flex-shrink-0"
               style={{ borderBottom: '1px solid rgba(45, 24, 16, 0.08)' }}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <div
                   aria-hidden="true"
                   className="inline-flex items-center justify-center rounded-full font-semibold"
@@ -453,9 +453,45 @@ export default function ConciergeModal() {
                 >
                   B
                 </div>
-                <div>
-                  <div style={{ fontFamily: 'Fraunces, serif', fontSize: 17, color: INK, fontWeight: 500 }}>
-                    Ask Blaize
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap" style={{ fontFamily: 'Fraunces, serif', fontSize: 17, color: INK, fontWeight: 500 }}>
+                    <span>Ask Blaize</span>
+                    {/* Persona indicator — colored avatar + first name
+                        in italic Fraunces with a persona-quote second
+                        line under the status strip. Signals that this
+                        trace belongs to a specific shopper. Omitted
+                        for the Fresh persona and for signed-out
+                        sessions — there's no voice to reflect. */}
+                    {persona && persona.id !== 'fresh' && (
+                      <span
+                        className="inline-flex items-center gap-1.5"
+                        style={{
+                          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+                          fontSize: 9.5,
+                          letterSpacing: '0.22em',
+                          textTransform: 'uppercase',
+                          color: INK_QUIET,
+                          fontWeight: 500,
+                        }}
+                      >
+                        <span
+                          aria-hidden
+                          className="inline-flex items-center justify-center rounded-full"
+                          style={{
+                            width: 18,
+                            height: 18,
+                            background: persona.avatar_color,
+                            color: '#faf3e8',
+                            fontFamily: 'Fraunces, serif',
+                            fontStyle: 'italic',
+                            fontSize: 10,
+                          }}
+                        >
+                          {persona.avatar_initial}
+                        </span>
+                        · as {persona.display_name}
+                      </span>
+                    )}
                   </div>
                   <div className="text-[11px] flex items-center gap-1.5 mt-0.5">
                     {isLoading ? (

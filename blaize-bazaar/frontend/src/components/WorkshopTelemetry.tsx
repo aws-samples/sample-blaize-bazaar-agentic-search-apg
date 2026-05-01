@@ -27,12 +27,33 @@ import type {
   WorkshopPlanEvent,
   WorkshopStepEvent,
 } from '../services/workshop'
+import { usePersona } from '../contexts/PersonaContext'
 
 const INK = '#2d1810'
 const INK_SOFT = '#6b4a35'
 const INK_QUIET = '#a68668'
 const CREAM_WARM = '#f5e8d3'
 const ACCENT = '#c44536'
+
+// Persona-tailored empty-state subheads. When a returning persona is
+// signed in, the empty state tells them what to ask so the first
+// turn is grounded in their signal — Marco asks about linen + Lisbon,
+// Anna asks about a gift under her ceiling, Theo asks about ceramics.
+const EMPTY_PROMPT_BY_PERSONA: Record<string, string> = {
+  marco:
+    'Ask about linen for Lisbon, or something you saw last time. The bench will show every step.',
+  anna:
+    "Ask for a thoughtful gift under two hundred, or a milestone piece. The bench will show Blaize's reasoning.",
+  theo:
+    'Ask about stoneware that wears in, or linen throws. The bench will show how the storefront thinks.',
+}
+
+function emptyPromptFor(personaId: string): string {
+  return (
+    EMPTY_PROMPT_BY_PERSONA[personaId] ??
+    'Every step appears here — the parse, the JOINs, the safety checks, the synthesis.'
+  )
+}
 
 const PANEL_PREVIEW: Array<{
   tag: string
@@ -340,6 +361,8 @@ function PlanCard({ plan }: { plan: PlanState }) {
 
 export default function WorkshopTelemetry({ events }: { events: WorkshopEvent[] }) {
   const { plan, panels } = usePlanReducer(events)
+  const { persona } = usePersona()
+  const isSignedIn = !!persona && persona.id !== 'fresh'
 
   if (!events.length) {
     return (
@@ -347,10 +370,41 @@ export default function WorkshopTelemetry({ events }: { events: WorkshopEvent[] 
         {/* Hero */}
         <div className="text-center max-w-[520px] mx-auto pt-6 pb-8">
           <div
-            className="text-[10px] font-medium uppercase mb-4"
+            className="text-[10px] font-medium uppercase mb-4 inline-flex items-center gap-2 justify-center"
             style={{ color: ACCENT, letterSpacing: '0.22em' }}
           >
             The bench is set
+            {/* Persona tag — colored avatar pill right of the eyebrow
+                when signed in as Marco / Anna / Theo. Signals that
+                the trace the user is about to see is theirs. */}
+            {isSignedIn && (
+              <span
+                className="inline-flex items-center gap-1.5 ml-1"
+                style={{
+                  color: INK_QUIET,
+                  fontSize: 9.5,
+                  letterSpacing: '0.22em',
+                }}
+              >
+                ·
+                <span
+                  aria-hidden
+                  className="inline-flex items-center justify-center rounded-full"
+                  style={{
+                    width: 16,
+                    height: 16,
+                    background: persona!.avatar_color,
+                    color: '#faf3e8',
+                    fontFamily: 'Fraunces, serif',
+                    fontStyle: 'italic',
+                    fontSize: 9,
+                  }}
+                >
+                  {persona!.avatar_initial}
+                </span>
+                as {persona!.display_name}
+              </span>
+            )}
           </div>
           <h2
             style={{
@@ -364,7 +418,9 @@ export default function WorkshopTelemetry({ events }: { events: WorkshopEvent[] 
               letterSpacing: '-0.01em',
             }}
           >
-            Ask Blaize a question.
+            {isSignedIn
+              ? `Ask Blaize, as ${persona!.display_name}.`
+              : 'Ask Blaize a question.'}
           </h2>
           <p
             className="mt-4"
@@ -376,7 +432,9 @@ export default function WorkshopTelemetry({ events }: { events: WorkshopEvent[] 
               lineHeight: 1.6,
             }}
           >
-            Every step appears here - the parse, the JOINs, the safety checks, the synthesis.
+            {isSignedIn
+              ? emptyPromptFor(persona!.id)
+              : 'Every step appears here — the parse, the JOINs, the safety checks, the synthesis.'}
           </p>
         </div>
 
