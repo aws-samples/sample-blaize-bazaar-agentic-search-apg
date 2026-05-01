@@ -40,12 +40,18 @@ const STEPS: SpotlightStep[] = [
   },
   {
     numeral: 'II',
+    kicker: 'Sign in first',
+    headline: 'Let Blaize remember you',
+    body: "Pick a persona from the top-right pill and watch the storefront tune itself — the cover, the recommendations, the voice of the chat. Try Marco for linen, Anna for gifts, Theo for home, or stay a Fresh visitor to see the editorial default.",
+  },
+  {
+    numeral: 'III',
     kicker: 'Your concierge',
     headline: 'Ask Blaize',
     body: "Tap the floating button anytime and ask in your own words — \"a linen piece for slow Sundays,\" \"something that travels well.\" Blaize reads the boutique and pulls what fits.",
   },
   {
-    numeral: 'III',
+    numeral: 'IV',
     kicker: 'Behind the curtain',
     headline: 'The Atelier',
     body: "Curious how Blaize thinks? Toggle to the Atelier in the header and watch every reasoning step, tool call, and decision unfold in real time. The wires, made visible.",

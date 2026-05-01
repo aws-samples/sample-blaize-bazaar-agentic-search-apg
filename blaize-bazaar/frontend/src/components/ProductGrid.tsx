@@ -55,12 +55,14 @@ export default function ProductGrid({
 }: ProductGridProps) {
   return (
     <section
+      id="shop"
       data-testid="product-grid"
       aria-label="Featured products"
       style={{
         width: '100%',
         padding: '32px 24px 48px',
         background: '#fbf4e8',
+        scrollMarginTop: 84, // clear the sticky header when scrolled to
       }}
     >
       <div

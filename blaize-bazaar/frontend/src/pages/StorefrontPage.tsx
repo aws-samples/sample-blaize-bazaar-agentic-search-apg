@@ -61,9 +61,34 @@ export default function StorefrontPage() {
     setChatSurface('drawer')
   }, [setChatSurface])
 
+  // Handle `/#shop` hash from off-route Shop nav clicks. React Router
+  // ignores the fragment by default, so we scroll to the anchor once
+  // the page has painted.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.hash === '#shop') {
+      // Defer a frame so the grid is mounted.
+      requestAnimationFrame(() => {
+        document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })
+      })
+    }
+  }, [])
+
   const handleNavigate = (item: NavItem) => {
     if (item === 'account') {
       openModal('auth')
+      return
+    }
+    // Home + Shop both live on the `/` route; clicking either while
+    // already on `/` should scroll to the grid rather than no-op.
+    // Home scrolls to the top of the page; Shop scrolls to the
+    // product grid anchor.
+    if (item === 'home') {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+    if (item === 'shop') {
+      document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })
       return
     }
     const target = NAV_ROUTES[item]

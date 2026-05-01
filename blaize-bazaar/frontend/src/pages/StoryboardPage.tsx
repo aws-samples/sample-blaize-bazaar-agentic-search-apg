@@ -16,16 +16,36 @@
  * The route is intentionally small - the full editorial hub lands in
  * a later Edit. Copy from copy.ts; Req 1.12 rules enforced there.
  */
+import { useNavigate } from 'react-router-dom'
 import CommandPill from '../components/CommandPill'
 import Footer from '../components/Footer'
-import Header from '../components/Header'
+import Header, { type NavItem } from '../components/Header'
 import StoryboardTeaser from '../components/StoryboardTeaser'
 import { STORYBOARD_PAGE_COMING_SOON } from '../copy'
 import ComingSoonLine from './ComingSoonLine'
+import { useUI } from '../contexts/UIContext'
 
 const CREAM = '#fbf4e8'
 
+const NAV_ROUTES: Record<NavItem, string> = {
+  home: '/',
+  shop: '/#shop',
+  storyboard: '/storyboard',
+  discover: '/discover',
+  account: '/',
+}
+
 export default function StoryboardPage() {
+  const navigate = useNavigate()
+  const { openModal } = useUI()
+  const handleNavigate = (item: NavItem) => {
+    if (item === 'account') {
+      openModal('auth')
+      return
+    }
+    const target = NAV_ROUTES[item]
+    if (target) navigate(target)
+  }
   return (
     <div
       data-testid="storyboard-page"
@@ -34,7 +54,7 @@ export default function StoryboardPage() {
         background: CREAM,
       }}
     >
-      <Header current="storyboard" />
+      <Header current="storyboard" onNavigate={handleNavigate} />
       <main>
         <StoryboardTeaser />
         <ComingSoonLine

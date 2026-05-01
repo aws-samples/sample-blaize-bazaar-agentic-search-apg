@@ -17,11 +17,13 @@
  * truth for the strings on this page; the scanner in copy.test.ts
  * keeps forbidden words out.
  */
+import { useNavigate } from 'react-router-dom'
 import CommandPill from '../components/CommandPill'
 import Footer from '../components/Footer'
-import Header from '../components/Header'
+import Header, { type NavItem } from '../components/Header'
 import ProductGrid from '../components/ProductGrid'
 import { useAuth } from '../contexts/AuthContext'
+import { useUI } from '../contexts/UIContext'
 import {
   DISCOVER_PAGE_COMING_SOON,
   DISCOVER_PAGE_SIGNED_OUT,
@@ -120,8 +122,26 @@ function DiscoverSigninPrompt() {
   )
 }
 
+const NAV_ROUTES: Record<NavItem, string> = {
+  home: '/',
+  shop: '/#shop',
+  storyboard: '/storyboard',
+  discover: '/discover',
+  account: '/',
+}
+
 export default function DiscoverPage() {
   const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
+  const { openModal } = useUI()
+  const handleNavigate = (item: NavItem) => {
+    if (item === 'account') {
+      openModal('auth')
+      return
+    }
+    const target = NAV_ROUTES[item]
+    if (target) navigate(target)
+  }
 
   return (
     <div
@@ -131,7 +151,7 @@ export default function DiscoverPage() {
         background: CREAM,
       }}
     >
-      <Header current="discover" />
+      <Header current="discover" onNavigate={handleNavigate} />
       <main>
         {isAuthenticated ? (
           <>
