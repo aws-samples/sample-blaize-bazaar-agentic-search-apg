@@ -18,11 +18,10 @@
  */
 import { useNavigate } from 'react-router-dom'
 import CommandPill from '../components/CommandPill'
+import FieldNotes from '../components/FieldNotes'
 import Footer from '../components/Footer'
 import Header, { type NavItem } from '../components/Header'
 import StoryboardTeaser from '../components/StoryboardTeaser'
-import { STORYBOARD_PAGE_COMING_SOON } from '../copy'
-import ComingSoonLine from './ComingSoonLine'
 import { useUI } from '../contexts/UIContext'
 
 const CREAM = '#fbf4e8'
@@ -57,10 +56,7 @@ export default function StoryboardPage() {
       <Header current="storyboard" onNavigate={handleNavigate} />
       <main>
         <StoryboardTeaser />
-        <ComingSoonLine
-          copy={STORYBOARD_PAGE_COMING_SOON}
-          testId="storyboard-coming-soon"
-        />
+        <FieldNotes />
       </main>
       <Footer />
       <CommandPill />

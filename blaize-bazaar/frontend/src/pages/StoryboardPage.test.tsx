@@ -79,7 +79,7 @@ vi.mock('../contexts/UIContext', () => ({
 }))
 
 import StoryboardPage from './StoryboardPage'
-import { STORYBOARD_PAGE_COMING_SOON, STORYBOARD_TEASERS } from '../copy'
+import { STORYBOARD_TEASERS } from '../copy'
 
 /**
  * StoryboardPage nests `<Header>` which renders a `<Link to="/workshop">`,
@@ -139,20 +139,23 @@ describe('StoryboardPage - 3-card storyboard grid (Req 1.13.1)', () => {
   })
 })
 
-describe('StoryboardPage - Coming soon editorial line (Req 1.13.1, 1.13.3)', () => {
-  it('renders the italic Fraunces coming-soon line with the exact copy from copy.ts', () => {
+describe('StoryboardPage - Field Notes essay surface', () => {
+  it('renders the FieldNotes section with four essays', () => {
     renderStoryboard()
 
-    const line = screen.getByTestId('storyboard-coming-soon')
-    expect(line).toBeInTheDocument()
-    expect(line).toHaveTextContent(STORYBOARD_PAGE_COMING_SOON)
+    // The section mounts and carries four field notes, one per
+    // persona archetype (editorial + Marco + Anna + Theo).
+    const section = screen.getByTestId('field-notes')
+    expect(section).toBeInTheDocument()
+    for (let i = 0; i < 4; i++) {
+      expect(screen.getByTestId(`field-note-${i}`)).toBeInTheDocument()
+    }
+  })
 
-    // The paragraph inside is rendered in italic Fraunces.
-    const paragraph = line.querySelector('p')
-    expect(paragraph).not.toBeNull()
-    const style = paragraph?.getAttribute('style') ?? ''
-    expect(style).toMatch(/font-style:\s*italic/)
-    expect(style).toMatch(/Fraunces/)
+  it('no longer renders the old coming-soon placeholder line', () => {
+    renderStoryboard()
+    // The ComingSoonLine placeholder has been replaced by FieldNotes.
+    expect(screen.queryByTestId('storyboard-coming-soon')).not.toBeInTheDocument()
   })
 })
 
