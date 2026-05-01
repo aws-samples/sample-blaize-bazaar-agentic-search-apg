@@ -1965,6 +1965,47 @@ CURRENT REQUEST: {message}"""
                     "total": len(parsed["products"])
                 }
             products_sent = parsed["products"]
+        elif persona_orders_for_cards:
+            # Retrospective path: the specialist answered from the LTM
+            # preamble without calling search_products, so no tool
+            # products were buffered. Surface up to 3 past-order
+            # thumbnails whose product names appear in the specialist's
+            # prose — the pills read as visual footnotes to the
+            # reference ("your Italian Linen Camp Shirt"). Marked
+            # variant="pill" so the frontend renders compact photo
+            # chips instead of full artifact cards.
+            #
+            # This replaces the blunt "top 3 by placed_at" injection
+            # the refactor deleted. Name matching is tight: a product
+            # only surfaces if its full name OR its head (name before
+            # any " — " separator) literally appears in the prose.
+            prose = (parsed["text"] or response_text or "").lower()
+            matched: list = []
+            seen_ids: set = set()
+            for order in persona_orders_for_cards:
+                name = (order.get("name") or "").strip()
+                if not name:
+                    continue
+                head = name.split(" — ")[0].strip()
+                key = name.lower()
+                head_key = head.lower()
+                if key in prose or (head_key and head_key in prose):
+                    pid = order.get("productId") or order.get("id")
+                    if pid in seen_ids:
+                        continue
+                    seen_ids.add(pid)
+                    matched.append({**order, "variant": "pill"})
+                if len(matched) >= 3:
+                    break
+            if matched:
+                for i, product in enumerate(matched):
+                    yield {
+                        "type": "product",
+                        "product": product,
+                        "index": i,
+                        "total": len(matched),
+                    }
+                products_sent = matched
 
         # OTEL extraction. On failure the payload carries otel_enabled=False
         # + reason so the frontend banner fires (Bug 3); we do NOT
