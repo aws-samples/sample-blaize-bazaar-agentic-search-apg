@@ -1,140 +1,67 @@
 /**
- * Header — Storefront sticky header.
+ * Header — Boutique sticky header (Phase 2 rebuild).
  *
- * Renders exactly five nav items (Home, Shop, Storyboard, Discover, Account),
- * a centered "Blaize Bazaar" wordmark with a circular B logo, and the right
- * actions: Storefront ↔ Atelier surface toggle (see SurfaceToggle), Account
- * state button, and a Bag icon with a live count badge. The concierge is not
- * duplicated here — the hero SearchPill and the floating CommandPill are the
- * two entry points so the header stays uncluttered.
+ * Centered "Blaize Bazaar" wordmark with circular B logo, four left nav
+ * items (Shop, Stories, Ask Blaize, About), and right cluster: search
+ * IconButton, persona Avatar dropdown, wishlist heart IconButton, bag
+ * IconButton with count badge, and the Storefront ↔ Atelier surface toggle.
  *
- * Validates Requirements 1.1.3, 1.2.1 through 1.2.4.
+ * The persona Avatar dropdown replaces the old PersonaPill + PersonaModal
+ * pattern. It calls `switchPersona` and `signOut` directly from `usePersona()`.
  *
- * Copy comes from `copy.ts`. No legacy About/Journal items; About content
- * lives in the Footer per `storefront.md`.
+ * Validates Requirements 4.3, 5.1, 5.2, 5.3, 5.4, 5.5, 15.3.
+ *
+ * Copy comes from `copy.ts`. Design tokens from `design/tokens.ts` and
+ * Tailwind extended config.
  */
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useCart } from '../contexts/CartContext'
-import { usePersona } from '../contexts/PersonaContext'
+import { usePersona, type PersonaListItem } from '../contexts/PersonaContext'
 import { NAV } from '../copy'
-import { ShoppingBag, User as UserIcon, ChevronDown } from 'lucide-react'
+import { colors } from '../design/tokens'
+import { Avatar } from '../design/primitives'
+import { IconButton } from '../design/primitives'
+import {
+  Search,
+  Heart,
+  ShoppingBag,
+  User as UserIcon,
+  ChevronDown,
+  LogOut,
+} from 'lucide-react'
 import SurfaceToggle from './SurfaceToggle'
-import PersonaModal from './PersonaModal'
-import { useState } from 'react'
 
-// Warm palette from `storefront.md`. Kept inline as hex until a design-token
-// stylesheet lands workspace-wide.
-const CREAM = '#fbf4e8'
-const INK = '#2d1810'
-const INK_SOFT = '#6b4a35'
-
-export type NavItem = 'home' | 'shop' | 'storyboard' | 'discover' | 'account'
+// Keep old NavItem values for backward compatibility with consuming pages,
+// plus new values for the redesigned nav.
+export type NavItem =
+  | 'home'
+  | 'shop'
+  | 'storyboard'
+  | 'stories'
+  | 'discover'
+  | 'about'
+  | 'account'
+  | 'ask-blaize'
 
 interface HeaderProps {
-  /** Which nav item is the current page — gets the ink highlight. Defaults to 'home'. */
+  /** Which nav item is the current page — gets the espresso highlight. Defaults to 'home'. */
   current?: NavItem
   /** Optional click handler fired when any nav link is activated. */
   onNavigate?: (item: NavItem) => void
 }
 
-/**
- * PersonaPill — replaces the old AccountButton.
- *
- * Signed out: outlined pill with person icon + "Sign in".
- * Signed in: espresso-filled pill with avatar monogram + "SIGNED IN AS" +
- * name + chevron. Click opens the persona modal.
- */
-function PersonaPill({ onClick }: { onClick: () => void }) {
-  const { persona } = usePersona()
+/** The four nav items rendered in the redesigned header. */
+const NAV_ITEMS: Array<{ item: NavItem; label: string }> = [
+  { item: 'shop', label: NAV.SHOP },
+  { item: 'stories', label: NAV.STORIES },
+  { item: 'ask-blaize', label: NAV.ASK_BLAIZE },
+  { item: 'about', label: NAV.ABOUT },
+]
 
-  if (!persona) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        data-testid="persona-pill"
-        className="flex items-center gap-2 text-[13.5px] font-medium transition-all"
-        style={{
-          color: INK,
-          background: 'transparent',
-          border: '1px solid rgba(45, 24, 16, 0.18)',
-          borderRadius: 100,
-          padding: '7px 14px',
-          cursor: 'pointer',
-        }}
-      >
-        <UserIcon className="w-3.5 h-3.5" aria-hidden />
-        <span>Sign in</span>
-      </button>
-    )
-  }
+// ---------------------------------------------------------------------------
+// Wordmark
+// ---------------------------------------------------------------------------
 
-  const isFresh = persona.id === 'fresh'
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      data-testid="persona-pill"
-      className="flex items-center gap-2 text-[13.5px] transition-all"
-      style={{
-        background: INK,
-        color: CREAM,
-        border: `1px solid ${INK}`,
-        borderRadius: 100,
-        padding: '5px 14px 5px 5px',
-        cursor: 'pointer',
-      }}
-    >
-      <span
-        className="flex items-center justify-center rounded-full"
-        style={{
-          width: 24,
-          height: 24,
-          background: isFresh ? 'transparent' : CREAM,
-          color: isFresh ? 'rgba(250,243,232,0.5)' : INK,
-          border: isFresh ? '1px dashed rgba(250,243,232,0.3)' : 'none',
-          fontFamily: 'Fraunces, serif',
-          fontWeight: 500,
-          fontSize: 12,
-          fontStyle: 'italic',
-        }}
-      >
-        {persona.avatar_initial}
-      </span>
-      <span className="flex flex-col items-start" style={{ lineHeight: 1.1 }}>
-        <span
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 8.5,
-            letterSpacing: '0.22em',
-            color: 'rgba(250,243,232,0.6)',
-            fontWeight: 500,
-          }}
-        >
-          SIGNED IN AS
-        </span>
-        <span
-          style={{
-            fontFamily: 'Fraunces, serif',
-            fontStyle: 'italic',
-            fontSize: 13.5,
-            color: CREAM,
-            marginTop: 1,
-          }}
-        >
-          {persona.display_name}
-        </span>
-      </span>
-      <ChevronDown
-        size={12}
-        style={{ color: 'rgba(250,243,232,0.6)', marginLeft: 2 }}
-      />
-    </button>
-  )
-}
-
-/**
- * Wordmark — centered "Blaize Bazaar" with a small circular B logo.
- */
 function Wordmark() {
   return (
     <a
@@ -142,25 +69,23 @@ function Wordmark() {
       data-testid="wordmark"
       aria-label={NAV.WORDMARK}
       className="flex items-center gap-2 select-none"
-      style={{ color: INK }}
     >
       <span
         aria-hidden="true"
-        className="inline-flex items-center justify-center rounded-full font-semibold"
+        className="inline-flex items-center justify-center rounded-full font-semibold bg-espresso text-cream-50"
         style={{
           width: 28,
           height: 28,
-          background: INK,
-          color: CREAM,
           fontSize: 14,
-          fontFamily: 'Fraunces, serif',
+          fontFamily: "'Fraunces', Georgia, serif",
         }}
       >
         B
       </span>
       <span
+        className="text-espresso"
         style={{
-          fontFamily: 'Fraunces, serif',
+          fontFamily: "'Fraunces', Georgia, serif",
           fontWeight: 500,
           fontSize: 20,
           letterSpacing: '-0.01em',
@@ -171,6 +96,10 @@ function Wordmark() {
     </a>
   )
 }
+
+// ---------------------------------------------------------------------------
+// NavLink
+// ---------------------------------------------------------------------------
 
 interface NavLinkProps {
   item: NavItem
@@ -188,11 +117,14 @@ function NavLink({ item, label, current, onClick }: NavLinkProps) {
       data-current={isCurrent ? 'true' : 'false'}
       aria-current={isCurrent ? 'page' : undefined}
       onClick={() => onClick?.(item)}
-      className="text-[14px] transition-opacity hover:opacity-70"
+      className={[
+        'text-[14px] transition-colors duration-fade ease-out',
+        'hover:opacity-70 bg-transparent cursor-pointer',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-espresso focus-visible:ring-offset-2',
+        isCurrent ? 'text-espresso font-semibold' : 'text-ink-soft font-normal',
+      ].join(' ')}
       style={{
-        color: isCurrent ? INK : INK_SOFT,
-        fontWeight: isCurrent ? 600 : 400,
-        background: 'transparent',
+        fontFamily: "'Inter', system-ui, sans-serif",
         padding: '6px 0',
       }}
     >
@@ -201,52 +133,250 @@ function NavLink({ item, label, current, onClick }: NavLinkProps) {
   )
 }
 
+// ---------------------------------------------------------------------------
+// PersonaDropdown — replaces PersonaPill + PersonaModal
+// ---------------------------------------------------------------------------
+
+function PersonaDropdown() {
+  const { persona, switchPersona, signOut, switching } = usePersona()
+  const [open, setOpen] = useState(false)
+  const [personas, setPersonas] = useState<PersonaListItem[]>([])
+  const [fetched, setFetched] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Fetch persona list on first open
+  useEffect(() => {
+    if (!open || fetched) return
+    fetch('/api/atelier/personas')
+      .then((r) => r.json())
+      .then((data) => {
+        setPersonas(Array.isArray(data) ? data : [])
+        setFetched(true)
+      })
+      .catch(() => setFetched(true))
+  }, [open, fetched])
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [open])
+
+  const handleSelect = useCallback(
+    async (id: string) => {
+      await switchPersona(id)
+      setOpen(false)
+    },
+    [switchPersona],
+  )
+
+  const handleSignOut = useCallback(() => {
+    signOut()
+    setOpen(false)
+  }, [signOut])
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      {/* Trigger */}
+      <button
+        type="button"
+        onClick={() => setOpen((prev) => !prev)}
+        data-testid="persona-pill"
+        className={[
+          'flex items-center gap-2 text-[13.5px] transition-colors duration-fade ease-out',
+          'cursor-pointer rounded-full',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-espresso focus-visible:ring-offset-2',
+        ].join(' ')}
+        style={{
+          padding: persona ? '4px 12px 4px 4px' : '7px 14px',
+          background: persona ? colors.espresso : 'transparent',
+          color: persona ? colors.cream : colors.espresso,
+          border: persona
+            ? `1px solid ${colors.espresso}`
+            : '1px solid rgba(59, 47, 47, 0.18)',
+        }}
+        aria-expanded={open}
+        aria-haspopup="true"
+      >
+        {persona ? (
+          <>
+            <Avatar
+              initial={persona.avatar_initial}
+              bgColor={persona.avatar_color}
+              size="sm"
+            />
+            <span
+              className="text-cream-50"
+              style={{
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              {persona.display_name}
+            </span>
+            <ChevronDown
+              size={14}
+              className="text-cream-50 opacity-60"
+              aria-hidden
+            />
+          </>
+        ) : (
+          <>
+            <UserIcon className="w-4 h-4" aria-hidden />
+            <span style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+              Sign in
+            </span>
+          </>
+        )}
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div
+          data-testid="persona-dropdown"
+          className={[
+            'absolute right-0 top-full mt-2 z-50',
+            'bg-cream-50 border border-sand rounded-lg shadow-warm-md',
+            'min-w-[240px] py-2',
+            'transition-opacity duration-fade ease-out',
+          ].join(' ')}
+          role="menu"
+          aria-label="Persona menu"
+        >
+          {personas.map((p) => {
+            const isActive = persona?.id === p.id
+            return (
+              <button
+                key={p.id}
+                type="button"
+                role="menuitem"
+                disabled={switching}
+                data-testid={`persona-option-${p.id}`}
+                onClick={() => handleSelect(p.id)}
+                className={[
+                  'w-full flex items-center gap-3 px-4 py-2.5 text-left',
+                  'transition-colors duration-fade ease-out',
+                  'hover:bg-sand/50 cursor-pointer',
+                  'focus-visible:outline-none focus-visible:bg-sand/50',
+                  isActive ? 'bg-sand/30' : '',
+                ].join(' ')}
+              >
+                <Avatar
+                  initial={p.avatar_initial}
+                  bgColor={p.avatar_color}
+                  size="sm"
+                />
+                <div className="flex flex-col min-w-0">
+                  <span
+                    className="text-espresso text-[13px] font-medium truncate"
+                    style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+                  >
+                    {p.display_name}
+                  </span>
+                  <span
+                    className="text-ink-soft text-[11px] truncate"
+                    style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+                  >
+                    {p.role_tag}
+                  </span>
+                </div>
+              </button>
+            )
+          })}
+
+          {persona && (
+            <>
+              <div className="border-t border-sand my-1" />
+              <button
+                type="button"
+                role="menuitem"
+                data-testid="persona-sign-out"
+                onClick={handleSignOut}
+                className={[
+                  'w-full flex items-center gap-3 px-4 py-2.5 text-left',
+                  'transition-colors duration-fade ease-out',
+                  'hover:bg-sand/50 cursor-pointer text-espresso',
+                  'focus-visible:outline-none focus-visible:bg-sand/50',
+                ].join(' ')}
+              >
+                <LogOut size={16} className="text-ink-soft" aria-hidden />
+                <span
+                  className="text-[13px] font-medium"
+                  style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+                >
+                  Sign out
+                </span>
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Header
+// ---------------------------------------------------------------------------
+
 export default function Header({
   current = 'home',
   onNavigate,
-}: HeaderProps = {}) {
+}: HeaderProps) {
   const { items: cartItems, setCartOpen } = useCart()
   const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
-  const [modalOpen, setModalOpen] = useState(false)
 
   return (
     <header
       role="banner"
       data-testid="sticky-header"
-      className="sticky top-0 z-40 w-full border-b backdrop-blur-md"
+      className="sticky top-0 z-40 w-full border-b border-sand/50"
       style={{
-        background: 'rgba(251, 244, 232, 0.9)',
-        borderColor: 'rgba(45, 24, 16, 0.08)',
+        background: 'rgba(247, 243, 238, 0.9)',
         WebkitBackdropFilter: 'blur(12px)',
         backdropFilter: 'blur(12px)',
       }}
     >
       <nav
         aria-label="Primary"
-        className="relative h-[64px] px-4 md:px-6 lg:px-8"
+        className="relative h-[64px]"
+        style={{ padding: '0 clamp(16px, 4vw, 48px)' }}
       >
         <div className="h-full max-w-[1440px] mx-auto flex items-center justify-between gap-4">
-          {/* Left: four text nav items (Home | Shop | Storyboard | Discover).
-              Account is grouped with the right-side actions per the storefront.md spec. */}
+          {/* Left: four text nav items */}
           <div className="flex items-center gap-6 flex-shrink-0">
-            <NavLink item="home" label={NAV.HOME} current={current} onClick={onNavigate} />
-            <NavLink item="shop" label={NAV.SHOP} current={current} onClick={onNavigate} />
-            <NavLink
-              item="storyboard"
-              label={NAV.STORYBOARD}
-              current={current}
-              onClick={onNavigate}
-            />
-            <NavLink
-              item="discover"
-              label={NAV.DISCOVER}
-              current={current}
-              onClick={onNavigate}
-            />
+            {NAV_ITEMS.map(({ item, label }) => (
+              <NavLink
+                key={item}
+                item={item}
+                label={label}
+                current={current}
+                onClick={onNavigate}
+              />
+            ))}
           </div>
 
-          {/* Center: wordmark, absolutely positioned so right/left alignment is
-              unaffected by responsive width changes. */}
+          {/* Center: wordmark, absolutely positioned */}
           <div
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
             data-testid="wordmark-wrapper"
@@ -254,44 +384,45 @@ export default function Header({
             <Wordmark />
           </div>
 
-          {/* Right: Storefront ↔ Atelier surface toggle (hidden <640px
-              to avoid crowding mobile), Account, Bag. The concierge
-              entry points are the hero SearchPill and the floating
-              CommandPill; duplicating them here would give three
-              identical surfaces on one page. */}
-          <div className="flex items-center gap-4 flex-shrink-0">
-            <div className="hidden sm:block">
-              <SurfaceToggle />
-            </div>
+          {/* Right: search, persona dropdown, wishlist, bag, surface toggle */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <IconButton
+              icon={<Search className="w-5 h-5" />}
+              ariaLabel="Search"
+              size="md"
+            />
 
-            {/* Persona pill — replaces the old Account button. Opens the
-                shared persona modal on click. */}
-            <PersonaPill onClick={() => setModalOpen(true)} />
+            <PersonaDropdown />
 
-            <button
-              type="button"
-              onClick={() => setCartOpen(true)}
-              aria-label="Bag"
-              data-testid="bag-button"
-              className="relative p-2 rounded-full transition-opacity hover:opacity-80"
-              style={{ color: INK, background: 'transparent' }}
-            >
-              <ShoppingBag className="w-5 h-5" aria-hidden="true" />
+            <IconButton
+              icon={<Heart className="w-5 h-5" />}
+              ariaLabel="Wishlist"
+              size="md"
+            />
+
+            <div className="relative">
+              <IconButton
+                icon={<ShoppingBag className="w-5 h-5" />}
+                ariaLabel="Bag"
+                onClick={() => setCartOpen(true)}
+                size="md"
+              />
               {cartItemCount > 0 && (
                 <span
                   data-testid="bag-count"
-                  className="absolute -top-1.5 -right-2 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[10px] font-semibold"
-                  style={{ background: INK, color: CREAM }}
+                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[10px] font-semibold bg-espresso text-cream-50 pointer-events-none"
                 >
                   {cartItemCount}
                 </span>
               )}
-            </button>
+            </div>
+
+            <div className="hidden sm:block ml-1">
+              <SurfaceToggle />
+            </div>
           </div>
         </div>
       </nav>
-
-      <PersonaModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </header>
   )
 }

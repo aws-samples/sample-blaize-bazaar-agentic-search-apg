@@ -115,6 +115,13 @@ export type StorefrontCategory =
   | 'Outerwear'
   | 'Footwear'
   | 'Home'
+  | 'Home Decor'
+  | 'Apparel'
+  | 'Bags & Travel'
+  | 'Home Fragrance'
+  | 'Watches & Jewelry'
+  | 'Beauty'
+  | 'Wellness'
 
 export type StorefrontBadge = 'EDITORS_PICK' | 'BESTSELLER' | 'JUST_IN'
 

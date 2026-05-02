@@ -20,14 +20,6 @@ import { useEffect, useState } from 'react'
 import { COMMAND_PILL } from '../copy'
 import { useUI } from '../contexts/UIContext'
 
-// --- Design tokens (storefront.md) ---------------------------------------
-const CREAM = '#fbf4e8'
-const CREAM_WARM = '#f5e8d3'
-const INK_QUIET = '#a68668'
-
-const INTER_STACK = 'Inter, system-ui, sans-serif'
-const FRAUNCES_STACK = 'Fraunces, Georgia, serif'
-
 function detectMac(): boolean {
   if (typeof navigator === 'undefined') return false
   // userAgentData is the forward-compatible API; fall back to platform.
@@ -64,29 +56,10 @@ export default function CommandPill() {
       aria-label={`${COMMAND_PILL.LABEL} (${keycap})`}
       aria-pressed={pressed}
       onClick={handleClick}
-      className="concierge-glow"
+      className="concierge-glow fixed bottom-6 right-6 z-40 inline-flex items-center gap-2.5 rounded-full bg-espresso/95 backdrop-blur-md text-cream-50 border-none font-sans text-[13px] font-medium tracking-[0.01em] cursor-pointer transition-transform duration-fade"
       style={{
-        position: 'fixed',
-        bottom: 24,
-        right: 24,
-        zIndex: 40,
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 10,
         padding: '10px 14px 10px 10px',
-        borderRadius: 9999,
-        background: 'rgba(45, 24, 16, 0.95)',
         WebkitBackdropFilter: 'blur(12px)',
-        backdropFilter: 'blur(12px)',
-        color: CREAM,
-        border: 'none',
-        fontFamily: INTER_STACK,
-        fontSize: 13,
-        fontWeight: 500,
-        letterSpacing: '0.01em',
-        cursor: 'pointer',
-        transition:
-          'transform 180ms ease-out, background 180ms ease-out',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-1px)'
@@ -98,50 +71,20 @@ export default function CommandPill() {
       <span
         aria-hidden="true"
         data-testid="command-pill-bmark"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 22,
-          height: 22,
-          borderRadius: '50%',
-          background: CREAM,
-          color: '#2d1810',
-          fontFamily: FRAUNCES_STACK,
-          fontWeight: 600,
-          fontSize: 12,
-          lineHeight: 1,
-        }}
+        className="inline-flex items-center justify-center w-[22px] h-[22px] rounded-full bg-cream-50 text-espresso font-display font-semibold text-xs leading-none"
       >
         B
       </span>
       <span
         data-testid="command-pill-label"
-        style={{
-          fontFamily: INTER_STACK,
-          whiteSpace: 'nowrap',
-        }}
+        className="font-sans whitespace-nowrap"
       >
         {COMMAND_PILL.LABEL}
       </span>
       <span
         aria-hidden="true"
         data-testid="command-pill-keycap"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '2px 8px',
-          borderRadius: 6,
-          border: `1px solid ${INK_QUIET}`,
-          background: CREAM_WARM,
-          color: '#2d1810',
-          fontFamily: INTER_STACK,
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: '0.02em',
-          minWidth: 28,
-        }}
+        className="inline-flex items-center justify-center px-2 py-0.5 rounded-md border border-ink-quiet bg-sand/50 text-espresso font-sans text-[11px] font-semibold tracking-[0.02em] min-w-[28px]"
       >
         {keycap}
       </span>

@@ -27,28 +27,16 @@
  *   7. Thin divider
  *   8. <ReasoningChip/>
  *   9. Full-width `Add to bag` secondary button
+ *
+ * Phase 2 redesign: replaced all hardcoded hex colors with Tailwind token
+ * classes. Card chrome uses shadow-warm-sm / shadow-warm-md tokens. The
+ * parallax observer logic and safety defenses are preserved unchanged.
  */
 import { useEffect, useRef, useState } from 'react'
 import { Star } from 'lucide-react'
 
 import type { StorefrontBadge, StorefrontProduct } from '../services/types'
 import ReasoningChip from './ReasoningChip'
-
-// --- Design tokens (storefront.md) ---------------------------------------
-const CREAM = '#fbf4e8'
-const INK = '#2d1810'
-const INK_SOFT = '#6b4a35'
-const INK_QUIET = '#a68668'
-const DUSK = '#3d2518'
-
-// Warm-tinted card chrome (ink-soft at low alpha). Mirrors the `shadow-warm`
-// / `shadow-warm-lg` / `border-warm` tokens in tailwind.config.js so the
-// inline-styled card stays in lockstep with any Tailwind consumer.
-const CARD_BORDER = '1px solid rgba(107, 74, 53, 0.08)'
-const CARD_SHADOW =
-  '0 2px 8px rgba(107, 74, 53, 0.06), 0 1px 3px rgba(107, 74, 53, 0.04)'
-const CARD_SHADOW_HOVER =
-  '0 8px 24px rgba(107, 74, 53, 0.10), 0 4px 8px rgba(107, 74, 53, 0.06)'
 
 const BADGE_LABEL: Record<StorefrontBadge, string> = {
   EDITORS_PICK: "EDITOR'S PICK",
@@ -72,9 +60,9 @@ interface ProductCardProps {
 // well past the observer's attention window.
 const STAGGER_MS = 220
 
-// Columns per row in the desktop grid (sm:grid-cols-2, lg:grid-cols-3). The
-// stagger math uses the widest case so the sweep is consistent on desktop;
-// on narrower breakpoints the same modulo still reads as a small cascade.
+// Columns per row in the desktop grid. The stagger math uses the widest case
+// so the sweep is consistent on desktop; on narrower breakpoints the same
+// modulo still reads as a small cascade.
 const GRID_COLUMNS = 3
 
 // Hard safety limit for the stuck-invisible bug that killed parallax v1. If
@@ -170,48 +158,30 @@ export default function ProductCard({
       data-testid={`product-card-${product.id}`}
       data-index={index}
       data-revealed={isVisible}
-      onMouseEnter={e => {
-        setHovered(true)
-        e.currentTarget.style.boxShadow = CARD_SHADOW_HOVER
-      }}
-      onMouseLeave={e => {
-        setHovered(false)
-        e.currentTarget.style.boxShadow = CARD_SHADOW
-      }}
+      className={`
+        bg-cream-50 rounded-xl overflow-hidden flex flex-col
+        shadow-warm-sm transition-shadow duration-fade ease-out
+        ${hovered ? 'shadow-warm-md' : 'shadow-warm-sm'}
+      `}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
-        background: CREAM,
-        borderRadius: 16,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        border: CARD_BORDER,
-        boxShadow: CARD_SHADOW,
         opacity: isVisible ? 1 : PRE_REVEAL_OPACITY,
         transform: isVisible
           ? 'translateY(0) scale(1)'
           : 'translateY(56px) scale(0.975)',
-        transition: `opacity 1100ms ${REVEAL_EASE}, transform 1200ms ${REVEAL_EASE}, box-shadow 300ms ease`,
+        transition: `opacity 1100ms ${REVEAL_EASE}, transform 1200ms ${REVEAL_EASE}, box-shadow 180ms ease-out`,
         willChange: 'opacity, transform',
       }}
     >
       {/* --- Image panel --------------------------------------------- */}
-      <div
-        style={{
-          position: 'relative',
-          aspectRatio: '4 / 5',
-          background: '#eadfcc',
-          overflow: 'hidden',
-        }}
-      >
+      <div className="relative aspect-[4/5] bg-sand overflow-hidden">
         <img
           src={product.imageUrl}
           alt={product.name}
           loading="lazy"
+          className="w-full h-full object-cover transition-transform duration-[600ms] ease-out"
           style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transition: 'transform 600ms ease-out',
             transform: hovered ? 'scale(1.03)' : 'scale(1)',
           }}
         />
@@ -219,61 +189,27 @@ export default function ProductCard({
         <div
           data-testid="product-card-warm-wash"
           aria-hidden
+          className="absolute inset-0 pointer-events-none"
           style={{
-            position: 'absolute',
-            inset: 0,
             background:
-              'linear-gradient(180deg, rgba(251,244,232,0.08) 0%, rgba(196,69,54,0.08) 100%)',
-            pointerEvents: 'none',
+              'linear-gradient(180deg, rgba(247,243,238,0.08) 0%, rgba(196,69,54,0.08) 100%)',
           }}
         />
         {/* Optional top-left badge (Req 1.6.5 step 2) */}
         {product.badge ? (
           <span
             data-testid={`product-card-badge-${product.id}`}
-            style={{
-              position: 'absolute',
-              top: 12,
-              left: 12,
-              background: CREAM,
-              color: INK,
-              padding: '4px 10px',
-              fontSize: 10,
-              letterSpacing: '0.12em',
-              fontFamily: 'Inter, system-ui, sans-serif',
-              borderRadius: 999,
-            }}
+            className="absolute top-3 left-3 bg-cream-50 text-espresso px-2.5 py-1 text-[10px] tracking-[0.12em] font-sans rounded-full"
           >
             {BADGE_LABEL[product.badge]}
           </span>
         ) : null}
-        {/* Heart / favorite button removed — the onClick was a no-op
-         * and there's no saved-for-later surface yet. Re-introduce
-         * when a real wishlist ships. */}
       </div>
 
       {/* --- Text block ---------------------------------------------- */}
-      <div
-        style={{
-          padding: 20,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-        }}
-      >
+      <div className="p-5 flex flex-col gap-2.5">
         {/* Brand + color row (Req 1.6.5 step 4) */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: 12,
-            fontSize: 11,
-            letterSpacing: '0.08em',
-            color: INK_QUIET,
-            fontFamily: 'Inter, system-ui, sans-serif',
-            textTransform: 'uppercase',
-          }}
-        >
+        <div className="flex justify-between gap-3 text-[11px] tracking-[0.08em] text-ink-quiet font-sans uppercase">
           <span>{product.brand}</span>
           <span>{product.color}</span>
         </div>
@@ -281,33 +217,17 @@ export default function ProductCard({
         {/* Product name — Fraunces italic (Req 1.6.5 step 5). Size bumps
             20→22px at ≥1024px via `.product-name` in index.css so the
             breakpoint happens in CSS, not React. */}
-        <h3 className="product-name" style={{ color: INK }}>
+        <h3 className="product-name text-espresso">
           {product.name}
         </h3>
 
         {/* Price + rating row (Req 1.6.5 step 6) */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            fontSize: 14,
-            color: INK_SOFT,
-            fontFamily: 'Inter, system-ui, sans-serif',
-          }}
-        >
-          <span style={{ color: INK }}>${product.price}</span>
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              color: INK_SOFT,
-            }}
-          >
-            <Star size={12} strokeWidth={1.5} fill={INK_SOFT} />
+        <div className="flex items-center justify-between text-sm text-ink-soft font-sans">
+          <span className="text-espresso">${product.price}</span>
+          <span className="inline-flex items-center gap-1.5 text-ink-soft">
+            <Star size={12} strokeWidth={1.5} className="fill-ink-soft text-ink-soft" />
             {product.rating.toFixed(1)}
-            <span style={{ color: INK_QUIET, fontSize: 12 }}>
+            <span className="text-ink-quiet text-xs">
               ({product.reviewCount})
             </span>
           </span>
@@ -316,11 +236,7 @@ export default function ProductCard({
         {/* Thin divider (Req 1.6.5 step 7) */}
         <div
           aria-hidden
-          style={{
-            height: 1,
-            background: 'rgba(45, 24, 16, 0.08)',
-            margin: '2px 0',
-          }}
+          className="h-px bg-sand/50 my-0.5"
         />
 
         {/* Reasoning chip (Req 1.6.5 step 8) */}
@@ -331,30 +247,13 @@ export default function ProductCard({
           type="button"
           data-testid={`product-card-add-${product.id}`}
           onClick={() => onAddToBag?.(product)}
-          style={{
-            marginTop: 6,
-            width: '100%',
-            background: 'transparent',
-            color: INK,
-            border: `1px solid ${INK}`,
-            borderRadius: 999,
-            padding: '10px 14px',
-            fontSize: 13,
-            letterSpacing: '0.06em',
-            cursor: 'pointer',
-            fontFamily: 'Inter, system-ui, sans-serif',
-            transition: 'background 200ms ease, color 200ms ease',
-          }}
-          onMouseEnter={e => {
-            const btn = e.currentTarget as HTMLButtonElement
-            btn.style.background = DUSK
-            btn.style.color = CREAM
-          }}
-          onMouseLeave={e => {
-            const btn = e.currentTarget as HTMLButtonElement
-            btn.style.background = 'transparent'
-            btn.style.color = INK
-          }}
+          className="
+            mt-1.5 w-full bg-transparent text-espresso border border-espresso
+            rounded-full py-2.5 px-3.5 text-[13px] tracking-[0.06em] cursor-pointer
+            font-sans transition-colors duration-fade ease-out
+            hover:bg-dusk hover:text-cream-50 hover:border-dusk
+            focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent
+          "
         >
           Add to bag
         </button>

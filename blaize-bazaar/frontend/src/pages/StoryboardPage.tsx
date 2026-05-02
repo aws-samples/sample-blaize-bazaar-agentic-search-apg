@@ -4,7 +4,7 @@
  * Validates Requirements 1.13.1, 1.13.3, 1.13.4.
  *
  * Composition:
- *   - Header (sticky) with `current="storyboard"` so the Storyboard nav
+ *   - Header (sticky) with `current="stories"` so the Stories nav
  *     item takes the ink-highlighted current-page state (Req 1.13.4).
  *   - The 3-card StoryboardTeaser grid from the home page (Req 1.9 /
  *     4.8), reused as-is.
@@ -30,8 +30,11 @@ const NAV_ROUTES: Record<NavItem, string> = {
   home: '/',
   shop: '/#shop',
   storyboard: '/storyboard',
+  stories: '/storyboard',
   discover: '/discover',
+  about: '/about',
   account: '/',
+  'ask-blaize': '/',
 }
 
 export default function StoryboardPage() {
@@ -53,7 +56,7 @@ export default function StoryboardPage() {
         background: CREAM,
       }}
     >
-      <Header current="storyboard" onNavigate={handleNavigate} />
+      <Header current="stories" onNavigate={handleNavigate} />
       <main>
         <StoryboardTeaser />
         <FieldNotes />

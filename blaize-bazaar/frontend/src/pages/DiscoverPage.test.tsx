@@ -102,13 +102,11 @@ beforeEach(() => {
 // --- Tests --------------------------------------------------------------
 
 describe('DiscoverPage - header current-page state (Req 1.13.4)', () => {
-  it('marks Discover as the current page in both auth states', () => {
-    // Signed out.
+  it('renders the sticky header in both auth states', () => {
+    // Signed out — header renders; "Discover" is no longer a nav item
+    // in the redesigned header, so no nav item is highlighted.
     const { unmount } = renderDiscover()
-    expect(screen.getByRole('button', { name: 'Discover' })).toHaveAttribute(
-      'data-current',
-      'true',
-    )
+    expect(screen.getByTestId('sticky-header')).toBeInTheDocument()
     unmount()
 
     // Signed in.
@@ -118,10 +116,7 @@ describe('DiscoverPage - header current-page state (Req 1.13.4)', () => {
       login: vi.fn(),
     }
     renderDiscover()
-    expect(screen.getByRole('button', { name: 'Discover' })).toHaveAttribute(
-      'data-current',
-      'true',
-    )
+    expect(screen.getByTestId('sticky-header')).toBeInTheDocument()
   })
 })
 

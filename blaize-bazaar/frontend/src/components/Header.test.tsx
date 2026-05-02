@@ -1,42 +1,29 @@
 /**
- * Header tests — storefront sticky header.
+ * Header tests — Boutique sticky header (Phase 2 rebuild).
  *
- * Validates Requirements 1.1.3, 1.2.1, 1.2.2, 1.2.3, 1.2.4.
+ * Validates Requirements 4.3, 5.1, 5.2, 5.3, 5.4, 5.5, 15.3.
  *
  * Design goals:
- *  - renders exactly 5 nav items (Home, Shop, Storyboard, Discover, Account)
- *  - does NOT render an "Ask Blaize" link (superseded by the hero SearchPill
- *    and floating CommandPill — three entry points was noise on one page)
- *  - swaps the Account label based on `useAuth().user` (1.2.2, 1.2.3)
- *  - carries no legacy About/Journal items (1.2.4)
+ *  - renders four nav items (Shop, Stories, Ask Blaize, About)
+ *  - centered "Blaize Bazaar" wordmark with circular B logo
+ *  - persona Avatar dropdown replaces PersonaPill + PersonaModal
+ *  - bag icon with live count badge
+ *  - sticky with backdrop-filter blur
  *
- * The CartContext and AuthContext are mocked at the module level so the test
- * stays focused on the Header's behavior without pulling in the full workshop
- * chrome (CartProvider depends on LayoutContext which pulls in the entire app).
+ * The CartContext and PersonaContext are mocked at the module level so the
+ * test stays focused on the Header's behavior without pulling in the full
+ * workshop chrome.
  *
- * Header internally renders a `<Link to="/workshop">` from react-router-dom,
- * so every render wraps in a `<MemoryRouter>` via the `renderHeader` helper.
+ * Header internally renders a SurfaceToggle with `<Link>` from
+ * react-router-dom, so every render wraps in a `<MemoryRouter>`.
  */
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactElement } from 'react'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { TEST_ROUTER_FUTURE_FLAGS } from '../test-utils'
 
 // --- Mocks -------------------------------------------------------------
-
-// useAuth — controlled per-test via the `mockUser` variable below.
-let mockUser: { sub?: string; email?: string; givenName?: string } | null = null
-vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({
-    user: mockUser,
-    isAuthenticated: mockUser !== null,
-    accessToken: null,
-    login: () => {},
-    logout: () => {},
-    loading: false,
-  }),
-}))
 
 // useCart — only `items` and `setCartOpen` are exercised by Header.
 let mockCartItems: Array<{ productId: number; quantity: number }> = []
@@ -48,13 +35,23 @@ vi.mock('../contexts/CartContext', () => ({
   }),
 }))
 
-// usePersona — Header now uses the persona pill instead of AccountButton.
-let mockPersona: { id: string; display_name: string; avatar_initial: string; avatar_color: string; customer_id: string; role_tag: string; stats: any } | null = null
+// usePersona — Header uses the persona Avatar dropdown.
+let mockPersona: {
+  id: string
+  display_name: string
+  avatar_initial: string
+  avatar_color: string
+  customer_id: string
+  role_tag: string
+  stats: { visits: number; orders: number; last_seen_days: number | null }
+} | null = null
+const mockSwitchPersona = vi.fn()
+const mockSignOut = vi.fn()
 vi.mock('../contexts/PersonaContext', () => ({
   usePersona: () => ({
     persona: mockPersona,
-    switchPersona: vi.fn(),
-    signOut: vi.fn(),
+    switchPersona: mockSwitchPersona,
+    signOut: mockSignOut,
     switching: false,
   }),
 }))
@@ -64,41 +61,36 @@ import Header from './Header'
 
 // --- Helpers -----------------------------------------------------------
 
-/**
- * Render the Header wrapped in a MemoryRouter. The Header renders a
- * `<Link to="/workshop">`, which requires a Router ancestor — without
- * one, Link's useContext(NavigationContext) returns null and destructuring
- * `basename` throws. Tests don't care about navigation behavior, just that
- * the link renders, so MemoryRouter is the minimal wrapper.
- */
 function renderHeader(ui: ReactElement = <Header />) {
-  return render(<MemoryRouter future={TEST_ROUTER_FUTURE_FLAGS}>{ui}</MemoryRouter>)
+  return render(
+    <MemoryRouter future={TEST_ROUTER_FUTURE_FLAGS}>{ui}</MemoryRouter>,
+  )
 }
 
 beforeEach(() => {
-  mockUser = null
+  mockPersona = null
   mockCartItems = []
   setCartOpen.mockClear()
+  mockSwitchPersona.mockClear()
+  mockSignOut.mockClear()
 })
 
 // --- Tests -------------------------------------------------------------
 
-describe('Header — nav items + persona pill', () => {
-  it('renders four text nav items plus the persona pill', () => {
+describe('Header — nav items', () => {
+  it('renders four text nav items: Shop, Stories, Ask Blaize, About', () => {
     renderHeader()
 
-    const navItems = screen.getAllByRole('button', { name: /^(Home|Shop|Storyboard|Discover)$/ })
+    const navItems = screen.getAllByRole('button', {
+      name: /^(Shop|Stories|Ask Blaize|About)$/,
+    })
     expect(navItems).toHaveLength(4)
-    expect(navItems.map(el => el.textContent)).toEqual([
-      'Home',
+    expect(navItems.map((el) => el.textContent)).toEqual([
       'Shop',
-      'Storyboard',
-      'Discover',
+      'Stories',
+      'Ask Blaize',
+      'About',
     ])
-
-    // The persona pill replaces the old Account button.
-    const pill = screen.getByTestId('persona-pill')
-    expect(pill).toBeInTheDocument()
   })
 
   it('renders the Blaize Bazaar wordmark centered', () => {
@@ -107,60 +99,48 @@ describe('Header — nav items + persona pill', () => {
     expect(wordmark).toHaveTextContent('Blaize Bazaar')
   })
 
-  it('has no legacy About/Journal nav items (Req 1.2.4)', () => {
+  it('has no legacy Home/Storyboard/Discover/Account nav items', () => {
     renderHeader()
-    expect(screen.queryByRole('button', { name: /about/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /journal/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Home$/ }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Storyboard$/ }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Discover$/ }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Account$/ }),
+    ).not.toBeInTheDocument()
   })
 
-  it('applies the current-page ink highlight to Home by default', () => {
-    renderHeader()
-    const home = screen.getByRole('button', { name: 'Home' })
-    expect(home).toHaveAttribute('data-current', 'true')
-    expect(home).toHaveAttribute('aria-current', 'page')
-
+  it('applies the current-page highlight to the matching nav item', () => {
+    renderHeader(<Header current="shop" />)
     const shop = screen.getByRole('button', { name: 'Shop' })
-    expect(shop).toHaveAttribute('data-current', 'false')
+    expect(shop).toHaveAttribute('data-current', 'true')
+    expect(shop).toHaveAttribute('aria-current', 'page')
+
+    const stories = screen.getByRole('button', { name: 'Stories' })
+    expect(stories).toHaveAttribute('data-current', 'false')
   })
 
-  it('can mark a non-Home item as the current page via props', () => {
-    renderHeader(<Header current="storyboard" />)
-    expect(screen.getByRole('button', { name: 'Storyboard' })).toHaveAttribute(
-      'data-current',
-      'true',
-    )
-    expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute(
-      'data-current',
-      'false',
-    )
-  })
-})
-
-describe('Header — concierge entry point consolidation', () => {
-  it('does NOT render an "Ask Blaize" link in the header', () => {
-    // The hero SearchPill and floating CommandPill are the two concierge
-    // entry points. A third link in the header was redundant.
-    renderHeader()
-    expect(screen.queryByTestId('ask-blaize-link')).not.toBeInTheDocument()
-  })
-
-  it('keeps the centered wordmark visible regardless of breakpoint', () => {
+  it('keeps the centered wordmark visible', () => {
     renderHeader()
     const wordmarkWrapper = screen.getByTestId('wordmark-wrapper')
-    // The wrapper is not gated by any `hidden` class.
     expect(wordmarkWrapper.className).not.toMatch(/\bhidden\b/)
   })
 })
 
-describe('Header — Persona pill swaps on persona state', () => {
-  it('shows "Sign in" when no persona is active', () => {
+describe('Header — Persona Avatar dropdown', () => {
+  it('shows "Sign in" when no persona is active (Req 5.3)', () => {
     mockPersona = null
     renderHeader()
     const pill = screen.getByTestId('persona-pill')
     expect(pill).toHaveTextContent('Sign in')
   })
 
-  it('shows the espresso pill with persona name when signed in', () => {
+  it('shows persona monogram and display name when signed in (Req 5.2)', () => {
     mockPersona = {
       id: 'marco',
       display_name: 'Marco',
@@ -173,7 +153,38 @@ describe('Header — Persona pill swaps on persona state', () => {
     renderHeader()
     const pill = screen.getByTestId('persona-pill')
     expect(pill).toHaveTextContent('Marco')
-    expect(pill).toHaveTextContent('SIGNED IN AS')
+    // The Avatar primitive renders the initial
+    expect(pill.textContent).toContain('M')
+  })
+
+  it('opens dropdown on click (Req 5.1)', () => {
+    mockPersona = null
+    renderHeader()
+    expect(screen.queryByTestId('persona-dropdown')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('persona-pill'))
+    expect(screen.getByTestId('persona-dropdown')).toBeInTheDocument()
+  })
+
+  it('closes dropdown on Escape (Req 5.5)', () => {
+    mockPersona = null
+    renderHeader()
+    fireEvent.click(screen.getByTestId('persona-pill'))
+    expect(screen.getByTestId('persona-dropdown')).toBeInTheDocument()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByTestId('persona-dropdown')).not.toBeInTheDocument()
+  })
+
+  it('closes dropdown on outside click (Req 5.5)', () => {
+    mockPersona = null
+    renderHeader()
+    fireEvent.click(screen.getByTestId('persona-pill'))
+    expect(screen.getByTestId('persona-dropdown')).toBeInTheDocument()
+
+    // Click outside the dropdown
+    fireEvent.mouseDown(document.body)
+    expect(screen.queryByTestId('persona-dropdown')).not.toBeInTheDocument()
   })
 })
 
@@ -191,5 +202,19 @@ describe('Header — Bag badge', () => {
     ]
     renderHeader()
     expect(screen.getByTestId('bag-count')).toHaveTextContent('3')
+  })
+})
+
+describe('Header — sticky backdrop', () => {
+  it('renders with sticky positioning and backdrop blur (Req 15.3)', () => {
+    renderHeader()
+    const header = screen.getByTestId('sticky-header')
+    expect(header.className).toContain('sticky')
+    // Verify backdrop-filter is set via inline style
+    expect(header.style.backdropFilter).toBe('blur(12px)')
+    // Note: WebkitBackdropFilter is set in the source via React's style prop
+    // but jsdom doesn't serialize vendor-prefixed CSS properties. The
+    // presence of -webkit-backdrop-filter is verified by source inspection
+    // and the tsc --noEmit check (the style object includes WebkitBackdropFilter).
   })
 })

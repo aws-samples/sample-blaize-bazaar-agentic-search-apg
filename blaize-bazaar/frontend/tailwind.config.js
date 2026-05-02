@@ -37,6 +37,14 @@ export default {
         // Warm-tinted hairline (ink-soft at 8% alpha). Used as card border
         // and hero-ticker top divider for premium warm depth.
         'warm': 'rgba(107, 74, 53, 0.08)',
+
+        // Redesign tokens (Phase 1) — coexist with existing tokens until Phase 5 retires them
+        'cream-50': '#F7F3EE',
+        'sand': '#E8DFD4',
+        'espresso': '#3B2F2F',
+        'olive': '#6B705C',
+        'espresso-dark': '#1F1410',
+        'espresso-mid': '#2A1E18',
       },
       borderColor: {
         'cream': '#fbf4e8',
@@ -55,6 +63,14 @@ export default {
           '0 2px 8px rgba(107, 74, 53, 0.06), 0 1px 3px rgba(107, 74, 53, 0.04)',
         'warm-lg':
           '0 8px 24px rgba(107, 74, 53, 0.10), 0 4px 8px rgba(107, 74, 53, 0.06)',
+
+        // Redesign tokens (Phase 1) — coexist with existing tokens until Phase 5 retires them
+        'warm-sm':
+          '0 2px 8px rgba(107, 74, 53, 0.06), 0 1px 3px rgba(107, 74, 53, 0.04)',
+        'warm-md':
+          '0 4px 16px rgba(107, 74, 53, 0.08), 0 2px 6px rgba(107, 74, 53, 0.05)',
+        'warm-xl':
+          '0 24px 48px rgba(107, 74, 53, 0.14), 0 8px 16px rgba(107, 74, 53, 0.08)',
       },
       fontFamily: {
         // Default body sans — Inter is loaded globally for the storefront
@@ -128,6 +144,19 @@ export default {
       backgroundImage: {
         'gradient-radial': 'radial-gradient(ellipse at center, var(--tw-gradient-stops))',
         'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+      },
+
+      // Redesign tokens (Phase 1) — coexist with existing tokens until Phase 5 retires them
+      screens: {
+        'wide': '1440px',
+        'expansion-stack': '1280px',
+      },
+      spacing: {
+        'container-x': 'clamp(16px, 4vw, 48px)',
+      },
+      transitionDuration: {
+        'fade': '180ms',
+        'slide': '240ms',
       },
     },
   },

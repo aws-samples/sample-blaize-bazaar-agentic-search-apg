@@ -1,128 +1,63 @@
 /**
- * StorefrontPage — the `/` route composition.
+ * StorefrontPage — the `/` route composition (Boutique redesign).
  *
- * Ordering matches storefront.md §"Frontend Component Tree" and the
- * reference composition in `stories/HomePage.stories.tsx`:
+ * Two-act layout:
  *
- *   AnnouncementBar -> Header (current="home") -> HeroStage ->
- *   AuthStateBand -> LiveStatusStrip -> CategoryChips ->
- *   ProductGrid (key={prefsVersion}) -> RefinementPanel ->
- *   StoryboardTeaser -> Footer -> CommandPill
+ *   ACT 1 (above the fold — full viewport):
+ *     Header (sticky) → BoutiqueHero (full-height search surface)
  *
- * Modals (AuthModal, PreferencesModal, ConciergeModal) and the
- * CartPanel drawer mount at the App root, not inside StorefrontPage,
- * so they survive route changes.
+ *   ACT 2 (below the fold — scroll to discover):
+ *     Featured product image (weekender bag) + "Weekend, re:defined."
+ *     → 8 remaining products in a staggered grid
+ *     → "Because you asked..." editorial cards
+ *     → Footer
  *
- * The `key={prefsVersion}` on ProductGrid (Req 1.6.6) is this page's
- * responsibility: the grid itself does not read AuthContext. When
- * `savePreferences` advances the counter, React tears down the grid and
- * the parallax observer re-fires on mount.
+ * The hero occupies the entire viewport so the first impression is
+ * the search bar. Scrolling reveals the editorial product showcase.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AnnouncementBar from '../components/AnnouncementBar'
 import Header, { type NavItem } from '../components/Header'
-import HeroHeadline from '../components/HeroHeadline'
-import HeroStage from '../components/HeroStage'
-import AuthStateBand from '../components/AuthStateBand'
-import LiveStatusStrip from '../components/LiveStatusStrip'
-import DemoChatCarousel from '../components/DemoChatCarousel'
-import CategoryChips from '../components/CategoryChips'
-import ProductGridHeader from '../components/ProductGridHeader'
-import ProductGrid from '../components/ProductGrid'
-import RefinementPanel, { type RefinementChip } from '../components/RefinementPanel'
-import StoryboardTeaser from '../components/StoryboardTeaser'
+import BoutiqueHero from '../components/BoutiqueHero'
+import BecauseYouAsked from '../components/BecauseYouAsked'
+import ProductCard from '../components/ProductCard'
 import Footer from '../components/Footer'
 import CommandPill from '../components/CommandPill'
-import StorefrontSpotlight from '../components/StorefrontSpotlight'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
-import { usePersona } from '../contexts/PersonaContext'
 import { useUI } from '../contexts/UIContext'
 import { SHOWCASE_PRODUCTS } from '../data/showcaseProducts'
-import type { StorefrontProduct } from '../services/types'
-
-const CREAM = '#fbf4e8'
 
 const NAV_ROUTES: Record<NavItem, string> = {
   home: '/',
   shop: '/',
   storyboard: '/storyboard',
+  stories: '/storyboard',
   discover: '/discover',
+  about: '/about',
   account: '/',
+  'ask-blaize': '/',
 }
 
-// Chip → predicate. Two of the four chips map to real product fields
-// (price, tags); "Ships by Friday" and "Gift-wrappable" are demo
-// placeholders that pass everything through today. The teaching
-// caption in RefinementPanel is honest about composition (pgvector
-// semantic match × metadata filter) — we're just doing the metadata
-// half client-side against the pre-loaded showcase. Real pgvector
-// composition will land when the grid fetches from a search endpoint.
-const FILTER_PREDICATES: Record<RefinementChip, (p: StorefrontProduct) => boolean> = {
-  'Under $100': (p) => p.price < 100,
-  'Ships by Friday': () => true,
-  'Gift-wrappable': () => true,
-  'From smaller makers': (p) =>
-    Array.isArray(p.tags) && p.tags.includes('slow'),
-}
-
-function applyFilters(
-  products: readonly StorefrontProduct[],
-  filters: readonly RefinementChip[],
-): StorefrontProduct[] {
-  if (filters.length === 0) return [...products]
-  return products.filter((p) =>
-    filters.every((chip) => FILTER_PREDICATES[chip](p)),
-  )
-}
+// The featured product is the Nocturne Leather Weekender (id: 3)
+const FEATURED_PRODUCT = SHOWCASE_PRODUCTS.find(p => p.id === 3) ?? SHOWCASE_PRODUCTS[2]
+// The remaining 8 products (everything except the featured one)
+const GRID_PRODUCTS = SHOWCASE_PRODUCTS.filter(p => p.id !== FEATURED_PRODUCT.id)
 
 export default function StorefrontPage() {
   const { prefsVersion } = useAuth()
   const { openModal, setChatSurface } = useUI()
-  const { persona } = usePersona()
   const { addToCart } = useCart()
   const navigate = useNavigate()
 
-  // Refinement chip state + the filtered grid derived from it.
-  // Lifting the state here lets the RefinementPanel be controlled
-  // and the ProductGrid actually re-render when chips toggle. The
-  // filter latency is measured so the teaching caption shows a real
-  // number instead of the hardcoded ~143ms.
-  const [activeFilters, setActiveFilters] = useState<RefinementChip[]>([])
-  const [filterLatencyMs, setFilterLatencyMs] = useState<number | null>(null)
-
-  const filteredProducts = useMemo(() => {
-    if (typeof performance === 'undefined') {
-      return applyFilters(SHOWCASE_PRODUCTS, activeFilters)
-    }
-    const t0 = performance.now()
-    const result = applyFilters(SHOWCASE_PRODUCTS, activeFilters)
-    const elapsed = Math.max(1, Math.round(performance.now() - t0))
-    // setState inside a useMemo is usually wrong, but here we're only
-    // writing a passive latency number that no render path depends on,
-    // so it's safe. Wrap in a microtask to sidestep the render warning.
-    queueMicrotask(() => setFilterLatencyMs(elapsed))
-    return result
-  }, [activeFilters])
-
-  const handleFiltersChange = useCallback((next: RefinementChip[]) => {
-    setActiveFilters(next)
-  }, [])
-
-  // Tell UIProvider that ⌘K should open the drawer (not the concierge
-  // modal) while on storefront routes.
   useEffect(() => {
     setChatSurface('drawer')
   }, [setChatSurface])
 
-  // Handle `/#shop` hash from off-route Shop nav clicks. React Router
-  // ignores the fragment by default, so we scroll to the anchor once
-  // the page has painted.
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (window.location.hash === '#shop') {
-      // Defer a frame so the grid is mounted.
       requestAnimationFrame(() => {
         document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })
       })
@@ -134,10 +69,6 @@ export default function StorefrontPage() {
       openModal('auth')
       return
     }
-    // Home + Shop both live on the `/` route; clicking either while
-    // already on `/` should scroll to the grid rather than no-op.
-    // Home scrolls to the top of the page; Shop scrolls to the
-    // product grid anchor.
     if (item === 'home') {
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
@@ -150,51 +81,158 @@ export default function StorefrontPage() {
     if (target) navigate(target)
   }
 
+  const handleAddToBag = (product: typeof SHOWCASE_PRODUCTS[0]) =>
+    addToCart({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.imageUrl,
+      origin: 'manual',
+    })
+
   return (
-    <div style={{ minHeight: '100vh', background: CREAM }}>
-      <StorefrontSpotlight />
+    <div className="min-h-dvh bg-cream-50">
+      {/* Announcement bar — full-width above the header */}
       <AnnouncementBar />
-      <Header
-        current="home"
-        onNavigate={handleNavigate}
-      />
+
+      <Header current="home" onNavigate={handleNavigate} />
+
       <main>
-        <HeroHeadline />
-        <HeroStage />
-        <AuthStateBand />
-        <LiveStatusStrip />
-        <DemoChatCarousel
-          onOpenChat={() => openModal('drawer')}
-          workshopMode="agentic"
-          personaId={persona?.id ?? null}
-        />
-        <CategoryChips />
-        <ProductGridHeader />
-        {/* `key` combines prefsVersion (preferences-save parallax
-         * re-fire) with the active-filter count so the grid also
-         * re-mounts on chip toggle — the useScrollReveal observer
-         * then re-fires for the new set.
-         */}
-        <ProductGrid
-          key={`${prefsVersion}-${activeFilters.length}`}
-          products={filteredProducts}
-          onAddToBag={(product) =>
-            addToCart({
-              productId: product.id,
-              name: product.name,
-              price: product.price,
-              image: product.imageUrl,
-              origin: 'manual',
-            })
-          }
-        />
-        <RefinementPanel
-          activeFilters={activeFilters}
-          onChange={handleFiltersChange}
-          measuredLatencyMs={filterLatencyMs}
-        />
-        <StoryboardTeaser />
+        {/* ── ACT 1: Full-viewport hero ── */}
+        <BoutiqueHero />
+
+        {/* ── ACT 2: Below the fold ── */}
+        <section
+          id="shop"
+          className="w-full bg-cream-50"
+          aria-label="Featured products"
+          style={{ scrollMarginTop: 84 }}
+        >
+          {/* Featured product: large image + editorial title */}
+          <div className="max-w-[1440px] mx-auto px-container-x pt-16 md:pt-24 pb-12">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+              {/* Left: featured image */}
+              <div className="relative aspect-[4/5] rounded-2xl overflow-hidden shadow-warm-md">
+                <img
+                  src={FEATURED_PRODUCT.imageUrl}
+                  alt={FEATURED_PRODUCT.name}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                {/* Subtle warm wash */}
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  aria-hidden="true"
+                  style={{
+                    background: 'linear-gradient(180deg, rgba(247,243,238,0.05) 0%, rgba(59,47,47,0.12) 100%)',
+                  }}
+                />
+              </div>
+
+              {/* Right: editorial title + product info */}
+              <div className="flex flex-col justify-center py-8 lg:py-0">
+                <p className="text-[11px] font-sans font-semibold tracking-[0.22em] uppercase text-ink-quiet mb-4">
+                  Weekend Edit
+                </p>
+                <h2
+                  className="font-display italic text-espresso"
+                  style={{
+                    fontSize: 'clamp(36px, 5vw, 64px)',
+                    lineHeight: 1.05,
+                    letterSpacing: '-0.02em',
+                    fontWeight: 400,
+                  }}
+                >
+                  Weekend,
+                  <br />
+                  re:defined.
+                </h2>
+                <p
+                  className="mt-5 max-w-[440px] font-sans text-ink-soft"
+                  style={{
+                    fontSize: 'clamp(14px, 1.1vw, 16px)',
+                    lineHeight: 1.65,
+                  }}
+                >
+                  Pieces that move with you from morning markets to golden-hour
+                  terraces. Linen, leather, ceramic — the weekend wardrobe,
+                  considered.
+                </p>
+
+                {/* Featured product details */}
+                <div className="mt-8 pt-6 border-t border-sand/50">
+                  <p className="text-[10px] font-sans font-semibold tracking-[0.2em] uppercase text-ink-quiet mb-1">
+                    {FEATURED_PRODUCT.brand}
+                  </p>
+                  <p className="font-display italic text-espresso text-xl">
+                    {FEATURED_PRODUCT.name}
+                  </p>
+                  <div className="flex items-center gap-3 mt-2 text-sm text-ink-soft font-sans">
+                    <span className="text-espresso font-medium">${FEATURED_PRODUCT.price}</span>
+                    <span>★ {FEATURED_PRODUCT.rating.toFixed(1)}</span>
+                    <span className="text-ink-quiet">({FEATURED_PRODUCT.reviewCount})</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAddToBag(FEATURED_PRODUCT)}
+                    className="mt-5 rounded-full bg-espresso text-cream-50 px-8 py-3 text-sm font-sans font-medium transition-colors duration-fade hover:bg-dusk cursor-pointer"
+                  >
+                    Add to bag
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Curated grid: remaining 8 products */}
+          <div className="max-w-[1440px] mx-auto px-container-x pb-16 md:pb-24">
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="relative flex h-2 w-2" aria-hidden="true">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+                </span>
+                <p className="text-[11px] font-sans font-semibold tracking-[0.22em] uppercase text-ink-quiet">
+                  Curated for you
+                </p>
+              </div>
+              <h2
+                className="font-display italic text-espresso"
+                style={{
+                  fontSize: 'clamp(28px, 3.5vw, 44px)',
+                  lineHeight: 1.15,
+                  letterSpacing: '-0.01em',
+                  fontWeight: 400,
+                }}
+              >
+                Things worth discovering.
+              </h2>
+            </div>
+
+            <div
+              key={prefsVersion}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '1.5rem',
+              }}
+            >
+              {GRID_PRODUCTS.map((product, index) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  index={index % 3}
+                  onAddToBag={handleAddToBag}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* "Because you asked..." editorial cards */}
+        <BecauseYouAsked />
       </main>
+
       <Footer />
       <CommandPill />
     </div>

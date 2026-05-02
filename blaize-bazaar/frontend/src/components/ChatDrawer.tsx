@@ -256,7 +256,7 @@ export default function ChatDrawer() {
                           className="cd-persona-av"
                           style={{
                             background: persona.avatar_color,
-                            color: '#faf3e8',
+                            color: '#F7F3EE',
                           }}
                         >
                           {persona.avatar_initial}

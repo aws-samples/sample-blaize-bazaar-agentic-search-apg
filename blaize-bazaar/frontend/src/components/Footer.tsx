@@ -14,20 +14,14 @@
  *                   links this rewrite is eliminating.
  *
  * Copy from `FOOTER` in copy.ts.
+ *
+ * Phase 2 redesign: replaced all hardcoded hex color constants with
+ * Tailwind token classes. Uses fluid container, font-display / font-sans
+ * utilities, border-sand/50 for borders, and duration-fade for transitions.
  */
 import { Link } from 'react-router-dom'
 
 import { FOOTER } from '../copy'
-
-const CREAM = '#fbf4e8'
-const CREAM_WARM = '#f5e8d3'
-const INK = '#2d1810'
-const INK_SOFT = '#6b4a35'
-const INK_QUIET = '#a68668'
-const ACCENT = '#c44536'
-
-const INTER_STACK = 'Inter, system-ui, sans-serif'
-const FRAUNCES_STACK = 'Fraunces, Georgia, serif'
 
 export default function Footer() {
   const year = new Date().getFullYear()
@@ -37,15 +31,12 @@ export default function Footer() {
     <footer
       data-testid="footer"
       role="contentinfo"
+      className="bg-sand text-espresso font-sans border-t border-sand/50"
       style={{
-        background: CREAM_WARM,
-        color: INK,
         padding: '72px 24px 32px',
-        fontFamily: INTER_STACK,
-        borderTop: `1px solid rgba(45, 24, 16, 0.08)`,
       }}
     >
-      <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div className="max-w-[1440px] mx-auto px-container-x">
         <div
           data-testid="footer-columns"
           style={{
@@ -83,44 +74,22 @@ function BrandColumn() {
     <section
       data-testid="footer-column-brand"
       aria-label="Blaize Bazaar"
-      style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+      className="flex flex-col gap-4"
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div className="flex items-center gap-2.5">
         <span
           aria-hidden="true"
-          className="inline-flex items-center justify-center rounded-full"
-          style={{
-            width: 32,
-            height: 32,
-            background: INK,
-            color: CREAM,
-            fontFamily: FRAUNCES_STACK,
-            fontWeight: 600,
-            fontSize: 16,
-          }}
+          className="inline-flex items-center justify-center rounded-full w-8 h-8 bg-espresso text-cream-50 font-display font-semibold text-base"
         >
           B
         </span>
-        <span
-          style={{
-            fontFamily: FRAUNCES_STACK,
-            fontSize: 20,
-            fontWeight: 500,
-            letterSpacing: '-0.01em',
-          }}
-        >
+        <span className="font-display text-xl font-medium tracking-tight">
           Blaize Bazaar
         </span>
       </div>
       <p
         data-testid="footer-brand-tagline"
-        style={{
-          fontSize: 13,
-          lineHeight: 1.6,
-          color: INK_SOFT,
-          margin: 0,
-          maxWidth: 260,
-        }}
+        className="text-[13px] leading-relaxed text-ink-soft m-0 max-w-[260px]"
       >
         {FOOTER.BRAND.TAGLINE}
       </p>
@@ -133,50 +102,24 @@ function ExploreColumn() {
     <section
       data-testid="footer-column-explore"
       aria-labelledby="footer-column-explore-heading"
-      style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+      className="flex flex-col gap-3.5"
     >
       <h3
         id="footer-column-explore-heading"
-        style={{
-          fontFamily: INTER_STACK,
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-          color: INK_QUIET,
-          margin: 0,
-        }}
+        className="font-sans text-[11px] font-semibold tracking-[0.18em] uppercase text-ink-quiet m-0"
       >
         {FOOTER.EXPLORE.HEADING}
       </h3>
       <ul
         role="list"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-          margin: 0,
-          padding: 0,
-          listStyle: 'none',
-        }}
+        className="flex flex-col gap-2.5 m-0 p-0 list-none"
       >
         {FOOTER.EXPLORE.ITEMS.map(({ label, href }) => (
           <li key={label}>
             <Link
               to={href}
               data-testid={`footer-explore-link-${label.toLowerCase().replace(/\s+/g, '-')}`}
-              style={{
-                color: INK,
-                fontSize: 14,
-                textDecoration: 'none',
-                transition: 'color 180ms ease-out',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = ACCENT
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = INK
-              }}
+              className="text-espresso text-sm no-underline transition-colors duration-fade ease-out hover:text-accent"
             >
               {label}
             </Link>
@@ -206,56 +149,21 @@ function EditorialColumn({
     <section
       data-testid={testId}
       aria-labelledby={`${testId}-heading`}
-      style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+      className="flex flex-col gap-3.5"
     >
       <h3
         id={`${testId}-heading`}
-        style={{
-          fontFamily: INTER_STACK,
-          fontSize: 11,
-          fontWeight: 600,
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-          color: INK_QUIET,
-          margin: 0,
-        }}
+        className="font-sans text-[11px] font-semibold tracking-[0.18em] uppercase text-ink-quiet m-0"
       >
         {heading}
       </h3>
-      <p
-        style={{
-          fontFamily: FRAUNCES_STACK,
-          fontStyle: 'italic',
-          fontWeight: 400,
-          fontSize: 15,
-          lineHeight: 1.55,
-          color: INK,
-          margin: 0,
-        }}
-      >
+      <p className="font-display italic font-normal text-[15px] leading-[1.55] text-espresso m-0">
         {copy}
       </p>
       <Link
         to={ctaHref}
         data-testid={`${testId}-cta`}
-        style={{
-          fontFamily: INTER_STACK,
-          fontSize: 13,
-          fontWeight: 500,
-          letterSpacing: '-0.003em',
-          color: ACCENT,
-          textDecoration: 'none',
-          marginTop: 4,
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 6,
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.textDecoration = 'underline'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.textDecoration = 'none'
-        }}
+        className="font-sans text-[13px] font-medium tracking-tight text-accent no-underline mt-1 inline-flex items-center gap-1.5 transition-all duration-fade ease-out hover:underline"
       >
         {ctaLabel}
         <span aria-hidden>&rarr;</span>
@@ -272,30 +180,15 @@ function BottomStrip({ copyrightLine }: BottomStripProps) {
   return (
     <div
       data-testid="footer-bottom-strip"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 16,
-        paddingTop: 24,
-        borderTop: `1px solid rgba(45, 24, 16, 0.08)`,
-      }}
+      className="flex items-center justify-between gap-4 pt-6 border-t border-sand/50"
     >
       <span
         data-testid="footer-copyright"
-        style={{ fontSize: 12, color: INK_QUIET }}
+        className="text-xs text-ink-quiet"
       >
         {copyrightLine}
       </span>
-      <span
-        style={{
-          fontFamily: INTER_STACK,
-          fontSize: 11,
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-          color: INK_QUIET,
-        }}
-      >
+      <span className="font-sans text-[11px] tracking-[0.18em] uppercase text-ink-quiet">
         Made for the workshop
       </span>
     </div>

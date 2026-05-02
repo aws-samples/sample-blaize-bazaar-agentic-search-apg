@@ -37,6 +37,7 @@ import InspectorPage from './pages/InspectorPage'
 import StoryboardPage from './pages/StoryboardPage'
 import DiscoverPage from './pages/DiscoverPage'
 import AtelierComponentsPreview from './pages/AtelierComponentsPreview'
+import DesignSystemPreview from './pages/DesignSystemPreview'
 import './styles/premium-heading-styles.css'
 
 // ---------------------------------------------------------------------------
@@ -185,6 +186,12 @@ function App() {
                   <Route
                     path="/atelier/_components"
                     element={<AtelierComponentsPreview />}
+                  />
+                )}
+                {import.meta.env.DEV && (
+                  <Route
+                    path="/dev/design-system"
+                    element={<DesignSystemPreview />}
                   />
                 )}
                 <Route path="/inspector" element={<InspectorPage />} />

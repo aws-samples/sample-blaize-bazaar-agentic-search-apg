@@ -126,8 +126,11 @@ const NAV_ROUTES: Record<NavItem, string> = {
   home: '/',
   shop: '/#shop',
   storyboard: '/storyboard',
+  stories: '/storyboard',
   discover: '/discover',
+  about: '/about',
   account: '/',
+  'ask-blaize': '/',
 }
 
 export default function DiscoverPage() {

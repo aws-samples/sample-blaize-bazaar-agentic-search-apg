@@ -1,13 +1,13 @@
 /**
- * The 9 showcase products from `storefront.md`.
+ * The 9 showcase products for the Blaize Bazaar storefront.
  *
  * These are the hero/featured cards rendered by `<ProductGrid/>` on the
- * home page (Req 1.6.1–1.6.6). The backend `/api/products?personalized=true`
+ * home page (Req 1.6.1-1.6.6). The backend `/api/products?personalized=true`
  * endpoint (Task 3.6) returns a superset of these, sorted by match score;
  * while that endpoint is still coming online, the grid uses this constant
  * as its fallback data source and as the seed for unit tests.
  *
- * Tag sets are copied verbatim from the table in `storefront.md` so the
+ * Tag sets are copied verbatim from the product table so the
  * personalization scorer in `services/personalization.py` (Task 1.4) and
  * the frontend render stay aligned.
  */
@@ -24,51 +24,60 @@ import {
 // Per-card reasoning copy authored in product declaration order.
 //
 // The copy is written so the authored `style` already lines up with the
-// canonical picked → matched → pricing → context rotation for the 9-card
+// canonical picked -> matched -> pricing -> context rotation for the 9-card
 // grid. `assignReasoningChipsCyclic` then guarantees the sequence has no
 // two adjacent entries sharing a style (Req 1.7.1). Because the authored
 // pattern is already the canonical cycle, the helper is a no-op today,
 // but it still runs so the guarantee survives any future edits to the
 // ordering or length of the showcase.
 const AUTHORED: ReasoningChip[] = [
-  // 0 — picked: italic Fraunces editorial reason.
+  // 0 - picked: italic Fraunces editorial reason.
   {
     style: 'picked',
-    text: REASONING.picked('linen breathes beautifully in July'),
+    text: REASONING.picked('sculptural ceramics that anchor a room'),
   },
-  // 1 — matched: engineer-voice monospace tag breadcrumb.
+  // 1 - matched: engineer-voice monospace tag breadcrumb.
   {
     style: 'matched',
-    text: REASONING.matched('earth', 'warm', 'everyday'),
+    text: REASONING.matched('linen', 'resort', 'minimal'),
   },
-  // 2 — pricing: lead clause + terracotta urgent clause (Req 1.7.4).
+  // 2 - pricing: lead clause + terracotta urgent clause (Req 1.7.4).
   {
     style: 'pricing',
     text: REASONING.pricing(14, 3).lead,
     urgentClause: REASONING.pricing(14, 3).urgent,
   },
-  // 3 — context: gift-ready free-form line.
-  { style: 'context', text: REASONING.DEFAULT_CONTEXT },
-  // 4 — picked.
+  // 3 - context: gift-ready free-form line.
+  {
+    style: 'context',
+    text: 'the scent that turns a Tuesday into a ritual',
+  },
+  // 4 - picked.
   {
     style: 'picked',
-    text: REASONING.picked('you mentioned warm evenings'),
+    text: REASONING.picked('you mentioned timeless accessories'),
   },
-  // 5 — matched.
+  // 5 - matched.
   {
     style: 'matched',
-    text: REASONING.matched('classic', 'warm', 'travel'),
+    text: REASONING.matched('apothecary', 'minimal', 'warm'),
   },
-  // 6 — pricing.
+  // 6 - pricing.
   {
     style: 'pricing',
     text: REASONING.pricing(8, 5).lead,
     urgentClause: REASONING.pricing(8, 5).urgent,
   },
-  // 7 — context.
-  { style: 'context', text: 'Quiet layer that earns its evenings' },
-  // 8 — picked.
-  { style: 'picked', text: REASONING.picked('you liked outdoor layers') },
+  // 7 - context.
+  {
+    style: 'context',
+    text: 'the set that makes staying in feel intentional',
+  },
+  // 8 - picked.
+  {
+    style: 'picked',
+    text: REASONING.picked('you liked clean activewear'),
+  },
 ]
 
 const CHIPS: ReasoningChip[] = assignReasoningChipsCyclic(AUTHORED)
@@ -85,205 +94,122 @@ if (findAdjacentDuplicateStyleIndex(CHIPS) !== -1) {
 export const SHOWCASE_PRODUCTS: StorefrontProduct[] = [
   {
     id: 1,
-    brand: 'Blaize Editions',
-    name: 'Italian Linen Camp Shirt',
-    color: 'Indigo',
-    price: 128,
-    rating: 4.8,
-    reviewCount: 214,
-    category: 'Linen',
-    imageUrl:
-      'https://images.unsplash.com/photo-1740711152088-88a009e877bb?w=1600&q=85',
-    badge: 'EDITORS_PICK',
-    tags: [
-      'minimal',
-      'serene',
-      'classic',
-      'warm',
-      'neutral',
-      'everyday',
-      'slow',
-      'linen',
-    ],
+    brand: 'Blaize Home',
+    name: 'Olive Branch Vessel',
+    color: 'Ivory',
+    price: 185,
+    rating: 4.9,
+    reviewCount: 127,
+    category: 'Home Decor',
+    imageUrl: '/products/olive-branch-vessel.png',
+    tags: ['ceramic', 'sculptural', 'minimal', 'warm', 'neutral', 'home'],
     reasoning: CHIPS[0],
   },
   {
     id: 2,
     brand: 'Blaize Editions',
-    name: 'Wide-Leg Linen Trousers',
-    color: 'Oatmeal',
-    price: 98,
-    rating: 4.7,
-    reviewCount: 166,
-    category: 'Linen',
-    imageUrl:
-      'https://images.unsplash.com/photo-1621767527621-ecdea6e1c522?w=1600&q=85',
-    tags: [
-      'creative',
-      'bold',
-      'warm',
-      'earth',
-      'everyday',
-      'travel',
-      'linen',
-    ],
+    name: 'Pellier Linen Shirt',
+    color: 'Ivory',
+    price: 248,
+    rating: 4.8,
+    reviewCount: 312,
+    category: 'Apparel',
+    imageUrl: '/products/pellier-linen-shirt.png',
+    badge: 'EDITORS_PICK',
+    tags: ['linen', 'minimal', 'resort', 'warm', 'neutral', 'everyday'],
     reasoning: CHIPS[1],
   },
   {
     id: 3,
     brand: 'Blaize Editions',
-    name: 'Signature Straw Tote',
-    color: 'Sand',
-    price: 68,
+    name: 'Nocturne Leather Weekender',
+    color: 'Cognac',
+    price: 695,
     rating: 4.9,
-    reviewCount: 402,
-    category: 'Accessories',
-    imageUrl:
-      'https://images.unsplash.com/photo-1657118493503-9cabb641a033?w=1600&q=85',
+    reviewCount: 89,
+    category: 'Bags & Travel',
+    imageUrl: '/products/nocturne-leather-weekender.png',
     badge: 'BESTSELLER',
-    tags: [
-      'classic',
-      'serene',
-      'neutral',
-      'soft',
-      'travel',
-      'everyday',
-      'accessories',
-    ],
+    tags: ['leather', 'travel', 'classic', 'warm', 'earth', 'accessories'],
     reasoning: CHIPS[2],
   },
   {
     id: 4,
-    brand: 'Blaize Editions',
-    name: 'Relaxed Oxford Shirt',
-    color: 'Chambray',
-    price: 88,
-    rating: 4.6,
-    reviewCount: 131,
-    category: 'Linen',
-    imageUrl:
-      'https://images.unsplash.com/photo-1732605559386-bc59426d1b16?w=1600&q=85',
-    tags: [
-      'classic',
-      'minimal',
-      'neutral',
-      'soft',
-      'everyday',
-      'work',
-      'linen',
-    ],
+    brand: 'Blaize Home',
+    name: 'Santal & Fig Candle',
+    color: 'Amber',
+    price: 92,
+    rating: 4.7,
+    reviewCount: 445,
+    category: 'Home Fragrance',
+    imageUrl: '/products/santal-fig-candle.png',
+    tags: ['candle', 'home', 'minimal', 'warm', 'slow'],
     reasoning: CHIPS[3],
   },
   {
     id: 5,
     brand: 'Blaize Editions',
-    name: 'Sundress in Washed Linen',
-    color: 'Russet',
-    price: 148,
-    rating: 4.9,
-    reviewCount: 286,
-    category: 'Dresses',
-    imageUrl:
-      'https://images.unsplash.com/photo-1667905632551-361dd00e5e35?w=1600&q=85',
+    name: 'Heritage Rectangular Watch',
+    color: 'Tan',
+    price: 420,
+    rating: 4.8,
+    reviewCount: 203,
+    category: 'Watches & Jewelry',
+    imageUrl: '/products/heritage-rectangular-watch.png',
     badge: 'JUST_IN',
-    tags: [
-      'creative',
-      'bold',
-      'warm',
-      'earth',
-      'evening',
-      'dresses',
-      'linen',
-    ],
+    tags: ['watch', 'classic', 'minimal', 'timeless', 'accessories'],
     reasoning: CHIPS[4],
   },
   {
     id: 6,
-    brand: 'Blaize Editions',
-    name: 'Leather Slide Sandal',
-    color: 'Onyx',
-    price: 112,
-    rating: 4.7,
+    brand: 'Blaize Home',
+    name: 'Neroli Apothecary Bottle',
+    color: 'Amber',
+    price: 128,
+    rating: 4.6,
     reviewCount: 178,
-    category: 'Footwear',
-    imageUrl:
-      'https://images.unsplash.com/photo-1625318880107-49baad6765fd?w=1600&q=85',
-    tags: [
-      'minimal',
-      'classic',
-      'earth',
-      'warm',
-      'everyday',
-      'travel',
-      'footwear',
-    ],
+    category: 'Beauty',
+    imageUrl: '/products/neroli-apothecary-bottle.png',
+    tags: ['beauty', 'apothecary', 'minimal', 'home', 'warm'],
     reasoning: CHIPS[5],
   },
   {
     id: 7,
-    brand: 'Blaize Editions',
-    name: 'Cashmere-Blend Cardigan',
-    color: 'Forest',
-    price: 158,
-    rating: 4.8,
-    reviewCount: 244,
-    category: 'Outerwear',
-    imageUrl:
-      'https://images.unsplash.com/photo-1687275168013-dcc11d9c74ab?w=1600&q=85',
-    tags: [
-      'minimal',
-      'serene',
-      'classic',
-      'neutral',
-      'earth',
-      'slow',
-      'evening',
-      'outerwear',
-    ],
+    brand: 'Blaize Home',
+    name: 'Solstice Woven Mat Set',
+    color: 'Natural',
+    price: 165,
+    rating: 4.7,
+    reviewCount: 96,
+    category: 'Wellness',
+    imageUrl: '/products/solstice-woven-mat-set.png',
+    tags: ['wellness', 'home', 'neutral', 'artisanal', 'slow'],
     reasoning: CHIPS[6],
   },
   {
     id: 8,
-    brand: 'Blaize Home',
-    name: 'Ceramic Tumbler Set',
-    color: 'Stoneware',
-    price: 52,
+    brand: 'Blaize Editions',
+    name: 'Alba Linen Lounge Set',
+    color: 'Oat',
+    price: 390,
     rating: 4.9,
-    reviewCount: 358,
-    category: 'Home',
-    imageUrl:
-      'https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=1600&q=85',
-    tags: [
-      'minimal',
-      'serene',
-      'creative',
-      'neutral',
-      'soft',
-      'slow',
-      'home',
-    ],
+    reviewCount: 267,
+    category: 'Apparel',
+    imageUrl: '/products/alba-linen-lounge-set.png',
+    tags: ['linen', 'loungewear', 'neutral', 'minimal', 'everyday', 'slow'],
     reasoning: CHIPS[7],
   },
   {
     id: 9,
-    brand: 'Blaize Editions',
-    name: 'Linen Utility Jacket',
-    color: 'Flax',
-    price: 178,
-    rating: 4.7,
-    reviewCount: 152,
-    category: 'Outerwear',
-    imageUrl:
-      'https://images.unsplash.com/photo-1691053318576-4bf08315e877?w=1600&q=85',
-    tags: [
-      'adventurous',
-      'creative',
-      'earth',
-      'neutral',
-      'outdoor',
-      'travel',
-      'outerwear',
-    ],
+    brand: 'Blaize Active',
+    name: 'Cloudform Studio Runner',
+    color: 'Stone',
+    price: 210,
+    rating: 4.8,
+    reviewCount: 341,
+    category: 'Footwear',
+    imageUrl: '/products/cloudform-studio-runner.png',
+    tags: ['activewear', 'neutral', 'minimal', 'wellness', 'footwear'],
     reasoning: CHIPS[8],
   },
 ]
