@@ -103,20 +103,20 @@ export function IntentInfoCard({ intent, product }: IntentInfoCardProps) {
     <div
       key={intent.id}
       data-testid="intent-info-card"
-      className="pointer-events-auto absolute left-5 top-5 z-20 w-[clamp(260px,30%,380px)] rounded-3xl bg-[#fbf4e8]/95 p-5 shadow-[0_24px_48px_-16px_rgba(45,24,16,0.28)] ring-1 ring-[#2d1810]/5 backdrop-blur-md md:left-6 md:top-6 md:p-6"
+      className="pointer-events-auto absolute left-5 top-5 z-20 w-[clamp(260px,30%,380px)] rounded-3xl bg-cream-50/95 p-5 shadow-warm-xl ring-1 ring-espresso/5 backdrop-blur-md md:left-6 md:top-6 md:p-6"
     >
       {/* Breadcrumb with small B mark + pulse dot (Req 1.3.4) */}
       <div
         data-testid="info-card-breadcrumb"
-        className="cascade-in mb-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-[#6b4a35]"
+        className="cascade-in mb-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-ink-soft"
         style={{ ['--cascade-delay' as string]: '0s' }}
       >
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#2d1810] font-[Fraunces] text-[10px] text-[#fbf4e8]">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-espresso font-[Fraunces] text-[10px] text-cream-50">
           B
         </span>
         <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#c44536] opacity-60" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-[#c44536]" />
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
         </span>
         <span>{HERO_BREADCRUMB}</span>
       </div>
@@ -124,7 +124,7 @@ export function IntentInfoCard({ intent, product }: IntentInfoCardProps) {
       {/* Intent query in italic Fraunces, wrapped in curly quotes (Req 1.3.4) */}
       <p
         data-testid="intent-query"
-        className="cascade-in mb-4 font-[Fraunces] text-[22px] italic leading-snug text-[#2d1810] md:text-[26px]"
+        className="cascade-in mb-4 font-[Fraunces] text-[22px] italic leading-snug text-espresso md:text-[26px]"
         style={{ ['--cascade-delay' as string]: '0.1s' }}
       >
         &ldquo;{intent.query}&rdquo;
@@ -132,21 +132,21 @@ export function IntentInfoCard({ intent, product }: IntentInfoCardProps) {
 
       {/* Product details row */}
       <div
-        className="cascade-in mb-4 text-[13px] text-[#6b4a35]"
+        className="cascade-in mb-4 text-[13px] text-ink-soft"
         style={{ ['--cascade-delay' as string]: '0.2s' }}
       >
         <span className="mr-2 uppercase tracking-wider">{product.brand}</span>
         {product.color ? <span className="mr-2">&middot; {product.color}</span> : null}
-        <div className="mt-1 font-[Fraunces] text-[17px] text-[#2d1810] md:text-[19px]">
+        <div className="mt-1 font-[Fraunces] text-[17px] text-espresso md:text-[19px]">
           {product.name}
         </div>
         <div className="mt-1 flex items-center gap-2 text-[13px]">
           {product.price > 0 ? <span>${product.price}</span> : null}
           {product.rating > 0 ? (
             <>
-              <span className="text-[#c44536]">&#9733;</span>
+              <span className="text-accent">&#9733;</span>
               <span>{product.rating.toFixed(1)}</span>
-              <span className="text-[#a68668]">
+              <span className="text-ink-quiet">
                 ({product.reviews ?? product.reviewCount})
               </span>
             </>
@@ -161,25 +161,25 @@ export function IntentInfoCard({ intent, product }: IntentInfoCardProps) {
       >
         <button
           type="button"
-          className="flex-1 rounded-full bg-[#2d1810] px-5 py-2 text-sm font-medium text-[#fbf4e8] transition-colors hover:bg-[#3d2518]"
+          className="flex-1 rounded-full bg-espresso px-5 py-2 text-sm font-medium text-cream-50 transition-colors duration-fade hover:bg-dusk"
         >
           Add to bag
         </button>
         <button
           type="button"
           aria-label="Save to wishlist"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#2d1810]/20 text-[#2d1810] transition-colors hover:bg-[#f5e8d3]"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-espresso/20 text-espresso transition-colors duration-fade hover:bg-sand"
         >
           &#9825;
         </button>
       </div>
 
-      <div className="mb-3 h-px bg-[#2d1810]/10" />
+      <div className="mb-3 h-px bg-espresso/10" />
 
       {/* 10px mono footnote (Req 1.3.4) */}
       <div
         data-testid="matched-on"
-        className="cascade-in flex items-center justify-between text-[10px] text-[#a68668]"
+        className="cascade-in flex items-center justify-between text-[10px] text-ink-quiet"
         style={{
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
           ['--cascade-delay' as string]: '0.3s',
@@ -208,12 +208,11 @@ export function IntentTicker({ intents, activeIndex, onSelect, onOpenDrawer }: I
     >
       <span
         data-testid="intent-ticker-label"
-        className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.2em]"
-        style={{ color: '#a68668', fontFamily: 'Inter, system-ui, sans-serif' }}
+        className="flex shrink-0 items-center gap-2 whitespace-nowrap text-[10px] font-medium uppercase tracking-[0.2em] text-ink-quiet font-[Inter]"
       >
         <span className="relative flex h-1.5 w-1.5" aria-hidden>
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#c44536] opacity-60" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#c44536]" />
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
         </span>
         {OTHERS_ARE_ASKING_LABEL}
       </span>
@@ -257,11 +256,11 @@ export function ProgressBar({ percent }: ProgressBarProps) {
   return (
     <div
       data-testid="progress-bar"
-      className="h-[2px] w-full bg-[#2d1810]/10"
+      className="h-[2px] w-full bg-espresso/10"
     >
       <div
         data-testid="progress-bar-fill"
-        className="h-full bg-[#c44536] transition-[width] duration-75 ease-linear"
+        className="h-full bg-accent transition-[width] duration-75 ease-linear"
         style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
       />
     </div>
@@ -407,7 +406,7 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
       data-hovering={hovering}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="relative mx-auto w-full max-w-[1440px] px-4 pt-6"
+      className="relative mx-auto w-full max-w-[1440px] px-container-x pt-6"
       aria-label="Hero stage"
     >
       {/* Hero frame: rounded rectangle with the Ken Burns image. A subtle
@@ -417,10 +416,10 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
           the wrapper's rounded corners — mock parity. */}
       <div
         data-testid="hero-frame"
-        className="relative overflow-hidden rounded-3xl shadow-[0_24px_48px_-16px_rgba(45,24,16,0.22)]"
+        className="relative overflow-hidden rounded-3xl shadow-warm-md"
         style={{
           background:
-            'radial-gradient(120% 120% at 50% 50%, rgba(245,232,211,0) 0%, rgba(245,232,211,0.85) 70%, rgba(245,232,211,1) 100%), #f5e8d3',
+            'radial-gradient(120% 120% at 50% 50%, rgba(232,223,212,0) 0%, rgba(232,223,212,0.85) 70%, rgba(232,223,212,1) 100%), #E8DFD4',
         }}
       >
         {/* The image panel must clip its own contents — the Ken Burns
@@ -436,11 +435,11 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
           {/* Mobile-only dark glass breadcrumb top-left (Req 1.3.10) */}
           <div
             data-testid="mobile-breadcrumb"
-            className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full bg-[#2d1810]/70 px-3 py-1 text-[11px] text-[#fbf4e8] backdrop-blur-md md:hidden"
+            className="absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full bg-espresso/70 px-3 py-1 text-[11px] text-cream-50 backdrop-blur-md md:hidden"
           >
             <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#c44536] opacity-60" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#c44536]" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
             </span>
             <span>{HERO_BREADCRUMB}</span>
           </div>
@@ -448,7 +447,7 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
           {/* Desktop-only cream "Curated for you" chip top-right (Req 1.3.10) */}
           <div
             data-testid="desktop-curated-chip"
-            className="absolute right-4 top-4 z-10 hidden rounded-full bg-[#fbf4e8]/85 px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-[#2d1810] backdrop-blur-md md:block"
+            className="absolute right-4 top-4 z-10 hidden rounded-full bg-cream-50/85 px-3 py-1 text-[11px] uppercase tracking-[0.12em] text-espresso backdrop-blur-md md:block"
           >
             {CURATED_FOR_YOU_CHIP}
           </div>
@@ -478,8 +477,7 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
             the image while keeping the single rounded unit. */}
         <div
           data-testid="hero-stage-ticker-strip"
-          className="bg-white"
-          style={{ borderTop: '1px solid rgba(107, 74, 53, 0.08)' }}
+          className="bg-white border-t border-warm"
         >
           <ProgressBar percent={progressPercent} />
           <IntentTicker
