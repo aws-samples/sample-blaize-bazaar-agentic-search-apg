@@ -110,7 +110,7 @@ export default function BoutiqueHero() {
               data-testid="boutique-hero-eyebrow"
               className="flex items-center gap-2 mb-4"
               style={{
-                fontFamily: "'Inter', system-ui, sans-serif",
+                fontFamily: 'var(--sans)',
                 fontSize: '11px',
                 letterSpacing: '0.22em',
                 textTransform: 'uppercase',
@@ -130,7 +130,7 @@ export default function BoutiqueHero() {
               data-testid="boutique-hero-headline"
               className="whitespace-nowrap"
               style={{
-                fontFamily: "'Fraunces', Georgia, serif",
+                fontFamily: 'var(--serif)',
                 fontStyle: 'italic',
                 fontSize: 'clamp(44px, 5.2vw, 72px)',
                 lineHeight: 1.0,
@@ -147,7 +147,7 @@ export default function BoutiqueHero() {
               data-testid="boutique-hero-subheadline"
               className="mt-4 md:mt-5"
               style={{
-                fontFamily: "'Fraunces', Georgia, serif",
+                fontFamily: 'var(--serif)',
                 fontStyle: 'italic',
                 fontSize: 'clamp(16px, 1.4vw, 22px)',
                 lineHeight: 1.5,
@@ -210,7 +210,7 @@ export default function BoutiqueHero() {
                     height: '66px',
                     fontSize: '17px',
                     color: '#1f1410',
-                    fontFamily: "'Inter', system-ui, sans-serif",
+                    fontFamily: 'var(--sans)',
                     boxShadow:
                       '0 2px 12px rgba(31, 20, 16, 0.06), 0 1px 3px rgba(31, 20, 16, 0.04)',
                   }}
@@ -246,7 +246,7 @@ export default function BoutiqueHero() {
               data-testid="boutique-hero-try-asking"
               className="mt-6 md:mt-8"
               style={{
-                fontFamily: "'Inter', system-ui, sans-serif",
+                fontFamily: 'var(--sans)',
                 fontSize: '14px',
                 fontWeight: 500,
                 color: '#1f1410',
@@ -278,7 +278,7 @@ export default function BoutiqueHero() {
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(31,20,16,0.15)]
                   "
                   style={{
-                    fontFamily: "'Inter', system-ui, sans-serif",
+                    fontFamily: 'var(--sans)',
                     fontSize: '12.5px',
                     fontWeight: 400,
                     lineHeight: 1.35,
@@ -320,7 +320,7 @@ export default function BoutiqueHero() {
             key={item}
             className="inline-flex items-center whitespace-nowrap"
             style={{
-              fontFamily: "'Inter', system-ui, sans-serif",
+              fontFamily: 'var(--sans)',
               fontSize: '12px',
               letterSpacing: '0.08em',
               textTransform: 'uppercase',

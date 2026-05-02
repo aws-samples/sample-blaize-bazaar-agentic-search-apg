@@ -50,6 +50,7 @@ export default function AnnouncementBar() {
       style={{
         background: DUSK,
         color: CREAM,
+        fontFamily: 'var(--sans)',
         fontSize: '11.5px',
         letterSpacing: '0.14em',
         lineHeight: 1,

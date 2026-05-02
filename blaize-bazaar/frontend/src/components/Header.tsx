@@ -77,7 +77,7 @@ function Wordmark() {
           width: 28,
           height: 28,
           fontSize: 14,
-          fontFamily: "'Fraunces', Georgia, serif",
+          fontFamily: 'var(--serif)',
         }}
       >
         B
@@ -85,7 +85,7 @@ function Wordmark() {
       <span
         className="text-espresso"
         style={{
-          fontFamily: "'Fraunces', Georgia, serif",
+          fontFamily: 'var(--serif)',
           fontWeight: 500,
           fontSize: 20,
           letterSpacing: '-0.01em',
@@ -124,7 +124,7 @@ function NavLink({ item, label, current, onClick }: NavLinkProps) {
         isCurrent ? 'text-espresso font-semibold' : 'text-ink-soft font-normal',
       ].join(' ')}
       style={{
-        fontFamily: "'Inter', system-ui, sans-serif",
+        fontFamily: 'var(--sans)',
         padding: '6px 0',
       }}
     >
@@ -227,7 +227,7 @@ function PersonaDropdown() {
             <span
               className="text-cream-50"
               style={{
-                fontFamily: "'Inter', system-ui, sans-serif",
+                fontFamily: 'var(--sans)',
                 fontSize: 13,
                 fontWeight: 500,
               }}
@@ -243,7 +243,7 @@ function PersonaDropdown() {
         ) : (
           <>
             <UserIcon className="w-4 h-4" aria-hidden />
-            <span style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+            <span style={{ fontFamily: 'var(--sans)' }}>
               Sign in
             </span>
           </>
@@ -289,13 +289,13 @@ function PersonaDropdown() {
                 <div className="flex flex-col min-w-0">
                   <span
                     className="text-espresso text-[13px] font-medium truncate"
-                    style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+                    style={{ fontFamily: 'var(--sans)' }}
                   >
                     {p.display_name}
                   </span>
                   <span
                     className="text-ink-soft text-[11px] truncate"
-                    style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+                    style={{ fontFamily: 'var(--sans)' }}
                   >
                     {p.role_tag}
                   </span>
@@ -322,7 +322,7 @@ function PersonaDropdown() {
                 <LogOut size={16} className="text-ink-soft" aria-hidden />
                 <span
                   className="text-[13px] font-medium"
-                  style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+                  style={{ fontFamily: 'var(--sans)' }}
                 >
                   Sign out
                 </span>
