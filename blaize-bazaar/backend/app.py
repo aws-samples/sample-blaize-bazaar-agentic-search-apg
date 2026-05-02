@@ -603,6 +603,36 @@ async def chat_stream(request: ChatRequest, user=Depends(get_current_user)):
             effective_user = dict(user) if user else {}
             if request.customer_id:
                 effective_user["customer_id"] = request.customer_id
+
+            # Per-turn guardrail INPUT check — records a decision in
+            # services/guardrails_log so the Atelier Grounding page's
+            # Guardrails lane shows live audit rows. Only runs when
+            # the user enabled guardrails in their request; otherwise
+            # the log captures no entry (accurate — nothing happened).
+            # Failures are swallowed: guardrail eval is observational,
+            # not a hard turn gate in this demo surface.
+            if request.guardrails_enabled:
+                try:
+                    import time as _time
+                    from services.guardrails import GuardrailsService
+                    from services.guardrails_log import record_guardrail
+                    _g = GuardrailsService()
+                    _t0 = _time.perf_counter()
+                    _res = _g.check_input(request.message)
+                    _latency = int((_time.perf_counter() - _t0) * 1000)
+                    record_guardrail(
+                        session_id=request.session_id,
+                        source="INPUT",
+                        action=_res.get("action", "NONE"),
+                        allowed=_res.get("allowed", True),
+                        violations=_res.get("violations", []),
+                        latency_ms=_latency,
+                        text_preview=request.message,
+                        mode=_res.get("mode"),
+                    )
+                except Exception as _exc:
+                    logger.debug("Input guardrail observational check failed: %s", _exc)
+
             async for event in chat_service.chat_stream(
                 message=request.message,
                 conversation_history=history,
@@ -1354,20 +1384,65 @@ async def get_tracing_info():
 
 @app.post("/api/guardrails/check")
 async def check_guardrails(request: Request):
-    """Demo endpoint to test Bedrock Guardrails on input/output text"""
+    """Demo endpoint to test Bedrock Guardrails on input/output text.
+
+    Also records the decision in ``services/guardrails_log`` so the
+    Atelier Grounding page's Guardrails lane can surface a live audit
+    trail alongside the Cedar policy decisions.
+    """
+    import time as _time
     from services.guardrails import GuardrailsService
+    from services.guardrails_log import record_guardrail
+
     body = await request.json()
     text = body.get("text", "")
     source = body.get("source", "INPUT")
+    session_id = body.get("session_id", "") or ""
 
     svc = GuardrailsService()
+    t0 = _time.perf_counter()
     if source == "OUTPUT":
         result = svc.check_output(text)
     else:
         result = svc.check_input(text)
+    latency_ms = int((_time.perf_counter() - t0) * 1000)
+
+    record_guardrail(
+        session_id=session_id or None,
+        source=source,
+        action=result.get("action", "NONE"),
+        allowed=result.get("allowed", True),
+        violations=result.get("violations", []),
+        latency_ms=latency_ms,
+        text_preview=text,
+        mode=result.get("mode"),
+    )
 
     pii = svc.detect_pii(text)
-    return {**result, "pii_detection": pii, "source": source, "configured": svc.is_configured}
+    return {
+        **result,
+        "pii_detection": pii,
+        "source": source,
+        "configured": svc.is_configured,
+        "latency_ms": latency_ms,
+    }
+
+
+@app.get("/api/guardrails/decisions")
+async def guardrails_decisions(session_id: str = "", limit: int = 50):
+    """Return recent guardrail outcomes for a session.
+
+    Feeds the Atelier Grounding page's Guardrails lane. Distinct from
+    ``/api/agentcore/policy/decisions`` (Cedar tool-call enforcement);
+    these are Bedrock content filter outcomes on the prose side.
+    """
+    try:
+        from services.guardrails_log import get_guardrails
+        decisions = get_guardrails(session_id or None, limit=max(1, min(500, int(limit))))
+        return {"session_id": session_id or "_anonymous", "decisions": decisions, "count": len(decisions)}
+    except Exception as e:
+        logger.warning(f"Guardrails decisions fetch failed: {e}")
+        return {"session_id": session_id, "decisions": [], "count": 0, "error": str(e)}
 
 
 # ============================================================================

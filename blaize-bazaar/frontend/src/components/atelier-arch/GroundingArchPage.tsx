@@ -41,6 +41,54 @@ import '../../styles/atelier-arch.css'
 // status vocabulary.
 // ---------------------------------------------------------------------------
 
+interface GuardrailDecision {
+  timestamp_ms: number
+  source: 'INPUT' | 'OUTPUT'
+  action: string
+  allowed: boolean
+  violations: Array<{ type?: string; confidence?: string }>
+  latency_ms?: number | null
+  text_preview?: string | null
+  mode?: string | null
+}
+
+function useLiveGuardrails(): GuardrailDecision[] {
+  const [rows, setRows] = useState<GuardrailDecision[]>([])
+  useEffect(() => {
+    let alive = true
+    const sessionId = (() => {
+      try {
+        return localStorage.getItem('blaize-session-id') ?? ''
+      } catch {
+        return ''
+      }
+    })()
+
+    const pull = () => {
+      const qs = sessionId
+        ? `?session_id=${encodeURIComponent(sessionId)}&limit=10`
+        : '?limit=10'
+      fetch(`/api/guardrails/decisions${qs}`)
+        .then(r => r.json())
+        .then(d => {
+          if (!alive) return
+          if (Array.isArray(d?.decisions)) setRows(d.decisions as GuardrailDecision[])
+        })
+        .catch(() => {
+          /* quiet */
+        })
+    }
+
+    pull()
+    const interval = setInterval(pull, 3000)
+    return () => {
+      alive = false
+      clearInterval(interval)
+    }
+  }, [])
+  return rows
+}
+
 interface PolicyDecision {
   timestamp_ms: number
   tool_name: string
@@ -289,6 +337,7 @@ const AUDIT_ROWS: AuditRow[] = [
 
 export default function GroundingArchPage() {
   const liveDecisions = useLivePolicyDecisions()
+  const liveGuardrails = useLiveGuardrails()
 
   // Live numbers: count DENY decisions as blocks, ALLOW as passes for
   // the Approvals lane's header meta. Keeping the other lanes' stub
@@ -597,15 +646,15 @@ export default function GroundingArchPage() {
         }
         meta={
           <>
-            {liveDecisions.length > 0
-              ? `${liveDecisions.length} live policy ${liveDecisions.length === 1 ? 'decision' : 'decisions'} · ${livePassCount} allow · ${liveDenyCount} deny`
-              : 'awaiting first tool call this session'}
+            {liveGuardrails.length + liveDecisions.length > 0
+              ? `${liveGuardrails.length} guardrail · ${liveDecisions.length} policy · ${livePassCount + liveGuardrails.filter(g => g.allowed).length} pass · ${liveDenyCount + liveGuardrails.filter(g => !g.allowed).length} block`
+              : 'awaiting first turn this session'}
           </>
         }
         stubCaption={
-          liveDecisions.length > 0
-            ? 'Approvals rows are live policy decisions from the Strands hook. Guardrails + Grounding rows are still stubbed.'
-            : 'No live tool calls yet this session. Guardrails + Grounding rows are illustrative.'
+          liveGuardrails.length + liveDecisions.length > 0
+            ? 'Guardrails + Approvals rows are live from backend events. Grounding rows still illustrative until the per-turn claim-verification pass ships.'
+            : 'No live turns yet this session. All three lanes are illustrative.'
         }
       >
         <div className="gt-audit-rows">
@@ -616,6 +665,36 @@ export default function GroundingArchPage() {
             <span>Detail</span>
             <span className="gt-audit-ms-col">ms</span>
           </div>
+          {liveGuardrails.map((g, i) => {
+            const isBlock = !g.allowed
+            const firstViolation = g.violations?.[0]
+            const detail = isBlock
+              ? `${firstViolation?.type ?? 'blocked'} · ${firstViolation?.confidence ?? ''}`.trim().replace(/\s+·\s*$/, '')
+              : g.mode === 'pass-through'
+                ? 'pass-through · no guardrail configured'
+                : `no flags · ${g.source.toLowerCase()}`
+            return (
+              <div
+                className="gt-audit-row"
+                key={`gr-${g.timestamp_ms}-${i}`}
+                data-testid="grounding-live-guardrail-row"
+              >
+                <span className="gt-audit-stamp">{formatStamp(g.timestamp_ms)}</span>
+                <span className="gt-audit-lane gt-audit-lane-guardrails">
+                  Guardrails
+                </span>
+                <span
+                  className={`gt-audit-verdict gt-audit-verdict-${isBlock ? 'block' : 'pass'}`}
+                >
+                  {isBlock ? 'Block' : 'Pass'}
+                </span>
+                <span className="gt-audit-detail">{detail}</span>
+                <span className="gt-audit-ms">
+                  {typeof g.latency_ms === 'number' ? `${g.latency_ms}ms` : 'live'}
+                </span>
+              </div>
+            )
+          })}
           {liveDecisions.map((dec, i) => {
             const isDeny = dec.decision === 'DENY'
             const reason = isDeny
