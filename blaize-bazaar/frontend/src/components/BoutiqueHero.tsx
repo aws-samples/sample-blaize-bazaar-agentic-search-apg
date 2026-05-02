@@ -119,29 +119,29 @@ export default function BoutiqueHero() {
               <span aria-hidden="true" style={{ color: '#a8423a', fontSize: '7px' }}>&#9679;</span>
             </div>
 
-            {/* Headline — mirrors WeekendEditorial h2 exactly (italic
-                Fraunces, weight 400, espresso ink). */}
+            {/* Headline — same Fraunces italic treatment as
+                WeekendEditorial, but sized up for hero prominence. */}
             <h1
               data-testid="boutique-hero-headline"
               className="whitespace-nowrap font-display italic text-espresso"
               style={{
-                fontSize: 'clamp(32px, 4.5vw, 56px)',
-                lineHeight: 1.1,
-                letterSpacing: '-0.01em',
+                fontSize: 'clamp(44px, 6vw, 76px)',
+                lineHeight: 1.05,
+                letterSpacing: '-0.015em',
                 fontWeight: 400,
               }}
             >
               Search, re:Engineered.
             </h1>
 
-            {/* Subheadline — mirrors WeekendEditorial subhead (Inter
-                sans, ink-soft, 14-16px). Not italic. */}
+            {/* Subheadline — same Inter sans / ink-soft treatment as
+                WeekendEditorial subhead, sized up for hero prominence. */}
             <p
               data-testid="boutique-hero-subheadline"
-              className="mx-auto mt-5 max-w-[540px] font-sans text-ink-soft"
+              className="mx-auto mt-6 max-w-[600px] font-sans text-ink-soft"
               style={{
-                fontSize: 'clamp(14px, 1.1vw, 16px)',
-                lineHeight: 1.65,
+                fontSize: 'clamp(17px, 1.4vw, 21px)',
+                lineHeight: 1.55,
               }}
             >
               Tell Blaize what you&rsquo;re looking for.
@@ -157,13 +157,15 @@ export default function BoutiqueHero() {
               style={{ maxWidth: '640px' }}
             >
               <div className="relative">
-                {/* Sparkles icon — left */}
+                {/* Sparkles icon — left. Burgundy for clear visibility
+                    against the cream input. z-10 keeps it above the
+                    input's own focus ring on click. */}
                 <span
-                  className="absolute left-5 top-1/2 -translate-y-1/2 pointer-events-none"
+                  className="absolute left-6 top-1/2 -translate-y-1/2 pointer-events-none z-10"
                   style={{ color: '#a8423a' }}
                   aria-hidden="true"
                 >
-                  <Sparkles size={20} strokeWidth={1.5} />
+                  <Sparkles size={22} strokeWidth={2} />
                 </span>
 
                 <input
@@ -184,9 +186,9 @@ export default function BoutiqueHero() {
                   aria-label="Ask Blaize anything"
                   className="
                     w-full rounded-full
-                    bg-[rgba(255,250,240,0.92)] backdrop-blur-md
-                    border border-[rgba(31,20,16,0.10)]
-                    pl-14 pr-16
+                    bg-[rgba(255,250,240,0.96)] backdrop-blur-md
+                    border border-[rgba(31,20,16,0.12)]
+                    pl-[60px] pr-[64px]
                     font-sans
                     placeholder:text-[rgba(31,20,16,0.42)]
                     focus:bg-[rgba(255,250,240,0.98)] focus:border-[rgba(31,20,16,0.18)]
