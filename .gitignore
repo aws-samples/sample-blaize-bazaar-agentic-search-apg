@@ -21,8 +21,9 @@ build/
 lab2/backend/.env
 lab2/frontend/.env
 
-# Claude Code (local permissions may contain secrets)
-.claude/settings.local.json
+# Claude Code — worktrees, debug logs, scheduled tasks, and local
+# settings are all machine-local and should never be committed.
+.claude/
 
 # IDE
 .vscode/
