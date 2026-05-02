@@ -1218,7 +1218,12 @@ CURRENT REQUEST: {message}"""
             preserved (no paraphrase cycle).
           - ``'agents_as_tools'`` — Atelier Pattern I. Haiku orchestrator
             + five ``@tool`` specialists. Two LLM calls per turn.
-          - ``'graph'`` — Atelier Pattern II (commit 2, not yet wired).
+          - ``'graph'`` — Atelier Pattern II. Real Strands
+            ``GraphBuilder`` DAG: Haiku router node + 5 specialist
+            nodes; conditional edges route the turn to exactly one
+            specialist. Exposed through ``GraphAgentAdapter`` so the
+            downstream streaming/hook pipeline treats it identically
+            to a single Agent.
           - ``None`` → ``'agents_as_tools'`` for backwards compatibility.
         """
         import asyncio
@@ -1390,9 +1395,11 @@ CURRENT REQUEST: {message}"""
         # For dispatcher/graph, ``orchestrator`` is bound later once
         # ContextVars are live. We reuse the ``orchestrator`` name so the
         # existing streaming/hook pipeline treats specialist or graph
-        # invocations identically — every code path downstream expects a
-        # Strands Agent with ``callback_handler``, ``add_hook``,
-        # ``trace_attributes``, and a callable signature.
+        # invocations identically — every code path downstream expects
+        # something with ``callback_handler``, ``add_hook``,
+        # ``trace_attributes``, and a callable signature. For graph,
+        # the GraphAdapter satisfies that interface while running a
+        # real Strands ``Graph`` internally.
 
         # Trace attributes are applied once ``orchestrator`` is bound.
         # For ``agents_as_tools`` that's here; for ``dispatcher`` that's
@@ -1726,6 +1733,32 @@ CURRENT REQUEST: {message}"""
                 except Exception as exc:
                     logger.warning("Persona ContextVar reset failed: %s", exc)
                 persona_token = None
+
+        # Pattern II (Graph) builds the GraphAdapter here, AFTER the
+        # persona + skill ContextVars are live so the specialist
+        # factories inside the adapter pick them up at construction
+        # time. The adapter looks like an ``Agent`` to the pipeline:
+        # callable, exposes ``callback_handler`` / ``add_hook`` /
+        # ``trace_attributes`` / ``session_manager``. A real
+        # Strands ``Graph`` with a Haiku router + 5 specialist nodes
+        # runs under the hood.
+        if pattern == "graph":
+            try:
+                from agents.graph_pattern import build_graph_orchestrator
+                orchestrator = build_graph_orchestrator()
+                orchestrator.trace_attributes = trace_attributes
+                if session_manager:
+                    orchestrator.session_manager = session_manager
+                    # GraphAdapter forwards session_manager to its
+                    # specialists via __setattr__; the wrapper call
+                    # below registers hooks on each specialist.
+                    for specialist in orchestrator._specialists.values():
+                        _safe_register_hooks(session_manager, specialist)
+                _attach_streaming_and_hooks(orchestrator)
+                logger.info("🔀 Graph | router + 5 specialists via GraphBuilder")
+            except Exception as exc:
+                logger.exception("Graph pattern failed to build; falling back to dispatcher: %s", exc)
+                pattern = "dispatcher"  # fall through to dispatcher branch
 
         # Pattern III (Dispatcher) builds the specialist here — AFTER
         # the persona + skill ContextVars are live, so the factory
