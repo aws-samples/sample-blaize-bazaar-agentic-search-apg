@@ -1438,6 +1438,44 @@ async def check_policy(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/agentcore/memory/ltm")
+async def memory_ltm(customer_id: str = ""):
+    """Return LTM facts for a persona, ranked by recency.
+
+    Reads the ``customer_episodic_seed`` fixture table via
+    ``services/episodic_memory.fetch_episodic_seed`` — the same source
+    chat.py consults when building the persona preamble. The
+    MemoryArchPage uses this to replace its hard-coded STUB_LTM_FACTS
+    so attendees see persona-tailored history (Marco's linen notes,
+    Anna's gift cues, Theo's slow-craft signals) the moment they pick
+    a persona.
+
+    Returns ``{customer_id, facts: [{text, ts_offset_days, relative}]}``.
+    Anonymous or unknown customers return an empty facts list — the
+    frontend falls back to the stub in that case so the page stays
+    populated for fresh visitors.
+    """
+    if not customer_id or customer_id == "anonymous":
+        return {"customer_id": customer_id or "", "facts": [], "source": "anonymous"}
+    try:
+        from services.episodic_memory import fetch_episodic_seed, _format_relative
+        if db_service is None:
+            return {"customer_id": customer_id, "facts": [], "source": "db-unavailable"}
+        rows = await fetch_episodic_seed(db_service, customer_id, limit=10)
+        facts = [
+            {
+                "text": r["summary_text"],
+                "ts_offset_days": r["ts_offset_days"],
+                "relative": _format_relative(r["ts_offset_days"]),
+            }
+            for r in rows
+        ]
+        return {"customer_id": customer_id, "facts": facts, "source": "aurora"}
+    except Exception as e:
+        logger.warning(f"Memory LTM fetch failed for {customer_id}: {e}")
+        return {"customer_id": customer_id, "facts": [], "source": "error", "error": str(e)}
+
+
 @app.get("/api/agentcore/memory/status")
 async def memory_status():
     """Return whether AgentCore Memory is SDK-backed or using the

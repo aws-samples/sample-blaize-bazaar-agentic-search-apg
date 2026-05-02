@@ -102,8 +102,11 @@ function useStmTurns(): StmTurn[] {
   return turns
 }
 
-// Stub LTM recall data — plausible facts that match the real catalog.
-// When the per-turn LTM recall event ships, swap this for live data.
+// Stub LTM recall data — shown for anonymous / fresh visitors who
+// haven't picked a persona yet. The instant a persona is active, we
+// swap to live facts from ``/api/agentcore/memory/ltm`` (keyed on the
+// persona's customer_id). That way the page teaches LTM recall with
+// data that actually matches the preamble chat.py injects.
 const STUB_LTM_FACTS = [
   { similarity: 0.91, text: 'Customer prefers natural fibers — linen, cotton blends.' },
   { similarity: 0.87, text: 'Past purchases: Italian Linen Camp Shirt (Indigo), $128.' },
@@ -111,9 +114,98 @@ const STUB_LTM_FACTS = [
   { similarity: 0.74, text: 'Style lean: minimal, neutral palette with warm earth tones.' },
 ]
 
+interface LtmFact {
+  text: string
+  ts_offset_days: number
+  relative: string
+}
+
+function usePersonaCustomerId(): string {
+  // The PersonaContext persists selection in localStorage under
+  // 'blaize-persona'. Reading it directly (rather than via useContext)
+  // means this hook can be used even before PersonaProvider remounts.
+  const [cid, setCid] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem('blaize-persona')
+      if (!raw) return ''
+      const parsed = JSON.parse(raw)
+      return typeof parsed?.customerId === 'string' ? parsed.customerId : ''
+    } catch {
+      return ''
+    }
+  })
+  useEffect(() => {
+    const tick = () => {
+      try {
+        const raw = localStorage.getItem('blaize-persona')
+        if (!raw) {
+          setCid('')
+          return
+        }
+        const parsed = JSON.parse(raw)
+        setCid(typeof parsed?.customerId === 'string' ? parsed.customerId : '')
+      } catch {
+        /* ignore */
+      }
+    }
+    const id = setInterval(tick, 2000)
+    return () => clearInterval(id)
+  }, [])
+  return cid
+}
+
+function useLiveLtmFacts(customerId: string): { facts: LtmFact[]; source: string } {
+  const [state, setState] = useState<{ facts: LtmFact[]; source: string }>({
+    facts: [],
+    source: 'loading',
+  })
+  useEffect(() => {
+    if (!customerId) {
+      setState({ facts: [], source: 'anonymous' })
+      return
+    }
+    let alive = true
+    fetch(`/api/agentcore/memory/ltm?customer_id=${encodeURIComponent(customerId)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (!alive) return
+        setState({
+          facts: Array.isArray(d?.facts) ? (d.facts as LtmFact[]) : [],
+          source: typeof d?.source === 'string' ? d.source : 'unknown',
+        })
+      })
+      .catch(() => {
+        if (alive) setState({ facts: [], source: 'error' })
+      })
+    return () => {
+      alive = false
+    }
+  }, [customerId])
+  return state
+}
+
 export default function MemoryArchPage() {
   const stmTurns = useStmTurns()
   const memStatus = useMemoryStatus()
+  const customerId = usePersonaCustomerId()
+  const ltm = useLiveLtmFacts(customerId)
+
+  // Resolve which LTM rows to render. When a persona is active and
+  // Aurora returned facts, use those. Otherwise fall back to the
+  // illustrative STUB_LTM_FACTS so the panel stays populated for
+  // anonymous visitors during teaching moments.
+  const liveLtmActive = customerId !== '' && ltm.facts.length > 0
+  // Synthesize a similarity score so the column remains meaningful.
+  // Newer episodes (smaller |ts_offset_days|) map to higher scores.
+  // This isn't a real cosine similarity — the real embedding path
+  // will land with the per-turn recall event instrumentation; this
+  // is a stopgap so the row format stays stable across both modes.
+  const liveLtmRows = ltm.facts.slice(0, 6).map((f, idx) => {
+    const maxIdx = Math.max(1, ltm.facts.length - 1)
+    const similarity = 0.95 - (idx / maxIdx) * 0.22
+    return { similarity, text: `${f.text} (${f.relative})` }
+  })
+  const ltmRowsToRender = liveLtmActive ? liveLtmRows : STUB_LTM_FACTS
 
   // Meta strip picks its "backing store" label from the live status
   // so the page doesn't lie when the SDK isn't wired in. Keeps the
@@ -432,8 +524,12 @@ export default function MemoryArchPage() {
             What's <em>in memory right now.</em>
           </>
         }
-        meta={`${stmTurns.length} turn${stmTurns.length === 1 ? '' : 's'} in STM · ${STUB_LTM_FACTS.length} LTM facts recalled`}
-        stubCaption="// LTM recall is a stub — the per-turn recall event is flagged for Phase 3 backend instrumentation"
+        meta={`${stmTurns.length} turn${stmTurns.length === 1 ? '' : 's'} in STM · ${ltmRowsToRender.length} LTM facts recalled${liveLtmActive ? ` · live for ${customerId}` : ''}`}
+        stubCaption={
+          liveLtmActive
+            ? `// LTM rows are live facts from customer_episodic_seed, joined by customer_id. Similarity column is synthesized from recency; the real pgvector similarity lands with the per-turn recall event.`
+            : `// LTM rows are illustrative — pick a persona to see live facts keyed on customer_id. Similarity column will reflect real pgvector scores once the per-turn recall event ships.`
+        }
       >
         <div className="mem-live-grid">
           <div className="mem-live-cell">
@@ -475,8 +571,13 @@ export default function MemoryArchPage() {
               </span>
               <span className="mem-live-cell-tag">PGVECTOR</span>
             </div>
-            {STUB_LTM_FACTS.map((f, i) => (
-              <div className="mem-ltm-row" key={i}>
+            {ltmRowsToRender.map((f, i) => (
+              <div
+                className="mem-ltm-row"
+                key={i}
+                data-testid="memory-ltm-row"
+                data-live={liveLtmActive ? 'true' : 'false'}
+              >
                 <span className="mem-ltm-sim">{f.similarity.toFixed(2)}</span>
                 <span className="mem-ltm-fact">
                   <em>{f.text}</em>
