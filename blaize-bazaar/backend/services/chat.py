@@ -1377,12 +1377,36 @@ CURRENT REQUEST: {message}"""
         # orchestrator here. Pattern III (Dispatcher) defers construction
         # until after persona + skill ContextVars are set below, so the
         # specialist factory picks them up at build time.
+        #
+        # Gateway preference: when ``settings.AGENTCORE_GATEWAY_URL`` is
+        # set, we use the MCP-discovered tool path instead of importing
+        # @tool symbols directly. This is the production shape — tools
+        # live in the Gateway, the orchestrator pulls them at runtime.
+        # When the Gateway URL is unset (local dev, Workshop Studio
+        # before Module 3c lands), we fall back to the in-process
+        # orchestrator silently. Guardrails flag is respected on the
+        # fallback path; gateway path honors guardrails via its own
+        # prompt extensions (future work).
         orchestrator = None
+        gateway_used = False
         if pattern == "agents_as_tools":
-            if guardrails_enabled:
-                orchestrator = create_guarded_orchestrator()
-            else:
-                orchestrator = create_orchestrator()
+            from config import settings as _settings
+            if getattr(_settings, "AGENTCORE_GATEWAY_URL", None):
+                try:
+                    from services.agentcore_gateway import create_gateway_orchestrator
+                    orchestrator = create_gateway_orchestrator()
+                    if orchestrator is not None:
+                        gateway_used = True
+                        logger.info("🛰️ Gateway orchestrator | tools via MCP discovery")
+                except Exception as exc:
+                    logger.warning("Gateway orchestrator failed; falling back to in-proc: %s", exc)
+                    orchestrator = None
+
+            if orchestrator is None:
+                if guardrails_enabled:
+                    orchestrator = create_guarded_orchestrator()
+                else:
+                    orchestrator = create_orchestrator()
 
             # Graceful fallback if orchestrator not implemented yet (Module 3b TODO)
             if orchestrator is None:

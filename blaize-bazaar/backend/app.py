@@ -1438,6 +1438,36 @@ async def check_policy(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/agentcore/gateway/status")
+async def gateway_status():
+    """Return the effective Gateway wiring for the current backend.
+
+    The Atelier MCP / Tool Registry tabs use this to show whether tools
+    are being discovered via MCP (Gateway configured) or loaded via
+    direct @tool imports (fallback). The ``source`` field is the
+    human-readable label shown next to the tool list.
+    """
+    try:
+        from config import settings
+        gateway_url = getattr(settings, "AGENTCORE_GATEWAY_URL", None) or ""
+        if gateway_url:
+            return {
+                "configured": True,
+                "source": "mcp-discovery",
+                "gateway_url": gateway_url,
+                "fallback_reason": None,
+            }
+        return {
+            "configured": False,
+            "source": "in-process-imports",
+            "gateway_url": "",
+            "fallback_reason": "AGENTCORE_GATEWAY_URL env var not set",
+        }
+    except Exception as e:
+        logger.warning(f"Gateway status fetch failed: {e}")
+        return {"configured": False, "source": "in-process-imports", "error": str(e)}
+
+
 @app.get("/api/agentcore/policy/decisions")
 async def policy_decisions(session_id: str = "", limit: int = 50):
     """Return the recent per-tool enforcement decisions for a session.
