@@ -105,18 +105,12 @@ export default function BoutiqueHero() {
                        flex flex-col items-center text-center"
             style={{ maxWidth: '960px', justifySelf: 'center' }}
           >
-            {/* Eyebrow — "• SUMMER EDIT • NO. 06 •" with burgundy dots */}
+            {/* Eyebrow — "• SUMMER EDIT • NO. 06 •" — matches
+                WeekendEditorial eyebrow type treatment exactly, with
+                burgundy dot separators. */}
             <div
               data-testid="boutique-hero-eyebrow"
-              className="flex items-center gap-2 mb-4"
-              style={{
-                fontFamily: 'var(--sans)',
-                fontSize: '11px',
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-                color: 'rgba(31, 20, 16, 0.55)',
-                fontWeight: 500,
-              }}
+              className="flex items-center gap-2 mb-4 text-[11px] font-sans font-semibold tracking-[0.22em] uppercase text-ink-quiet"
             >
               <span aria-hidden="true" style={{ color: '#a8423a', fontSize: '7px' }}>&#9679;</span>
               <span>Summer Edit</span>
@@ -125,35 +119,29 @@ export default function BoutiqueHero() {
               <span aria-hidden="true" style={{ color: '#a8423a', fontSize: '7px' }}>&#9679;</span>
             </div>
 
-            {/* Headline — one line, italic Fraunces */}
+            {/* Headline — mirrors WeekendEditorial h2 exactly (italic
+                Fraunces, weight 400, espresso ink). */}
             <h1
               data-testid="boutique-hero-headline"
-              className="whitespace-nowrap"
+              className="whitespace-nowrap font-display italic text-espresso"
               style={{
-                fontFamily: 'var(--serif)',
-                fontStyle: 'italic',
-                fontSize: 'clamp(44px, 5.2vw, 72px)',
-                lineHeight: 1.0,
-                letterSpacing: '-0.02em',
-                fontWeight: 500,
-                color: '#1f1410',
+                fontSize: 'clamp(32px, 4.5vw, 56px)',
+                lineHeight: 1.1,
+                letterSpacing: '-0.01em',
+                fontWeight: 400,
               }}
             >
               Search, re:Engineered.
             </h1>
 
-            {/* Subheadline */}
+            {/* Subheadline — mirrors WeekendEditorial subhead (Inter
+                sans, ink-soft, 14-16px). Not italic. */}
             <p
               data-testid="boutique-hero-subheadline"
-              className="mt-4 md:mt-5"
+              className="mx-auto mt-5 max-w-[540px] font-sans text-ink-soft"
               style={{
-                fontFamily: 'var(--serif)',
-                fontStyle: 'italic',
-                fontSize: 'clamp(16px, 1.4vw, 22px)',
-                lineHeight: 1.5,
-                fontWeight: 400,
-                color: 'rgba(31, 20, 16, 0.66)',
-                maxWidth: '440px',
+                fontSize: 'clamp(14px, 1.1vw, 16px)',
+                lineHeight: 1.65,
               }}
             >
               Tell Blaize what you&rsquo;re looking for.
