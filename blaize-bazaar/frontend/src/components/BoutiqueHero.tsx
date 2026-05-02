@@ -63,6 +63,7 @@ export default function BoutiqueHero() {
   )
 
   return (
+    <>
     <section
       data-testid="boutique-hero"
       aria-label="Search and discover"
@@ -298,42 +299,53 @@ export default function BoutiqueHero() {
               ))}
             </div>
 
-            {/* Trust strip — centered, single line or centered wrap */}
-            <div
-              data-testid="boutique-hero-trust"
-              className="mt-8 md:mt-10 flex flex-wrap justify-center items-center gap-x-2 gap-y-1"
-              style={{ maxWidth: '640px' }}
-            >
-              {TRUST_ITEMS.map((item, i) => (
-                <span
-                  key={item}
-                  className="inline-flex items-center"
-                  style={{
-                    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                    fontSize: '10px',
-                    letterSpacing: '0.18em',
-                    textTransform: 'uppercase',
-                    color: 'rgba(31, 20, 16, 0.42)',
-                  }}
-                >
-                  {i > 0 && (
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        marginRight: '8px',
-                        color: 'rgba(31, 20, 16, 0.25)',
-                      }}
-                    >
-                      &middot;
-                    </span>
-                  )}
-                  {item}
-                </span>
-              ))}
-            </div>
           </div>
         </div>
       </div>
     </section>
+
+    {/* Trust strip — sits on the cream page background directly below
+        the photograph. Single line with burgundy dot separators and
+        small icons matching the reference. */}
+    <div
+      data-testid="boutique-hero-trust"
+      className="w-full border-b border-sand/40"
+      style={{ background: '#faf3e8' }}
+    >
+      <div
+        className="max-w-[1200px] mx-auto px-6 py-5 flex flex-wrap justify-center items-center gap-x-3 gap-y-2"
+      >
+        {TRUST_ITEMS.map((item, i) => (
+          <span
+            key={item}
+            className="inline-flex items-center whitespace-nowrap"
+            style={{
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: '12px',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'rgba(31, 20, 16, 0.62)',
+              fontWeight: 500,
+            }}
+          >
+            {i > 0 && (
+              <span
+                aria-hidden="true"
+                style={{
+                  marginRight: '12px',
+                  color: '#a8423a',
+                  fontSize: '6px',
+                  lineHeight: 1,
+                }}
+              >
+                &#9679;
+              </span>
+            )}
+            {item}
+          </span>
+        ))}
+      </div>
+    </div>
+    </>
   )
 }
