@@ -18,12 +18,11 @@ import { useUI } from '../contexts/UIContext'
 import heroImage from '../assets/hero/boutique-hero.png'
 
 const SUGGESTIONS = [
-  'something for long summer walks',
   'a thoughtful gift for someone who runs',
+  'pieces for slow Sunday mornings',
   'something to wear for warm evenings out',
-  'pieces that travel well',
-  'something for slow Sunday mornings',
-  'a linen piece that earns its golden hour',
+  'linen pieces that travel well',
+  'a cozy layer for cooler nights',
 ]
 
 const TRUST_ITEMS = [
@@ -98,14 +97,33 @@ export default function BoutiqueHero() {
                      grid grid-cols-1 md:grid-cols-12 items-center"
           style={{ minHeight: 'min(85vh, calc(100dvh - 100px))' }}
         >
-          {/* Typography column: cols 5–11 on desktop (right-of-center within
-              the photograph). Narrower than full cols 6-12 so contents
-              center within the cream-wall area rather than drifting right. */}
+          {/* Typography column: centered within full width. The vase
+              on the left and linen on the right frame it naturally. */}
           <div
-            className="md:col-start-5 md:col-span-7 py-12 md:py-0
+            className="md:col-start-3 md:col-span-8 py-12 md:py-0
                        flex flex-col items-center text-center"
-            style={{ maxWidth: '680px', justifySelf: 'center' }}
+            style={{ maxWidth: '720px', justifySelf: 'center' }}
           >
+            {/* Eyebrow — "• SUMMER EDIT • NO. 06 •" with burgundy dots */}
+            <div
+              data-testid="boutique-hero-eyebrow"
+              className="flex items-center gap-2 mb-4"
+              style={{
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: '11px',
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+                color: 'rgba(31, 20, 16, 0.55)',
+                fontWeight: 500,
+              }}
+            >
+              <span aria-hidden="true" style={{ color: '#a8423a', fontSize: '7px' }}>&#9679;</span>
+              <span>Summer Edit</span>
+              <span aria-hidden="true" style={{ color: '#a8423a', fontSize: '7px' }}>&#9679;</span>
+              <span>No. 06</span>
+              <span aria-hidden="true" style={{ color: '#a8423a', fontSize: '7px' }}>&#9679;</span>
+            </div>
+
             {/* Headline — one line, italic Fraunces */}
             <h1
               data-testid="boutique-hero-headline"
@@ -113,7 +131,7 @@ export default function BoutiqueHero() {
               style={{
                 fontFamily: "'Fraunces', Georgia, serif",
                 fontStyle: 'italic',
-                fontSize: 'clamp(40px, 5vw, 72px)',
+                fontSize: 'clamp(36px, 4.2vw, 58px)',
                 lineHeight: 1.0,
                 letterSpacing: '-0.02em',
                 fontWeight: 500,
@@ -147,7 +165,7 @@ export default function BoutiqueHero() {
               onSubmit={handleSubmit}
               className="mt-8 md:mt-10 w-full"
               role="search"
-              style={{ maxWidth: '620px' }}
+              style={{ maxWidth: '560px' }}
             >
               <div className="relative">
                 {/* Sparkles icon — left */}
@@ -242,9 +260,9 @@ export default function BoutiqueHero() {
               className="mt-4 flex flex-wrap justify-center gap-2.5"
               role="listbox"
               aria-label="Suggested queries"
-              style={{ maxWidth: '780px' }}
+              style={{ maxWidth: '820px' }}
             >
-              {SUGGESTIONS.slice(0, 5).map((query) => (
+              {SUGGESTIONS.map((query) => (
                 <button
                   key={query}
                   type="button"
