@@ -34,7 +34,7 @@ export default function HeroHeadline() {
       <h1
         data-testid="hero-headline-title"
         className="mt-4 font-[Fraunces] italic text-[40px] leading-[1] sm:text-[48px] md:text-[56px] lg:text-[64px]"
-        style={{ color: INK, letterSpacing: '-0.01em', fontWeight: 400 }}
+        style={{ color: INK, letterSpacing: '-0.01em', fontWeight: 500 }}
       >
         <span>{HERO_HEADLINE.TITLE_TOP}</span>{' '}
         <span>{HERO_HEADLINE.TITLE_BOTTOM}</span>
@@ -45,7 +45,9 @@ export default function HeroHeadline() {
         className="mx-auto mt-5 max-w-[660px] font-[Fraunces] italic text-[18px] leading-[1.55] md:text-[20px]"
         style={{ color: INK_SOFT, fontWeight: 600, letterSpacing: '-0.005em' }}
       >
-        {HERO_HEADLINE.SUBHEADLINE}
+        Tell Blaize what you're looking for.
+        <br />
+        Watch the pieces find you.
       </p>
     </div>
   )
