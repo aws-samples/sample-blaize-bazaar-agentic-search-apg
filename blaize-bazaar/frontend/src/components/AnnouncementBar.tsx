@@ -50,13 +50,14 @@ export default function AnnouncementBar() {
       style={{
         background: DUSK,
         color: CREAM,
-        fontSize: '11px',
-        letterSpacing: '0.12em',
-        lineHeight: 1.8,
+        fontSize: '11.5px',
+        letterSpacing: '0.14em',
+        lineHeight: 1,
         wordSpacing: '0.08em',
         textTransform: 'uppercase',
-        padding: '10px 16px',
-        height: 38,
+        padding: '0 16px',
+        height: 42,
+        fontWeight: 500,
       }}
     >
       <AnimatePresence mode="wait">

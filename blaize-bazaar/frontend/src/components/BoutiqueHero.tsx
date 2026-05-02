@@ -257,11 +257,10 @@ export default function BoutiqueHero() {
                   type="button"
                   onClick={() => handlePillClick(query)}
                   className="
-                    rounded-[12px]
-                    border border-[rgba(31,20,16,0.18)]
-                    bg-[rgba(255,250,240,0.75)] backdrop-blur-sm
+                    rounded-[10px]
+                    border-[1.5px] border-[rgba(31,20,16,0.22)]
                     text-[12.5px]
-                    hover:bg-[rgba(255,250,240,0.92)] hover:border-[rgba(31,20,16,0.28)]
+                    hover:border-[rgba(31,20,16,0.35)]
                     transition-all duration-fade ease-out
                     cursor-pointer
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(31,20,16,0.15)]
@@ -270,7 +269,8 @@ export default function BoutiqueHero() {
                     fontFamily: "'Fraunces', Georgia, serif",
                     fontStyle: 'italic',
                     color: 'rgba(31, 20, 16, 0.72)',
-                    padding: '10px 18px',
+                    padding: '10px 20px',
+                    background: '#faf3e8',
                   }}
                 >
                   &ldquo;{query}&rdquo;
