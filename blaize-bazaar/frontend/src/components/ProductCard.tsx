@@ -29,7 +29,7 @@
  *   9. Full-width `Add to bag` secondary button
  */
 import { useEffect, useRef, useState } from 'react'
-import { Heart, Star } from 'lucide-react'
+import { Star } from 'lucide-react'
 
 import type { StorefrontBadge, StorefrontProduct } from '../services/types'
 import ReasoningChip from './ReasoningChip'
@@ -247,30 +247,9 @@ export default function ProductCard({
             {BADGE_LABEL[product.badge]}
           </span>
         ) : null}
-        {/* Top-right heart — fades in on hover (Req 1.6.5 step 3) */}
-        <button
-          type="button"
-          aria-label={`Favorite ${product.name}`}
-          data-testid={`product-card-heart-${product.id}`}
-          style={{
-            position: 'absolute',
-            top: 12,
-            right: 12,
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            border: 'none',
-            background: CREAM,
-            color: INK,
-            cursor: 'pointer',
-            display: 'grid',
-            placeItems: 'center',
-            opacity: hovered ? 1 : 0,
-            transition: 'opacity 200ms ease-out',
-          }}
-        >
-          <Heart size={16} strokeWidth={1.5} />
-        </button>
+        {/* Heart / favorite button removed — the onClick was a no-op
+         * and there's no saved-for-later surface yet. Re-introduce
+         * when a real wishlist ships. */}
       </div>
 
       {/* --- Text block ---------------------------------------------- */}

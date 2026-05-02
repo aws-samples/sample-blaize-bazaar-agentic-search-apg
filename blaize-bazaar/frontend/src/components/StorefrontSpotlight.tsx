@@ -60,11 +60,41 @@ const STEPS: SpotlightStep[] = [
 
 const FINAL_CTA = 'Start browsing'
 
+// One-shot gate: once the visitor dismisses the spotlight in a
+// session, don't re-show it on route changes or refreshes within
+// the same tab. sessionStorage is the right shelf for this — it
+// clears when the tab closes so a fresh session still gets the
+// walkthrough.
+const SPOTLIGHT_SEEN_KEY = 'blaize-storefront-spotlight-seen'
+
+function hasSeenSpotlight(): boolean {
+  if (typeof window === 'undefined') return true
+  try {
+    return window.sessionStorage.getItem(SPOTLIGHT_SEEN_KEY) === 'true'
+  } catch {
+    // private mode / storage disabled — skip rather than re-show
+    // forever. Losing the gate is safer than spamming the overlay.
+    return true
+  }
+}
+
+function markSpotlightSeen(): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.sessionStorage.setItem(SPOTLIGHT_SEEN_KEY, 'true')
+  } catch {
+    /* noop */
+  }
+}
+
 export default function StorefrontSpotlight() {
-  const [visible, setVisible] = useState(true)
+  // Initialize from sessionStorage so the overlay stays dismissed
+  // across the lifetime of a tab.
+  const [visible, setVisible] = useState(() => !hasSeenSpotlight())
   const [step, setStep] = useState(0)
 
   const dismiss = useCallback(() => {
+    markSpotlightSeen()
     setVisible(false)
   }, [])
 

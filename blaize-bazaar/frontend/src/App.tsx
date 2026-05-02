@@ -16,11 +16,11 @@
  * mounted. The export exists solely to keep `tsc` green until the
  * orphans are deleted in a follow-up cleanup.
  */
-import { createContext, useContext, type ReactNode } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { createContext, useContext, useEffect, type ReactNode } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { CartProvider } from './contexts/CartContext'
-import { UIProvider } from './contexts/UIContext'
+import { UIProvider, useUI } from './contexts/UIContext'
 import { LayoutProvider } from './contexts/LayoutContext'
 import { PersonaProvider } from './contexts/PersonaContext'
 import AuthModal from './components/AuthModal'
@@ -91,6 +91,34 @@ export function AuthGate({ children }: { children: ReactNode }) {
 }
 
 // ---------------------------------------------------------------------------
+// ModalRouteGuard — closes transient modals when the route changes.
+//
+// UIProvider sits above BrowserRouter so it can't call useLocation()
+// directly. This tiny watcher mounts inside the router, subscribes
+// to pathname changes, and closes anything non-persistent. Chat
+// surfaces (drawer / concierge) and the comparison modal are
+// intentional leave-open cases — a user who opens the chat on `/`
+// and navigates to `/atelier` should keep talking to Blaize. The
+// auth, preferences, and cart modals close because they're
+// context-bound to a specific page.
+// ---------------------------------------------------------------------------
+const TRANSIENT_MODALS = new Set(['auth', 'preferences', 'cart', 'checkout'])
+
+function ModalRouteGuard() {
+  const { pathname } = useLocation()
+  const { activeModal, closeModal } = useUI()
+  useEffect(() => {
+    if (activeModal && TRANSIENT_MODALS.has(activeModal)) {
+      closeModal()
+    }
+    // intentionally only run on pathname changes — activeModal in the
+    // dep array would close the modal the instant it opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
+  return null
+}
+
+// ---------------------------------------------------------------------------
 // App — provider chain + routes.
 // ---------------------------------------------------------------------------
 function App() {
@@ -117,6 +145,7 @@ function App() {
                 v7_relativeSplatPath: true,
               }}
             >
+              <ModalRouteGuard />
               <ConciergeModal />
               <ChatDrawer />
               <ComparisonHost />
