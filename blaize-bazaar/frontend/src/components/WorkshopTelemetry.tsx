@@ -20,6 +20,7 @@
  * emitters don't change with this polish pass.
  */
 import { useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import type {
   WorkshopEvent,
@@ -529,6 +530,59 @@ export default function WorkshopTelemetry({ events }: { events: WorkshopEvent[] 
           <PanelCard ev={ev} />
         </motion.div>
       ))}
+      {/* Inspector link — frozen audit view of the current session's
+       * traces. Appears after a turn completes so attendees can open
+       * the full waterfall in a dedicated page. Session id is read
+       * from the storage key the workshop backend writes on each
+       * persona switch. */}
+      {panels.length > 0 && (
+        <motion.div
+          variants={{
+            hidden: { opacity: 0 },
+            visible: { opacity: 1, transition: { duration: 0.4, delay: 0.2 } },
+          }}
+          style={{
+            marginTop: 14,
+            paddingTop: 14,
+            borderTop: '1px dashed rgba(45, 24, 16, 0.12)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16,
+            fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+            fontSize: 10.5,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            color: INK_QUIET,
+          }}
+        >
+          <span>{panels.length} panels · captured this turn</span>
+          <Link
+            to={`/inspector?session=${encodeURIComponent(
+              (typeof localStorage !== 'undefined'
+                ? localStorage.getItem('blaize-session-id')
+                : '') ?? '',
+            )}`}
+            data-testid="telemetry-inspector-link"
+            style={{
+              color: ACCENT,
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              letterSpacing: '0.12em',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.textDecoration = 'underline'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.textDecoration = 'none'
+            }}
+          >
+            Open in Inspector <span aria-hidden>→</span>
+          </Link>
+        </motion.div>
+      )}
     </motion.div>
   )
 }
