@@ -16,7 +16,7 @@
  *   - Live tool calls: localStorage "blaize-last-tool-calls"
  *     (written by useAgentChat on every ``tool_call`` SSE event)
  */
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   DetailPageShell,
   SectionFrame,
@@ -27,9 +27,46 @@ import {
 import { useCatalog, useRecentToolCalls } from './shared-catalog'
 import '../../styles/atelier-arch.css'
 
+interface GatewayStatus {
+  configured: boolean
+  source: string
+  gateway_url?: string
+  fallback_reason?: string | null
+}
+
+function useGatewayStatus(): GatewayStatus | null {
+  const [status, setStatus] = useState<GatewayStatus | null>(null)
+  useEffect(() => {
+    let alive = true
+    fetch('/api/agentcore/gateway/status')
+      .then(r => r.json())
+      .then(d => {
+        if (alive) setStatus(d as GatewayStatus)
+      })
+      .catch(() => {
+        if (alive) setStatus(null)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+  return status
+}
+
 export default function McpArchPage() {
   const { catalog, loading } = useCatalog()
   const recentCalls = useRecentToolCalls()
+  const gwStatus = useGatewayStatus()
+
+  // The Surface meta label is honest about whether the Gateway is
+  // wired this instance. 'AgentCore Gateway' when configured,
+  // 'In-process imports (fallback)' otherwise — matches the backend's
+  // /api/agentcore/gateway/status vocabulary.
+  const surfaceLabel = gwStatus
+    ? gwStatus.configured
+      ? 'AgentCore Gateway'
+      : 'In-process imports (fallback)'
+    : 'AgentCore Gateway'
 
   // Tool "fired" state — fire if the tool appeared in recent calls.
   const firedSet = useMemo(() => {
@@ -54,7 +91,7 @@ export default function McpArchPage() {
         { label: 'Tools registered', value: toolsTotal || '—' },
         { label: 'Fired this turn', value: toolsFired },
         { label: 'Gateway p50', value: '18ms' },
-        { label: 'Surface', value: 'AgentCore Gateway' },
+        { label: 'Surface', value: surfaceLabel },
       ]}
     >
       {/* ---- Network section ---- */}

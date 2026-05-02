@@ -19,6 +19,7 @@
  * shape of the stub data is chosen so a real harness could populate it
  * from a ``/api/atelier/evaluations`` endpoint later.
  */
+import { useEffect, useState } from 'react'
 import {
   DetailPageShell,
   SectionFrame,
@@ -26,6 +27,40 @@ import {
   LiveStrip,
 } from '../atelier'
 import '../../styles/atelier-arch.css'
+
+interface PerformanceAggregates {
+  turn_count: number
+  empty: boolean
+  layers_p50?: Record<string, number>
+  total_p50?: number
+  ttft_p50?: number
+}
+
+/**
+ * usePerformanceAggregates — read /api/performance/runtime once so
+ * the Telemetry axis can surface real p50s instead of the stub
+ * percentages. Kept narrow: this page only needs totals for the
+ * detail rows; the richer histogram/per-layer view lives on the
+ * Performance tab itself.
+ */
+function usePerformanceAggregates(): PerformanceAggregates | null {
+  const [agg, setAgg] = useState<PerformanceAggregates | null>(null)
+  useEffect(() => {
+    let alive = true
+    fetch('/api/performance/runtime')
+      .then(r => r.json())
+      .then(d => {
+        if (alive && d && typeof d === 'object') setAgg(d as PerformanceAggregates)
+      })
+      .catch(() => {
+        /* quiet */
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+  return agg
+}
 
 // ---------------------------------------------------------------------------
 // Stub evaluation data — shaped as a future /api/atelier/evaluations payload.
@@ -104,7 +139,31 @@ const STUB_RUN: EvalRunStub = {
 // ---------------------------------------------------------------------------
 
 export default function EvaluationsArchPage() {
-  const run = STUB_RUN
+  const perf = usePerformanceAggregates()
+  // Telemetry axis swaps its 'p50 within budget' detail line to live
+  // numbers when the performance_log buffer has seen turns this
+  // session. Truth and taste remain stub percentages — a real eval
+  // harness is out of scope for this commit series.
+  const run: EvalRunStub = (() => {
+    if (!perf || perf.empty) return STUB_RUN
+    const liveTotal = Math.round(perf.total_p50 ?? 0)
+    const liveTtft = Math.round(perf.ttft_p50 ?? 0)
+    return {
+      ...STUB_RUN,
+      total_cases: STUB_RUN.total_cases,
+      axes: {
+        ...STUB_RUN.axes,
+        telemetry: {
+          ...STUB_RUN.axes.telemetry,
+          detail: [
+            { label: 'p50 total', value: `${liveTotal}ms · live` },
+            { label: 'p50 first token', value: `${liveTtft}ms` },
+            { label: 'Turns observed', value: `${perf.turn_count}` },
+          ],
+        },
+      },
+    }
+  })()
 
   return (
     <DetailPageShell
