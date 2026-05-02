@@ -1642,6 +1642,36 @@ CURRENT REQUEST: {message}"""
             except (ImportError, AttributeError) as e:
                 logger.warning(f"Strands hooks not available, falling back: {e}")
 
+            # Cedar policy enforcement — registered alongside the
+            # telemetry hooks so the policy's ``cancel_tool`` write
+            # fires before Strands actually invokes the tool. The
+            # enforcement hook consults PolicyService; DENY decisions
+            # short-circuit the call with a synthetic tool result
+            # explaining the violation, which the agent paraphrases
+            # to the user.
+            #
+            # Agent.add_hook() takes an individual callback; we register
+            # the provider through the lower-level registry so the
+            # provider's ``register_hooks`` runs once and sets up all
+            # its callbacks in one shot. GraphAdapter forwards
+            # ``add_hook`` per-specialist, so this still propagates to
+            # every specialist when pattern=="graph".
+            try:
+                from services.policy_hook import PolicyEnforcementHook
+                policy_provider = PolicyEnforcementHook(session_id=session_id)
+                hooks_registry = getattr(agent, "hooks", None)
+                if hooks_registry is not None and hasattr(hooks_registry, "add_hook"):
+                    hooks_registry.add_hook(policy_provider)
+                else:
+                    # GraphAdapter / non-Strands shim: fall through to
+                    # the callback-style registration so the policy
+                    # still fires. PolicyEnforcementHook._on_before_tool
+                    # is the exact callback Strands would register via
+                    # ``register_hooks``.
+                    agent.add_hook(policy_provider._on_before_tool)
+            except Exception as exc:
+                logger.warning("PolicyEnforcementHook attach failed: %s", exc)
+
         # For Pattern I (``agents_as_tools``) the orchestrator is
         # already constructed at this point; attach the streaming and
         # hooks to it now. Pattern III attaches after the specialist is

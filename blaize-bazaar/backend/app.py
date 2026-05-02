@@ -1438,6 +1438,23 @@ async def check_policy(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/agentcore/policy/decisions")
+async def policy_decisions(session_id: str = "", limit: int = 50):
+    """Return the recent per-tool enforcement decisions for a session.
+
+    Feeds the Atelier Policy tab so it can show live DENY/ALLOW
+    outcomes per turn instead of a static policy list. Bounded by the
+    in-memory PolicyEnforcementHook buffer (oldest decisions evicted
+    automatically)."""
+    try:
+        from services.policy_hook import get_decisions
+        decisions = get_decisions(session_id or None, limit=max(1, min(500, int(limit))))
+        return {"session_id": session_id or "_anonymous", "decisions": decisions, "count": len(decisions)}
+    except Exception as e:
+        logger.warning(f"Policy decisions fetch failed: {e}")
+        return {"session_id": session_id, "decisions": [], "count": 0, "error": str(e)}
+
+
 # ============================================================================
 # AGENTCORE ENDPOINTS (Lab 4)
 # ============================================================================
