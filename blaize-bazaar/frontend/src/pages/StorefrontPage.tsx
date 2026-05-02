@@ -18,7 +18,7 @@
  * `savePreferences` advances the counter, React tears down the grid and
  * the parallax observer re-fires on mount.
  */
-import { useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AnnouncementBar from '../components/AnnouncementBar'
 import Header, { type NavItem } from '../components/Header'
@@ -30,7 +30,7 @@ import DemoChatCarousel from '../components/DemoChatCarousel'
 import CategoryChips from '../components/CategoryChips'
 import ProductGridHeader from '../components/ProductGridHeader'
 import ProductGrid from '../components/ProductGrid'
-import RefinementPanel from '../components/RefinementPanel'
+import RefinementPanel, { type RefinementChip } from '../components/RefinementPanel'
 import StoryboardTeaser from '../components/StoryboardTeaser'
 import Footer from '../components/Footer'
 import CommandPill from '../components/CommandPill'
@@ -38,6 +38,8 @@ import StorefrontSpotlight from '../components/StorefrontSpotlight'
 import { useAuth } from '../contexts/AuthContext'
 import { usePersona } from '../contexts/PersonaContext'
 import { useUI } from '../contexts/UIContext'
+import { SHOWCASE_PRODUCTS } from '../data/showcaseProducts'
+import type { StorefrontProduct } from '../services/types'
 
 const CREAM = '#fbf4e8'
 
@@ -49,11 +51,62 @@ const NAV_ROUTES: Record<NavItem, string> = {
   account: '/',
 }
 
+// Chip → predicate. Two of the four chips map to real product fields
+// (price, tags); "Ships by Friday" and "Gift-wrappable" are demo
+// placeholders that pass everything through today. The teaching
+// caption in RefinementPanel is honest about composition (pgvector
+// semantic match × metadata filter) — we're just doing the metadata
+// half client-side against the pre-loaded showcase. Real pgvector
+// composition will land when the grid fetches from a search endpoint.
+const FILTER_PREDICATES: Record<RefinementChip, (p: StorefrontProduct) => boolean> = {
+  'Under $100': (p) => p.price < 100,
+  'Ships by Friday': () => true,
+  'Gift-wrappable': () => true,
+  'From smaller makers': (p) =>
+    Array.isArray(p.tags) && p.tags.includes('slow'),
+}
+
+function applyFilters(
+  products: readonly StorefrontProduct[],
+  filters: readonly RefinementChip[],
+): StorefrontProduct[] {
+  if (filters.length === 0) return [...products]
+  return products.filter((p) =>
+    filters.every((chip) => FILTER_PREDICATES[chip](p)),
+  )
+}
+
 export default function StorefrontPage() {
   const { prefsVersion } = useAuth()
   const { openModal, setChatSurface } = useUI()
   const { persona } = usePersona()
   const navigate = useNavigate()
+
+  // Refinement chip state + the filtered grid derived from it.
+  // Lifting the state here lets the RefinementPanel be controlled
+  // and the ProductGrid actually re-render when chips toggle. The
+  // filter latency is measured so the teaching caption shows a real
+  // number instead of the hardcoded ~143ms.
+  const [activeFilters, setActiveFilters] = useState<RefinementChip[]>([])
+  const [filterLatencyMs, setFilterLatencyMs] = useState<number | null>(null)
+
+  const filteredProducts = useMemo(() => {
+    if (typeof performance === 'undefined') {
+      return applyFilters(SHOWCASE_PRODUCTS, activeFilters)
+    }
+    const t0 = performance.now()
+    const result = applyFilters(SHOWCASE_PRODUCTS, activeFilters)
+    const elapsed = Math.max(1, Math.round(performance.now() - t0))
+    // setState inside a useMemo is usually wrong, but here we're only
+    // writing a passive latency number that no render path depends on,
+    // so it's safe. Wrap in a microtask to sidestep the render warning.
+    queueMicrotask(() => setFilterLatencyMs(elapsed))
+    return result
+  }, [activeFilters])
+
+  const handleFiltersChange = useCallback((next: RefinementChip[]) => {
+    setActiveFilters(next)
+  }, [])
 
   // Tell UIProvider that ⌘K should open the drawer (not the concierge
   // modal) while on storefront routes.
@@ -115,8 +168,20 @@ export default function StorefrontPage() {
         />
         <CategoryChips />
         <ProductGridHeader />
-        <ProductGrid key={prefsVersion} />
-        <RefinementPanel />
+        {/* `key` combines prefsVersion (preferences-save parallax
+         * re-fire) with the active-filter count so the grid also
+         * re-mounts on chip toggle — the useScrollReveal observer
+         * then re-fires for the new set.
+         */}
+        <ProductGrid
+          key={`${prefsVersion}-${activeFilters.length}`}
+          products={filteredProducts}
+        />
+        <RefinementPanel
+          activeFilters={activeFilters}
+          onChange={handleFiltersChange}
+          measuredLatencyMs={filterLatencyMs}
+        />
         <StoryboardTeaser />
       </main>
       <Footer />

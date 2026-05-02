@@ -55,11 +55,20 @@ interface RefinementPanelProps {
    * 1.8.2 and remount the grid.
    */
   onChange?: (next: RefinementChip[]) => void
+  /**
+   * Measured latency (ms) of the last filter pass. When the parent
+   * lifts state and applies filters, it passes the real elapsed time
+   * here so the teaching caption shows a true number instead of the
+   * hardcoded "~143ms". `null` falls back to the hardcoded label so
+   * uncontrolled usage still reads sensibly.
+   */
+  measuredLatencyMs?: number | null
 }
 
 export default function RefinementPanel({
   activeFilters,
   onChange,
+  measuredLatencyMs,
 }: RefinementPanelProps) {
   const { persona } = usePersona()
   const prompt = (persona?.id && PERSONA_PROMPT[persona.id]) || REFINEMENT.PROMPT
@@ -241,7 +250,9 @@ export default function RefinementPanel({
             <span aria-hidden style={{ color: 'rgba(45, 24, 16, 0.25)' }}>
               ·
             </span>
-            <span style={{ color: ACCENT }}>~143ms</span>
+            <span style={{ color: ACCENT }}>
+              {measuredLatencyMs != null ? `~${measuredLatencyMs}ms` : '~143ms'}
+            </span>
             <span aria-hidden style={{ color: 'rgba(45, 24, 16, 0.25)' }}>
               ·
             </span>
