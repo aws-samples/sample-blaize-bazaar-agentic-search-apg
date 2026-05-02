@@ -777,6 +777,27 @@ async def compare_index_performance(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/performance/runtime")
+async def performance_runtime(include_recent: bool = False):
+    """Return rolling aggregates of chat turn latency breakdowns.
+
+    Feeds the Atelier Performance tab — layer p50/p95 replace the
+    hardcoded 3779ms/4ms numbers, cold-start histogram replaces the
+    stub bars, tool p50 fuels the per-tool legend. Empty buffer is
+    reported honestly so the UI can show a placeholder instead of
+    faking data.
+    """
+    try:
+        from services.performance_log import get_aggregates, get_recent_turns
+        agg = get_aggregates()
+        if include_recent:
+            agg = {**agg, "recent": get_recent_turns(limit=30)}
+        return agg
+    except Exception as e:
+        logger.warning(f"Performance runtime stats failed: {e}")
+        return {"turn_count": 0, "empty": True, "error": str(e)}
+
+
 @app.get("/api/performance/stats")
 async def get_index_stats():
     """Get pgvector index statistics"""

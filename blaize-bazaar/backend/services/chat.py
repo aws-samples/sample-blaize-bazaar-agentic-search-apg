@@ -2143,6 +2143,23 @@ CURRENT REQUEST: {message}"""
         timing["tools"] = tools_ms
         timing["stream"] = stream_ms
 
+        # Record this turn's latency breakdown into the process-local
+        # perf log so /api/performance/runtime can serve live p50/p95
+        # aggregates to the Atelier Performance tab. Any failure is
+        # swallowed — measurement must never break a turn.
+        try:
+            from services.performance_log import record_turn
+            record_turn(
+                session_id=session_id,
+                layers=timing,
+                ttft_ms=ttft_ms,
+                total_ms=turn_total_ms,
+                tool_trace=tool_trace,
+                pattern=pattern,
+            )
+        except Exception as _exc:
+            logger.debug("performance_log.record_turn failed: %s", _exc)
+
         # Emit timing + db query events BEFORE the complete event so the
         # Atelier runtime and state-management pages pick them up via
         # their useAgentChat localStorage bridge.

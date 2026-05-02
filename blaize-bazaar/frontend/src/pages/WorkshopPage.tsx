@@ -438,6 +438,55 @@ const TAB_STORAGE_KEY = 'blaize-atelier-tab'
  * without overriding the attendee who clicked back to Architecture
  * mid-turn.
  */
+/**
+ * usePerformanceRuntime — live aggregates for the Performance tab.
+ *
+ * Pulls /api/performance/runtime every 5s so the bar chart + metric
+ * strip + cold-start histogram reflect the actual turns this session
+ * has observed. When the buffer is empty (no turns yet) the hook
+ * returns ``null`` and the render path falls back to the hardcoded
+ * illustrative numbers — the UI should never fake measurements it
+ * doesn't have.
+ */
+interface PerformanceAggregates {
+  turn_count: number
+  empty: boolean
+  layers_p50?: Record<string, number>
+  layers_p95?: Record<string, number>
+  total_p50?: number
+  total_p95?: number
+  ttft_p50?: number
+  ttft_p95?: number
+  histogram?: number[]
+  tools_p50?: Record<string, number>
+}
+
+function usePerformanceRuntime(enabled: boolean): PerformanceAggregates | null {
+  const [agg, setAgg] = useState<PerformanceAggregates | null>(null)
+  useEffect(() => {
+    if (!enabled) return
+    let alive = true
+    const pull = () => {
+      fetch('/api/performance/runtime')
+        .then(r => r.json())
+        .then(d => {
+          if (!alive) return
+          if (d && typeof d === 'object') setAgg(d as PerformanceAggregates)
+        })
+        .catch(() => {
+          /* quiet */
+        })
+    }
+    pull()
+    const id = setInterval(pull, 5000)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
+  }, [enabled])
+  return agg
+}
+
 function useTabState(panelCount: number): [Tab, (t: Tab) => void] {
   const [activeTab, setActiveTab] = useState<Tab>(() => {
     if (typeof window === 'undefined') return 'telemetry'
@@ -574,6 +623,11 @@ function WorkshopContent() {
 
   const panelCount = events.filter((e) => e.type === 'panel').length
   const [activeTab, setActiveTab] = useTabState(panelCount)
+
+  // Live performance aggregates — only pulled when the Performance
+  // tab is visible so we don't burn a fetch every 5s on unrelated tabs.
+  const perfAggregates = usePerformanceRuntime(activeTab === 'performance')
+  const hasLivePerf = !!perfAggregates && !perfAggregates.empty
 
   // Four real metrics feeding the MetricsRow + AtmosphereStrip. All
   // derived from the current turn's events — no stubs, no per-session
@@ -866,21 +920,41 @@ function WorkshopContent() {
               </div>
             </div>
 
-            {/* Metric strip */}
+            {/* Metric strip — swaps to live p50/p95 when the buffer
+                has observed at least one turn this session, otherwise
+                shows the illustrative placeholders. */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg p-4" style={{ background: 'white', border: '1px solid rgba(45, 24, 16, 0.12)' }}>
-                <div className="text-[10px] uppercase mb-1.5" style={{ color: INK_QUIET, letterSpacing: '0.16em' }}>P50 Cold-start</div>
-                <div style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 24, lineHeight: 1, color: INK }}>
-                  2.4<span className="text-[13px] ml-0.5" style={{ color: INK_QUIET }}>s</span>
+              <div className="rounded-lg p-4" style={{ background: 'white', border: '1px solid rgba(45, 24, 16, 0.12)' }} data-testid="perf-metric-total">
+                <div className="text-[10px] uppercase mb-1.5" style={{ color: INK_QUIET, letterSpacing: '0.16em' }}>
+                  {hasLivePerf ? 'P50 Turn total' : 'P50 Cold-start'}
                 </div>
-                <div className="text-[11px] mt-1.5" style={{ color: INK_SOFT }}>20 samples · bimodal</div>
+                <div style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 24, lineHeight: 1, color: INK }}>
+                  {hasLivePerf
+                    ? (perfAggregates!.total_p50! >= 1000
+                        ? <>{(perfAggregates!.total_p50! / 1000).toFixed(1)}<span className="text-[13px] ml-0.5" style={{ color: INK_QUIET }}>s</span></>
+                        : <>{Math.round(perfAggregates!.total_p50!)}<span className="text-[13px] ml-0.5" style={{ color: INK_QUIET }}>ms</span></>)
+                    : <>2.4<span className="text-[13px] ml-0.5" style={{ color: INK_QUIET }}>s</span></>}
+                </div>
+                <div className="text-[11px] mt-1.5" style={{ color: INK_SOFT }}>
+                  {hasLivePerf
+                    ? `${perfAggregates!.turn_count} turn${perfAggregates!.turn_count === 1 ? '' : 's'} · live`
+                    : '20 samples · bimodal'}
+                </div>
               </div>
-              <div className="rounded-lg p-4" style={{ background: 'white', border: '1px solid rgba(45, 24, 16, 0.12)' }}>
-                <div className="text-[10px] uppercase mb-1.5" style={{ color: INK_QUIET, letterSpacing: '0.16em' }}>P50 Warm-start</div>
-                <div style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 24, lineHeight: 1, color: INK }}>
-                  52<span className="text-[13px] ml-0.5" style={{ color: INK_QUIET }}>ms</span>
+              <div className="rounded-lg p-4" style={{ background: 'white', border: '1px solid rgba(45, 24, 16, 0.12)' }} data-testid="perf-metric-ttft">
+                <div className="text-[10px] uppercase mb-1.5" style={{ color: INK_QUIET, letterSpacing: '0.16em' }}>
+                  {hasLivePerf ? 'P50 Time-to-first-token' : 'P50 Warm-start'}
                 </div>
-                <div className="text-[11px] mt-1.5" style={{ color: INK_SOFT }}>95th: 78ms</div>
+                <div style={{ fontFamily: 'Fraunces, Georgia, serif', fontSize: 24, lineHeight: 1, color: INK }}>
+                  {hasLivePerf
+                    ? <>{Math.round(perfAggregates!.ttft_p50!)}<span className="text-[13px] ml-0.5" style={{ color: INK_QUIET }}>ms</span></>
+                    : <>52<span className="text-[13px] ml-0.5" style={{ color: INK_QUIET }}>ms</span></>}
+                </div>
+                <div className="text-[11px] mt-1.5" style={{ color: INK_SOFT }}>
+                  {hasLivePerf
+                    ? `95th: ${Math.round(perfAggregates!.ttft_p95!)}ms`
+                    : '95th: 78ms'}
+                </div>
               </div>
             </div>
 
@@ -896,18 +970,33 @@ function WorkshopContent() {
               <p className="text-[14px] leading-[1.7] mb-[18px]" style={{ color: INK_SOFT, maxWidth: 580 }}>
                 Managed runtime cold-start is bimodal - fresh container ~2.4s, warm reuse ~52ms. Twenty samples, sixty-second cooldowns. The teaching moment: every managed primitive has this shape; pre-warm or accept it.
               </p>
-              {/* Histogram */}
+              {/* Histogram — real bucket counts when the runtime
+                  buffer has observed turns; illustrative stub bars
+                  otherwise. We normalize live bucket counts to 0..100
+                  for height so the shape is visible regardless of
+                  sample volume. */}
               <div className="flex items-end gap-[3px] mb-[14px] pb-2" style={{ height: 80, borderBottom: '1px solid rgba(45, 24, 16, 0.08)' }}>
-                {[18,8,65,88,95,72,30,12,5,5,5,5,0,0,0,28,55,38,18,8].map((h, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 rounded-t-sm"
-                    style={{
-                      height: `${h}%`,
-                      background: h > 10 ? ACCENT : 'rgba(45, 24, 16, 0.15)',
-                    }}
-                  />
-                ))}
+                {(() => {
+                  const stubBars = [18,8,65,88,95,72,30,12,5,5,5,5,0,0,0,28,55,38,18,8]
+                  let bars: number[]
+                  if (hasLivePerf && Array.isArray(perfAggregates!.histogram) && perfAggregates!.histogram!.length > 0) {
+                    const live = perfAggregates!.histogram!
+                    const maxCount = Math.max(1, ...live)
+                    bars = live.map((n) => Math.round((n / maxCount) * 95))
+                  } else {
+                    bars = stubBars
+                  }
+                  return bars.map((h, i) => (
+                    <div
+                      key={i}
+                      className="flex-1 rounded-t-sm"
+                      style={{
+                        height: `${Math.max(0, h)}%`,
+                        background: h > 10 ? ACCENT : 'rgba(45, 24, 16, 0.15)',
+                      }}
+                    />
+                  ))
+                })()}
               </div>
               <div className="flex justify-between font-mono text-[10px] mb-[14px]" style={{ color: INK_QUIET }}>
                 <span>0ms</span><span>500ms</span><span>1.5s</span><span>2.5s</span><span>3.5s</span>
@@ -927,18 +1016,53 @@ function WorkshopContent() {
                 Where the agent spends its time.
               </h3>
               <p className="text-[14px] leading-[1.7] mb-[18px]" style={{ color: INK_SOFT, maxWidth: 580 }}>
-                Latency budget per panel, last 100 turns. The Postgres reads are fast. The LLM calls are everything else.
+                {hasLivePerf
+                  ? `Latency budget per layer, last ${perfAggregates!.turn_count} ${perfAggregates!.turn_count === 1 ? 'turn' : 'turns'} this session. Live p50 from services/performance_log.`
+                  : 'Latency budget per panel, last 100 turns. The Postgres reads are fast. The LLM calls are everything else.'}
               </p>
-              <div className="flex flex-col gap-[10px]">
-                {[
-                  { label: 'LLM · OPUS · SYNTHESIZE',    ms: 3779, pct: 92, llm: true },
-                  { label: 'LLM · HAIKU · INTENT',       ms: 1887, pct: 46, llm: true },
-                  { label: 'TOOL REGISTRY · DISCOVER',    ms: 817,  pct: 20, llm: false },
-                  { label: 'MEMORY · EPISODIC',           ms: 55,   pct: 1.5, llm: false },
-                  { label: 'MEMORY · PROCEDURAL',         ms: 13,   pct: 0.4, llm: false },
-                  { label: 'MEMORY · SEMANTIC',           ms: 4,    pct: 0.1, llm: false },
-                ].map((row) => (
-                  <div key={row.label} className="grid items-center gap-3 text-[12px]" style={{ gridTemplateColumns: '220px 1fr 60px' }}>
+              <div className="flex flex-col gap-[10px]" data-testid="perf-layer-rows">
+                {(() => {
+                  // Stub rows stay the source of truth when no live
+                  // data has been captured yet. Live rows are derived
+                  // from the chat.py ``timing`` dict: fastpath, intent,
+                  // skill_router, orchestrator, specialist, tools,
+                  // stream. 'tools' is further split against per-tool
+                  // p50s when we have them so attendees can see which
+                  // individual tool is expensive.
+                  const stubRows = [
+                    { label: 'LLM · OPUS · SYNTHESIZE', ms: 3779, pct: 92, llm: true },
+                    { label: 'LLM · HAIKU · INTENT',    ms: 1887, pct: 46, llm: true },
+                    { label: 'TOOL REGISTRY · DISCOVER', ms: 817, pct: 20, llm: false },
+                    { label: 'MEMORY · EPISODIC',        ms: 55,  pct: 1.5, llm: false },
+                    { label: 'MEMORY · PROCEDURAL',      ms: 13,  pct: 0.4, llm: false },
+                    { label: 'MEMORY · SEMANTIC',        ms: 4,   pct: 0.1, llm: false },
+                  ]
+                  if (!hasLivePerf) return stubRows.map(row => ({ ...row, key: row.label }))
+
+                  const layers = perfAggregates!.layers_p50 || {}
+                  const layerEntries = [
+                    { key: 'orchestrator', label: 'LLM · ORCHESTRATOR', llm: true },
+                    { key: 'intent',       label: 'ROUTER · INTENT',    llm: true },
+                    { key: 'skill_router', label: 'SKILLS · ROUTE',     llm: true },
+                    { key: 'tools',        label: 'TOOLS · ALL',        llm: false },
+                    { key: 'stream',       label: 'STREAM · TOKENS',    llm: false },
+                    { key: 'fastpath',     label: 'FASTPATH · TRIAGE',  llm: false },
+                  ]
+                  const rows = layerEntries
+                    .map(e => ({
+                      key: e.key,
+                      label: e.label,
+                      llm: e.llm,
+                      ms: Math.round(layers[e.key] ?? 0),
+                    }))
+                    .filter(r => r.ms > 0)
+                  const maxMs = Math.max(1, ...rows.map(r => r.ms))
+                  return rows.map(r => ({
+                    ...r,
+                    pct: (r.ms / maxMs) * 100,
+                  }))
+                })().map((row) => (
+                  <div key={row.key ?? row.label} className="grid items-center gap-3 text-[12px]" style={{ gridTemplateColumns: '220px 1fr 60px' }}>
                     <span className="font-mono text-[11px]" style={{ color: INK }}>{row.label}</span>
                     <div className="h-2 rounded overflow-hidden" style={{ background: 'rgba(45, 24, 16, 0.06)' }}>
                       <div className="h-full rounded" style={{ width: `${Math.max(row.pct, 0.5)}%`, background: row.llm ? ACCENT : INK_SOFT }} />
