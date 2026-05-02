@@ -15,7 +15,7 @@
  * The hero occupies the entire viewport so the first impression is
  * the search bar. Scrolling reveals the editorial product showcase.
  */
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AnnouncementBar from '../components/AnnouncementBar'
 import Header, { type NavItem } from '../components/Header'
@@ -26,8 +26,10 @@ import Footer from '../components/Footer'
 import CommandPill from '../components/CommandPill'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
+import { usePersona } from '../contexts/PersonaContext'
 import { useUI } from '../contexts/UIContext'
 import { SHOWCASE_PRODUCTS } from '../data/showcaseProducts'
+import { PERSONA_INTERESTS, rankProductsForPersona } from '../data/personaCurations'
 
 const NAV_ROUTES: Record<NavItem, string> = {
   home: '/',
@@ -49,7 +51,24 @@ export default function StorefrontPage() {
   const { prefsVersion } = useAuth()
   const { openModal, setChatSurface } = useUI()
   const { addToCart } = useCart()
+  const { persona } = usePersona()
   const navigate = useNavigate()
+
+  // Persona-aware product order for "Curated for you". Fresh / unknown
+  // personas fall through to the canonical showcase order; Marco, Anna,
+  // and Theo get their own tag-weighted ranking from personaCurations.
+  const personaId = persona?.id ?? null
+  const rankedGridProducts = useMemo(
+    () => rankProductsForPersona(GRID_PRODUCTS, personaId),
+    [personaId],
+  )
+  const personaInterests = personaId ? PERSONA_INTERESTS[personaId] : undefined
+  const isPersonalized =
+    !!personaInterests &&
+    Object.keys(personaInterests.tagWeights).length > 0
+  const curatedEyebrow = personaInterests?.curatedEyebrow ?? 'Curated for you'
+  const curatedHeadline =
+    personaInterests?.curatedHeadline ?? 'Things worth discovering.'
 
   useEffect(() => {
     setChatSurface('drawer')
@@ -184,40 +203,78 @@ export default function StorefrontPage() {
             </div>
           </div>
 
-          {/* Curated grid: remaining 8 products */}
+          {/* Curated grid: 8 products, reordered by active persona.
+              Fresh visitors get the canonical showcase sequence; Marco,
+              Anna, and Theo see a tag-ranked ordering with a matching
+              eyebrow + headline + "for <name>" chip so the
+              personalization is visible rather than silent. */}
           <div className="max-w-[1440px] mx-auto px-container-x pb-16 md:pb-24">
-            <div className="mb-8">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="relative flex h-2 w-2" aria-hidden="true">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-                </span>
-                <p className="text-[11px] font-sans font-semibold tracking-[0.22em] uppercase text-ink-quiet">
-                  Curated for you
-                </p>
+            <div className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="relative flex h-2 w-2" aria-hidden="true">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+                  </span>
+                  <p
+                    data-testid="curated-eyebrow"
+                    className="text-[11px] font-sans font-semibold tracking-[0.22em] uppercase text-ink-quiet"
+                  >
+                    {curatedEyebrow}
+                  </p>
+                </div>
+                <h2
+                  data-testid="curated-headline"
+                  className="font-display italic text-espresso"
+                  style={{
+                    fontSize: 'clamp(28px, 3.5vw, 44px)',
+                    lineHeight: 1.15,
+                    letterSpacing: '-0.01em',
+                    fontWeight: 400,
+                  }}
+                >
+                  {curatedHeadline}
+                </h2>
               </div>
-              <h2
-                className="font-display italic text-espresso"
-                style={{
-                  fontSize: 'clamp(28px, 3.5vw, 44px)',
-                  lineHeight: 1.15,
-                  letterSpacing: '-0.01em',
-                  fontWeight: 400,
-                }}
-              >
-                Things worth discovering.
-              </h2>
+
+              {/* Persona chip — renders only when a persona is active,
+                  so the fresh anonymous view stays clean. */}
+              {isPersonalized && persona && (
+                <div
+                  data-testid="curated-persona-chip"
+                  className="inline-flex items-center gap-2 self-start md:self-end"
+                  style={{
+                    fontFamily: 'var(--sans)',
+                    fontSize: '11px',
+                    letterSpacing: '0.14em',
+                    textTransform: 'uppercase',
+                    fontWeight: 500,
+                    color: '#1f1410',
+                    padding: '6px 12px',
+                    borderRadius: 999,
+                    background: '#faf3e8',
+                    border: '1px solid rgba(31,20,16,0.12)',
+                  }}
+                >
+                  <span aria-hidden style={{ color: '#a8423a', fontSize: '7px' }}>
+                    &#9679;
+                  </span>
+                  <span>For {persona.display_name.split(' ')[0]}</span>
+                </div>
+              )}
             </div>
 
             <div
-              key={prefsVersion}
+              // Re-mount on prefsVersion OR persona change so the grid's
+              // per-card reveal animation re-fires for the new ordering.
+              key={`${prefsVersion}-${personaId ?? 'fresh'}`}
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
                 gap: '1.5rem',
               }}
             >
-              {GRID_PRODUCTS.map((product, index) => (
+              {rankedGridProducts.map((product, index) => (
                 <ProductCard
                   key={product.id}
                   product={product}
