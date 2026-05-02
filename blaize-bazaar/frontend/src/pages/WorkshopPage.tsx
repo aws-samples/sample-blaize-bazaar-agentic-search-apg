@@ -41,7 +41,11 @@ import { AuthGate } from '../App'
 import PatternsTab from '../components/PatternsTab'
 import WorkshopChat from '../components/WorkshopChat'
 import WorkshopTelemetry from '../components/WorkshopTelemetry'
-import IndexPerformanceDashboard from '../components/IndexPerformanceDashboard'
+import {
+  HnswBenchmarkSection,
+  QuantizationSection,
+  IterativeScanSection,
+} from '../components/PgvectorBenchSections'
 import SkillsPanel from '../components/SkillsPanel'
 import MemoryArchPage from '../components/atelier-arch/MemoryArchPage'
 import McpArchPage from '../components/atelier-arch/McpArchPage'
@@ -71,7 +75,6 @@ type Tab = 'telemetry' | 'architecture' | 'patterns' | 'performance'
 type Provenance = 'MANAGED' | 'OWNED' | 'BOTH'
 
 type DetailPanelKey =
-  | 'bench'
   | 'skills'
   // Atelier architecture detail pages (Phase 2+)
   | 'arch-memory'
@@ -677,7 +680,7 @@ function WorkshopContent() {
   }, [events, skillRouting])
 
   const detailOpen = detailPanel !== null
-  const isBenchModal = detailPanel === 'bench' // IndexPerformanceDashboard stays modal for now
+  // isBenchModal removed — pgvector benchmarks are now inline in the Performance tab
 
   const closeDetail = () => {
     // If the panel was opened via deep link, nav back to /atelier so
@@ -1117,15 +1120,15 @@ function WorkshopContent() {
                 <div><span style={{ color: ACCENT }}>CREATE INDEX</span> ON product_catalog</div>
                 <div><span style={{ color: ACCENT }}>USING</span> hnsw (embedding vector_cosine_ops);</div>
               </div>
-              <button
-                type="button"
-                onClick={() => setDetailPanel('bench')}
-                className="text-[13px] font-medium transition-opacity hover:opacity-75"
-                style={{ color: ACCENT }}
-              >
-                Open pgvector benchmarks →
-              </button>
             </div>
+
+            {/* iv–vi. Inline pgvector benchmark sections — each is a
+                self-contained accordion with its own API calls. Start
+                collapsed so the tab isn't overwhelming; expand any to
+                run live comparisons against the Aurora catalog. */}
+            <HnswBenchmarkSection />
+            <QuantizationSection />
+            <IterativeScanSection />
           </div>
         )}
       </div>
@@ -1142,7 +1145,7 @@ function WorkshopContent() {
     </div>
   )
 
-  const detailArea = detailOpen && !isBenchModal && (
+  const detailArea = detailOpen && true && (
     <motion.div
       key={detailPanel}
       initial={{ opacity: 0, x: 16 }}
@@ -1256,7 +1259,7 @@ function WorkshopContent() {
           <div className="flex flex-col gap-4">
             <div className="min-h-[520px]">{chatArea}</div>
             <div className="min-h-[520px]">{workArea}</div>
-            {detailOpen && !isBenchModal && (
+            {detailOpen && true && (
               <div className="min-h-[520px]" data-testid="detail-panel-stacked">
                 {renderDetail()}
               </div>
@@ -1267,13 +1270,9 @@ function WorkshopContent() {
 
       <Footer />
 
-      {/* IndexPerformanceDashboard stays modal for now — the bench's
-          chart-heavy layout fights the panel's vertical space
-          constraint, so it retains its original full-screen mount. */}
-      <IndexPerformanceDashboard
-        isOpen={detailPanel === 'bench'}
-        onClose={closeDetail}
-      />
+      {/* IndexPerformanceDashboard removed — pgvector benchmarks are
+          now inline in the Performance tab via HnswBenchmarkSection,
+          QuantizationSection, and IterativeScanSection. */}
     </div>
   )
 }

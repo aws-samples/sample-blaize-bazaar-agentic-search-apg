@@ -43,9 +43,10 @@ vi.mock('../components/WorkshopChat', () => ({
 vi.mock('../components/WorkshopTelemetry', () => ({
   default: () => <div data-testid="stub-workshop-telemetry">telemetry</div>,
 }))
-vi.mock('../components/IndexPerformanceDashboard', () => ({
-  default: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div data-testid="stub-bench-modal">bench</div> : null,
+vi.mock('../components/PgvectorBenchSections', () => ({
+  HnswBenchmarkSection: () => <div data-testid="stub-hnsw-bench">hnsw bench</div>,
+  QuantizationSection: () => <div data-testid="stub-quantization">quantization</div>,
+  IterativeScanSection: () => <div data-testid="stub-iterative-scan">iterative scan</div>,
 }))
 
 // Stub each atelier-arch page so the test asserts routing without
