@@ -230,12 +230,16 @@ export function IntentTicker({ intents, activeIndex, onSelect, onOpenDrawer }: I
               onOpenDrawer?.(intent.query)
             }}
             className={
-              'shrink-0 rounded-full border px-3 py-1 text-[11px] italic transition-colors ' +
+              'shrink-0 border text-[11px] italic transition-colors ' +
               (selected
                 ? 'border-[#2d1810] bg-[#2d1810] not-italic text-[#fbf4e8]'
-                : 'border-[#f5e8d3] bg-white text-[#6b4a35] hover:border-[#2d1810]')
+                : 'border-[#6b4a35]/20 bg-[#fffaf0] text-[#6b4a35] hover:border-[#2d1810]')
             }
-            style={{ fontFamily: 'Fraunces, Georgia, serif' }}
+            style={{
+              fontFamily: 'Fraunces, Georgia, serif',
+              borderRadius: 12,
+              padding: '10px 18px',
+            }}
           >
             &ldquo;{intent.query}&rdquo;
           </button>
@@ -460,7 +464,7 @@ export default function HeroStage({ intents = INTENTS }: HeroStageProps) {
             style={{
               opacity: imageOpacity,
               transition: 'opacity 250ms ease-out',
-              objectPosition: 'center 40%',
+              objectPosition: 'center 80%',
             }}
           />
 

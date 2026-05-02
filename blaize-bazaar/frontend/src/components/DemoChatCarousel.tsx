@@ -5,7 +5,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Search, Target, DollarSign, Database, Send, Shield, HelpCircle } from 'lucide-react'
+import { Brain, Search, Target, DollarSign, Database, Send, Shield, HelpCircle, Sparkles } from 'lucide-react'
 import type { WorkshopMode } from '../contexts/LayoutContext'
 
 // ─── Data Types ───
@@ -819,14 +819,19 @@ const DemoChatCarousel = ({
             }}
           >
             <div
-              className="flex items-center gap-2"
+              className="flex items-center gap-3"
               style={{
                 background: 'var(--cream-1)',
                 border: '1px solid var(--rule-2)',
                 borderRadius: 100,
-                padding: '6px 6px 6px 16px',
+                padding: '8px 8px 8px 16px',
               }}
             >
+              <Sparkles
+                className="h-[18px] w-[18px] flex-shrink-0"
+                style={{ color: 'var(--red-1, #c44536)' }}
+                strokeWidth={1.5}
+              />
               <div
                 className="flex-1"
                 style={{
@@ -836,7 +841,7 @@ const DemoChatCarousel = ({
                   color: 'var(--ink-4)',
                 }}
               >
-                Tell Blaize what you're looking for…
+                Ask Blaize anything…
               </div>
               <div
                 className="flex items-center justify-center flex-shrink-0"
