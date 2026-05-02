@@ -39,6 +39,36 @@ interface StmTurn {
   timestamp: number
 }
 
+interface MemoryStatus {
+  live: boolean
+  source: string
+  memory_id?: string
+  sdk_available?: boolean
+  fallback_reason?: string | null
+}
+
+function useMemoryStatus(): MemoryStatus | null {
+  const [status, setStatus] = useState<MemoryStatus | null>(null)
+  useEffect(() => {
+    let alive = true
+    fetch('/api/agentcore/memory/status')
+      .then(r => r.json())
+      .then(d => {
+        if (alive) setStatus(d as MemoryStatus)
+      })
+      .catch(() => {
+        // Endpoint unreachable — the banner just won't render rather
+        // than showing a scary error. The rest of the page works off
+        // localStorage and remains fully functional.
+        if (alive) setStatus(null)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+  return status
+}
+
 function loadStmTurns(): StmTurn[] {
   try {
     const raw = localStorage.getItem('blaize-concierge-storefront')
@@ -83,6 +113,18 @@ const STUB_LTM_FACTS = [
 
 export default function MemoryArchPage() {
   const stmTurns = useStmTurns()
+  const memStatus = useMemoryStatus()
+
+  // Meta strip picks its "backing store" label from the live status
+  // so the page doesn't lie when the SDK isn't wired in. Keeps the
+  // page honest in both teaching (everyone sees 'in-process dict' on
+  // a fresh Workshop Studio clone) and demo (attendees see
+  // 'AgentCore Memory' once AGENTCORE_MEMORY_ID is set) modes.
+  const backingStoreLabel = memStatus
+    ? memStatus.live
+      ? `AgentCore Memory · ${memStatus.memory_id ?? ''}`
+      : 'Fallback · in-process dict'
+    : 'AgentCore + Aurora pgvector'
 
   return (
     <DetailPageShell
@@ -97,9 +139,19 @@ export default function MemoryArchPage() {
         { label: 'STM size', value: `${stmTurns.length} turn${stmTurns.length === 1 ? '' : 's'}` },
         { label: 'LTM facts', value: '1,247' },
         { label: 'This turn', value: '47ms · 312ms' },
-        { label: 'Backing store', value: 'AgentCore + Aurora pgvector' },
+        { label: 'Backing store', value: backingStoreLabel },
       ]}
     >
+      {/* ---- Live/fallback banner ---- */}
+      {/* Honest self-labeling. When the page loads and the status
+          endpoint reports 'live: false', we say so — rather than
+          letting the meta strip lie about 'AgentCore' backing when
+          a local dict is handling writes. The banner is deliberately
+          not alarming: it's an operational fact, not an error. */}
+      {memStatus && (
+        <MemoryStatusBanner status={memStatus} />
+      )}
+
       {/* ---- Two-tier hero ---- */}
       <SectionFrame
         eyebrow="The two tiers"
@@ -477,4 +529,83 @@ function SequenceStep({
 
 function truncate(s: string, n: number): string {
   return s.length > n ? s.slice(0, n - 1) + '…' : s
+}
+
+/**
+ * MemoryStatusBanner — tells attendees whether Memory is SDK-backed
+ * right now. The design is deliberately small and neutral; a heavy
+ * banner would compete with the two-tier hero below. Colors track
+ * the atelier-arch palette: LIVE = muted teal, FALLBACK = warm sand.
+ */
+function MemoryStatusBanner({ status }: { status: MemoryStatus }) {
+  const live = status.live
+  const label = live ? 'LIVE' : 'FALLBACK'
+  const background = live ? 'rgba(46, 125, 109, 0.08)' : 'rgba(196, 140, 69, 0.10)'
+  const border = live ? 'rgba(46, 125, 109, 0.25)' : 'rgba(196, 140, 69, 0.30)'
+  const dot = live ? '#2e7d6d' : '#c48c45'
+  const primaryText = live
+    ? `AgentCore Memory · ${status.memory_id ?? ''}`
+    : 'In-process dict (session-scoped)'
+  const reason = live
+    ? 'Long-term reads hit the managed store; writes replicate to pgvector for hybrid recall.'
+    : status.fallback_reason ?? 'AGENTCORE_MEMORY_ID env var not set.'
+
+  return (
+    <div
+      data-testid="memory-status-banner"
+      data-live={live ? 'true' : 'false'}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 14px',
+        marginBottom: 18,
+        background,
+        border: `1px solid ${border}`,
+        borderRadius: 10,
+        fontFamily: 'Inter, system-ui, sans-serif',
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          background: dot,
+          flexShrink: 0,
+        }}
+      />
+      <span
+        style={{
+          fontSize: 11,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: dot,
+          fontWeight: 600,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontSize: 13,
+          color: '#2d1810',
+          fontWeight: 500,
+        }}
+      >
+        {primaryText}
+      </span>
+      <span
+        style={{
+          fontSize: 12,
+          color: '#6b4a35',
+          fontStyle: 'italic',
+          marginLeft: 'auto',
+        }}
+      >
+        {reason}
+      </span>
+    </div>
+  )
 }
