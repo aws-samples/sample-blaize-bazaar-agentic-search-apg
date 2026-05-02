@@ -84,6 +84,22 @@ const EDITORIAL_BADGE = {
   border: 'rgba(196, 69, 54, 0.22)',
 }
 
+// ─── Real catalog images (from data/showcaseProducts.ts) ───
+// Reused here so the demo slides show the same pieces the live chat
+// would return. Every product, price, and image below exists in the
+// boutique catalog — no phantom headphones or Stanley Quenchers.
+const IMG = {
+  linenCamp:     'https://images.unsplash.com/photo-1740711152088-88a009e877bb?w=1600&q=85',
+  wideLeg:       'https://images.unsplash.com/photo-1621767527621-ecdea6e1c522?w=1600&q=85',
+  strawTote:     'https://images.unsplash.com/photo-1657118493503-9cabb641a033?w=1600&q=85',
+  oxford:        'https://images.unsplash.com/photo-1732605559386-bc59426d1b16?w=1600&q=85',
+  sundress:      'https://images.unsplash.com/photo-1667905632551-361dd00e5e35?w=1600&q=85',
+  sandal:        'https://images.unsplash.com/photo-1625318880107-49baad6765fd?w=1600&q=85',
+  cardigan:      'https://images.unsplash.com/photo-1687275168013-dcc11d9c74ab?w=1600&q=85',
+  tumbler:       'https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=1600&q=85',
+  utilityJacket: 'https://images.unsplash.com/photo-1691053318576-4bf08315e877?w=1600&q=85',
+}
+
 const DEMO_SLIDES: DemoSlide[] = [
   {
     id: 'semantic-search',
@@ -91,16 +107,16 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureColor: 'var(--red-1)',
     featureGlow: 'rgba(196, 69, 54, 0.0)',
     featureIconKey: 'search',
-    userMessage: 'A gift for someone who loves to cook.',
+    userMessage: 'Something for slow Sunday mornings at home.',
     aiAvatarIconKey: 'brain',
     aiAvatarLabel: 'Orchestrator',
     agentBadges: [
       { label: 'Search', bgColor: EDITORIAL_BADGE.bg, textColor: EDITORIAL_BADGE.fg },
     ],
-    aiResponseText: 'Two pieces that earn their place on a working kitchen counter — the cast-iron starter for the heat, the bamboo board for the quiet.',
+    aiResponseText: 'Two pieces that earn a place in quiet mornings — the Ceramic Tumbler Set for the coffee, the Cashmere-Blend Cardigan for the chill.',
     productCards: [
-      { name: 'Lodge Cast Iron Starter Gift Set', price: '$79.99', rating: '4.8', image: 'https://images.unsplash.com/photo-1602031939964-2854d8c32447?w=1600&q=85' },
-      { name: 'Cuisinart Bamboo Cutting Board Set', price: '$28.99', rating: '4.2', image: 'https://images.unsplash.com/photo-1633536705119-bcc37bf6c84e?w=1600&q=85' },
+      { name: 'Ceramic Tumbler Set', price: '$52', rating: '4.9', image: IMG.tumbler },
+      { name: 'Cashmere-Blend Cardigan', price: '$158', rating: '4.8', image: IMG.cardigan },
     ],
     minMode: 'agentic',
   },
@@ -110,17 +126,17 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureColor: 'var(--red-1)',
     featureGlow: 'rgba(196, 69, 54, 0.0)',
     featureIconKey: 'dollar',
-    userMessage: 'A luxury watch, under five hundred.',
+    userMessage: 'Linen pieces under a hundred dollars.',
     aiAvatarIconKey: 'dollar',
     aiAvatarLabel: 'Pricing',
     agentBadges: [
       { label: 'Pricing', bgColor: EDITORIAL_BADGE.bg, textColor: EDITORIAL_BADGE.fg },
       { label: 'Search', bgColor: EDITORIAL_BADGE.bg, textColor: EDITORIAL_BADGE.fg },
     ],
-    aiResponseText: 'Two Citizens sit well inside your ceiling — the Skyhawk for weight on the wrist, the Eco-Drive for days that want quieter things.',
+    aiResponseText: 'Three linen pieces sit under your ceiling — the Wide-Leg Trousers at $98, the Drawstring Shorts at $78, and the Straw Tote at $68.',
     productCards: [
-      { name: 'Citizen Promaster Skyhawk AT', price: '$425.00', rating: '4.9', image: 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=1600&q=85' },
-      { name: 'Citizen Eco-Drive Silhouette Crystal', price: '$245.00', rating: '4.9', image: 'https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?w=1600&q=85' },
+      { name: 'Wide-Leg Linen Trousers', price: '$98', rating: '4.7', image: IMG.wideLeg },
+      { name: 'Signature Straw Tote', price: '$68', rating: '4.9', image: IMG.strawTote },
     ],
     minMode: 'agentic',
   },
@@ -130,15 +146,14 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureColor: 'var(--red-1)',
     featureGlow: 'rgba(196, 69, 54, 0.0)',
     featureIconKey: 'database',
-    userMessage: 'Is the Stanley Quencher still on the floor?',
+    userMessage: 'Is the Sundress in Washed Linen still on the floor?',
     aiAvatarIconKey: 'database',
     aiAvatarLabel: 'Inventory',
     agentBadges: [
       { label: 'Inventory', bgColor: EDITORIAL_BADGE.bg, textColor: EDITORIAL_BADGE.fg },
-      { label: 'Pricing', bgColor: EDITORIAL_BADGE.bg, textColor: EDITORIAL_BADGE.fg },
     ],
-    aiResponseText: 'Four left — the Quencher H2.0 40oz at $35. Our most-reviewed piece this week; I\'d move soon if it\'s the one.',
-    contextNote: 'Live stock · 4 units remaining',
+    aiResponseText: 'Three left in Russet at $148. It\'s been our most-pulled dress this week — I\'d move if it\'s the one.',
+    contextNote: 'Live stock · 3 units remaining',
     minMode: 'agentic',
   },
   {
@@ -147,13 +162,13 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureColor: 'var(--red-1)',
     featureGlow: 'rgba(196, 69, 54, 0.0)',
     featureIconKey: 'help',
-    userMessage: 'What\'s the return window for electronics?',
+    userMessage: 'What\'s the return window on linen pieces?',
     aiAvatarIconKey: 'help',
     aiAvatarLabel: 'Support',
     agentBadges: [
       { label: 'Support', bgColor: EDITORIAL_BADGE.bg, textColor: EDITORIAL_BADGE.fg },
     ],
-    aiResponseText: 'Thirty days, original packaging, every accessory. Refund lands on the original payment within a week.',
+    aiResponseText: 'Thirty days, original packaging, unworn. Linen pieces can be exchanged for a different size within the same window.',
     contextNote: 'Policy · 30-day window',
     minMode: 'agentic',
   },
@@ -163,7 +178,7 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureColor: 'var(--red-1)',
     featureGlow: 'rgba(196, 69, 54, 0.0)',
     featureIconKey: 'target',
-    userMessage: 'Which headphones are running low — and how do the prices stack up?',
+    userMessage: 'Which outerwear is running low — and what\'s the best value?',
     aiAvatarIconKey: 'target',
     aiAvatarLabel: 'Orchestrator',
     agentBadges: [
@@ -171,7 +186,7 @@ const DEMO_SLIDES: DemoSlide[] = [
       { label: 'Pricing', bgColor: EDITORIAL_BADGE.bg, textColor: EDITORIAL_BADGE.fg },
       { label: 'Recommend', bgColor: EDITORIAL_BADGE.bg, textColor: EDITORIAL_BADGE.fg },
     ],
-    aiResponseText: 'Inventory found eight AirPods Pro and six Samsung Buds3 Pro left. Pricing puts them at $249 and $229.99 — the Samsung is the softer landing.',
+    aiResponseText: 'Inventory shows the Quilted Vest at 4 units and the Linen Utility Jacket at 6. Pricing puts them at $128 and $178 — the Vest is the gentler entry.',
     contextNote: 'Routed to two specialists · 1.2s',
     minMode: 'agentic',
   },
@@ -181,13 +196,13 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureColor: 'var(--red-1)',
     featureGlow: 'rgba(196, 69, 54, 0.0)',
     featureIconKey: 'brain',
-    userMessage: 'What about the Citizen Skyhawk — is it right for every day?',
+    userMessage: 'What about the Camp Shirt — does it wrinkle when you travel?',
     aiAvatarIconKey: 'brain',
     aiAvatarLabel: 'Orchestrator',
     agentBadges: [
       { label: 'Search', bgColor: EDITORIAL_BADGE.bg, textColor: EDITORIAL_BADGE.fg },
     ],
-    aiResponseText: 'From earlier in the conversation — yes. Atomic timekeeping, stainless case, built to be worn down to nothing and still keep time.',
+    aiResponseText: 'From earlier — the Italian Linen Camp Shirt at $128. It\'s garment-washed, so the wrinkles are the point. Rolls into a packing cube and comes out looking intentional.',
     contextNote: 'Recalled · two turns back',
     minMode: 'agentic',
   },
@@ -197,7 +212,7 @@ const DEMO_SLIDES: DemoSlide[] = [
     featureColor: 'var(--red-1)',
     featureGlow: 'rgba(196, 69, 54, 0.0)',
     featureIconKey: 'shield',
-    userMessage: 'Restock the Stanley Quencher — a thousand units.',
+    userMessage: 'Restock the Sundress in Washed Linen — a thousand units.',
     aiAvatarIconKey: 'shield',
     aiAvatarLabel: 'Policy',
     agentBadges: [
