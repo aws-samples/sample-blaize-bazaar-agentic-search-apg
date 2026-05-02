@@ -67,9 +67,28 @@ export function useCart() {
 // --- Helpers ---
 
 const STORAGE_KEY = 'blaize-cart'
+const CART_SESSION_KEY = 'blaize-cart-session'
 
 function hydrateItems(): CartItem[] {
   try {
+    // Session-scope the cart: if the browser session is fresh (no
+    // session ID stored) or the session ID changed (persona switch,
+    // new tab), start with an empty cart rather than resurfacing
+    // phantom items from a prior persona or demo run. Items added
+    // during the current session will re-persist normally.
+    const currentSession = sessionStorage.getItem('blaize-session-id') || ''
+    const cartSession = localStorage.getItem(CART_SESSION_KEY) || ''
+    if (!currentSession || currentSession !== cartSession) {
+      // Stale or first load — clear the persisted cart and record
+      // the new session so subsequent navigations within the same
+      // session keep their cart.
+      localStorage.removeItem(STORAGE_KEY)
+      if (currentSession) {
+        localStorage.setItem(CART_SESSION_KEY, currentSession)
+      }
+      return []
+    }
+
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       const parsed = JSON.parse(saved) as Array<Partial<CartItem>>
@@ -131,9 +150,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     prevModeRef.current = workshopMode
   }, [workshopMode]) // eslint-disable-line react-hooks/exhaustive-deps -- intentional: only fire on mode change
 
-  // Persist cart to localStorage
+  // Persist cart to localStorage + stamp the session so stale carts
+  // from prior sessions don't resurrect on the next page load.
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+    try {
+      const sid = sessionStorage.getItem('blaize-session-id')
+      if (sid) localStorage.setItem(CART_SESSION_KEY, sid)
+    } catch { /* ignore */ }
   }, [items])
 
   // --- Cart operations ---

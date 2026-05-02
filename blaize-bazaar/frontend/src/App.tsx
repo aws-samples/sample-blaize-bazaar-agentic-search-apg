@@ -19,11 +19,12 @@
 import { createContext, useContext, useEffect, type ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { CartProvider } from './contexts/CartContext'
+import { CartProvider, useCart } from './contexts/CartContext'
 import { UIProvider, useUI } from './contexts/UIContext'
 import { LayoutProvider } from './contexts/LayoutContext'
 import { PersonaProvider } from './contexts/PersonaContext'
 import AuthModal from './components/AuthModal'
+import CartPanel from './components/CartPanel'
 import PersonaTransitionOverlay from './components/PersonaTransitionOverlay'
 import PreferencesModal from './components/PreferencesModal'
 import ConciergeModal from './components/ConciergeModal'
@@ -102,6 +103,15 @@ export function AuthGate({ children }: { children: ReactNode }) {
 // auth, preferences, and cart modals close because they're
 // context-bound to a specific page.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// CartPanelSlot — bridges CartContext's open/close to CartPanel props.
+// Mounted at the App root so it survives route changes (same as AuthModal).
+// ---------------------------------------------------------------------------
+function CartPanelSlot() {
+  const { cartOpen, setCartOpen } = useCart()
+  return <CartPanel isOpen={cartOpen} onClose={() => setCartOpen(false)} />
+}
+
 const TRANSIENT_MODALS = new Set(['auth', 'preferences', 'cart', 'checkout'])
 
 function ModalRouteGuard() {
@@ -139,6 +149,7 @@ function App() {
             <AuthModal />
             <PreferencesModal />
             <PersonaTransitionOverlay />
+            <CartPanelSlot />
             <BrowserRouter
               future={{
                 v7_startTransition: true,

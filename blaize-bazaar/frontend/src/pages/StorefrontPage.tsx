@@ -9,8 +9,8 @@
  *   ProductGrid (key={prefsVersion}) -> RefinementPanel ->
  *   StoryboardTeaser -> Footer -> CommandPill
  *
- * Modals (AuthModal, PreferencesModal, ConciergeModal, CartModal,
- * CheckoutModal) mount at the App root, not inside StorefrontPage,
+ * Modals (AuthModal, PreferencesModal, ConciergeModal) and the
+ * CartPanel drawer mount at the App root, not inside StorefrontPage,
  * so they survive route changes.
  *
  * The `key={prefsVersion}` on ProductGrid (Req 1.6.6) is this page's
@@ -36,6 +36,7 @@ import Footer from '../components/Footer'
 import CommandPill from '../components/CommandPill'
 import StorefrontSpotlight from '../components/StorefrontSpotlight'
 import { useAuth } from '../contexts/AuthContext'
+import { useCart } from '../contexts/CartContext'
 import { usePersona } from '../contexts/PersonaContext'
 import { useUI } from '../contexts/UIContext'
 import { SHOWCASE_PRODUCTS } from '../data/showcaseProducts'
@@ -80,6 +81,7 @@ export default function StorefrontPage() {
   const { prefsVersion } = useAuth()
   const { openModal, setChatSurface } = useUI()
   const { persona } = usePersona()
+  const { addToCart } = useCart()
   const navigate = useNavigate()
 
   // Refinement chip state + the filtered grid derived from it.
@@ -176,6 +178,15 @@ export default function StorefrontPage() {
         <ProductGrid
           key={`${prefsVersion}-${activeFilters.length}`}
           products={filteredProducts}
+          onAddToBag={(product) =>
+            addToCart({
+              productId: product.id,
+              name: product.name,
+              price: product.price,
+              image: product.imageUrl,
+              origin: 'manual',
+            })
+          }
         />
         <RefinementPanel
           activeFilters={activeFilters}
