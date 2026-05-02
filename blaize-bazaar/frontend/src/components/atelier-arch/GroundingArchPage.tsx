@@ -25,6 +25,7 @@
  * mistake demo data for measurement. The shape is chosen so a real
  * gate could populate the same payload later.
  */
+import { useEffect, useState } from 'react'
 import {
   DetailPageShell,
   SectionFrame,
@@ -32,6 +33,66 @@ import {
   LiveStrip,
 } from '../atelier'
 import '../../styles/atelier-arch.css'
+
+// ---------------------------------------------------------------------------
+// Live wiring — policy decisions from the Strands BeforeToolCallEvent
+// hook (services/policy_hook.py). Each DENY/ALLOW the backend records
+// surfaces as an "Approvals" row with a verdict that matches the lane's
+// status vocabulary.
+// ---------------------------------------------------------------------------
+
+interface PolicyDecision {
+  timestamp_ms: number
+  tool_name: string
+  action: string
+  decision: 'ALLOW' | 'DENY'
+  violations: Array<{ policy_id?: string; policy_name?: string; reason?: string }>
+  matching_policies: string[]
+  parameters: Record<string, unknown>
+  tool_use_id?: string | null
+}
+
+function useLivePolicyDecisions(): PolicyDecision[] {
+  const [rows, setRows] = useState<PolicyDecision[]>([])
+  useEffect(() => {
+    let alive = true
+    const sessionId = (() => {
+      try {
+        return localStorage.getItem('blaize-session-id') ?? ''
+      } catch {
+        return ''
+      }
+    })()
+
+    const pull = () => {
+      const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}&limit=10` : '?limit=10'
+      fetch(`/api/agentcore/policy/decisions${qs}`)
+        .then(r => r.json())
+        .then(d => {
+          if (!alive) return
+          if (Array.isArray(d?.decisions)) {
+            setRows(d.decisions as PolicyDecision[])
+          }
+        })
+        .catch(() => {
+          // Quiet failure — the stub audit rows still render below.
+        })
+    }
+
+    pull()
+    const interval = setInterval(pull, 3000)
+    return () => {
+      alive = false
+      clearInterval(interval)
+    }
+  }, [])
+  return rows
+}
+
+function formatStamp(ms: number): string {
+  const d = new Date(ms)
+  return d.toLocaleTimeString('en-US', { hour12: false })
+}
 
 // ---------------------------------------------------------------------------
 // Stub data — shape chosen so a future /api/atelier/grounding endpoint
@@ -227,9 +288,18 @@ const AUDIT_ROWS: AuditRow[] = [
 // ---------------------------------------------------------------------------
 
 export default function GroundingArchPage() {
+  const liveDecisions = useLivePolicyDecisions()
+
+  // Live numbers: count DENY decisions as blocks, ALLOW as passes for
+  // the Approvals lane's header meta. Keeping the other lanes' stub
+  // numbers intact — guardrails and grounding wire in on separate
+  // commits (11 and a future grounding instrumentation).
+  const livePassCount = liveDecisions.filter((d) => d.decision === 'ALLOW').length
+  const liveDenyCount = liveDecisions.filter((d) => d.decision === 'DENY').length
+
   const passCount = LANES.filter((l) => l.status === 'pass').length
   const queuedCount = LANES.filter((l) => l.status === 'queued').length
-  const blockedCount = LANES.filter((l) => l.status === 'block').length
+  const blockedCount = LANES.filter((l) => l.status === 'block').length + liveDenyCount
 
   return (
     <DetailPageShell
@@ -511,6 +581,13 @@ export default function GroundingArchPage() {
       />
 
       {/* ---- Live audit strip ---- */}
+      {/* Live: the Approvals lane now surfaces Cedar policy decisions
+          captured by the Strands BeforeToolCallEvent hook. Every tool
+          the backend decides to allow or deny for this session appears
+          here within ~3s. The stub grid below keeps the illustrative
+          guardrails / grounding rows while those lanes are still
+          unwired — they'll swap for live counterparts in Commits 11
+          and a future grounding instrumentation pass. */}
       <LiveStrip
         eyebrow="Live · audit log"
         title={
@@ -518,8 +595,18 @@ export default function GroundingArchPage() {
             The boundary, <em>turn by turn.</em>
           </>
         }
-        meta={<>last 12 turns · 36 lane checks · 2 blocks · 1 pending</>}
-        stubCaption="Demo data. The gate isn't wired to backend events yet — rows are illustrative."
+        meta={
+          <>
+            {liveDecisions.length > 0
+              ? `${liveDecisions.length} live policy ${liveDecisions.length === 1 ? 'decision' : 'decisions'} · ${livePassCount} allow · ${liveDenyCount} deny`
+              : 'awaiting first tool call this session'}
+          </>
+        }
+        stubCaption={
+          liveDecisions.length > 0
+            ? 'Approvals rows are live policy decisions from the Strands hook. Guardrails + Grounding rows are still stubbed.'
+            : 'No live tool calls yet this session. Guardrails + Grounding rows are illustrative.'
+        }
       >
         <div className="gt-audit-rows">
           <div className="gt-audit-row gt-audit-row-head">
@@ -529,6 +616,29 @@ export default function GroundingArchPage() {
             <span>Detail</span>
             <span className="gt-audit-ms-col">ms</span>
           </div>
+          {liveDecisions.map((dec, i) => {
+            const isDeny = dec.decision === 'DENY'
+            const reason = isDeny
+              ? (dec.violations?.[0]?.reason ?? 'policy denied')
+              : `${dec.matching_policies.length} policies evaluated`
+            return (
+              <div className="gt-audit-row" key={`live-${dec.tool_use_id ?? i}`} data-testid="grounding-live-policy-row">
+                <span className="gt-audit-stamp">{formatStamp(dec.timestamp_ms)}</span>
+                <span className={`gt-audit-lane gt-audit-lane-approvals`}>
+                  Approvals
+                </span>
+                <span
+                  className={`gt-audit-verdict gt-audit-verdict-${isDeny ? 'block' : 'pass'}`}
+                >
+                  {isDeny ? 'Block' : 'Pass'}
+                </span>
+                <span className="gt-audit-detail">
+                  {dec.tool_name} · <em>{reason}</em>
+                </span>
+                <span className="gt-audit-ms">live</span>
+              </div>
+            )
+          })}
           {AUDIT_ROWS.map((row, i) => (
             <div className="gt-audit-row" key={`audit-${i}`}>
               <span className="gt-audit-stamp">{row.stamp}</span>
