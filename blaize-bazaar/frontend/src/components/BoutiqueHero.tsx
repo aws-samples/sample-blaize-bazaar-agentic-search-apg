@@ -100,9 +100,9 @@ export default function BoutiqueHero() {
           {/* Typography column: centered within full width. The vase
               on the left and linen on the right frame it naturally. */}
           <div
-            className="md:col-start-3 md:col-span-8 py-12 md:py-0
+            className="md:col-start-2 md:col-span-10 py-12 md:py-0
                        flex flex-col items-center text-center"
-            style={{ maxWidth: '720px', justifySelf: 'center' }}
+            style={{ maxWidth: '960px', justifySelf: 'center' }}
           >
             {/* Eyebrow — "• SUMMER EDIT • NO. 06 •" with burgundy dots */}
             <div
@@ -131,7 +131,7 @@ export default function BoutiqueHero() {
               style={{
                 fontFamily: "'Fraunces', Georgia, serif",
                 fontStyle: 'italic',
-                fontSize: 'clamp(36px, 4.2vw, 58px)',
+                fontSize: 'clamp(44px, 5.2vw, 72px)',
                 lineHeight: 1.0,
                 letterSpacing: '-0.02em',
                 fontWeight: 500,
@@ -165,7 +165,7 @@ export default function BoutiqueHero() {
               onSubmit={handleSubmit}
               className="mt-8 md:mt-10 w-full"
               role="search"
-              style={{ maxWidth: '560px' }}
+              style={{ maxWidth: '640px' }}
             >
               <div className="relative">
                 {/* Sparkles icon — left */}
@@ -206,8 +206,8 @@ export default function BoutiqueHero() {
                     transition-all duration-fade ease-out
                   "
                   style={{
-                    height: '58px',
-                    fontSize: '16px',
+                    height: '66px',
+                    fontSize: '17px',
                     color: '#1f1410',
                     fontFamily: "'Inter', system-ui, sans-serif",
                     boxShadow:
@@ -228,14 +228,14 @@ export default function BoutiqueHero() {
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(31,20,16,0.3)]
                   "
                   style={{
-                    width: '44px',
-                    height: '44px',
+                    width: '50px',
+                    height: '50px',
                     background: '#1f1410',
                     color: '#faf3e8',
                     cursor: 'pointer',
                   }}
                 >
-                  <Mic size={18} strokeWidth={1.75} />
+                  <Mic size={20} strokeWidth={1.75} />
                 </button>
               </div>
             </form>
@@ -245,22 +245,23 @@ export default function BoutiqueHero() {
               data-testid="boutique-hero-try-asking"
               className="mt-6 md:mt-8"
               style={{
-                fontFamily: "'Fraunces', Georgia, serif",
-                fontStyle: 'italic',
-                fontSize: '15px',
-                color: 'rgba(31, 20, 16, 0.55)',
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: '14px',
+                fontWeight: 500,
+                color: '#1f1410',
               }}
             >
               Try asking
             </div>
 
-            {/* Suggestion chips — five in a row, no quotes, solid cream */}
+            {/* Suggestion chips — 5 in a row, text wraps to 2 lines
+                inside each chip. Matches the reference's compact grid. */}
             <div
               data-testid="boutique-hero-pills"
-              className="mt-4 flex flex-wrap justify-center gap-2.5"
+              className="mt-4 flex justify-center gap-2.5 flex-nowrap"
               role="listbox"
               aria-label="Suggested queries"
-              style={{ maxWidth: '820px' }}
+              style={{ maxWidth: '900px' }}
             >
               {SUGGESTIONS.map((query) => (
                 <button
@@ -276,13 +277,20 @@ export default function BoutiqueHero() {
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(31,20,16,0.15)]
                   "
                   style={{
-                    fontFamily: "'Fraunces', Georgia, serif",
-                    fontStyle: 'italic',
-                    fontSize: '13px',
-                    lineHeight: 1.4,
-                    color: 'rgba(31, 20, 16, 0.68)',
-                    padding: '12px 22px',
+                    fontFamily: "'Inter', system-ui, sans-serif",
+                    fontSize: '12.5px',
+                    fontWeight: 400,
+                    lineHeight: 1.35,
+                    color: '#1f1410',
+                    padding: '10px 16px',
                     background: '#faf3e8',
+                    width: '168px',
+                    minHeight: '54px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center',
+                    flex: '0 0 auto',
                   }}
                 >
                   {query}
