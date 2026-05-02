@@ -147,7 +147,7 @@ export default function BoutiqueHero() {
               onSubmit={handleSubmit}
               className="mt-8 md:mt-10 w-full"
               role="search"
-              style={{ maxWidth: '560px' }}
+              style={{ maxWidth: '620px' }}
             >
               <div className="relative">
                 {/* Sparkles icon — left */}
@@ -222,45 +222,37 @@ export default function BoutiqueHero() {
               </div>
             </form>
 
-            {/* "Try asking" label — burgundy dot prefix, mono small caps */}
+            {/* "Try asking" label */}
             <div
               data-testid="boutique-hero-try-asking"
-              className="mt-5 md:mt-6 flex items-center gap-1.5"
+              className="mt-6 md:mt-8"
               style={{
-                fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                fontSize: '10.5px',
-                letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                color: 'rgba(31, 20, 16, 0.42)',
+                fontFamily: "'Fraunces', Georgia, serif",
+                fontStyle: 'italic',
+                fontSize: '15px',
+                color: 'rgba(31, 20, 16, 0.55)',
               }}
             >
-              <span
-                aria-hidden="true"
-                style={{ color: '#a8423a', fontSize: '14px', lineHeight: 1 }}
-              >
-                &middot;
-              </span>
-              <span>Try asking</span>
+              Try asking
             </div>
 
-            {/* Suggestion chips — centered, wrapping naturally */}
+            {/* Suggestion chips — five in a row, no quotes, solid cream */}
             <div
               data-testid="boutique-hero-pills"
-              className="mt-3 flex flex-wrap justify-center gap-x-2 gap-y-2"
+              className="mt-4 flex flex-wrap justify-center gap-2.5"
               role="listbox"
               aria-label="Suggested queries"
-              style={{ maxWidth: '600px' }}
+              style={{ maxWidth: '780px' }}
             >
-              {SUGGESTIONS.map((query) => (
+              {SUGGESTIONS.slice(0, 5).map((query) => (
                 <button
                   key={query}
                   type="button"
                   onClick={() => handlePillClick(query)}
                   className="
                     rounded-[10px]
-                    border-[1.5px] border-[rgba(31,20,16,0.22)]
-                    text-[12.5px]
-                    hover:border-[rgba(31,20,16,0.35)]
+                    border border-[rgba(31,20,16,0.18)]
+                    hover:border-[rgba(31,20,16,0.32)] hover:bg-[#f5eddf]
                     transition-all duration-fade ease-out
                     cursor-pointer
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(31,20,16,0.15)]
@@ -268,12 +260,14 @@ export default function BoutiqueHero() {
                   style={{
                     fontFamily: "'Fraunces', Georgia, serif",
                     fontStyle: 'italic',
-                    color: 'rgba(31, 20, 16, 0.72)',
-                    padding: '10px 20px',
+                    fontSize: '13px',
+                    lineHeight: 1.4,
+                    color: 'rgba(31, 20, 16, 0.68)',
+                    padding: '12px 22px',
                     background: '#faf3e8',
                   }}
                 >
-                  &ldquo;{query}&rdquo;
+                  {query}
                 </button>
               ))}
             </div>
