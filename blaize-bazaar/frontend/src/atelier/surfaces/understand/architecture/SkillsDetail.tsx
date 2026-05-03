@@ -114,18 +114,18 @@ const SkillCard: React.FC<{
         <span style={{ fontFamily: 'var(--at-mono)', fontSize: '9px', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--at-ink-4)' }}>
           Triggers on
         </span>
-        <p style={{ fontFamily: 'var(--at-sans)', fontSize: '13px', lineHeight: 1.5, color: 'var(--at-ink-1)', margin: '4px 0 0 0' }}>
+        <p style={{ fontFamily: 'var(--at-sans)', fontSize: '15px', lineHeight: 1.5, color: 'var(--at-ink-1)', margin: '4px 0 0 0' }}>
           {trigger}
         </p>
       </div>
-      <p style={{ fontFamily: 'var(--at-sans)', fontSize: '13px', lineHeight: 1.5, color: 'var(--at-ink-1)', margin: 0 }}>
+      <p style={{ fontFamily: 'var(--at-sans)', fontSize: '15px', lineHeight: 1.5, color: 'var(--at-ink-1)', margin: 0 }}>
         {description}
       </p>
       <div
         style={{
           fontFamily: 'var(--at-serif)',
           fontStyle: 'italic',
-          fontSize: '13px',
+          fontSize: '15px',
           color: 'var(--at-ink-1)',
           padding: '10px 14px',
           backgroundColor: 'var(--at-cream-2)',
@@ -158,7 +158,7 @@ const proseStyle: React.CSSProperties = {
 };
 
 const codeStyle: React.CSSProperties = {
-  fontFamily: 'var(--at-mono)', fontSize: '13px', lineHeight: 1.7,
+  fontFamily: 'var(--at-mono)', fontSize: '15px', lineHeight: 1.7,
   color: 'var(--at-ink-1)', backgroundColor: 'var(--at-cream-2)', borderRadius: '8px',
   padding: '14px 16px', margin: 0, overflowX: 'auto', whiteSpace: 'pre',
 };

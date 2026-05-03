@@ -238,7 +238,7 @@ const DetailPageShell: React.FC<DetailPageShellProps> = ({
           display: 'inline-flex',
           alignItems: 'center',
           gap: '8px',
-          fontSize: '13px',
+          fontSize: '15px',
           fontWeight: 500,
           color: 'var(--at-ink-1)',
           background: 'none',

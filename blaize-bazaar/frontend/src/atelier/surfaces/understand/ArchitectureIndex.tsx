@@ -118,12 +118,12 @@ const ConceptCard: React.FC<ConceptCardProps> = ({ concept, onOpen }) => (
       <pre
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: 'var(--at-mono-size)',
-          lineHeight: 'var(--at-mono-leading)',
-          color: 'var(--at-ink-2)',
+          fontSize: '15px',
+          lineHeight: 1.7,
+          color: 'var(--at-ink-1)',
           backgroundColor: 'var(--at-cream-2)',
           borderRadius: '8px',
-          padding: '14px 16px',
+          padding: '16px 20px',
           margin: 0,
           overflowX: 'auto',
           whiteSpace: 'pre',
@@ -178,8 +178,8 @@ const LegendCard: React.FC = () => (
       </h3>
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
+          display: 'flex',
+          flexDirection: 'column',
           gap: '16px',
         }}
       >
@@ -360,7 +360,7 @@ const ArchitectureIndex: React.FC = () => {
   const concepts = data ?? [];
 
   return (
-    <div style={{ padding: '40px 48px', maxWidth: '1100px' }}>
+    <div style={{ padding: '40px 48px', maxWidth: '1400px' }}>
       <EditorialTitle
         eyebrow="Understand · Architecture"
         title="Architecture"
@@ -374,8 +374,15 @@ const ArchitectureIndex: React.FC = () => {
       {!loading && !error && concepts.length === 0 && <EmptyState />}
 
       {!loading && !error && concepts.length > 0 && (
-        <>
-          {/* 2-column grid of concept cards */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 280px',
+            gap: '32px',
+            alignItems: 'start',
+          }}
+        >
+          {/* Left: 2-column grid of concept cards */}
           <div
             style={{
               display: 'grid',
@@ -392,11 +399,16 @@ const ArchitectureIndex: React.FC = () => {
             ))}
           </div>
 
-          {/* Legend card below the grid */}
-          <div style={{ marginTop: '32px' }}>
+          {/* Right: sticky legend rail */}
+          <div
+            style={{
+              position: 'sticky',
+              top: '100px',
+            }}
+          >
             <LegendCard />
           </div>
-        </>
+        </div>
       )}
     </div>
   );
