@@ -61,7 +61,7 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
     <svg
       viewBox="0 0 600 600"
       width="100%"
-      style={{ maxWidth: '560px', display: 'block', margin: '0 auto' }}
+      style={{ maxWidth: '800px', display: 'block', margin: '0 auto' }}
       role="img"
       aria-label={`Memory orbit for ${persona}: ${stmItems.length} STM items, ${ltmItems.length} LTM items`}
     >
@@ -101,13 +101,13 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
         return (
           <g key={`ltm-${item.id}`}>
             <circle
-              cx={pos.x} cy={pos.y} r={6}
+              cx={pos.x} cy={pos.y} r={8}
               fill="var(--at-cream-2)" stroke="var(--at-ink-3)" strokeWidth="1.5"
             />
             <text
               x={pos.x} y={pos.y + 18} textAnchor="middle"
               style={{
-                fontFamily: 'var(--at-mono)', fontSize: '8px',
+                fontFamily: 'var(--at-mono)', fontSize: '10px',
                 fill: 'var(--at-ink-3)', letterSpacing: '0.04em',
               }}
             >
@@ -122,11 +122,11 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
         const item = stmItems[i];
         return (
           <g key={`stm-${item.id}`}>
-            <circle cx={pos.x} cy={pos.y} r={5} fill="var(--at-red-1)" opacity={0.85} />
+            <circle cx={pos.x} cy={pos.y} r={7} fill="var(--at-red-1)" opacity={0.85} />
             <text
               x={pos.x} y={pos.y + 16} textAnchor="middle"
               style={{
-                fontFamily: 'var(--at-mono)', fontSize: '8px',
+                fontFamily: 'var(--at-mono)', fontSize: '10px',
                 fill: 'var(--at-ink-2)', letterSpacing: '0.04em',
               }}
             >
@@ -162,7 +162,7 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
       <text
         x={cx} y={cy - stmRadius - 10} textAnchor="middle"
         style={{
-          fontFamily: 'var(--at-mono)', fontSize: '8px',
+          fontFamily: 'var(--at-mono)', fontSize: '10px',
           fill: 'var(--at-red-1)', letterSpacing: '0.22em',
           textTransform: 'uppercase',
         }}
@@ -172,7 +172,7 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
       <text
         x={cx} y={cy - ltmRadius - 10} textAnchor="middle"
         style={{
-          fontFamily: 'var(--at-mono)', fontSize: '8px',
+          fontFamily: 'var(--at-mono)', fontSize: '10px',
           fill: 'var(--at-ink-4)', letterSpacing: '0.22em',
           textTransform: 'uppercase',
         }}
@@ -258,7 +258,7 @@ const TierCard: React.FC<TierCardProps> = ({
           fontFamily: 'var(--at-sans)',
           fontSize: 'var(--at-body-size)',
           lineHeight: 'var(--at-body-leading)',
-          color: 'var(--at-ink-3)',
+          color: 'var(--at-ink-1)',
           margin: 0,
         }}
       >

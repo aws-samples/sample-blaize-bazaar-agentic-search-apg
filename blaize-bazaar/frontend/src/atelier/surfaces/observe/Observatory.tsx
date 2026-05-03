@@ -48,11 +48,10 @@ const MetricNumeral: React.FC<MetricNumeralProps> = ({ value, label, unit }) => 
       {unit && (
         <span
           style={{
-            fontFamily: 'var(--at-mono)',
-            fontSize: '12px',
-            letterSpacing: '0.1em',
-            color: 'var(--at-ink-4)',
-            textTransform: 'uppercase',
+            fontFamily: 'var(--at-sans)',
+            fontSize: '14px',
+            letterSpacing: '0.04em',
+            color: 'var(--at-ink-2)',
           }}
         >
           {unit}
@@ -61,11 +60,10 @@ const MetricNumeral: React.FC<MetricNumeralProps> = ({ value, label, unit }) => 
     </div>
     <span
       style={{
-        fontFamily: 'var(--at-mono)',
-        fontSize: '10px',
-        letterSpacing: '0.22em',
-        textTransform: 'uppercase',
-        color: 'var(--at-ink-4)',
+        fontFamily: 'var(--at-sans)',
+        fontSize: '12px',
+        letterSpacing: '0.06em',
+        color: 'var(--at-ink-2)',
         marginTop: '8px',
         display: 'block',
       }}

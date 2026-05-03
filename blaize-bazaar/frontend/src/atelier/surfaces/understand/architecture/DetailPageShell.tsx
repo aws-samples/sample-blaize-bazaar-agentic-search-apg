@@ -151,11 +151,10 @@ const LiveStateCallout: React.FC<LiveStateCalloutProps> = ({ label, values }) =>
         {/* Context description */}
         <p
           style={{
-            fontFamily: 'var(--at-serif)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--at-sans)',
             fontSize: '15px',
             lineHeight: 1.5,
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
             margin: 0,
             maxWidth: '560px',
           }}
@@ -301,7 +300,7 @@ const DetailPageShell: React.FC<DetailPageShellProps> = ({
           fontFamily: 'var(--at-sans)',
           fontSize: 'var(--at-body-size)',
           lineHeight: 'var(--at-body-leading)',
-          color: 'var(--at-ink-3)',
+          color: 'var(--at-ink-1)',
           maxWidth: '680px',
           margin: '0 0 40px 0',
         }}
