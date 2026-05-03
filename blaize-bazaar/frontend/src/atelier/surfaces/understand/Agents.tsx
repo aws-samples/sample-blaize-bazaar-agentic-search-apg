@@ -127,7 +127,7 @@ const AgentRow: React.FC<AgentRowProps> = ({ agent }) => {
               style={{
                 fontFamily: 'var(--at-serif)',
                 fontStyle: 'italic',
-                fontSize: '14px',
+                fontSize: '16px',
                 color: 'var(--at-ink-1)',
                 lineHeight: 1.4,
                 margin: 0,
@@ -171,10 +171,10 @@ const AgentRow: React.FC<AgentRowProps> = ({ agent }) => {
           <span
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '9px',
+              fontSize: '11px',
               letterSpacing: '0.22em',
               textTransform: 'uppercase' as const,
-              color: isExercise ? 'var(--at-red-1)' : 'var(--at-ink-4)',
+              color: isExercise ? 'var(--at-red-1)' : 'var(--at-ink-2)',
               marginRight: '6px',
               fontWeight: 500,
             }}
@@ -186,7 +186,7 @@ const AgentRow: React.FC<AgentRowProps> = ({ agent }) => {
               key={tool}
               style={{
                 fontFamily: 'var(--at-mono)',
-                fontSize: '11px',
+                fontSize: '13px',
                 padding: '3px 9px',
                 background: isExercise ? 'transparent' : 'var(--at-cream-2)',
                 border: isExercise
@@ -207,9 +207,9 @@ const AgentRow: React.FC<AgentRowProps> = ({ agent }) => {
           <span
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '10px',
+              fontSize: '12px',
               letterSpacing: '0.1em',
-              color: 'var(--at-ink-4)',
+              color: 'var(--at-ink-2)',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
@@ -228,7 +228,7 @@ const AgentRow: React.FC<AgentRowProps> = ({ agent }) => {
               gap: '8px',
               fontFamily: 'var(--at-serif)',
               fontStyle: 'italic',
-              fontSize: '14px',
+              fontSize: '16px',
               fontWeight: 400,
               color: 'var(--at-red-1)',
               cursor: 'pointer',
@@ -238,7 +238,7 @@ const AgentRow: React.FC<AgentRowProps> = ({ agent }) => {
             }}
           >
             Open {agent.name}
-            <span aria-hidden="true" style={{ fontStyle: 'italic', fontSize: '15px' }}>→</span>
+            <span aria-hidden="true" style={{ fontStyle: 'italic', fontSize: '16px' }}>→</span>
           </span>
         </div>
       </div>
@@ -251,7 +251,7 @@ const AgentRow: React.FC<AgentRowProps> = ({ agent }) => {
             paddingTop: '12px',
             borderTop: '1px dashed var(--at-rule-1)',
             fontFamily: 'var(--at-mono)',
-            fontSize: '10.5px',
+            fontSize: '12px',
             lineHeight: 1.7,
             color: 'var(--at-ink-1)',
           }}
@@ -261,7 +261,7 @@ const AgentRow: React.FC<AgentRowProps> = ({ agent }) => {
               color: 'var(--at-red-1)',
               letterSpacing: '0.22em',
               textTransform: 'uppercase' as const,
-              fontSize: '9px',
+              fontSize: '11px',
               marginRight: '8px',
               fontWeight: 500,
             }}
@@ -300,10 +300,10 @@ const RelatedCard: React.FC = () => (
       <div
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '9.5px',
+          fontSize: '11px',
           letterSpacing: '0.22em',
           textTransform: 'uppercase' as const,
-          color: 'var(--at-ink-4)',
+          color: 'var(--at-ink-2)',
           fontWeight: 500,
           paddingTop: '4px',
           lineHeight: 1.6,
@@ -329,7 +329,7 @@ const RelatedCard: React.FC = () => (
             fontFamily: 'var(--at-serif)',
             fontWeight: 400,
             fontStyle: 'italic',
-            fontSize: '18px',
+            fontSize: '20px',
             color: 'var(--at-ink-1)',
             letterSpacing: '-0.01em',
           }}
@@ -341,7 +341,7 @@ const RelatedCard: React.FC = () => (
           style={{
             fontFamily: 'var(--at-serif)',
             fontStyle: 'italic',
-            fontSize: '13px',
+            fontSize: '15px',
             color: 'var(--at-ink-1)',
             lineHeight: 1.5,
             margin: 0,
@@ -358,7 +358,7 @@ const RelatedCard: React.FC = () => (
           to="/atelier/architecture/skills"
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '10px',
+            fontSize: '12px',
             letterSpacing: '0.18em',
             textTransform: 'uppercase' as const,
             color: 'var(--at-red-1)',
@@ -395,7 +395,7 @@ const RelatedCard: React.FC = () => (
             fontFamily: 'var(--at-serif)',
             fontWeight: 400,
             fontStyle: 'italic',
-            fontSize: '18px',
+            fontSize: '20px',
             color: 'var(--at-ink-1)',
             letterSpacing: '-0.01em',
           }}
@@ -407,7 +407,7 @@ const RelatedCard: React.FC = () => (
           style={{
             fontFamily: 'var(--at-serif)',
             fontStyle: 'italic',
-            fontSize: '13px',
+            fontSize: '15px',
             color: 'var(--at-ink-1)',
             lineHeight: 1.5,
             margin: 0,
@@ -425,7 +425,7 @@ const RelatedCard: React.FC = () => (
           to="/atelier/routing"
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '10px',
+            fontSize: '12px',
             letterSpacing: '0.18em',
             textTransform: 'uppercase' as const,
             color: 'var(--at-red-1)',
@@ -496,7 +496,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '20px',
+        fontSize: '22px',
         lineHeight: 1.35,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -508,8 +508,8 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
     <p
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: 'var(--at-mono-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '16px',
+        color: 'var(--at-ink-2)',
         maxWidth: '480px',
         marginTop: '8px',
       }}
@@ -521,7 +521,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         marginTop: '24px',
         fontFamily: 'var(--at-sans)',
-        fontSize: '14px',
+        fontSize: '16px',
         fontWeight: 500,
         color: 'var(--at-cream-1)',
         backgroundColor: 'var(--at-ink-1)',
@@ -556,7 +556,7 @@ const EmptyState: React.FC = () => (
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '22px',
+        fontSize: '24px',
         lineHeight: 1.35,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -568,8 +568,8 @@ const EmptyState: React.FC = () => (
     <p
       style={{
         fontFamily: 'var(--at-sans)',
-        fontSize: 'var(--at-body-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '17px',
+        color: 'var(--at-ink-2)',
         maxWidth: '380px',
         marginTop: '8px',
       }}

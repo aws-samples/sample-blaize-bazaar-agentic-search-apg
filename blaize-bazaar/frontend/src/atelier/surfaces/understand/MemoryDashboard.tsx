@@ -65,7 +65,7 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
     <svg
       viewBox={viewBox}
       width="100%"
-      style={{ maxWidth: '600px', display: 'block', margin: '0 auto' }}
+      style={{ maxWidth: '800px', display: 'block', margin: '0 auto' }}
       role="img"
       aria-label={`Memory orbit for ${persona}: ${stmItems.length} short-term items, ${ltmItems.length} long-term items`}
     >
@@ -138,7 +138,7 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
               textAnchor="middle"
               style={{
                 fontFamily: 'var(--at-mono)',
-                fontSize: '8px',
+                fontSize: '12px',
                 fill: 'var(--at-ink-1)',
                 letterSpacing: '0.04em',
               }}
@@ -167,7 +167,7 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
               textAnchor="middle"
               style={{
                 fontFamily: 'var(--at-mono)',
-                fontSize: '8px',
+                fontSize: '12px',
                 fill: 'var(--at-ink-2)',
                 letterSpacing: '0.04em',
               }}
@@ -193,7 +193,7 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
         style={{
           fontFamily: 'var(--at-serif)',
           fontStyle: 'italic',
-          fontSize: '18px',
+          fontSize: '20px',
           fill: 'var(--at-cream-1)',
           letterSpacing: '-0.02em',
         }}
@@ -206,8 +206,8 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
         textAnchor="middle"
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '9px',
-          fill: 'var(--at-ink-4)',
+          fontSize: '12px',
+          fill: 'var(--at-ink-2)',
           letterSpacing: '0.22em',
           textTransform: 'uppercase',
         }}
@@ -222,7 +222,7 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
         textAnchor="middle"
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '8px',
+          fontSize: '13px',
           fill: 'var(--at-red-1)',
           letterSpacing: '0.22em',
           textTransform: 'uppercase',
@@ -236,8 +236,8 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
         textAnchor="middle"
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '8px',
-          fill: 'var(--at-ink-4)',
+          fontSize: '13px',
+          fill: 'var(--at-ink-2)',
           letterSpacing: '0.22em',
           textTransform: 'uppercase',
         }}
@@ -274,7 +274,7 @@ const StmCard: React.FC<StmCardProps> = ({ turnCount, recentIntents, items }) =>
       <span
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '9px',
+          fontSize: '11px',
           letterSpacing: '0.22em',
           textTransform: 'uppercase' as const,
           color: 'var(--at-red-1)',
@@ -289,7 +289,7 @@ const StmCard: React.FC<StmCardProps> = ({ turnCount, recentIntents, items }) =>
       style={{
         fontFamily: 'var(--at-serif)',
         fontWeight: 400,
-        fontSize: '22px',
+        fontSize: '24px',
         letterSpacing: '-0.012em',
         lineHeight: 1.15,
         color: 'var(--at-ink-1)',
@@ -302,7 +302,7 @@ const StmCard: React.FC<StmCardProps> = ({ turnCount, recentIntents, items }) =>
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '14px',
+        fontSize: '16px',
         color: 'var(--at-ink-1)',
         lineHeight: 1.5,
         margin: '0 0 20px 0',
@@ -337,10 +337,10 @@ const StmCard: React.FC<StmCardProps> = ({ turnCount, recentIntents, items }) =>
       <span
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '10px',
+          fontSize: '12px',
           letterSpacing: '0.18em',
           textTransform: 'uppercase' as const,
-          color: 'var(--at-ink-4)',
+          color: 'var(--at-ink-2)',
         }}
       >
         turns this session
@@ -352,10 +352,10 @@ const StmCard: React.FC<StmCardProps> = ({ turnCount, recentIntents, items }) =>
       <span
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '9px',
+          fontSize: '11px',
           letterSpacing: '0.22em',
           textTransform: 'uppercase' as const,
-          color: 'var(--at-ink-4)',
+          color: 'var(--at-ink-2)',
           fontWeight: 500,
           display: 'block',
           marginBottom: '8px',
@@ -370,7 +370,7 @@ const StmCard: React.FC<StmCardProps> = ({ turnCount, recentIntents, items }) =>
             style={{
               fontFamily: 'var(--at-serif)',
               fontStyle: 'italic',
-              fontSize: '13.5px',
+              fontSize: '16px',
               lineHeight: 1.45,
               color: 'var(--at-ink-2)',
               paddingLeft: '14px',
@@ -389,10 +389,10 @@ const StmCard: React.FC<StmCardProps> = ({ turnCount, recentIntents, items }) =>
         <span
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '9px',
+            fontSize: '11px',
             letterSpacing: '0.22em',
             textTransform: 'uppercase' as const,
-            color: 'var(--at-ink-4)',
+            color: 'var(--at-ink-2)',
             fontWeight: 500,
             display: 'block',
             marginBottom: '8px',
@@ -406,7 +406,7 @@ const StmCard: React.FC<StmCardProps> = ({ turnCount, recentIntents, items }) =>
               key={item.id}
               style={{
                 fontFamily: 'var(--at-mono)',
-                fontSize: '11px',
+                fontSize: '13px',
                 padding: '4px 10px',
                 background: 'var(--at-cream-2)',
                 border: '1px dashed var(--at-red-1)',
@@ -461,10 +461,10 @@ const LtmCard: React.FC<LtmCardProps> = ({
       <span
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '9px',
+          fontSize: '11px',
           letterSpacing: '0.22em',
           textTransform: 'uppercase' as const,
-          color: 'var(--at-ink-4)',
+          color: 'var(--at-ink-2)',
           fontWeight: 500,
         }}
       >
@@ -476,7 +476,7 @@ const LtmCard: React.FC<LtmCardProps> = ({
       style={{
         fontFamily: 'var(--at-serif)',
         fontWeight: 400,
-        fontSize: '22px',
+        fontSize: '24px',
         letterSpacing: '-0.012em',
         lineHeight: 1.15,
         color: 'var(--at-ink-1)',
@@ -489,7 +489,7 @@ const LtmCard: React.FC<LtmCardProps> = ({
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '14px',
+        fontSize: '16px',
         color: 'var(--at-ink-1)',
         lineHeight: 1.5,
         margin: '0 0 20px 0',
@@ -504,10 +504,10 @@ const LtmCard: React.FC<LtmCardProps> = ({
       <span
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '9px',
+          fontSize: '11px',
           letterSpacing: '0.22em',
           textTransform: 'uppercase' as const,
-          color: 'var(--at-ink-4)',
+          color: 'var(--at-ink-2)',
           fontWeight: 500,
           display: 'block',
           marginBottom: '8px',
@@ -521,7 +521,7 @@ const LtmCard: React.FC<LtmCardProps> = ({
             key={pref}
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '11px',
+              fontSize: '13px',
               padding: '3px 10px',
               background: 'var(--at-cream-2)',
               border: '1px solid var(--at-card-border)',
@@ -541,10 +541,10 @@ const LtmCard: React.FC<LtmCardProps> = ({
       <span
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '9px',
+          fontSize: '11px',
           letterSpacing: '0.22em',
           textTransform: 'uppercase' as const,
-          color: 'var(--at-ink-4)',
+          color: 'var(--at-ink-2)',
           fontWeight: 500,
           display: 'block',
           marginBottom: '8px',
@@ -558,7 +558,7 @@ const LtmCard: React.FC<LtmCardProps> = ({
             key={idx}
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '11.5px',
+              fontSize: '13px',
               lineHeight: 1.5,
               color: 'var(--at-ink-2)',
               paddingLeft: '14px',
@@ -582,10 +582,10 @@ const LtmCard: React.FC<LtmCardProps> = ({
       <span
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '9px',
+          fontSize: '11px',
           letterSpacing: '0.22em',
           textTransform: 'uppercase' as const,
-          color: 'var(--at-ink-4)',
+          color: 'var(--at-ink-2)',
           fontWeight: 500,
           display: 'block',
           marginBottom: '8px',
@@ -600,7 +600,7 @@ const LtmCard: React.FC<LtmCardProps> = ({
             style={{
               fontFamily: 'var(--at-serif)',
               fontStyle: 'italic',
-              fontSize: '13px',
+              fontSize: '15px',
               lineHeight: 1.5,
               color: 'var(--at-ink-1)',
             }}
@@ -617,10 +617,10 @@ const LtmCard: React.FC<LtmCardProps> = ({
         <span
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '9px',
+            fontSize: '11px',
             letterSpacing: '0.22em',
             textTransform: 'uppercase' as const,
-            color: 'var(--at-ink-4)',
+            color: 'var(--at-ink-2)',
             fontWeight: 500,
             display: 'block',
             marginBottom: '8px',
@@ -641,7 +641,7 @@ const LtmCard: React.FC<LtmCardProps> = ({
               <span
                 style={{
                   fontFamily: 'var(--at-mono)',
-                  fontSize: '11px',
+                  fontSize: '13px',
                   padding: '4px 10px',
                   background: 'var(--at-cream-2)',
                   border: '1px solid var(--at-card-border)',
@@ -660,7 +660,7 @@ const LtmCard: React.FC<LtmCardProps> = ({
                 <span
                   style={{
                     fontFamily: 'var(--at-mono)',
-                    fontSize: '10px',
+                    fontSize: '12px',
                     color: 'var(--at-green-1)',
                     fontWeight: 500,
                     flexShrink: 0,
@@ -735,7 +735,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '20px',
+        fontSize: '22px',
         lineHeight: 1.35,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -747,8 +747,8 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
     <p
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: 'var(--at-mono-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '16px',
+        color: 'var(--at-ink-2)',
         maxWidth: '480px',
         marginTop: '8px',
       }}
@@ -760,7 +760,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         marginTop: '24px',
         fontFamily: 'var(--at-sans)',
-        fontSize: '14px',
+        fontSize: '16px',
         fontWeight: 500,
         color: 'var(--at-cream-1)',
         backgroundColor: 'var(--at-ink-1)',
@@ -795,7 +795,7 @@ const EmptyState: React.FC = () => (
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '22px',
+        fontSize: '24px',
         lineHeight: 1.35,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -807,8 +807,8 @@ const EmptyState: React.FC = () => (
     <p
       style={{
         fontFamily: 'var(--at-sans)',
-        fontSize: 'var(--at-body-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '17px',
+        color: 'var(--at-ink-2)',
         maxWidth: '380px',
         marginTop: '8px',
       }}
@@ -868,7 +868,7 @@ const MemoryDashboard: React.FC = () => {
                 style={{
                   fontFamily: 'var(--at-serif)',
                   fontStyle: 'italic',
-                  fontSize: '14px',
+                  fontSize: '16px',
                   color: 'var(--at-ink-1)',
                   lineHeight: 1.5,
                   margin: '0 0 16px 0',

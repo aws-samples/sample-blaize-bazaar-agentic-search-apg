@@ -49,7 +49,7 @@ const MetricNumeral: React.FC<MetricNumeralProps> = ({ value, label, unit }) => 
         <span
           style={{
             fontFamily: 'var(--at-sans)',
-            fontSize: '14px',
+            fontSize: '17px',
             letterSpacing: '0.04em',
             color: 'var(--at-ink-2)',
           }}
@@ -61,7 +61,7 @@ const MetricNumeral: React.FC<MetricNumeralProps> = ({ value, label, unit }) => 
     <span
       style={{
         fontFamily: 'var(--at-sans)',
-        fontSize: '12px',
+        fontSize: '16px',
         letterSpacing: '0.06em',
         color: 'var(--at-ink-2)',
         marginTop: '8px',
@@ -130,8 +130,8 @@ const AgentStatusCard: React.FC<AgentStatusCardProps> = ({ agents }) => {
             <span
               style={{
                 fontFamily: 'var(--at-sans)',
-                fontSize: '13px',
-                color: agent.status === 'live' ? 'var(--at-ink-1)' : 'var(--at-ink-4)',
+                fontSize: '15px',
+                color: agent.status === 'live' ? 'var(--at-ink-1)' : 'var(--at-ink-2)',
               }}
             >
               {agent.name}
@@ -139,10 +139,10 @@ const AgentStatusCard: React.FC<AgentStatusCardProps> = ({ agents }) => {
             <span
               style={{
                 fontFamily: 'var(--at-mono)',
-                fontSize: '9px',
+                fontSize: '11px',
                 letterSpacing: '0.18em',
                 textTransform: 'uppercase',
-                color: agent.status === 'live' ? 'var(--at-green-1)' : 'var(--at-ink-5)',
+                color: agent.status === 'live' ? 'var(--at-green-1)' : 'var(--at-ink-3)',
                 marginLeft: 'auto',
               }}
             >
@@ -244,8 +244,8 @@ const FixtureDataNote: React.FC = () => (
     <span
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: '10.5px',
-        color: 'var(--at-ink-4)',
+        fontSize: '12px',
+        color: 'var(--at-ink-2)',
         letterSpacing: '0.04em',
       }}
     >
@@ -327,7 +327,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
     <p
       style={{
         fontFamily: 'var(--at-sans)',
-        fontSize: '16px',
+        fontSize: '17px',
         lineHeight: 1.6,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -339,8 +339,8 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
     <p
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: 'var(--at-mono-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '16px',
+        color: 'var(--at-ink-2)',
         maxWidth: '480px',
         marginTop: '8px',
       }}
@@ -352,7 +352,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         marginTop: '24px',
         fontFamily: 'var(--at-sans)',
-        fontSize: '14px',
+        fontSize: '16px',
         fontWeight: 500,
         color: 'var(--at-cream-1)',
         backgroundColor: 'var(--at-ink-1)',
@@ -386,7 +386,7 @@ const EmptyState: React.FC = () => (
     <p
       style={{
         fontFamily: 'var(--at-sans)',
-        fontSize: '16px',
+        fontSize: '17px',
         lineHeight: 1.6,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -398,8 +398,8 @@ const EmptyState: React.FC = () => (
     <p
       style={{
         fontFamily: 'var(--at-sans)',
-        fontSize: 'var(--at-body-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '17px',
+        color: 'var(--at-ink-2)',
         maxWidth: '380px',
         marginTop: '8px',
       }}
@@ -449,10 +449,10 @@ const Observatory: React.FC = () => {
           <span
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '10px',
+              fontSize: '12px',
               letterSpacing: '0.18em',
               textTransform: 'uppercase',
-              color: 'var(--at-ink-4)',
+              color: 'var(--at-ink-2)',
             }}
           >
             Live
@@ -496,8 +496,8 @@ const Observatory: React.FC = () => {
           <div
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '10px',
-              color: 'var(--at-ink-5)',
+              fontSize: '12px',
+              color: 'var(--at-ink-3)',
               letterSpacing: '0.06em',
               textAlign: 'right',
             }}

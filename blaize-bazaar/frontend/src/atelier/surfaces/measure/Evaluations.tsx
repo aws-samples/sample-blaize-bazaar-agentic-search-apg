@@ -52,10 +52,10 @@ const MetricPill: React.FC<MetricPillProps> = ({ label, value, highlight }) => (
     <span
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: '8px',
+        fontSize: '11px',
         letterSpacing: '0.22em',
         textTransform: 'uppercase',
-        color: 'var(--at-ink-4)',
+        color: 'var(--at-ink-2)',
         fontWeight: 500,
       }}
     >
@@ -63,7 +63,7 @@ const MetricPill: React.FC<MetricPillProps> = ({ label, value, highlight }) => (
     </span>
     <span
       style={{
-        fontFamily: 'var(--at-serif)',
+        fontFamily: 'var(--at-sans)',
         fontSize: '28px',
         fontWeight: 300,
         letterSpacing: '-0.02em',
@@ -90,8 +90,8 @@ const VersionTrend: React.FC<VersionTrendProps> = ({ trend }) => {
       <div
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '10px',
-          color: 'var(--at-ink-5)',
+          fontSize: '12px',
+          color: 'var(--at-ink-3)',
           fontStyle: 'italic',
           padding: '8px 0',
         }}
@@ -125,10 +125,10 @@ const VersionTrend: React.FC<VersionTrendProps> = ({ trend }) => {
       <span
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '8px',
+          fontSize: '11px',
           letterSpacing: '0.22em',
           textTransform: 'uppercase',
-          color: 'var(--at-ink-4)',
+          color: 'var(--at-ink-2)',
           fontWeight: 500,
         }}
       >
@@ -163,8 +163,8 @@ const VersionTrend: React.FC<VersionTrendProps> = ({ trend }) => {
               textAnchor="middle"
               style={{
                 fontFamily: 'var(--at-mono)',
-                fontSize: '8px',
-                fill: 'var(--at-ink-4)',
+                fontSize: '11px',
+                fill: 'var(--at-ink-2)',
               }}
             >
               v{p.version}
@@ -219,10 +219,10 @@ const Scorecard: React.FC<ScorecardProps> = ({ card, index }) => {
             style={{
               fontFamily: 'var(--at-serif)',
               fontWeight: 400,
-              fontSize: '22px',
+              fontSize: '24px',
               letterSpacing: '-0.01em',
               lineHeight: 1.1,
-              color: active ? 'var(--at-ink-1)' : 'var(--at-ink-4)',
+              color: active ? 'var(--at-ink-1)' : 'var(--at-ink-2)',
               margin: 0,
             }}
           >
@@ -262,8 +262,8 @@ const Scorecard: React.FC<ScorecardProps> = ({ card, index }) => {
             borderTop: '1px dashed var(--at-rule-2)',
             fontFamily: 'var(--at-serif)',
             fontStyle: 'italic',
-            fontSize: '14px',
-            color: 'var(--at-ink-4)',
+            fontSize: '16px',
+            color: 'var(--at-ink-2)',
             lineHeight: 1.5,
           }}
         >
@@ -321,7 +321,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '20px',
+        fontSize: '22px',
         lineHeight: 1.35,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -333,8 +333,8 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
     <p
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: 'var(--at-mono-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '16px',
+        color: 'var(--at-ink-2)',
         maxWidth: '480px',
         marginTop: '8px',
       }}
@@ -346,7 +346,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         marginTop: '24px',
         fontFamily: 'var(--at-sans)',
-        fontSize: '14px',
+        fontSize: '16px',
         fontWeight: 500,
         color: 'var(--at-cream-1)',
         backgroundColor: 'var(--at-ink-1)',
@@ -381,7 +381,7 @@ const EmptyState: React.FC = () => (
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '22px',
+        fontSize: '24px',
         lineHeight: 1.35,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -393,8 +393,8 @@ const EmptyState: React.FC = () => (
     <p
       style={{
         fontFamily: 'var(--at-sans)',
-        fontSize: 'var(--at-body-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '17px',
+        color: 'var(--at-ink-2)',
         maxWidth: '380px',
         marginTop: '8px',
       }}
@@ -445,10 +445,10 @@ const Evaluations: React.FC = () => {
                 <span
                   style={{
                     fontFamily: 'var(--at-mono)',
-                    fontSize: '8px',
+                    fontSize: '11px',
                     letterSpacing: '0.22em',
                     textTransform: 'uppercase',
-                    color: 'var(--at-ink-4)',
+                    color: 'var(--at-ink-2)',
                     fontWeight: 500,
                   }}
                 >
@@ -456,7 +456,7 @@ const Evaluations: React.FC = () => {
                 </span>
                 <div
                   style={{
-                    fontFamily: 'var(--at-serif)',
+                    fontFamily: 'var(--at-sans)',
                     fontSize: '36px',
                     fontWeight: 300,
                     color: 'var(--at-ink-1)',
@@ -465,7 +465,7 @@ const Evaluations: React.FC = () => {
                   }}
                 >
                   {scorecards.filter(isActive).length}
-                  <span style={{ fontSize: '18px', color: 'var(--at-ink-4)' }}>
+                  <span style={{ fontSize: '20px', color: 'var(--at-ink-2)' }}>
                     /{scorecards.length}
                   </span>
                 </div>
@@ -474,10 +474,10 @@ const Evaluations: React.FC = () => {
                 <span
                   style={{
                     fontFamily: 'var(--at-mono)',
-                    fontSize: '8px',
+                    fontSize: '11px',
                     letterSpacing: '0.22em',
                     textTransform: 'uppercase',
-                    color: 'var(--at-ink-4)',
+                    color: 'var(--at-ink-2)',
                     fontWeight: 500,
                   }}
                 >
@@ -485,7 +485,7 @@ const Evaluations: React.FC = () => {
                 </span>
                 <div
                   style={{
-                    fontFamily: 'var(--at-serif)',
+                    fontFamily: 'var(--at-sans)',
                     fontSize: '36px',
                     fontWeight: 300,
                     color: 'var(--at-ink-1)',
@@ -507,10 +507,10 @@ const Evaluations: React.FC = () => {
                 <span
                   style={{
                     fontFamily: 'var(--at-mono)',
-                    fontSize: '8px',
+                    fontSize: '11px',
                     letterSpacing: '0.22em',
                     textTransform: 'uppercase',
-                    color: 'var(--at-ink-4)',
+                    color: 'var(--at-ink-2)',
                     fontWeight: 500,
                   }}
                 >
@@ -518,7 +518,7 @@ const Evaluations: React.FC = () => {
                 </span>
                 <div
                   style={{
-                    fontFamily: 'var(--at-serif)',
+                    fontFamily: 'var(--at-sans)',
                     fontSize: '36px',
                     fontWeight: 300,
                     color: 'var(--at-ink-1)',

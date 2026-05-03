@@ -75,7 +75,7 @@ const DiscoveryDemoCard: React.FC = () => {
           style={{
             fontFamily: 'var(--at-serif)',
             fontWeight: 400,
-            fontSize: '22px',
+            fontSize: '24px',
             letterSpacing: '-0.012em',
             color: 'var(--at-ink-1)',
             margin: 0,
@@ -89,10 +89,10 @@ const DiscoveryDemoCard: React.FC = () => {
         <span
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '9.5px',
+            fontSize: '11px',
             letterSpacing: '0.22em',
             textTransform: 'uppercase' as const,
-            color: 'var(--at-ink-4)',
+            color: 'var(--at-ink-2)',
             fontWeight: 500,
           }}
         >
@@ -105,7 +105,7 @@ const DiscoveryDemoCard: React.FC = () => {
         style={{
           fontFamily: 'var(--at-serif)',
           fontStyle: 'italic',
-          fontSize: '13.5px',
+          fontSize: '16px',
           color: 'var(--at-ink-1)',
           lineHeight: 1.55,
           marginBottom: '18px',
@@ -137,7 +137,7 @@ const DiscoveryDemoCard: React.FC = () => {
           <span
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '9px',
+              fontSize: '11px',
               letterSpacing: '0.22em',
               textTransform: 'uppercase' as const,
               color: 'var(--at-red-1)',
@@ -157,7 +157,7 @@ const DiscoveryDemoCard: React.FC = () => {
               flex: 1,
               fontFamily: 'var(--at-serif)',
               fontStyle: 'italic',
-              fontSize: '16px',
+              fontSize: '17px',
               color: 'var(--at-ink-1)',
               background: 'transparent',
               border: 'none',
@@ -170,7 +170,7 @@ const DiscoveryDemoCard: React.FC = () => {
             disabled={loading || !query.trim()}
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '10px',
+              fontSize: '12px',
               letterSpacing: '0.18em',
               textTransform: 'uppercase' as const,
               fontWeight: 500,
@@ -195,7 +195,7 @@ const DiscoveryDemoCard: React.FC = () => {
         <div
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '11px',
+            fontSize: '13px',
             color: 'var(--at-red-1)',
             padding: '10px 12px',
             background: 'var(--at-red-soft)',
@@ -235,7 +235,7 @@ const DiscoveryDemoCard: React.FC = () => {
                 style={{
                   fontFamily: 'var(--at-serif)',
                   fontStyle: 'italic',
-                  fontSize: '16px',
+                  fontSize: '17px',
                   color: 'var(--at-red-1)',
                 }}
               >
@@ -246,7 +246,7 @@ const DiscoveryDemoCard: React.FC = () => {
               <span
                 style={{
                   fontFamily: 'var(--at-mono)',
-                  fontSize: '12px',
+                  fontSize: '14px',
                   color:
                     result.status === 'exercise'
                       ? 'var(--at-ink-1)'
@@ -261,7 +261,7 @@ const DiscoveryDemoCard: React.FC = () => {
               <span
                 style={{
                   fontFamily: 'var(--at-mono)',
-                  fontSize: '9px',
+                  fontSize: '11px',
                   letterSpacing: '0.16em',
                   textTransform: 'uppercase' as const,
                   fontWeight: 500,
@@ -278,7 +278,7 @@ const DiscoveryDemoCard: React.FC = () => {
               <span
                 style={{
                   fontFamily: 'var(--at-mono)',
-                  fontSize: '11.5px',
+                  fontSize: '13px',
                   color: 'var(--at-ink-1)',
                   fontWeight: 500,
                   letterSpacing: '0.02em',
@@ -301,8 +301,8 @@ const DiscoveryDemoCard: React.FC = () => {
           style={{
             fontFamily: 'var(--at-serif)',
             fontStyle: 'italic',
-            fontSize: '13px',
-            color: 'var(--at-ink-4)',
+            fontSize: '15px',
+            color: 'var(--at-ink-2)',
             textAlign: 'center' as const,
             padding: '16px 0',
           }}
@@ -318,7 +318,7 @@ const DiscoveryDemoCard: React.FC = () => {
           style={{
             fontFamily: 'var(--at-mono)',
             fontStyle: 'italic',
-            fontSize: '11px',
+            fontSize: '13px',
             color: 'var(--at-ink-1)',
             letterSpacing: '0.04em',
             paddingTop: '14px',
@@ -335,7 +335,7 @@ const DiscoveryDemoCard: React.FC = () => {
             </>
           )}
           {sql && (
-            <span style={{ color: 'var(--at-ink-4)' }}>
+            <span style={{ color: 'var(--at-ink-2)' }}>
               {sql.split('\n')[0]}
             </span>
           )}
@@ -401,7 +401,7 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool }) => {
             fontFamily: 'var(--at-serif)',
             fontStyle: 'italic',
             fontWeight: 400,
-            fontSize: '22px',
+            fontSize: '24px',
             color: 'var(--at-red-1)',
             letterSpacing: '-0.02em',
             lineHeight: 1,
@@ -434,7 +434,7 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool }) => {
             style={{
               fontFamily: 'var(--at-serif)',
               fontStyle: 'italic',
-              fontSize: '13.5px',
+              fontSize: '16px',
               color: 'var(--at-ink-1)',
               lineHeight: 1.4,
             }}
@@ -465,7 +465,7 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool }) => {
           padding: '9px 12px',
           borderRadius: '6px',
           fontFamily: 'var(--at-mono)',
-          fontSize: '11px',
+          fontSize: '13px',
           color: 'var(--at-ink-1)',
           lineHeight: 1.5,
           margin: '12px 0 12px 46px',
@@ -478,7 +478,7 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool }) => {
           <span style={{ color: 'var(--at-ink-1)' }}>
             ({tool.signature.split('(')[1]?.split(')')[0] ?? ''})
           </span>
-          <span style={{ color: 'var(--at-ink-4)' }}>
+          <span style={{ color: 'var(--at-ink-2)' }}>
             {' '}
             → {tool.signature.split('->')[1]?.trim() ?? 'str'}
           </span>
@@ -518,10 +518,10 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool }) => {
             <span
               style={{
                 fontFamily: 'var(--at-mono)',
-                fontSize: '9px',
+                fontSize: '11px',
                 letterSpacing: '0.22em',
                 textTransform: 'uppercase' as const,
-                color: 'var(--at-ink-4)',
+                color: 'var(--at-ink-2)',
                 marginRight: '4px',
                 fontWeight: 500,
               }}
@@ -534,7 +534,7 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool }) => {
                 style={{
                   fontFamily: 'var(--at-serif)',
                   fontStyle: 'italic',
-                  fontSize: '11.5px',
+                  fontSize: '13px',
                   padding: '2px 9px',
                   background: isExercise
                     ? 'transparent'
@@ -555,9 +555,9 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool }) => {
           <span
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '10px',
+              fontSize: '12px',
               letterSpacing: '0.04em',
-              color: 'var(--at-ink-4)',
+              color: 'var(--at-ink-2)',
             }}
           >
             <span
@@ -597,10 +597,10 @@ const RelatedCard: React.FC = () => (
       <div
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '9.5px',
+          fontSize: '11px',
           letterSpacing: '0.22em',
           textTransform: 'uppercase' as const,
-          color: 'var(--at-ink-4)',
+          color: 'var(--at-ink-2)',
           fontWeight: 500,
           paddingTop: '4px',
           lineHeight: 1.6,
@@ -626,7 +626,7 @@ const RelatedCard: React.FC = () => (
             fontFamily: 'var(--at-serif)',
             fontWeight: 400,
             fontStyle: 'italic',
-            fontSize: '18px',
+            fontSize: '20px',
             color: 'var(--at-ink-1)',
             letterSpacing: '-0.01em',
           }}
@@ -638,7 +638,7 @@ const RelatedCard: React.FC = () => (
           style={{
             fontFamily: 'var(--at-serif)',
             fontStyle: 'italic',
-            fontSize: '13px',
+            fontSize: '15px',
             color: 'var(--at-ink-1)',
             lineHeight: 1.5,
             margin: 0,
@@ -660,7 +660,7 @@ const RelatedCard: React.FC = () => (
           to="/atelier/agents"
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '10px',
+            fontSize: '12px',
             letterSpacing: '0.18em',
             textTransform: 'uppercase' as const,
             color: 'var(--at-red-1)',
@@ -697,7 +697,7 @@ const RelatedCard: React.FC = () => (
             fontFamily: 'var(--at-serif)',
             fontWeight: 400,
             fontStyle: 'italic',
-            fontSize: '18px',
+            fontSize: '20px',
             color: 'var(--at-ink-1)',
             letterSpacing: '-0.01em',
           }}
@@ -709,7 +709,7 @@ const RelatedCard: React.FC = () => (
           style={{
             fontFamily: 'var(--at-serif)',
             fontStyle: 'italic',
-            fontSize: '13px',
+            fontSize: '15px',
             color: 'var(--at-ink-1)',
             lineHeight: 1.5,
             margin: 0,
@@ -727,7 +727,7 @@ const RelatedCard: React.FC = () => (
           to="/atelier/architecture/tool-registry"
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '10px',
+            fontSize: '12px',
             letterSpacing: '0.18em',
             textTransform: 'uppercase' as const,
             color: 'var(--at-red-1)',
@@ -805,7 +805,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '20px',
+        fontSize: '22px',
         lineHeight: 1.35,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -817,8 +817,8 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
     <p
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: 'var(--at-mono-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '16px',
+        color: 'var(--at-ink-2)',
         maxWidth: '480px',
         marginTop: '8px',
       }}
@@ -830,7 +830,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         marginTop: '24px',
         fontFamily: 'var(--at-sans)',
-        fontSize: '14px',
+        fontSize: '16px',
         fontWeight: 500,
         color: 'var(--at-cream-1)',
         backgroundColor: 'var(--at-ink-1)',
@@ -865,7 +865,7 @@ const EmptyState: React.FC = () => (
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '22px',
+        fontSize: '24px',
         lineHeight: 1.35,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -877,8 +877,8 @@ const EmptyState: React.FC = () => (
     <p
       style={{
         fontFamily: 'var(--at-sans)',
-        fontSize: 'var(--at-body-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '17px',
+        color: 'var(--at-ink-2)',
         maxWidth: '380px',
         marginTop: '8px',
       }}

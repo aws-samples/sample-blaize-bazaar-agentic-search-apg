@@ -61,7 +61,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, unit, detail }) => (
     <div style={{ marginTop: '14px', display: 'flex', alignItems: 'baseline', gap: '6px' }}>
       <span
         style={{
-          fontFamily: 'var(--at-serif)',
+          fontFamily: 'var(--at-sans)',
           fontSize: '48px',
           fontWeight: 300,
           letterSpacing: '-0.03em',
@@ -74,9 +74,9 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, unit, detail }) => (
       <span
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '12px',
+          fontSize: '14px',
           letterSpacing: '0.1em',
-          color: 'var(--at-ink-4)',
+          color: 'var(--at-ink-2)',
           textTransform: 'uppercase',
         }}
       >
@@ -86,8 +86,8 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, unit, detail }) => (
     <p
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: '10.5px',
-        color: 'var(--at-ink-4)',
+        fontSize: '12px',
+        color: 'var(--at-ink-2)',
         marginTop: '8px',
         margin: '8px 0 0',
         letterSpacing: '0.04em',
@@ -152,7 +152,7 @@ const ColdStartHistogram: React.FC<HistogramProps> = ({ histogram }) => {
                   textAnchor="middle"
                   style={{
                     fontFamily: 'var(--at-mono)',
-                    fontSize: '10px',
+                    fontSize: '12px',
                     fill: 'var(--at-ink-1)',
                   }}
                 >
@@ -165,8 +165,8 @@ const ColdStartHistogram: React.FC<HistogramProps> = ({ histogram }) => {
                   textAnchor="middle"
                   style={{
                     fontFamily: 'var(--at-mono)',
-                    fontSize: '9px',
-                    fill: 'var(--at-ink-4)',
+                    fontSize: '11px',
+                    fill: 'var(--at-ink-2)',
                   }}
                 >
                   {bucket.bucket}
@@ -178,7 +178,7 @@ const ColdStartHistogram: React.FC<HistogramProps> = ({ histogram }) => {
                   textAnchor="middle"
                   style={{
                     fontFamily: 'var(--at-mono)',
-                    fontSize: '8px',
+                    fontSize: '11px',
                     fill: bucket.type === 'warm' ? 'var(--at-green-1)' : 'var(--at-red-1)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.15em',
@@ -198,8 +198,8 @@ const ColdStartHistogram: React.FC<HistogramProps> = ({ histogram }) => {
           gap: '20px',
           marginTop: '12px',
           fontFamily: 'var(--at-mono)',
-          fontSize: '10px',
-          color: 'var(--at-ink-4)',
+          fontSize: '12px',
+          color: 'var(--at-ink-2)',
           letterSpacing: '0.08em',
         }}
       >
@@ -260,7 +260,7 @@ const LatencyBudgetTable: React.FC<LatencyBudgetProps> = ({ budget }) => {
                 <span
                   style={{
                     fontFamily: 'var(--at-mono)',
-                    fontSize: '8px',
+                    fontSize: '11px',
                     letterSpacing: '0.18em',
                     textTransform: 'uppercase',
                     color,
@@ -276,7 +276,7 @@ const LatencyBudgetTable: React.FC<LatencyBudgetProps> = ({ budget }) => {
                 <span
                   style={{
                     fontFamily: 'var(--at-sans)',
-                    fontSize: '13px',
+                    fontSize: '15px',
                     color: 'var(--at-ink-2)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
@@ -313,14 +313,14 @@ const LatencyBudgetTable: React.FC<LatencyBudgetProps> = ({ budget }) => {
               <span
                 style={{
                   fontFamily: 'var(--at-mono)',
-                  fontSize: '11px',
+                  fontSize: '13px',
                   color: 'var(--at-ink-2)',
                   textAlign: 'right',
                   letterSpacing: '0.04em',
                 }}
               >
                 {row.p50Ms}ms
-                <span style={{ color: 'var(--at-ink-5)', marginLeft: '4px', fontSize: '9px' }}>
+                <span style={{ color: 'var(--at-ink-3)', marginLeft: '4px', fontSize: '13px' }}>
                   / {row.maxMs}
                 </span>
               </span>
@@ -343,10 +343,10 @@ interface PgvectorComparisonProps {
 const PgvectorComparison: React.FC<PgvectorComparisonProps> = ({ strategies }) => {
   const headerStyle: React.CSSProperties = {
     fontFamily: 'var(--at-mono)',
-    fontSize: '9px',
+    fontSize: '11px',
     letterSpacing: '0.22em',
     textTransform: 'uppercase',
-    color: 'var(--at-ink-4)',
+    color: 'var(--at-ink-2)',
     fontWeight: 500,
     padding: '8px 12px',
     textAlign: 'left',
@@ -355,7 +355,7 @@ const PgvectorComparison: React.FC<PgvectorComparisonProps> = ({ strategies }) =
 
   const cellStyle: React.CSSProperties = {
     fontFamily: 'var(--at-mono)',
-    fontSize: '12px',
+    fontSize: '14px',
     color: 'var(--at-ink-2)',
     padding: '10px 12px',
     letterSpacing: '0.02em',
@@ -396,7 +396,7 @@ const PgvectorComparison: React.FC<PgvectorComparisonProps> = ({ strategies }) =
                         style={{
                           marginLeft: '8px',
                           fontFamily: 'var(--at-mono)',
-                          fontSize: '8px',
+                          fontSize: '11px',
                           letterSpacing: '0.18em',
                           textTransform: 'uppercase',
                           color: 'var(--at-green-1)',
@@ -463,7 +463,7 @@ const StorageUsageBars: React.FC<StorageUsageProps> = ({ usage }) => {
               <span
                 style={{
                   fontFamily: 'var(--at-sans)',
-                  fontSize: '13px',
+                  fontSize: '15px',
                   color: 'var(--at-ink-2)',
                 }}
               >
@@ -472,8 +472,8 @@ const StorageUsageBars: React.FC<StorageUsageProps> = ({ usage }) => {
               <span
                 style={{
                   fontFamily: 'var(--at-mono)',
-                  fontSize: '11px',
-                  color: 'var(--at-ink-4)',
+                  fontSize: '13px',
+                  color: 'var(--at-ink-2)',
                   letterSpacing: '0.04em',
                 }}
               >
@@ -541,10 +541,10 @@ const MeasureControls: React.FC<MeasureControlsProps> = ({
         <span
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '9px',
+            fontSize: '11px',
             letterSpacing: '0.22em',
             textTransform: 'uppercase',
-            color: 'var(--at-ink-4)',
+            color: 'var(--at-ink-2)',
             fontWeight: 500,
             marginRight: '6px',
           }}
@@ -557,7 +557,7 @@ const MeasureControls: React.FC<MeasureControlsProps> = ({
             onClick={() => onWindowChange(w)}
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '11px',
+              fontSize: '13px',
               letterSpacing: '0.06em',
               padding: '5px 14px',
               borderRadius: '100px',
@@ -579,10 +579,10 @@ const MeasureControls: React.FC<MeasureControlsProps> = ({
         <span
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '9px',
+            fontSize: '11px',
             letterSpacing: '0.22em',
             textTransform: 'uppercase',
-            color: 'var(--at-ink-4)',
+            color: 'var(--at-ink-2)',
             fontWeight: 500,
           }}
         >
@@ -604,7 +604,7 @@ const MeasureControls: React.FC<MeasureControlsProps> = ({
         <span
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '11px',
+            fontSize: '13px',
             color: 'var(--at-ink-2)',
             minWidth: '40px',
             textAlign: 'right',
@@ -618,7 +618,7 @@ const MeasureControls: React.FC<MeasureControlsProps> = ({
       <button
         style={{
           fontFamily: 'var(--at-sans)',
-          fontSize: '13px',
+          fontSize: '15px',
           fontWeight: 500,
           color: 'var(--at-cream-1)',
           backgroundColor: 'var(--at-ink-1)',
@@ -698,7 +698,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '20px',
+        fontSize: '22px',
         lineHeight: 1.35,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -710,8 +710,8 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
     <p
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: 'var(--at-mono-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '16px',
+        color: 'var(--at-ink-2)',
         maxWidth: '480px',
         marginTop: '8px',
       }}
@@ -723,7 +723,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         marginTop: '24px',
         fontFamily: 'var(--at-sans)',
-        fontSize: '14px',
+        fontSize: '16px',
         fontWeight: 500,
         color: 'var(--at-cream-1)',
         backgroundColor: 'var(--at-ink-1)',
@@ -758,7 +758,7 @@ const EmptyState: React.FC = () => (
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '22px',
+        fontSize: '24px',
         lineHeight: 1.35,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -770,8 +770,8 @@ const EmptyState: React.FC = () => (
     <p
       style={{
         fontFamily: 'var(--at-sans)',
-        fontSize: 'var(--at-body-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '17px',
+        color: 'var(--at-ink-2)',
         maxWidth: '380px',
         marginTop: '8px',
       }}

@@ -39,7 +39,7 @@ const ActivePill: React.FC = () => (
       backgroundColor: 'var(--at-status-shipped-bg)',
       color: 'var(--at-status-shipped-text)',
       fontFamily: 'var(--at-mono)',
-      fontSize: '10px',
+      fontSize: '12px',
       fontWeight: 500,
       letterSpacing: '0.06em',
       textTransform: 'uppercase' as const,
@@ -135,7 +135,7 @@ const RoutingCard: React.FC<RoutingCardProps> = ({ pattern, numeral }) => {
         style={{
           fontFamily: 'var(--at-serif)',
           fontStyle: 'italic',
-          fontSize: '14.5px',
+          fontSize: '16px',
           lineHeight: 1.55,
           color: 'var(--at-ink-1)',
           margin: '0 0 18px 0',
@@ -158,7 +158,7 @@ const RoutingCard: React.FC<RoutingCardProps> = ({ pattern, numeral }) => {
         <pre
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '11.5px',
+            fontSize: '13px',
             lineHeight: 1.6,
             color: 'var(--at-ink-1)',
             margin: 0,
@@ -184,10 +184,10 @@ const RoutingCard: React.FC<RoutingCardProps> = ({ pattern, numeral }) => {
         <span
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '9px',
+            fontSize: '11px',
             letterSpacing: '0.22em',
             textTransform: 'uppercase' as const,
-            color: 'var(--at-ink-4)',
+            color: 'var(--at-ink-2)',
             marginRight: '6px',
             fontWeight: 500,
           }}
@@ -199,7 +199,7 @@ const RoutingCard: React.FC<RoutingCardProps> = ({ pattern, numeral }) => {
             key={agent}
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '11px',
+              fontSize: '13px',
               padding: '3px 9px',
               background: 'var(--at-cream-2)',
               border: '1px solid var(--at-card-border)',
@@ -268,7 +268,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '20px',
+        fontSize: '22px',
         lineHeight: 1.35,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -280,8 +280,8 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
     <p
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: 'var(--at-mono-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '16px',
+        color: 'var(--at-ink-2)',
         maxWidth: '480px',
         marginTop: '8px',
       }}
@@ -293,7 +293,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         marginTop: '24px',
         fontFamily: 'var(--at-sans)',
-        fontSize: '14px',
+        fontSize: '16px',
         fontWeight: 500,
         color: 'var(--at-cream-1)',
         backgroundColor: 'var(--at-ink-1)',
@@ -328,7 +328,7 @@ const EmptyState: React.FC = () => (
       style={{
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
-        fontSize: '22px',
+        fontSize: '24px',
         lineHeight: 1.35,
         color: 'var(--at-ink-1)',
         maxWidth: '420px',
@@ -340,8 +340,8 @@ const EmptyState: React.FC = () => (
     <p
       style={{
         fontFamily: 'var(--at-sans)',
-        fontSize: 'var(--at-body-size)',
-        color: 'var(--at-ink-4)',
+        fontSize: '17px',
+        color: 'var(--at-ink-2)',
         maxWidth: '380px',
         marginTop: '8px',
       }}
