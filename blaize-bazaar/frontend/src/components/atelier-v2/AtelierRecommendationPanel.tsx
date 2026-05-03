@@ -121,7 +121,7 @@ export function AtelierRecommendationPanel({
 
       <div className="mt-5">
         <span style={eyebrow}>{brand}</span>
-        <h3 className="mt-2 font-display" style={productTitle}>
+        <h3 className="mt-2 font-display italic text-espresso" style={productTitle}>
           {nameLine1}
           {nameLine2 && (
             <>

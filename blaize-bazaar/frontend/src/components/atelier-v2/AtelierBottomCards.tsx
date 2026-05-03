@@ -110,7 +110,7 @@ function ObservatoryCard({ sessionId }: { sessionId: string }) {
     <div className="font-sans" style={cardStyle}>
       <CloseButton />
       <div style={eyebrowStyle}>SESSION #{sessionId} · OBSERVATORY</div>
-      <h3 className="text-headline italic" style={titleStyle}>How we arrived at this.</h3>
+      <h3 className="text-headline italic text-espresso" style={titleStyle}>How we arrived at this.</h3>
       <p className="text-body-sm" style={subtitleStyle}>Expand any step to see details, context and reasoning.</p>
 
       <div className="mt-5 flex flex-col gap-2">
@@ -256,7 +256,7 @@ function MemoryCard({ sessionId }: { sessionId: string }) {
     <div className="font-sans" style={cardStyle}>
       <CloseButton />
       <div style={eyebrowStyle}>SESSION #{sessionId} · MEMORY</div>
-      <h3 className="text-headline italic" style={titleStyle}>What we know about you.</h3>
+      <h3 className="text-headline italic text-espresso" style={titleStyle}>What we know about you.</h3>
       <p className="text-body-sm" style={subtitleStyle}>Signals and preferences that shaped this recommendation.</p>
 
       <div className="mt-4 flex" style={{ gap: '16px' }}>
@@ -351,7 +351,7 @@ function AgentsCard({ sessionId }: { sessionId: string }) {
     <div className="font-sans" style={cardStyle}>
       <CloseButton />
       <div style={eyebrowStyle}>SESSION #{sessionId} · AGENTS</div>
-      <h3 className="text-headline italic" style={titleStyle}>
+      <h3 className="text-headline italic text-espresso" style={titleStyle}>
         A team of specialists.
         <br />
         Working in harmony.

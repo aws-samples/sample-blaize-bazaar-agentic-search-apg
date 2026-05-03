@@ -63,10 +63,9 @@ export function AtelierFooterStats({
       <div className="flex items-start" style={{ gap: '10px', flex: 1, minWidth: '240px' }}>
         <Sparkles size={20} color={BURGUNDY} style={{ flexShrink: 0, marginTop: '2px' }} />
         <p
-          className="font-display italic"
+          className="font-display italic text-espresso"
           style={{
             fontSize: '15px',
-            color: MUTED,
             margin: 0,
             lineHeight: 1.4,
           }}

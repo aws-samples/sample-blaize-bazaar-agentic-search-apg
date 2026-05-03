@@ -209,39 +209,16 @@ function ComingSoon({ section }: { section: string }) {
   const label = section.charAt(0).toUpperCase() + section.slice(1)
   return (
     <div className="text-center max-w-md">
-      <div
-        style={{
-          fontFamily: 'var(--sans)',
-          fontSize: 11,
-          letterSpacing: '0.22em',
-          textTransform: 'uppercase',
-          color: 'rgba(31, 20, 16, 0.55)',
-          marginBottom: 12,
-          fontWeight: 600,
-        }}
-      >
+      <div className="text-eyebrow text-ink-quiet mb-3">
         Coming soon
       </div>
       <h2
-        style={{
-          fontFamily: 'var(--serif)',
-          fontStyle: 'italic',
-          fontSize: 36,
-          lineHeight: 1.1,
-          color: '#1f1410',
-          marginBottom: 16,
-        }}
+        className="font-display italic text-espresso mb-4"
+        style={{ fontSize: 36, lineHeight: 1.1 }}
       >
         {label} is next.
       </h2>
-      <p
-        style={{
-          fontFamily: 'var(--sans)',
-          fontSize: 14,
-          lineHeight: 1.6,
-          color: 'rgba(31, 20, 16, 0.65)',
-        }}
-      >
+      <p className="text-body text-ink-soft">
         This surface is reserved for the {label.toLowerCase()} view — it lands in the
         next Atelier iteration. Observatory is the default for this session.
       </p>
