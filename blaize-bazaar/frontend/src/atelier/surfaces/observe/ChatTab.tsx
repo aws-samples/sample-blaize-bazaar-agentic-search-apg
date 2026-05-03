@@ -84,8 +84,7 @@ const PersonaStrip: React.FC<{
           alignItems: 'center',
           justifyContent: 'center',
           color: 'var(--at-cream-1)',
-          fontFamily: 'var(--at-serif)',
-          fontStyle: 'italic',
+          fontFamily: 'var(--at-sans)',
           fontSize: '18px',
           fontWeight: 400,
           flexShrink: 0,
@@ -96,8 +95,7 @@ const PersonaStrip: React.FC<{
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            fontFamily: 'var(--at-serif)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--at-sans)',
             fontSize: '16px',
             color: 'var(--at-ink-1)',
             lineHeight: 1.3,
@@ -299,8 +297,7 @@ const ProductGrid: React.FC<{ products: ProductCard[] }> = ({ products }) => (
           </div>
           <div
             style={{
-              fontFamily: 'var(--at-serif)',
-              fontStyle: 'italic',
+              fontFamily: 'var(--at-sans)',
               fontSize: '14px',
               color: 'var(--at-ink-1)',
               lineHeight: 1.3,
@@ -655,8 +652,7 @@ const EmptyState: React.FC = () => {
       <Eyebrow label="No messages yet" variant="muted" />
       <p
         style={{
-          fontFamily: 'var(--at-serif)',
-          fontStyle: 'italic',
+          fontFamily: 'var(--at-sans)',
           fontSize: '20px',
           color: 'var(--at-ink-3)',
           marginTop: '16px',

@@ -324,8 +324,7 @@ const BriefProductCard: React.FC<{ product: ProductCard }> = ({ product }) => (
       </span>
       <span
         style={{
-          fontFamily: 'var(--at-serif)',
-          fontStyle: 'italic',
+          fontFamily: 'var(--at-sans)',
           fontSize: '14px',
           lineHeight: 1.3,
           color: 'var(--at-ink-1)',
@@ -352,8 +351,7 @@ const EditorialSection: React.FC<{ section: BriefSection }> = ({
     <div style={{ marginBottom: '16px' }}>
       <span
         style={{
-          fontFamily: 'var(--at-serif)',
-          fontStyle: 'italic',
+          fontFamily: 'var(--at-sans)',
           fontSize: '14px',
           color: 'var(--at-red-1)',
           display: 'block',
@@ -364,8 +362,7 @@ const EditorialSection: React.FC<{ section: BriefSection }> = ({
       </span>
       <h3
         style={{
-          fontFamily: 'var(--at-serif)',
-          fontStyle: 'italic',
+          fontFamily: 'var(--at-sans)',
           fontSize: '22px',
           fontWeight: 400,
           lineHeight: 1.25,
@@ -449,8 +446,7 @@ const BriefTab: React.FC = () => {
         <Eyebrow label="No brief available" variant="muted" />
         <p
           style={{
-            fontFamily: 'var(--at-serif)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--at-sans)',
             fontSize: '22px',
             lineHeight: 1.35,
             color: 'var(--at-ink-3)',
@@ -481,8 +477,7 @@ const BriefTab: React.FC = () => {
         />
         <h1
           style={{
-            fontFamily: 'var(--at-serif)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--at-sans)',
             fontSize: '36px',
             fontWeight: 400,
             lineHeight: 1.15,
@@ -662,8 +657,7 @@ const BriefTab: React.FC = () => {
                 <div key={stat.label}>
                   <span
                     style={{
-                      fontFamily: 'var(--at-serif)',
-                      fontStyle: 'italic',
+                      fontFamily: 'var(--at-sans)',
                       fontSize: '12px',
                       color: 'var(--at-ink-4)',
                       display: 'block',
@@ -714,8 +708,7 @@ const BriefTab: React.FC = () => {
       >
         <span
           style={{
-            fontFamily: 'var(--at-serif)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--at-sans)',
             fontSize: '24px',
             color: 'var(--at-ink-4)',
             display: 'block',
@@ -726,8 +719,7 @@ const BriefTab: React.FC = () => {
         </span>
         <p
           style={{
-            fontFamily: 'var(--at-serif)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--at-sans)',
             fontSize: '14px',
             lineHeight: 1.5,
             color: 'var(--at-ink-3)',

@@ -99,8 +99,7 @@ const SessionView: React.FC = () => {
         <Eyebrow label="Something went wrong" variant="muted" />
         <p
           style={{
-            fontFamily: 'var(--at-serif)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--at-sans)',
             fontSize: '22px',
             lineHeight: 1.35,
             color: 'var(--at-ink-3)',
@@ -157,8 +156,7 @@ const SessionView: React.FC = () => {
         <Eyebrow label="Session not found" variant="muted" />
         <p
           style={{
-            fontFamily: 'var(--at-serif)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--at-sans)',
             fontSize: '22px',
             lineHeight: 1.35,
             color: 'var(--at-ink-3)',
@@ -179,8 +177,7 @@ const SessionView: React.FC = () => {
         <Eyebrow label={`Session #${session.id} · ${session.routingPattern}`} />
         <h2
           style={{
-            fontFamily: 'var(--at-serif)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--at-sans)',
             fontSize: '28px',
             fontWeight: 400,
             lineHeight: 1.2,

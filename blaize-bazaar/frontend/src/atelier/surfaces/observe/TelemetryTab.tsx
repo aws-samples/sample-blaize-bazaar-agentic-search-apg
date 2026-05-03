@@ -249,8 +249,7 @@ const TimelinePanelCard: React.FC<TimelinePanelProps> = ({
         {/* Title */}
         <h4
           style={{
-            fontFamily: 'var(--at-serif)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--at-sans)',
             fontSize: '16px',
             fontWeight: 400,
             color: 'var(--at-ink-1)',
@@ -387,11 +386,11 @@ const ProductRecommendationCard: React.FC = () => (
     {/* Name */}
     <div
       style={{
-        fontFamily: 'var(--at-serif)',
-        fontStyle: 'italic',
-        fontSize: '18px',
+        fontFamily: 'var(--at-sans)',
+        fontSize: '16px',
+        fontWeight: 500,
         color: 'var(--at-ink-1)',
-        lineHeight: 1.3,
+        lineHeight: 1.6,
         marginBottom: '4px',
       }}
     >
@@ -811,11 +810,10 @@ const FooterStrip: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
         style={{
           flex: 1,
           minWidth: '200px',
-          fontFamily: 'var(--at-serif)',
-          fontStyle: 'italic',
+          fontFamily: 'var(--at-sans)',
           fontSize: '14px',
           color: 'var(--at-ink-3)',
-          lineHeight: 1.4,
+          lineHeight: 1.6,
         }}
       >
         "Every panel is a decision the system made on your behalf."
@@ -901,8 +899,7 @@ const TelemetryTab: React.FC = () => {
         <Eyebrow label="No telemetry" variant="muted" />
         <p
           style={{
-            fontFamily: 'var(--at-serif)',
-            fontStyle: 'italic',
+            fontFamily: 'var(--at-sans)',
             fontSize: '22px',
             lineHeight: 1.35,
             color: 'var(--at-ink-3)',

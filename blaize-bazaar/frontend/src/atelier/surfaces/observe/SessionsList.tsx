@@ -95,8 +95,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, onClick }) => (
       {/* Opening query */}
       <p
         style={{
-          fontFamily: 'var(--at-serif)',
-          fontStyle: 'italic',
+          fontFamily: 'var(--at-sans)',
           fontSize: '18px',
           lineHeight: 1.35,
           color: 'var(--at-ink-1)',
@@ -178,8 +177,7 @@ const EmptyState: React.FC = () => (
     <Eyebrow label="No sessions" variant="muted" />
     <p
       style={{
-        fontFamily: 'var(--at-serif)',
-        fontStyle: 'italic',
+        fontFamily: 'var(--at-sans)',
         fontSize: '22px',
         lineHeight: 1.35,
         color: 'var(--at-ink-3)',
@@ -255,8 +253,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
     <Eyebrow label="Something went wrong" variant="muted" />
     <p
       style={{
-        fontFamily: 'var(--at-serif)',
-        fontStyle: 'italic',
+        fontFamily: 'var(--at-sans)',
         fontSize: '20px',
         lineHeight: 1.35,
         color: 'var(--at-ink-3)',

@@ -292,7 +292,7 @@ function UnderTheHood({ index, message, expanded, onToggle, guardrailsEnabled }:
               className="pt-1.5 mt-1"
               style={{ borderTop: '1px solid rgba(45, 24, 16, 0.06)' }}
             >
-              <p className="italic" style={{ color: INK_QUIET }}>
+              <p style={{ color: INK_QUIET }}>
                 The orchestrator picked which specialists to involve based on your query. Open{' '}
                 <span style={{ color: ACCENT }}>/inspector</span> to see the full waterfall.
               </p>
@@ -482,8 +482,7 @@ export default function ConciergeModal() {
                             height: 18,
                             background: persona.avatar_color,
                             color: '#faf3e8',
-                            fontFamily: 'Fraunces, serif',
-                            fontStyle: 'italic',
+                            fontFamily: 'Inter, sans-serif',
                             fontSize: 10,
                           }}
                         >

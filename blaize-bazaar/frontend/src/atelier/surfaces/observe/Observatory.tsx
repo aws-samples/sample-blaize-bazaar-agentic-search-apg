@@ -35,10 +35,10 @@ const MetricNumeral: React.FC<MetricNumeralProps> = ({ value, label, unit }) => 
     <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
       <span
         style={{
-          fontFamily: 'var(--at-serif)',
+          fontFamily: 'var(--at-sans)',
           fontSize: '52px',
-          fontWeight: 300,
-          letterSpacing: '-0.03em',
+          fontWeight: 400,
+          letterSpacing: '-0.02em',
           lineHeight: 1,
           color: 'var(--at-ink-1)',
         }}
@@ -328,10 +328,9 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
     <Eyebrow label="Something went wrong" variant="muted" />
     <p
       style={{
-        fontFamily: 'var(--at-serif)',
-        fontStyle: 'italic',
-        fontSize: '20px',
-        lineHeight: 1.35,
+        fontFamily: 'var(--at-sans)',
+        fontSize: '16px',
+        lineHeight: 1.6,
         color: 'var(--at-ink-3)',
         maxWidth: '420px',
         marginTop: '16px',
@@ -388,10 +387,9 @@ const EmptyState: React.FC = () => (
     <Eyebrow label="No data" variant="muted" />
     <p
       style={{
-        fontFamily: 'var(--at-serif)',
-        fontStyle: 'italic',
-        fontSize: '22px',
-        lineHeight: 1.35,
+        fontFamily: 'var(--at-sans)',
+        fontSize: '16px',
+        lineHeight: 1.6,
         color: 'var(--at-ink-3)',
         maxWidth: '420px',
         marginTop: '16px',
