@@ -161,7 +161,7 @@ const TimelinePanelCard: React.FC<TimelinePanelProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             fontFamily: 'var(--at-mono)',
-            fontSize: '11px',
+            fontSize: '13px',
             fontWeight: 600,
             color: isActive ? 'var(--at-cream-1)' : 'var(--at-ink-1)',
             flexShrink: 0,
@@ -234,7 +234,7 @@ const TimelinePanelCard: React.FC<TimelinePanelProps> = ({
             <span
               style={{
                 fontFamily: 'var(--at-mono)',
-                fontSize: '9px',
+                fontSize: '11px',
                 fontWeight: 500,
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
@@ -250,7 +250,7 @@ const TimelinePanelCard: React.FC<TimelinePanelProps> = ({
         <h4
           style={{
             fontFamily: 'var(--at-sans)',
-            fontSize: '16px',
+            fontSize: '17px',
             fontWeight: 400,
             color: 'var(--at-ink-1)',
             margin: '0 0 4px 0',
@@ -264,7 +264,7 @@ const TimelinePanelCard: React.FC<TimelinePanelProps> = ({
         <p
           style={{
             fontFamily: 'var(--at-sans)',
-            fontSize: '13px',
+            fontSize: '15px',
             color: 'var(--at-ink-1)',
             margin: '0 0 8px 0',
             lineHeight: 1.5,
@@ -285,8 +285,8 @@ const TimelinePanelCard: React.FC<TimelinePanelProps> = ({
             <span
               style={{
                 fontFamily: 'var(--at-mono)',
-                fontSize: '10px',
-                color: 'var(--at-ink-4)',
+                fontSize: '12px',
+                color: 'var(--at-ink-2)',
                 padding: '2px 8px',
                 border: '1px solid var(--at-rule-2)',
                 borderRadius: '4px',
@@ -300,8 +300,8 @@ const TimelinePanelCard: React.FC<TimelinePanelProps> = ({
           <span
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: 'var(--at-mono-size)',
-              color: 'var(--at-ink-4)',
+              fontSize: '13px',
+              color: 'var(--at-ink-2)',
               marginLeft: panel.agent ? '0' : 'auto',
             }}
           >
@@ -318,7 +318,7 @@ const TimelinePanelCard: React.FC<TimelinePanelProps> = ({
               background: 'var(--at-cream-2)',
               borderRadius: '8px',
               fontFamily: 'var(--at-mono)',
-              fontSize: 'var(--at-mono-size)',
+              fontSize: '13px',
               lineHeight: 'var(--at-mono-leading)',
               color: 'var(--at-ink-2)',
               overflowX: 'auto',
@@ -359,8 +359,8 @@ const ProductRecommendationCard: React.FC = () => (
       <span
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '9px',
-          color: 'var(--at-ink-4)',
+          fontSize: '11px',
+          color: 'var(--at-ink-2)',
           textTransform: 'uppercase',
           letterSpacing: '0.1em',
         }}
@@ -373,8 +373,8 @@ const ProductRecommendationCard: React.FC = () => (
     <div
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: '9px',
-        color: 'var(--at-ink-4)',
+        fontSize: '11px',
+        color: 'var(--at-ink-2)',
         textTransform: 'uppercase',
         letterSpacing: '0.1em',
         marginBottom: '4px',
@@ -387,7 +387,7 @@ const ProductRecommendationCard: React.FC = () => (
     <div
       style={{
         fontFamily: 'var(--at-sans)',
-        fontSize: '16px',
+        fontSize: '17px',
         fontWeight: 500,
         color: 'var(--at-ink-1)',
         lineHeight: 1.6,
@@ -401,7 +401,7 @@ const ProductRecommendationCard: React.FC = () => (
     <div
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: '14px',
+        fontSize: '15px',
         fontWeight: 600,
         color: 'var(--at-ink-2)',
         marginBottom: '12px',
@@ -414,7 +414,7 @@ const ProductRecommendationCard: React.FC = () => (
     <p
       style={{
         fontFamily: 'var(--at-sans)',
-        fontSize: '13px',
+        fontSize: '15px',
         color: 'var(--at-ink-1)',
         lineHeight: 1.55,
         margin: '0 0 14px 0',
@@ -429,11 +429,11 @@ const ProductRecommendationCard: React.FC = () => (
       <div
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '9px',
+          fontSize: '11px',
           fontWeight: 600,
           textTransform: 'uppercase',
           letterSpacing: '0.1em',
-          color: 'var(--at-ink-4)',
+          color: 'var(--at-ink-2)',
           marginBottom: '8px',
         }}
       >
@@ -458,7 +458,7 @@ const ProductRecommendationCard: React.FC = () => (
             key={i}
             style={{
               fontFamily: 'var(--at-sans)',
-              fontSize: '12px',
+              fontSize: '14px',
               color: 'var(--at-ink-2)',
               lineHeight: 1.5,
             }}
@@ -479,7 +479,7 @@ const ProductRecommendationCard: React.FC = () => (
         backgroundColor: 'transparent',
         color: 'var(--at-ink-1)',
         fontFamily: 'var(--at-mono)',
-        fontSize: '11px',
+        fontSize: '13px',
         fontWeight: 600,
         textTransform: 'uppercase',
         letterSpacing: '0.06em',
@@ -502,7 +502,7 @@ const ProductRecommendationCard: React.FC = () => (
         <span
           style={{
             fontFamily: 'var(--at-serif)',
-            fontSize: '20px',
+            fontSize: '22px',
             fontWeight: 400,
             color: 'var(--at-green-1)',
           }}
@@ -512,8 +512,8 @@ const ProductRecommendationCard: React.FC = () => (
         <span
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '9px',
-            color: 'var(--at-ink-4)',
+            fontSize: '11px',
+            color: 'var(--at-ink-2)',
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
           }}
@@ -524,8 +524,8 @@ const ProductRecommendationCard: React.FC = () => (
       <div
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: 'var(--at-mono-size)',
-          color: 'var(--at-ink-4)',
+          fontSize: '13px',
+          color: 'var(--at-ink-2)',
         }}
       >
         2,340 tokens
@@ -575,7 +575,7 @@ const ExpansionArea: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
                 <div
                   style={{
                     fontFamily: 'var(--at-mono)',
-                    fontSize: '10px',
+                    fontSize: '12px',
                     fontWeight: 600,
                     color: 'var(--at-ink-1)',
                     textTransform: 'uppercase',
@@ -591,7 +591,7 @@ const ExpansionArea: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
                     background: 'var(--at-cream-2)',
                     borderRadius: '8px',
                     fontFamily: 'var(--at-mono)',
-                    fontSize: '10px',
+                    fontSize: '12px',
                     lineHeight: 'var(--at-mono-leading)',
                     color: 'var(--at-ink-2)',
                     overflowX: 'auto',
@@ -607,7 +607,7 @@ const ExpansionArea: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
             <p
               style={{
                 fontFamily: 'var(--at-sans)',
-                fontSize: '13px',
+                fontSize: '15px',
                 color: 'var(--at-ink-4)',
                 margin: 0,
               }}
@@ -645,7 +645,7 @@ const ExpansionArea: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
                 <span
                   style={{
                     fontFamily: 'var(--at-mono)',
-                    fontSize: '9px',
+                    fontSize: '11px',
                     fontWeight: 600,
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
@@ -669,7 +669,7 @@ const ExpansionArea: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
                   <div
                     style={{
                       fontFamily: 'var(--at-sans)',
-                      fontSize: '12px',
+                      fontSize: '14px',
                       color: 'var(--at-ink-2)',
                       lineHeight: 1.5,
                     }}
@@ -679,8 +679,8 @@ const ExpansionArea: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
                   <div
                     style={{
                       fontFamily: 'var(--at-mono)',
-                      fontSize: '10px',
-                      color: 'var(--at-ink-4)',
+                      fontSize: '12px',
+                      color: 'var(--at-ink-2)',
                       marginTop: '4px',
                     }}
                   >
@@ -693,7 +693,7 @@ const ExpansionArea: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
             <p
               style={{
                 fontFamily: 'var(--at-sans)',
-                fontSize: '13px',
+                fontSize: '15px',
                 color: 'var(--at-ink-4)',
                 margin: 0,
               }}
@@ -740,7 +740,7 @@ const ExpansionArea: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
                   <div
                     style={{
                       fontFamily: 'var(--at-sans)',
-                      fontSize: '13px',
+                      fontSize: '15px',
                       fontWeight: 500,
                       color: 'var(--at-ink-1)',
                     }}
@@ -750,8 +750,8 @@ const ExpansionArea: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
                   <div
                     style={{
                       fontFamily: 'var(--at-mono)',
-                      fontSize: '10px',
-                      color: 'var(--at-ink-4)',
+                      fontSize: '12px',
+                      color: 'var(--at-ink-2)',
                       marginTop: '2px',
                     }}
                   >
@@ -761,7 +761,7 @@ const ExpansionArea: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
                 <span
                   style={{
                     fontFamily: 'var(--at-mono)',
-                    fontSize: '9px',
+                    fontSize: '11px',
                     fontWeight: 500,
                     textTransform: 'uppercase',
                     letterSpacing: '0.06em',
@@ -811,7 +811,7 @@ const FooterStrip: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
           flex: 1,
           minWidth: '200px',
           fontFamily: 'var(--at-sans)',
-          fontSize: '14px',
+          fontSize: '15px',
           color: 'var(--at-ink-1)',
           lineHeight: 1.6,
         }}
@@ -839,7 +839,7 @@ const FooterStrip: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
             <span
               style={{
                 fontFamily: 'var(--at-serif)',
-                fontSize: '20px',
+                fontSize: '22px',
                 fontWeight: 400,
                 color: 'var(--at-ink-1)',
                 lineHeight: 1,
@@ -850,8 +850,8 @@ const FooterStrip: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
             <span
               style={{
                 fontFamily: 'var(--at-mono)',
-                fontSize: '9px',
-                color: 'var(--at-ink-4)',
+                fontSize: '11px',
+                color: 'var(--at-ink-2)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
                 whiteSpace: 'nowrap',
@@ -900,7 +900,7 @@ const TelemetryTab: React.FC = () => {
         <p
           style={{
             fontFamily: 'var(--at-sans)',
-            fontSize: '22px',
+            fontSize: '24px',
             lineHeight: 1.35,
             color: 'var(--at-ink-1)',
             maxWidth: '420px',
@@ -912,7 +912,7 @@ const TelemetryTab: React.FC = () => {
         <p
           style={{
             fontFamily: 'var(--at-sans)',
-            fontSize: 'var(--at-body-size)',
+            fontSize: '16px',
             color: 'var(--at-ink-4)',
             maxWidth: '380px',
             marginTop: '8px',

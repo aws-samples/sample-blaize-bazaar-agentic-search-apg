@@ -100,7 +100,7 @@ const SessionView: React.FC = () => {
         <p
           style={{
             fontFamily: 'var(--at-sans)',
-            fontSize: '22px',
+            fontSize: '24px',
             lineHeight: 1.35,
             color: 'var(--at-ink-1)',
             maxWidth: '420px',
@@ -112,7 +112,7 @@ const SessionView: React.FC = () => {
         <p
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: 'var(--at-mono-size)',
+            fontSize: '13px',
             color: 'var(--at-ink-4)',
             maxWidth: '480px',
             marginTop: '8px',
@@ -125,7 +125,7 @@ const SessionView: React.FC = () => {
           style={{
             marginTop: '24px',
             fontFamily: 'var(--at-sans)',
-            fontSize: '14px',
+            fontSize: '15px',
             fontWeight: 500,
             color: 'var(--at-cream-1)',
             backgroundColor: 'var(--at-ink-1)',
@@ -157,7 +157,7 @@ const SessionView: React.FC = () => {
         <p
           style={{
             fontFamily: 'var(--at-sans)',
-            fontSize: '22px',
+            fontSize: '24px',
             lineHeight: 1.35,
             color: 'var(--at-ink-1)',
             maxWidth: '420px',

@@ -75,7 +75,7 @@ const TracePill: React.FC<{ label: string }> = ({ label }) => (
     style={{
       display: 'inline-block',
       fontFamily: 'var(--at-mono)',
-      fontSize: '10px',
+      fontSize: '12px',
       fontWeight: 600,
       letterSpacing: '0.05em',
       color: 'var(--at-red-1)',
@@ -154,7 +154,7 @@ const EvidencePanel: React.FC<{
     <pre
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: 'var(--at-mono-size)',
+        fontSize: '13px',
         lineHeight: 'var(--at-mono-leading)',
         backgroundColor: 'var(--at-cream-2)',
         border: '1px solid var(--at-rule-1)',
@@ -177,7 +177,7 @@ const EvidencePanel: React.FC<{
           fontSize: 'var(--at-eyebrow-size)',
           letterSpacing: 'var(--at-eyebrow-tracking)',
           textTransform: 'uppercase',
-          color: 'var(--at-ink-4)',
+          color: 'var(--at-ink-2)',
           display: 'block',
           marginBottom: '8px',
         }}
@@ -201,7 +201,7 @@ const EvidencePanel: React.FC<{
           <span
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '12px',
+              fontSize: '14px',
               color: 'var(--at-ink-1)',
             }}
           >
@@ -210,8 +210,8 @@ const EvidencePanel: React.FC<{
           <span
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '11px',
-              color: 'var(--at-ink-4)',
+              fontSize: '13px',
+              color: 'var(--at-ink-2)',
             }}
           >
             {tool.distance.toFixed(2)} cos
@@ -239,7 +239,7 @@ const MemoryRow: React.FC<{ tier: string; content: string }> = ({
     <span
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: '10px',
+        fontSize: '12px',
         fontWeight: 600,
         letterSpacing: '0.1em',
         textTransform: 'uppercase',
@@ -262,7 +262,7 @@ const MemoryRow: React.FC<{ tier: string; content: string }> = ({
     <span
       style={{
         fontFamily: 'var(--at-serif)',
-        fontSize: '14px',
+        fontSize: '15px',
         lineHeight: 1.5,
         color: 'var(--at-ink-2)',
       }}
@@ -297,8 +297,8 @@ const BriefProductCard: React.FC<{ product: ProductCard }> = ({ product }) => (
       <span
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '10px',
-          color: 'var(--at-ink-4)',
+          fontSize: '12px',
+          color: 'var(--at-ink-2)',
           textTransform: 'uppercase',
           letterSpacing: '0.1em',
         }}
@@ -312,10 +312,10 @@ const BriefProductCard: React.FC<{ product: ProductCard }> = ({ product }) => (
       <span
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '9px',
+          fontSize: '11px',
           letterSpacing: '0.15em',
           textTransform: 'uppercase',
-          color: 'var(--at-ink-4)',
+          color: 'var(--at-ink-2)',
           display: 'block',
           marginBottom: '4px',
         }}
@@ -325,7 +325,7 @@ const BriefProductCard: React.FC<{ product: ProductCard }> = ({ product }) => (
       <span
         style={{
           fontFamily: 'var(--at-sans)',
-          fontSize: '14px',
+          fontSize: '15px',
           lineHeight: 1.3,
           color: 'var(--at-ink-1)',
           display: 'block',
@@ -352,7 +352,7 @@ const EditorialSection: React.FC<{ section: BriefSection }> = ({
       <span
         style={{
           fontFamily: 'var(--at-sans)',
-          fontSize: '14px',
+          fontSize: '15px',
           color: 'var(--at-red-1)',
           display: 'block',
           marginBottom: '4px',
@@ -363,7 +363,7 @@ const EditorialSection: React.FC<{ section: BriefSection }> = ({
       <h3
         style={{
           fontFamily: 'var(--at-sans)',
-          fontSize: '22px',
+          fontSize: '24px',
           fontWeight: 400,
           lineHeight: 1.25,
           color: 'var(--at-ink-1)',
@@ -447,7 +447,7 @@ const BriefTab: React.FC = () => {
         <p
           style={{
             fontFamily: 'var(--at-sans)',
-            fontSize: '22px',
+            fontSize: '24px',
             lineHeight: 1.35,
             color: 'var(--at-ink-1)',
             maxWidth: '420px',
@@ -491,8 +491,8 @@ const BriefTab: React.FC = () => {
         <div
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: 'var(--at-mono-size)',
-            color: 'var(--at-ink-4)',
+            fontSize: '13px',
+            color: 'var(--at-ink-2)',
             display: 'flex',
             justifyContent: 'center',
             gap: '16px',
@@ -542,10 +542,10 @@ const BriefTab: React.FC = () => {
             <span
               style={{
                 fontFamily: 'var(--at-mono)',
-                fontSize: '10px',
+                fontSize: '12px',
                 letterSpacing: '0.15em',
                 textTransform: 'uppercase',
-                color: 'var(--at-ink-4)',
+                color: 'var(--at-ink-2)',
                 display: 'block',
                 marginBottom: '4px',
               }}
@@ -555,7 +555,7 @@ const BriefTab: React.FC = () => {
             <span
               style={{
                 fontFamily: 'var(--at-serif)',
-                fontSize: '15px',
+                fontSize: '16px',
                 lineHeight: 1.4,
                 color: 'var(--at-ink-1)',
               }}
@@ -632,7 +632,7 @@ const BriefTab: React.FC = () => {
               fontSize: 'var(--at-eyebrow-size)',
               letterSpacing: 'var(--at-eyebrow-tracking)',
               textTransform: 'uppercase',
-              color: 'var(--at-ink-4)',
+              color: 'var(--at-ink-2)',
             }}
           >
             Confidence Score
@@ -658,8 +658,8 @@ const BriefTab: React.FC = () => {
                   <span
                     style={{
                       fontFamily: 'var(--at-sans)',
-                      fontSize: '12px',
-                      color: 'var(--at-ink-4)',
+                      fontSize: '14px',
+                      color: 'var(--at-ink-2)',
                       display: 'block',
                       marginBottom: '2px',
                     }}
@@ -669,7 +669,7 @@ const BriefTab: React.FC = () => {
                   <span
                     style={{
                       fontFamily: 'var(--at-serif)',
-                      fontSize: '18px',
+                      fontSize: '20px',
                       fontWeight: 400,
                       color: 'var(--at-ink-1)',
                       display: 'block',
@@ -681,10 +681,10 @@ const BriefTab: React.FC = () => {
                   <span
                     style={{
                       fontFamily: 'var(--at-mono)',
-                      fontSize: '9px',
+                      fontSize: '11px',
                       letterSpacing: '0.1em',
                       textTransform: 'uppercase',
-                      color: 'var(--at-ink-4)',
+                      color: 'var(--at-ink-2)',
                     }}
                   >
                     {stat.label}
@@ -720,7 +720,7 @@ const BriefTab: React.FC = () => {
         <p
           style={{
             fontFamily: 'var(--at-sans)',
-            fontSize: '14px',
+            fontSize: '15px',
             lineHeight: 1.5,
             color: 'var(--at-ink-1)',
             maxWidth: '400px',
