@@ -129,7 +129,7 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
               cy={pos.y}
               r={6}
               fill="var(--at-cream-2)"
-              stroke="var(--at-ink-3)"
+              stroke="var(--at-ink-1)"
               strokeWidth="1.5"
             />
             <text
@@ -139,7 +139,7 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
               style={{
                 fontFamily: 'var(--at-mono)',
                 fontSize: '8px',
-                fill: 'var(--at-ink-3)',
+                fill: 'var(--at-ink-1)',
                 letterSpacing: '0.04em',
               }}
             >
@@ -303,7 +303,7 @@ const StmCard: React.FC<StmCardProps> = ({ turnCount, recentIntents, items }) =>
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
         fontSize: '14px',
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         lineHeight: 1.5,
         margin: '0 0 20px 0',
       }}
@@ -453,7 +453,7 @@ const LtmCard: React.FC<LtmCardProps> = ({
           width: '8px',
           height: '8px',
           borderRadius: '50%',
-          border: '2px solid var(--at-ink-3)',
+          border: '2px solid var(--at-ink-1)',
           backgroundColor: 'transparent',
           flexShrink: 0,
         }}
@@ -490,7 +490,7 @@ const LtmCard: React.FC<LtmCardProps> = ({
         fontFamily: 'var(--at-serif)',
         fontStyle: 'italic',
         fontSize: '14px',
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         lineHeight: 1.5,
         margin: '0 0 20px 0',
       }}
@@ -602,7 +602,7 @@ const LtmCard: React.FC<LtmCardProps> = ({
               fontStyle: 'italic',
               fontSize: '13px',
               lineHeight: 1.5,
-              color: 'var(--at-ink-3)',
+              color: 'var(--at-ink-1)',
             }}
           >
             {pattern}
@@ -737,7 +737,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
         fontStyle: 'italic',
         fontSize: '20px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}
@@ -797,7 +797,7 @@ const EmptyState: React.FC = () => (
         fontStyle: 'italic',
         fontSize: '22px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}
@@ -869,7 +869,7 @@ const MemoryDashboard: React.FC = () => {
                   fontFamily: 'var(--at-serif)',
                   fontStyle: 'italic',
                   fontSize: '14px',
-                  color: 'var(--at-ink-3)',
+                  color: 'var(--at-ink-1)',
                   lineHeight: 1.5,
                   margin: '0 0 16px 0',
                   maxWidth: '520px',

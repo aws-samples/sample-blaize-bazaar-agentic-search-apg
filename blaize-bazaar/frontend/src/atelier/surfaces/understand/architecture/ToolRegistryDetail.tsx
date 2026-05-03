@@ -155,12 +155,12 @@ const titleStyle: React.CSSProperties = {
 
 const proseStyle: React.CSSProperties = {
   fontFamily: 'var(--at-sans)', fontSize: 'var(--at-body-size)', lineHeight: 'var(--at-body-leading)',
-  color: 'var(--at-ink-3)', margin: 0, maxWidth: '560px',
+  color: 'var(--at-ink-1)', margin: 0, maxWidth: '560px',
 };
 
 const codeStyle: React.CSSProperties = {
-  fontFamily: 'var(--at-mono)', fontSize: 'var(--at-mono-size)', lineHeight: 'var(--at-mono-leading)',
-  color: 'var(--at-ink-2)', backgroundColor: 'var(--at-cream-2)', borderRadius: '8px',
+  fontFamily: 'var(--at-mono)', fontSize: '13px', lineHeight: 1.7,
+  color: 'var(--at-ink-1)', backgroundColor: 'var(--at-cream-2)', borderRadius: '8px',
   padding: '14px 16px', margin: 0, overflowX: 'auto', whiteSpace: 'pre',
 };
 

@@ -105,7 +105,7 @@ const CheatSheetStrip: React.FC<{ items: CheatSheetItem[] }> = ({ items }) => {
                 fontStyle: 'italic',
                 fontSize: '14px',
                 lineHeight: 1.55,
-                color: 'var(--at-ink-2)',
+                color: 'var(--at-ink-1)',
                 margin: 0,
               }}
             >
@@ -240,7 +240,7 @@ const DetailPageShell: React.FC<DetailPageShellProps> = ({
           gap: '8px',
           fontSize: '13px',
           fontWeight: 500,
-          color: 'var(--at-ink-3)',
+          color: 'var(--at-ink-1)',
           background: 'none',
           border: 'none',
           cursor: 'pointer',
@@ -248,7 +248,7 @@ const DetailPageShell: React.FC<DetailPageShellProps> = ({
           marginBottom: '24px',
         }}
         onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--at-ink-1)'; }}
-        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--at-ink-3)'; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--at-ink-1)'; }}
       >
         <ArrowLeft size={16} strokeWidth={1.75} />
         Back to Architecture

@@ -137,7 +137,7 @@ const RoutingCard: React.FC<RoutingCardProps> = ({ pattern, numeral }) => {
           fontStyle: 'italic',
           fontSize: '14.5px',
           lineHeight: 1.55,
-          color: 'var(--at-ink-3)',
+          color: 'var(--at-ink-1)',
           margin: '0 0 18px 0',
           maxWidth: '640px',
         }}
@@ -270,7 +270,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
         fontStyle: 'italic',
         fontSize: '20px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}
@@ -330,7 +330,7 @@ const EmptyState: React.FC = () => (
         fontStyle: 'italic',
         fontSize: '22px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}

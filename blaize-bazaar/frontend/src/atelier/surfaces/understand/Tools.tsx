@@ -106,7 +106,7 @@ const DiscoveryDemoCard: React.FC = () => {
           fontFamily: 'var(--at-serif)',
           fontStyle: 'italic',
           fontSize: '13.5px',
-          color: 'var(--at-ink-3)',
+          color: 'var(--at-ink-1)',
           lineHeight: 1.55,
           marginBottom: '18px',
           maxWidth: '640px',
@@ -249,7 +249,7 @@ const DiscoveryDemoCard: React.FC = () => {
                   fontSize: '12px',
                   color:
                     result.status === 'exercise'
-                      ? 'var(--at-ink-3)'
+                      ? 'var(--at-ink-1)'
                       : 'var(--at-ink-1)',
                   fontWeight: 500,
                 }}
@@ -319,7 +319,7 @@ const DiscoveryDemoCard: React.FC = () => {
             fontFamily: 'var(--at-mono)',
             fontStyle: 'italic',
             fontSize: '11px',
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
             letterSpacing: '0.04em',
             paddingTop: '14px',
             marginTop: '14px',
@@ -435,7 +435,7 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool }) => {
               fontFamily: 'var(--at-serif)',
               fontStyle: 'italic',
               fontSize: '13.5px',
-              color: 'var(--at-ink-3)',
+              color: 'var(--at-ink-1)',
               lineHeight: 1.4,
             }}
           >
@@ -475,7 +475,7 @@ const ToolRow: React.FC<ToolRowProps> = ({ tool }) => {
         <code>
           <span style={{ color: 'var(--at-red-1)' }}>def</span>{' '}
           {tool.functionName}
-          <span style={{ color: 'var(--at-ink-3)' }}>
+          <span style={{ color: 'var(--at-ink-1)' }}>
             ({tool.signature.split('(')[1]?.split(')')[0] ?? ''})
           </span>
           <span style={{ color: 'var(--at-ink-4)' }}>
@@ -639,7 +639,7 @@ const RelatedCard: React.FC = () => (
             fontFamily: 'var(--at-serif)',
             fontStyle: 'italic',
             fontSize: '13px',
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
             lineHeight: 1.5,
             margin: 0,
           }}
@@ -710,7 +710,7 @@ const RelatedCard: React.FC = () => (
             fontFamily: 'var(--at-serif)',
             fontStyle: 'italic',
             fontSize: '13px',
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
             lineHeight: 1.5,
             margin: 0,
           }}
@@ -807,7 +807,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
         fontStyle: 'italic',
         fontSize: '20px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}
@@ -867,7 +867,7 @@ const EmptyState: React.FC = () => (
         fontStyle: 'italic',
         fontSize: '22px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}

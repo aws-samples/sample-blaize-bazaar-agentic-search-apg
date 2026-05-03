@@ -74,7 +74,7 @@ export const WorkshopProgressStrip: React.FC<WorkshopProgressStripProps> = ({
           fontFamily: 'var(--at-mono)',
           fontSize: '11px',
           fontWeight: 500,
-          color: 'var(--at-ink-3)',
+          color: 'var(--at-ink-1)',
           letterSpacing: '0.04em',
           whiteSpace: 'nowrap',
         }}

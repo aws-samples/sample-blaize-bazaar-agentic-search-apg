@@ -83,7 +83,7 @@ class AtelierErrorBoundary extends React.Component<
                 fontFamily: 'var(--at-mono)',
                 fontSize: 'var(--at-mono-size)',
                 lineHeight: 'var(--at-mono-leading)',
-                color: 'var(--at-ink-3)',
+                color: 'var(--at-ink-1)',
                 backgroundColor: 'var(--at-cream-2)',
                 padding: '12px 20px',
                 borderRadius: '8px',

@@ -117,7 +117,7 @@ const AgentRow: React.FC<AgentRowProps> = ({ agent }) => {
                 fontSize: '24px',
                 letterSpacing: '-0.012em',
                 lineHeight: 1.1,
-                color: isExercise ? 'var(--at-ink-3)' : 'var(--at-ink-1)',
+                color: isExercise ? 'var(--at-ink-1)' : 'var(--at-ink-1)',
                 margin: 0,
               }}
             >
@@ -128,7 +128,7 @@ const AgentRow: React.FC<AgentRowProps> = ({ agent }) => {
                 fontFamily: 'var(--at-serif)',
                 fontStyle: 'italic',
                 fontSize: '14px',
-                color: 'var(--at-ink-3)',
+                color: 'var(--at-ink-1)',
                 lineHeight: 1.4,
                 margin: 0,
               }}
@@ -253,7 +253,7 @@ const AgentRow: React.FC<AgentRowProps> = ({ agent }) => {
             fontFamily: 'var(--at-mono)',
             fontSize: '10.5px',
             lineHeight: 1.7,
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
           }}
         >
           <span
@@ -342,7 +342,7 @@ const RelatedCard: React.FC = () => (
             fontFamily: 'var(--at-serif)',
             fontStyle: 'italic',
             fontSize: '13px',
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
             lineHeight: 1.5,
             margin: 0,
           }}
@@ -408,7 +408,7 @@ const RelatedCard: React.FC = () => (
             fontFamily: 'var(--at-serif)',
             fontStyle: 'italic',
             fontSize: '13px',
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
             lineHeight: 1.5,
             margin: 0,
           }}
@@ -498,7 +498,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
         fontStyle: 'italic',
         fontSize: '20px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}
@@ -558,7 +558,7 @@ const EmptyState: React.FC = () => (
         fontStyle: 'italic',
         fontSize: '22px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}

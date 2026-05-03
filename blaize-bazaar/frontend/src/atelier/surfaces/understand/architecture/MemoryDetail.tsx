@@ -102,13 +102,13 @@ const OrbitVisualization: React.FC<OrbitVisualizationProps> = ({
           <g key={`ltm-${item.id}`}>
             <circle
               cx={pos.x} cy={pos.y} r={8}
-              fill="var(--at-cream-2)" stroke="var(--at-ink-3)" strokeWidth="1.5"
+              fill="var(--at-cream-2)" stroke="var(--at-ink-1)" strokeWidth="1.5"
             />
             <text
               x={pos.x} y={pos.y + 18} textAnchor="middle"
               style={{
                 fontFamily: 'var(--at-mono)', fontSize: '10px',
-                fill: 'var(--at-ink-3)', letterSpacing: '0.04em',
+                fill: 'var(--at-ink-1)', letterSpacing: '0.04em',
               }}
             >
               {truncate(item.content, 32)}
@@ -269,12 +269,12 @@ const TierCard: React.FC<TierCardProps> = ({
       <pre
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: 'var(--at-mono-size)',
-          lineHeight: 'var(--at-mono-leading)',
-          color: 'var(--at-ink-2)',
+          fontSize: '13px',
+          lineHeight: 1.7,
+          color: 'var(--at-ink-1)',
           backgroundColor: 'var(--at-cream-2)',
           borderRadius: '8px',
-          padding: '14px 16px',
+          padding: '16px 20px',
           margin: 0,
           overflowX: 'auto',
           whiteSpace: 'pre',
@@ -411,7 +411,7 @@ ORDER BY embedding <=> $1 LIMIT 5;`}
                   fontFamily: 'var(--at-serif)',
                   fontStyle: 'italic',
                   fontSize: '14px',
-                  color: 'var(--at-ink-3)',
+                  color: 'var(--at-ink-1)',
                   lineHeight: 1.5,
                   margin: 0,
                   maxWidth: '520px',
@@ -492,7 +492,7 @@ const MemoryErrorState: React.FC<{ message: string; onRetry: () => void }> = ({
         fontStyle: 'italic',
         fontSize: '20px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
       }}
     >
@@ -501,7 +501,7 @@ const MemoryErrorState: React.FC<{ message: string; onRetry: () => void }> = ({
     <p
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: 'var(--at-mono-size)',
+        fontSize: '13px',
         color: 'var(--at-ink-4)',
         maxWidth: '480px',
         marginTop: '8px',
@@ -550,7 +550,7 @@ const MemoryEmptyState: React.FC = () => (
         fontStyle: 'italic',
         fontSize: '20px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
       }}
     >

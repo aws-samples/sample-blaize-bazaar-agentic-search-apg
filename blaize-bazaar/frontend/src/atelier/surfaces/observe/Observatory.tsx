@@ -329,7 +329,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
         fontFamily: 'var(--at-sans)',
         fontSize: '16px',
         lineHeight: 1.6,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}
@@ -388,7 +388,7 @@ const EmptyState: React.FC = () => (
         fontFamily: 'var(--at-sans)',
         fontSize: '16px',
         lineHeight: 1.6,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}

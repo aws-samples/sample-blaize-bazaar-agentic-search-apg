@@ -147,7 +147,7 @@ const NodeCard: React.FC<{
       >
         {tag}
       </span>
-      <p style={{ fontFamily: 'var(--at-sans)', fontSize: '13px', lineHeight: 1.5, color: 'var(--at-ink-3)', margin: 0 }}>
+      <p style={{ fontFamily: 'var(--at-sans)', fontSize: '13px', lineHeight: 1.5, color: 'var(--at-ink-1)', margin: 0 }}>
         {description}
       </p>
     </div>
@@ -218,16 +218,16 @@ const sectionProseStyle: React.CSSProperties = {
   fontFamily: 'var(--at-sans)',
   fontSize: 'var(--at-body-size)',
   lineHeight: 'var(--at-body-leading)',
-  color: 'var(--at-ink-3)',
+  color: 'var(--at-ink-1)',
   margin: 0,
   maxWidth: '560px',
 };
 
 const codeBlockStyle: React.CSSProperties = {
   fontFamily: 'var(--at-mono)',
-  fontSize: 'var(--at-mono-size)',
-  lineHeight: 'var(--at-mono-leading)',
-  color: 'var(--at-ink-2)',
+  fontSize: '13px',
+  lineHeight: 1.7,
+  color: 'var(--at-ink-1)',
   backgroundColor: 'var(--at-cream-2)',
   borderRadius: '8px',
   padding: '14px 16px',

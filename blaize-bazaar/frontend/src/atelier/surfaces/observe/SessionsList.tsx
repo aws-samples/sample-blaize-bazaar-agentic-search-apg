@@ -118,7 +118,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, onClick }) => (
           style={{
             fontFamily: 'var(--at-mono)',
             fontSize: 'var(--at-mono-size)',
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
           }}
         >
           {formatElapsed(session.elapsedMs)}
@@ -128,7 +128,7 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, onClick }) => (
           style={{
             fontFamily: 'var(--at-mono)',
             fontSize: 'var(--at-mono-size)',
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
           }}
         >
           {session.agentCount} agent{session.agentCount !== 1 ? 's' : ''}
@@ -180,7 +180,7 @@ const EmptyState: React.FC = () => (
         fontFamily: 'var(--at-sans)',
         fontSize: '22px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}
@@ -256,7 +256,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
         fontFamily: 'var(--at-sans)',
         fontSize: '20px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}

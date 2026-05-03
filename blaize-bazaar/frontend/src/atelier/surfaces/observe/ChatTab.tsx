@@ -164,7 +164,7 @@ const ToolCallChip: React.FC<{ tool: ToolCall }> = ({ tool }) => {
           style={{
             fontFamily: 'var(--at-sans)',
             fontSize: '12px',
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
             flex: 1,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -222,7 +222,7 @@ const ToolCallChip: React.FC<{ tool: ToolCall }> = ({ tool }) => {
               style={{
                 fontFamily: 'var(--at-sans)',
                 fontSize: '13px',
-                color: 'var(--at-ink-3)',
+                color: 'var(--at-ink-1)',
                 margin: 0,
                 lineHeight: 1.5,
               }}
@@ -361,7 +361,7 @@ const PlanRowDisplay: React.FC<{ plan: PlanRow }> = ({ plan }) => (
       style={{
         fontFamily: 'var(--at-mono)',
         fontSize: 'var(--at-mono-size)',
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
       }}
     >
       {plan.stepCount} steps
@@ -654,7 +654,7 @@ const EmptyState: React.FC = () => {
         style={{
           fontFamily: 'var(--at-sans)',
           fontSize: '20px',
-          color: 'var(--at-ink-3)',
+          color: 'var(--at-ink-1)',
           marginTop: '16px',
           marginBottom: '20px',
         }}

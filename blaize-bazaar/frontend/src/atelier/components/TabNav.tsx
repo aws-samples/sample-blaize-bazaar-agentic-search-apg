@@ -53,7 +53,7 @@ export const TabNav: React.FC<TabNavProps> = ({
               fontStyle: 'italic',
               fontSize: 'var(--at-tab-size)',
               fontWeight: 400,
-              color: isActive ? 'var(--at-ink-1)' : 'var(--at-ink-3)',
+              color: isActive ? 'var(--at-ink-1)' : 'var(--at-ink-1)',
               background: 'none',
               border: 'none',
               borderBottom: isActive

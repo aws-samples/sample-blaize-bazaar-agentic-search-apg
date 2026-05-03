@@ -61,7 +61,7 @@ const PlaceholderSurface: React.FC<PlaceholderSurfaceProps> = ({
             fontFamily: 'var(--at-sans)',
             fontSize: '14px',
             lineHeight: 1.6,
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
           }}
         >
           {description}

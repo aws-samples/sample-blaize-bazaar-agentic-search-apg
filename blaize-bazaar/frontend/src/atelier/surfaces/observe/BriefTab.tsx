@@ -449,7 +449,7 @@ const BriefTab: React.FC = () => {
             fontFamily: 'var(--at-sans)',
             fontSize: '22px',
             lineHeight: 1.35,
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
             maxWidth: '420px',
             marginTop: '16px',
           }}
@@ -722,7 +722,7 @@ const BriefTab: React.FC = () => {
             fontFamily: 'var(--at-sans)',
             fontSize: '14px',
             lineHeight: 1.5,
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
             maxWidth: '400px',
             margin: '0 auto',
           }}

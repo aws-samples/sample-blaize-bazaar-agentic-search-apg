@@ -153,7 +153,7 @@ const ColdStartHistogram: React.FC<HistogramProps> = ({ histogram }) => {
                   style={{
                     fontFamily: 'var(--at-mono)',
                     fontSize: '10px',
-                    fill: 'var(--at-ink-3)',
+                    fill: 'var(--at-ink-1)',
                   }}
                 >
                   {bucket.count}
@@ -563,7 +563,7 @@ const MeasureControls: React.FC<MeasureControlsProps> = ({
               borderRadius: '100px',
               border: activeWindow === w ? '1px solid var(--at-ink-1)' : '1px solid var(--at-card-border)',
               backgroundColor: activeWindow === w ? 'var(--at-ink-1)' : 'transparent',
-              color: activeWindow === w ? 'var(--at-cream-1)' : 'var(--at-ink-3)',
+              color: activeWindow === w ? 'var(--at-cream-1)' : 'var(--at-ink-1)',
               cursor: 'pointer',
               fontWeight: activeWindow === w ? 600 : 400,
               transition: 'all 0.15s ease',
@@ -700,7 +700,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
         fontStyle: 'italic',
         fontSize: '20px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}
@@ -760,7 +760,7 @@ const EmptyState: React.FC = () => (
         fontStyle: 'italic',
         fontSize: '22px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}

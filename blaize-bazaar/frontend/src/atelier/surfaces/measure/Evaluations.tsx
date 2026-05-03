@@ -68,7 +68,7 @@ const MetricPill: React.FC<MetricPillProps> = ({ label, value, highlight }) => (
         fontWeight: 300,
         letterSpacing: '-0.02em',
         lineHeight: 1,
-        color: highlight ? 'var(--at-ink-1)' : 'var(--at-ink-3)',
+        color: highlight ? 'var(--at-ink-1)' : 'var(--at-ink-1)',
       }}
     >
       {value}
@@ -323,7 +323,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
         fontStyle: 'italic',
         fontSize: '20px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}
@@ -383,7 +383,7 @@ const EmptyState: React.FC = () => (
         fontStyle: 'italic',
         fontSize: '22px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}

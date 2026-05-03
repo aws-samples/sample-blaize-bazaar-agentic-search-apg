@@ -52,7 +52,7 @@ export const ModeStrip: React.FC<ModeStripProps> = ({
                 ? '1px solid var(--at-ink-1)'
                 : '1px solid var(--at-rule-2)',
               backgroundColor: isActive ? 'var(--at-ink-1)' : 'transparent',
-              color: isActive ? 'var(--at-cream-1)' : 'var(--at-ink-3)',
+              color: isActive ? 'var(--at-cream-1)' : 'var(--at-ink-1)',
               fontFamily: 'var(--at-mono)',
               fontSize: '10px',
               fontWeight: 500,

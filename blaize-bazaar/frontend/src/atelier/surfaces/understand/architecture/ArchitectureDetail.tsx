@@ -137,7 +137,7 @@ const NotFoundState: React.FC<{ concept: string }> = ({ concept }) => {
           fontFamily: 'var(--at-sans)',
           fontSize: 'var(--at-body-size)',
           lineHeight: 'var(--at-body-leading)',
-          color: 'var(--at-ink-3)',
+          color: 'var(--at-ink-1)',
           maxWidth: '420px',
           marginTop: '12px',
         }}

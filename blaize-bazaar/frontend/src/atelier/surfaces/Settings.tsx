@@ -102,7 +102,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
             fontSize: '16px',
             fontWeight: 600,
             color: persona.avatar_color === 'transparent'
-              ? 'var(--at-ink-3)'
+              ? 'var(--at-ink-1)'
               : '#fff',
             flexShrink: 0,
           }}
@@ -168,7 +168,7 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
           fontStyle: 'italic',
           fontSize: '14px',
           lineHeight: 1.55,
-          color: 'var(--at-ink-3)',
+          color: 'var(--at-ink-1)',
           margin: 0,
         }}
       >
@@ -284,7 +284,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
         fontStyle: 'italic',
         fontSize: '20px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}
@@ -442,7 +442,7 @@ const Settings: React.FC = () => {
               fontFamily: 'var(--at-serif)',
               fontStyle: 'italic',
               fontSize: '20px',
-              color: 'var(--at-ink-3)',
+              color: 'var(--at-ink-1)',
               marginTop: '16px',
             }}
           >
@@ -480,7 +480,7 @@ const Settings: React.FC = () => {
               fontFamily: 'var(--at-mono)',
               fontSize: '11px',
               lineHeight: 1.6,
-              color: 'var(--at-ink-3)',
+              color: 'var(--at-ink-1)',
               letterSpacing: '0.02em',
             }}
           >

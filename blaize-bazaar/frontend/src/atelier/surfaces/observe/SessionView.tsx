@@ -102,7 +102,7 @@ const SessionView: React.FC = () => {
             fontFamily: 'var(--at-sans)',
             fontSize: '22px',
             lineHeight: 1.35,
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
             maxWidth: '420px',
             marginTop: '16px',
           }}
@@ -159,7 +159,7 @@ const SessionView: React.FC = () => {
             fontFamily: 'var(--at-sans)',
             fontSize: '22px',
             lineHeight: 1.35,
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
             maxWidth: '420px',
             marginTop: '16px',
           }}

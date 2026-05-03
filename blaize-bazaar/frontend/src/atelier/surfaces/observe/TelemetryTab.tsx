@@ -163,7 +163,7 @@ const TimelinePanelCard: React.FC<TimelinePanelProps> = ({
             fontFamily: 'var(--at-mono)',
             fontSize: '11px',
             fontWeight: 600,
-            color: isActive ? 'var(--at-cream-1)' : 'var(--at-ink-3)',
+            color: isActive ? 'var(--at-cream-1)' : 'var(--at-ink-1)',
             flexShrink: 0,
             zIndex: 1,
           }}
@@ -265,7 +265,7 @@ const TimelinePanelCard: React.FC<TimelinePanelProps> = ({
           style={{
             fontFamily: 'var(--at-sans)',
             fontSize: '13px',
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
             margin: '0 0 8px 0',
             lineHeight: 1.5,
           }}
@@ -415,7 +415,7 @@ const ProductRecommendationCard: React.FC = () => (
       style={{
         fontFamily: 'var(--at-sans)',
         fontSize: '13px',
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         lineHeight: 1.55,
         margin: '0 0 14px 0',
       }}
@@ -577,7 +577,7 @@ const ExpansionArea: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
                     fontFamily: 'var(--at-mono)',
                     fontSize: '10px',
                     fontWeight: 600,
-                    color: 'var(--at-ink-3)',
+                    color: 'var(--at-ink-1)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.06em',
                     marginBottom: '6px',
@@ -812,7 +812,7 @@ const FooterStrip: React.FC<{ panels: TelemetryPanel[] }> = ({ panels }) => {
           minWidth: '200px',
           fontFamily: 'var(--at-sans)',
           fontSize: '14px',
-          color: 'var(--at-ink-3)',
+          color: 'var(--at-ink-1)',
           lineHeight: 1.6,
         }}
       >
@@ -902,7 +902,7 @@ const TelemetryTab: React.FC = () => {
             fontFamily: 'var(--at-sans)',
             fontSize: '22px',
             lineHeight: 1.35,
-            color: 'var(--at-ink-3)',
+            color: 'var(--at-ink-1)',
             maxWidth: '420px',
             marginTop: '16px',
           }}

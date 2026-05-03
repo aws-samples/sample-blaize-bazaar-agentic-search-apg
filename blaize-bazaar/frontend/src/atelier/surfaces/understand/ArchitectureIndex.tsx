@@ -107,7 +107,7 @@ const ConceptCard: React.FC<ConceptCardProps> = ({ concept, onOpen }) => (
           fontFamily: 'var(--at-sans)',
           fontSize: 'var(--at-body-size)',
           lineHeight: 'var(--at-body-leading)',
-          color: 'var(--at-ink-3)',
+          color: 'var(--at-ink-1)',
           margin: 0,
         }}
       >
@@ -198,7 +198,7 @@ const LegendCard: React.FC = () => (
                 fontFamily: 'var(--at-sans)',
                 fontSize: '13px',
                 lineHeight: 1.5,
-                color: 'var(--at-ink-3)',
+                color: 'var(--at-ink-1)',
                 margin: 0,
               }}
             >
@@ -266,7 +266,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
         fontStyle: 'italic',
         fontSize: '20px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}
@@ -277,7 +277,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
       style={{
         fontFamily: 'var(--at-mono)',
         fontSize: 'var(--at-mono-size)',
-        color: 'var(--at-ink-4)',
+        color: 'var(--at-ink-2)',
         maxWidth: '480px',
         marginTop: '8px',
       }}
@@ -326,7 +326,7 @@ const EmptyState: React.FC = () => (
         fontStyle: 'italic',
         fontSize: '22px',
         lineHeight: 1.35,
-        color: 'var(--at-ink-3)',
+        color: 'var(--at-ink-1)',
         maxWidth: '420px',
         marginTop: '16px',
       }}
@@ -337,7 +337,7 @@ const EmptyState: React.FC = () => (
       style={{
         fontFamily: 'var(--at-sans)',
         fontSize: 'var(--at-body-size)',
-        color: 'var(--at-ink-4)',
+        color: 'var(--at-ink-2)',
         maxWidth: '380px',
         marginTop: '8px',
       }}
