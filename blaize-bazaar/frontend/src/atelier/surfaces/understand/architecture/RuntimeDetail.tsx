@@ -132,27 +132,27 @@ const LayerCard: React.FC<{
 );
 
 const RuntimeLayersDiagram: React.FC = () => (
-  <svg viewBox="0 0 500 160" width="100%" style={{ maxWidth: '500px', display: 'block', margin: '0 auto' }}>
+  <svg viewBox="0 0 700 280" width="100%" style={{ maxWidth: '800px', display: 'block', margin: '0 auto' }}>
     {/* Layer bars stacked */}
     {[
-      { label: 'fast-path', width: 30, color: 'rgba(107,140,94,0.3)' },
-      { label: 'intent', width: 80, color: 'rgba(168,66,58,0.2)' },
-      { label: 'skill-router', width: 80, color: 'rgba(168,66,58,0.15)' },
-      { label: 'orchestrator', width: 150, color: 'rgba(31,20,16,0.12)' },
-      { label: 'specialist', width: 280, color: 'rgba(31,20,16,0.08)' },
-      { label: 'tools', width: 200, color: 'rgba(168,66,58,0.1)' },
-      { label: 'stream', width: 400, color: 'rgba(107,140,94,0.15)' },
+      { label: 'fast-path', width: 40, color: 'rgba(107,140,94,0.45)' },
+      { label: 'intent', width: 110, color: 'rgba(168,66,58,0.35)' },
+      { label: 'skill-router', width: 110, color: 'rgba(168,66,58,0.25)' },
+      { label: 'orchestrator', width: 210, color: 'rgba(31,20,16,0.20)' },
+      { label: 'specialist', width: 390, color: 'rgba(31,20,16,0.14)' },
+      { label: 'tools', width: 280, color: 'rgba(168,66,58,0.18)' },
+      { label: 'stream', width: 560, color: 'rgba(107,140,94,0.25)' },
     ].map((layer, i) => (
       <g key={layer.label}>
-        <rect x="80" y={10 + i * 20} width={layer.width} height="16" rx="4" fill={layer.color} />
-        <text x="70" y={22 + i * 20} textAnchor="end" fontFamily="JetBrains Mono, monospace" fontSize="8" fill="rgba(31,20,16,0.5)" letterSpacing="0.5">
+        <rect x="120" y={16 + i * 34} width={layer.width} height="26" rx="5" fill={layer.color} />
+        <text x="110" y={34 + i * 34} textAnchor="end" fontFamily="JetBrains Mono, monospace" fontSize="13" fill="rgba(31,20,16,0.75)" letterSpacing="0.5">
           {layer.label}
         </text>
       </g>
     ))}
     {/* Time axis */}
-    <line x1="80" y1="155" x2="480" y2="155" stroke="rgba(31,20,16,0.15)" strokeWidth="0.5" />
-    <text x="280" y="152" textAnchor="middle" fontFamily="JetBrains Mono, monospace" fontSize="7" fill="rgba(31,20,16,0.35)" letterSpacing="1.5">TIME →</text>
+    <line x1="120" y1="262" x2="680" y2="262" stroke="rgba(31,20,16,0.2)" strokeWidth="1" />
+    <text x="400" y="276" textAnchor="middle" fontFamily="JetBrains Mono, monospace" fontSize="11" fill="rgba(31,20,16,0.55)" letterSpacing="2">TIME →</text>
   </svg>
 );
 
