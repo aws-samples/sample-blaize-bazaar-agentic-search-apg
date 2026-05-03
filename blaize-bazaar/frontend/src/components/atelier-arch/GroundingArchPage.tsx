@@ -492,7 +492,7 @@ export default function GroundingArchPage() {
               <>
                 Item enters <span className="gt-mono">approvals</span> table
               </>,
-              <>Storefront chat surfaces a confirm card</>,
+              <>Boutique chat surfaces a confirm card</>,
               <>User taps confirm or deny</>,
               <>
                 Reply ships <em>only after clearance</em>

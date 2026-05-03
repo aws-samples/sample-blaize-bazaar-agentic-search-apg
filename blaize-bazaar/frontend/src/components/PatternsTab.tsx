@@ -44,7 +44,7 @@ interface Pattern {
   tint: string
   goodFor: string[]
   tradeoffs: string[]
-  usedIn: 'Storefront' | 'Atelier' | 'Atelier (toggle)'
+  usedIn: 'Boutique' | 'Atelier' | 'Atelier (toggle)'
 }
 
 const PATTERNS: readonly Pattern[] = [
@@ -109,7 +109,7 @@ const PATTERNS: readonly Pattern[] = [
       'No cross-specialist composition — one reply at a time.',
       'Keyword regex needs maintenance as the vocabulary grows.',
     ],
-    usedIn: 'Storefront',
+    usedIn: 'Boutique',
   },
 ]
 
@@ -334,7 +334,7 @@ export default function PatternsTab() {
             margin: 0,
           }}
         >
-          Why did we choose Dispatcher for the Storefront?
+          Why did we choose Dispatcher for the Boutique?
         </h3>
         <div
           style={{

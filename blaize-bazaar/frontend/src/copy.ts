@@ -37,7 +37,7 @@ export const NAV = {
 // atelier register (Atelier) instead of operator jargon.
 export const SURFACE_TOGGLE = {
   ARIA_LABEL: "Switch surface",
-  STOREFRONT: "Storefront",
+  STOREFRONT: "Boutique",
   ATELIER: "Atelier",
 } as const;
 
@@ -169,7 +169,7 @@ export const INTENTS: Intent[] = [
 // Sign-in strip (Requirement 1.4.1)
 export const SIGN_IN_STRIP = {
   EYEBROW: "PERSONALIZED VISIONS",
-  HEADLINE: "Sign in and watch Blaize tailor the storefront to you.",
+  HEADLINE: "Sign in and watch Blaize tailor the boutique to you.",
   CTA: "Sign in for personalized visions",
   DISMISS: "Not now",
 } as const;
@@ -311,7 +311,7 @@ export const STORYBOARD_TEASERS: StoryboardTeaser[] = [
 export const STORYBOARD_PAGE_COMING_SOON =
   "Coming soon - the full editorial hub arrives with the next Edit.";
 export const DISCOVER_PAGE_SIGNED_OUT =
-  "Discover is tailored to you. Sign in and watch the storefront tune itself.";
+  "Discover is tailored to you. Sign in and watch the boutique tune itself.";
 export const DISCOVER_PAGE_COMING_SOON = STORYBOARD_PAGE_COMING_SOON;
 
 // Footer \u2014 three live columns + a brand + a bottom strip.
@@ -361,9 +361,9 @@ export const COMMAND_PILL = {
 // Auth modal (storefront.md "Auth modal" section, Requirement 2.6.6)
 export const AUTH_MODAL = {
   HEADER: "Welcome to Blaize Bazaar",
-  SUBHEADER: "Sign in for a storefront built for you",
+  SUBHEADER: "Sign in for a boutique built for you",
   EYEBROW: "PERSONALIZED VISIONS",
-  ITALIC_HEADLINE: "Let the storefront find you.",
+  ITALIC_HEADLINE: "Let the boutique find you.",
   BUTTON_GOOGLE: "Continue with Google",
   BUTTON_APPLE: "Continue with Apple",
   BUTTON_EMAIL: "Continue with email",
@@ -438,7 +438,7 @@ export const PREFERENCES_MODAL = {
     },
   ] as PreferenceGroup[],
   SKIP: "Skip for now",
-  SUBMIT: "Save and see my storefront",
+  SUBMIT: "Save and see my boutique",
   FOOTER: "Preferences stored with AgentCore Memory",
 } as const;
 

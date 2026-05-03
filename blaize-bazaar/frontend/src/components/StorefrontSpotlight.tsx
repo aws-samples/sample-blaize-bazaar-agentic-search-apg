@@ -42,7 +42,7 @@ const STEPS: SpotlightStep[] = [
     numeral: 'II',
     kicker: 'Sign in first',
     headline: 'Let Blaize remember you',
-    body: "Pick a persona from the top-right pill and watch the storefront tune itself — the cover, the recommendations, the voice of the chat. Try Marco for linen, Anna for gifts, Theo for home, or stay a Fresh visitor to see the editorial default.",
+    body: "Pick a persona from the top-right pill and watch the boutique tune itself — the cover, the recommendations, the voice of the chat. Try Marco for linen, Anna for gifts, Theo for home, or stay a Fresh visitor to see the editorial default.",
   },
   {
     numeral: 'III',

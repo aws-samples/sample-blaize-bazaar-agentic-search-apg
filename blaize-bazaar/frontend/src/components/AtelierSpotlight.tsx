@@ -36,13 +36,13 @@ const STEPS: SpotlightStep[] = [
     numeral: 'I',
     kicker: 'Welcome to',
     headline: 'The Atelier',
-    body: "This is where Blaize thinks out loud. Every agent decision, every tool call, every database read — visible in real time. The workshop behind the storefront.",
+    body: "This is where Blaize thinks out loud. Every agent decision, every tool call, every database read — visible in real time. The workshop behind the boutique.",
   },
   {
     numeral: 'II',
     kicker: 'On the left',
     headline: 'The conversation',
-    body: "Ask Blaize anything you'd ask in the storefront. The difference here: you see exactly how the answer was built — which specialist handled it, what tools fired, how long each step took.",
+    body: "Ask Blaize anything you'd ask in the boutique. The difference here: you see exactly how the answer was built — which specialist handled it, what tools fired, how long each step took.",
   },
   {
     numeral: 'III',
