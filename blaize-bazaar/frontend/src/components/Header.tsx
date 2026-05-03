@@ -20,6 +20,7 @@ import { usePersona, type PersonaListItem } from '../contexts/PersonaContext'
 import { NAV } from '../copy'
 import { colors } from '../design/tokens'
 import { Avatar } from '../design/primitives'
+import { getPersonaPhoto } from '../data/personaPhotos'
 import { IconButton } from '../design/primitives'
 import {
   Search,
@@ -222,6 +223,7 @@ function PersonaDropdown() {
             <Avatar
               initial={persona.avatar_initial}
               bgColor={persona.avatar_color}
+              photoUrl={getPersonaPhoto(persona.id)}
               size="sm"
             />
             <span
@@ -284,6 +286,7 @@ function PersonaDropdown() {
                 <Avatar
                   initial={p.avatar_initial}
                   bgColor={p.avatar_color}
+                  photoUrl={getPersonaPhoto(p.id)}
                   size="sm"
                 />
                 <div className="flex flex-col min-w-0">

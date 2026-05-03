@@ -31,6 +31,15 @@ interface NavSection {
 }
 
 /* -----------------------------------------------------------------------
+ * Persona headshot photos — Unsplash free-to-use portraits. Each URL
+ * points to a 200×200 crop so the sidebar avatar renders a real face.
+ * Falls back to the colored-initial circle when no photo is mapped.
+ * ----------------------------------------------------------------------- */
+
+// Shared persona photos from data/personaPhotos.ts
+import { PERSONA_PHOTOS } from '../../data/personaPhotos';
+
+/* -----------------------------------------------------------------------
  * Sidebar component
  * ----------------------------------------------------------------------- */
 
@@ -38,6 +47,7 @@ const Sidebar: React.FC = () => {
   const { persona } = usePersona();
   const buildState = useBuildState();
 
+  const personaId = persona?.id ?? 'fresh';
   const displayName = persona?.display_name ?? 'Marco';
   const roleTag = persona?.role_tag ?? 'RETURNING CUSTOMER';
   const avatarInitial = persona?.avatar_initial ?? 'M';
@@ -115,7 +125,7 @@ const Sidebar: React.FC = () => {
             justifyContent: 'center',
             fontFamily: 'var(--at-serif)',
             fontStyle: 'italic',
-            fontSize: '15px',
+            fontSize: '17px',
             fontWeight: 400,
             color: 'var(--at-ink-1)',
             flexShrink: 0,
@@ -126,7 +136,7 @@ const Sidebar: React.FC = () => {
         <span
           style={{
             fontFamily: 'var(--at-serif)',
-            fontSize: '15px',
+            fontSize: '17px',
             fontWeight: 400,
             color: 'var(--at-sidebar-text-active)',
           }}
@@ -156,7 +166,7 @@ const Sidebar: React.FC = () => {
                 alignItems: 'center',
                 gap: '8px',
                 fontFamily: 'var(--at-mono)',
-                fontSize: 'var(--at-eyebrow-size)',
+                fontSize: '11px',
                 fontWeight: 500,
                 letterSpacing: 'var(--at-eyebrow-tracking)',
                 textTransform: 'uppercase',
@@ -207,33 +217,48 @@ const Sidebar: React.FC = () => {
           borderTop: '1px solid rgba(250, 243, 232, 0.08)',
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
+          gap: '12px',
         }}
       >
-        <div
-          style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            background: avatarColor,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'var(--at-sans)',
-            fontSize: '13px',
-            fontWeight: 600,
-            color: '#fff',
-            flexShrink: 0,
-          }}
-        >
-          {avatarInitial}
-        </div>
+        {PERSONA_PHOTOS[personaId] ? (
+          <img
+            src={PERSONA_PHOTOS[personaId]}
+            alt={displayName}
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              objectFit: 'cover',
+              flexShrink: 0,
+              border: '2px solid rgba(250, 243, 232, 0.15)',
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              background: avatarColor,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: 'var(--at-sans)',
+              fontSize: '17px',
+              fontWeight: 600,
+              color: '#fff',
+              flexShrink: 0,
+            }}
+          >
+            {avatarInitial}
+          </div>
+        )}
         <div style={{ minWidth: 0 }}>
           <div
             style={{
               fontFamily: 'var(--at-serif)',
               fontStyle: 'italic',
-              fontSize: '14px',
+              fontSize: '16px',
               color: 'var(--at-sidebar-text-active)',
               lineHeight: 1.2,
               whiteSpace: 'nowrap',
@@ -246,7 +271,7 @@ const Sidebar: React.FC = () => {
           <div
             style={{
               fontFamily: 'var(--at-mono)',
-              fontSize: '8.5px',
+              fontSize: '11px',
               fontWeight: 500,
               letterSpacing: '0.18em',
               textTransform: 'uppercase',
@@ -281,7 +306,7 @@ const SidebarNavItem: React.FC<{ item: NavItemDef }> = ({ item }) => {
         borderRadius: '6px',
         textDecoration: 'none',
         fontFamily: 'var(--at-sans)',
-        fontSize: '13.5px',
+        fontSize: '15px',
         fontWeight: isActive ? 500 : 400,
         color: isActive
           ? 'var(--at-sidebar-text-active)'
@@ -304,7 +329,7 @@ const SidebarNavItem: React.FC<{ item: NavItemDef }> = ({ item }) => {
         <span
           style={{
             fontFamily: 'var(--at-mono)',
-            fontSize: '10px',
+            fontSize: '12px',
             fontWeight: 500,
             color: 'var(--at-sidebar-text)',
             opacity: 0.7,

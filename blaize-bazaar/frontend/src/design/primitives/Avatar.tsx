@@ -5,6 +5,8 @@ export interface AvatarProps {
   initial: string;
   bgColor?: string;
   size?: 'sm' | 'md' | 'lg';
+  /** Optional headshot photo URL. Renders as img instead of monogram. */
+  photoUrl?: string;
 }
 
 const sizeClasses: Record<NonNullable<AvatarProps['size']>, string> = {
@@ -24,7 +26,21 @@ export const Avatar: React.FC<AvatarProps> = ({
   initial,
   bgColor,
   size = 'md',
+  photoUrl,
 }) => {
+  if (photoUrl) {
+    return (
+      <img
+        src={photoUrl}
+        alt={initial}
+        className={[
+          'inline-flex rounded-full object-cover select-none',
+          sizeClasses[size].replace(/text-\w+/, ''),
+        ].join(' ')}
+        style={{ border: '1.5px solid rgba(250, 243, 232, 0.2)' }}
+      />
+    );
+  }
   return (
     <div
       className={[

@@ -13,6 +13,7 @@ import { useLocation } from 'react-router-dom';
 import SurfaceToggle from '../../components/SurfaceToggle';
 import { BreadcrumbTrail } from '../components/BreadcrumbTrail';
 import { usePersona } from '../../contexts/PersonaContext';
+import { getPersonaPhoto } from '../../data/personaPhotos';
 
 /* -----------------------------------------------------------------------
  * Route → breadcrumb mapping
@@ -116,26 +117,43 @@ const TopBar: React.FC = () => {
       </div>
 
       {/* Persona avatar */}
-      <div
-        style={{
-          width: '28px',
-          height: '28px',
-          borderRadius: '50%',
-          background: avatarColor,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontFamily: 'var(--at-sans)',
-          fontSize: '12px',
-          fontWeight: 600,
-          color: '#fff',
-          flexShrink: 0,
-          cursor: 'default',
-        }}
-        title={persona?.display_name ?? 'Marco'}
-      >
-        {avatarInitial}
-      </div>
+      {(() => {
+        const photoUrl = getPersonaPhoto(persona?.id);
+        return photoUrl ? (
+          <img
+            src={photoUrl}
+            alt={persona?.display_name ?? 'Marco'}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              objectFit: 'cover',
+              flexShrink: 0,
+              border: '1.5px solid rgba(31, 20, 16, 0.1)',
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: avatarColor,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: 'var(--at-sans)',
+              fontSize: '13px',
+              fontWeight: 600,
+              color: '#fff',
+              flexShrink: 0,
+            }}
+            title={persona?.display_name ?? 'Marco'}
+          >
+            {avatarInitial}
+          </div>
+        );
+      })()}
     </header>
   );
 };
