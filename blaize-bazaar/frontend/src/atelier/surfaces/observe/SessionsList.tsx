@@ -39,10 +39,20 @@ function formatElapsed(ms: number): string {
   return `${(ms / 1000).toFixed(1)}s`;
 }
 
-/** Format an ISO timestamp as a readable date string. */
+/**
+ * Format an ISO timestamp relative to NOW so fixture dates from 2025
+ * render as if they happened recently. Computes the offset between
+ * the newest fixture date and now, then shifts all dates forward by
+ * that offset. This way "today" and "yesterday" labels are always
+ * accurate regardless of when the workshop runs.
+ */
+const FIXTURE_ANCHOR = new Date('2025-01-15T19:42:00Z').getTime();
+const NOW_ANCHOR = Date.now();
+const OFFSET_MS = NOW_ANCHOR - FIXTURE_ANCHOR;
+
 function formatTimestamp(iso: string): string {
-  const date = new Date(iso);
-  return date.toLocaleDateString('en-US', {
+  const shifted = new Date(new Date(iso).getTime() + OFFSET_MS);
+  return shifted.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

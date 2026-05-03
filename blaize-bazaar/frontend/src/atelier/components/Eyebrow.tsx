@@ -32,7 +32,7 @@ export const Eyebrow: React.FC<EyebrowProps> = ({
         display: 'inline-flex',
         alignItems: 'center',
         gap: '8px',
-        fontSize: '11px',
+        fontSize: '13px',
         fontWeight: 600,
         letterSpacing: '0.22em',
         textTransform: 'uppercase',

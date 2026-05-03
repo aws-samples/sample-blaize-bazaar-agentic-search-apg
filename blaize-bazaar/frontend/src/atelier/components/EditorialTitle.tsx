@@ -51,7 +51,7 @@ export const EditorialTitle: React.FC<EditorialTitleProps> = ({
         <p
           className="font-sans text-ink-soft"
           style={{
-            fontSize: 'clamp(14px, 1.1vw, 16px)',
+            fontSize: 'clamp(15px, 1.2vw, 17px)',
             lineHeight: 1.65,
             maxWidth: '640px',
             margin: 0,

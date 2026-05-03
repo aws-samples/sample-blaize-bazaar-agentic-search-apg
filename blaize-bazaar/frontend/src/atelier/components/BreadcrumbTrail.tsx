@@ -28,12 +28,12 @@ export const BreadcrumbTrail: React.FC<BreadcrumbTrailProps> = ({
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        fontFamily: 'var(--at-mono)',
-        fontSize: '10px',
-        fontWeight: 500,
+        fontFamily: 'var(--at-sans)',
+        fontSize: '13px',
+        fontWeight: 600,
         letterSpacing: '0.14em',
         textTransform: 'uppercase',
-        color: 'var(--at-ink-4)',
+        color: 'var(--at-ink-2)',
         lineHeight: 1,
       }}
     >
