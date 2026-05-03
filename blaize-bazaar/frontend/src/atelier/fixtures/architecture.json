@@ -1,0 +1,74 @@
+[
+  {
+    "numeral": "I",
+    "category": "both",
+    "title": "Memory",
+    "role": "Ephemeral and persistent recall",
+    "description": "Two-tier memory system: STM for session-scoped conversation state managed by AgentCore, and LTM for cross-session semantic recall stored in Aurora pgvector. Memory enables personalization, context continuity, and preference learning.",
+    "codeSnippet": "# STM — session-scoped via AgentCore Memory\nawait memory.store(session_id, turn_context)\n\n# LTM — pgvector semantic recall\nSELECT content, 1 - (embedding <=> $1) AS similarity\nFROM memory_items\nWHERE persona_id = $2 AND tier = 'ltm'\nORDER BY embedding <=> $1 LIMIT 5;",
+    "slug": "memory"
+  },
+  {
+    "numeral": "II",
+    "category": "managed",
+    "title": "MCP",
+    "role": "Model Context Protocol gateway",
+    "description": "AgentCore MCP Gateway provides a standardized protocol for tool discovery and invocation. Tools are registered with semantic embeddings, enabling the orchestrator to discover relevant tools via natural-language queries rather than hardcoded routing.",
+    "codeSnippet": "# MCP tool discovery via AgentCore Gateway\ngateway = MCPGateway(endpoint=settings.MCP_ENDPOINT)\ntools = await gateway.discover(\n    query=\"find products matching user intent\",\n    limit=5\n)",
+    "slug": "mcp"
+  },
+  {
+    "numeral": "III",
+    "category": "managed",
+    "title": "State Management",
+    "role": "Conversation and agent state coordination",
+    "description": "Centralized state management coordinates conversation context, agent activation status, and routing decisions across the multi-agent system. AgentCore Runtime maintains the state graph that the orchestrator traverses.",
+    "codeSnippet": "# State transitions managed by AgentCore Runtime\nstate = {\n    'intent': classified_intent,\n    'active_agents': [search, recommend],\n    'memory_context': stm_items,\n    'routing': 'dispatcher'\n}",
+    "slug": "state-management"
+  },
+  {
+    "numeral": "IV",
+    "category": "both",
+    "title": "Tool Registry / Gateway",
+    "role": "Semantic tool discovery and invocation",
+    "description": "Nine tools registered in Aurora PostgreSQL with pgvector embeddings. The gateway enables semantic discovery — agents find tools by describing what they need, not by knowing function names. HNSW indexing provides sub-millisecond lookup.",
+    "codeSnippet": "# Register tool with embedding\nINSERT INTO tools (name, description, embedding)\nVALUES ($1, $2, $3);\n\n# Discover by semantic similarity\nSELECT name, 1 - (embedding <=> $1) AS similarity\nFROM tools ORDER BY embedding <=> $1 LIMIT 5;",
+    "slug": "tool-registry"
+  },
+  {
+    "numeral": "V",
+    "category": "teaching",
+    "title": "Skills",
+    "role": "Persona-routed runtime capabilities",
+    "description": "Two skills — style-advisor and gift-concierge — are injected at runtime based on persona context. The SkillRouter (Claude Haiku 4.5) evaluates each turn and activates the appropriate skill when the conversation signals a styling question or gift occasion.",
+    "codeSnippet": "# SkillRouter evaluates each turn\nskill_router = Agent(\n    model=BedrockModel('claude-haiku-4-5'),\n    system_prompt=SKILL_ROUTER_PROMPT\n)\n\n# Activated skills inject into agent context\nif skill == 'style-advisor':\n    agent.tools.append(style_advisor_tool)",
+    "slug": "skills"
+  },
+  {
+    "numeral": "VI",
+    "category": "managed",
+    "title": "Runtime",
+    "role": "AgentCore execution environment",
+    "description": "AgentCore Runtime provides the execution environment for all agents — model invocation, tool orchestration, memory access, and observability hooks. It manages the lifecycle from intent classification through response composition.",
+    "codeSnippet": "# AgentCore Runtime initialization\nfrom bedrock_agentcore import Runtime\n\nruntime = Runtime(\n    agents=[search, recommend, pricing],\n    memory=memory_service,\n    gateway=mcp_gateway,\n    telemetry=otel_exporter\n)",
+    "slug": "runtime"
+  },
+  {
+    "numeral": "VII",
+    "category": "owned",
+    "title": "Evaluations",
+    "role": "Agent quality measurement and tracking",
+    "description": "Evaluation scorecards measure agent accuracy, latency percentiles, and citation rates. Version-over-version trends track quality improvements as agents are refined. Each evaluation recipe tests a specific capability.",
+    "codeSnippet": "# Evaluation scorecard structure\nscorecard = {\n    'agent': 'Search',\n    'accuracy': 0.94,\n    'latency_p50': 340,\n    'latency_p95': 620,\n    'citation_rate': 0.88\n}",
+    "slug": "evaluations"
+  },
+  {
+    "numeral": "VIII",
+    "category": "both",
+    "title": "Grounding",
+    "role": "Factual anchoring via Aurora PostgreSQL",
+    "description": "All agent responses are grounded in data from Aurora PostgreSQL — product catalog, pricing, inventory, and return policies. pgvector embeddings enable semantic grounding, ensuring recommendations are factually anchored rather than hallucinated.",
+    "codeSnippet": "# Grounding query — verify product exists\nSELECT id, name, price, in_stock\nFROM product_catalog\nWHERE id = $1;\n\n# Semantic grounding — find related facts\nSELECT content FROM knowledge_base\nWHERE embedding <=> $1 < 0.3;",
+    "slug": "grounding"
+  }
+]

@@ -1,0 +1,967 @@
+/**
+ * Tools — Nine registered tool functions surface.
+ *
+ * WorkshopProgressStrip (9 segments: 6 shipped, 3 exercise) + discovery demo card
+ * + 9 tool row cards. Discovery demo card hits real POST /api/atelier/tools/discover.
+ *
+ * Shipped tools: solid borders, sage status.
+ * Exercise tools: dashed borders, burgundy status.
+ * "Related" callout card linking to Agents and Architecture · Tool Registry.
+ *
+ * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 16.3
+ */
+
+import React, { useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  EditorialTitle,
+  ExpCard,
+  Eyebrow,
+  StatusDot,
+  StatusPill,
+  WorkshopProgressStrip,
+} from '../../components';
+import type { Segment } from '../../components/WorkshopProgressStrip';
+import { useAtelierData } from '../../hooks/useAtelierData';
+import { useBuildState } from '../../hooks/useBuildState';
+import { useToolDiscovery } from '../../hooks/useToolDiscovery';
+import type { Tool, ToolDiscoveryResult } from '../../types';
+
+/* -----------------------------------------------------------------------
+ * Build Segment[] from tool data for WorkshopProgressStrip
+ * ----------------------------------------------------------------------- */
+
+function buildSegments(tools: Tool[]): Segment[] {
+  return tools.map((tool) => ({
+    id: String(tool.numeral),
+    label: tool.functionName,
+    status: tool.status,
+  }));
+}
+
+/* -----------------------------------------------------------------------
+ * Discovery Demo Card
+ * ----------------------------------------------------------------------- */
+
+const DEFAULT_QUERY = 'find products matching customer preferences';
+
+const DiscoveryDemoCard: React.FC = () => {
+  const [query, setQuery] = useState(DEFAULT_QUERY);
+  const { results, loading, error, durationMs, sql, discover } =
+    useToolDiscovery();
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (query.trim()) {
+        discover(query.trim());
+      }
+    },
+    [query, discover],
+  );
+
+  return (
+    <ExpCard>
+      {/* Head */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          justifyContent: 'space-between',
+          marginBottom: '12px',
+        }}
+      >
+        <h3
+          style={{
+            fontFamily: 'var(--at-serif)',
+            fontWeight: 400,
+            fontSize: '22px',
+            letterSpacing: '-0.012em',
+            color: 'var(--at-ink-1)',
+            margin: 0,
+          }}
+        >
+          Discovery demo{' '}
+          <em style={{ fontStyle: 'italic', color: 'var(--at-red-1)' }}>
+            · pgvector
+          </em>
+        </h3>
+        <span
+          style={{
+            fontFamily: 'var(--at-mono)',
+            fontSize: '9.5px',
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase' as const,
+            color: 'var(--at-ink-4)',
+            fontWeight: 500,
+          }}
+        >
+          Live endpoint
+        </span>
+      </div>
+
+      {/* Prose */}
+      <p
+        style={{
+          fontFamily: 'var(--at-serif)',
+          fontStyle: 'italic',
+          fontSize: '13.5px',
+          color: 'var(--at-ink-3)',
+          lineHeight: 1.55,
+          marginBottom: '18px',
+          maxWidth: '640px',
+        }}
+      >
+        Type a natural-language query. The registry finds the closest tools
+        using{' '}
+        <em style={{ color: 'var(--at-ink-1)', fontStyle: 'italic' }}>
+          cosine similarity
+        </em>{' '}
+        over Cohere Embed v4 embeddings — the same primitive that powers product
+        search.
+      </p>
+
+      {/* Query input */}
+      <form onSubmit={handleSubmit}>
+        <div
+          style={{
+            background: 'var(--at-cream-2)',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            marginBottom: '18px',
+          }}
+        >
+          <span
+            style={{
+              fontFamily: 'var(--at-mono)',
+              fontSize: '9px',
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase' as const,
+              color: 'var(--at-red-1)',
+              fontWeight: 500,
+              flexShrink: 0,
+            }}
+          >
+            Query
+          </span>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Describe what you need..."
+            aria-label="Tool discovery query"
+            style={{
+              flex: 1,
+              fontFamily: 'var(--at-serif)',
+              fontStyle: 'italic',
+              fontSize: '16px',
+              color: 'var(--at-ink-1)',
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              padding: 0,
+            }}
+          />
+          <button
+            type="submit"
+            disabled={loading || !query.trim()}
+            style={{
+              fontFamily: 'var(--at-mono)',
+              fontSize: '10px',
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase' as const,
+              fontWeight: 500,
+              color: 'var(--at-cream-1)',
+              backgroundColor: loading
+                ? 'var(--at-ink-4)'
+                : 'var(--at-ink-1)',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '7px 14px',
+              cursor: loading ? 'wait' : 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            {loading ? 'Searching…' : 'Discover'}
+          </button>
+        </div>
+      </form>
+
+      {/* Error state */}
+      {error && (
+        <div
+          style={{
+            fontFamily: 'var(--at-mono)',
+            fontSize: '11px',
+            color: 'var(--at-red-1)',
+            padding: '10px 12px',
+            background: 'var(--at-red-soft)',
+            borderRadius: '6px',
+            marginBottom: '14px',
+          }}
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Results list */}
+      {results.length > 0 && (
+        <div style={{ marginBottom: '4px' }}>
+          {results.map((result: ToolDiscoveryResult, idx: number) => (
+            <div
+              key={result.toolId ?? result.name ?? idx}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '30px 1fr auto auto',
+                gap: '14px',
+                alignItems: 'center',
+                padding: '10px 12px',
+                borderRadius: '6px',
+                marginBottom: '4px',
+                ...(idx === 0
+                  ? {
+                      background: 'var(--at-green-soft)',
+                      borderLeft: '2px solid var(--at-green-1)',
+                      paddingLeft: '10px',
+                    }
+                  : {}),
+              }}
+            >
+              {/* Rank */}
+              <span
+                style={{
+                  fontFamily: 'var(--at-serif)',
+                  fontStyle: 'italic',
+                  fontSize: '16px',
+                  color: 'var(--at-red-1)',
+                }}
+              >
+                {result.rank ?? idx + 1}.
+              </span>
+
+              {/* Name */}
+              <span
+                style={{
+                  fontFamily: 'var(--at-mono)',
+                  fontSize: '12px',
+                  color:
+                    result.status === 'exercise'
+                      ? 'var(--at-ink-3)'
+                      : 'var(--at-ink-1)',
+                  fontWeight: 500,
+                }}
+              >
+                {result.name}
+              </span>
+
+              {/* Status */}
+              <span
+                style={{
+                  fontFamily: 'var(--at-mono)',
+                  fontSize: '9px',
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase' as const,
+                  fontWeight: 500,
+                  color:
+                    result.status === 'shipped'
+                      ? 'var(--at-green-1)'
+                      : 'var(--at-red-1)',
+                }}
+              >
+                {result.status}
+              </span>
+
+              {/* Distance / Similarity */}
+              <span
+                style={{
+                  fontFamily: 'var(--at-mono)',
+                  fontSize: '11.5px',
+                  color: 'var(--at-ink-1)',
+                  fontWeight: 500,
+                  letterSpacing: '0.02em',
+                  textAlign: 'right' as const,
+                  minWidth: '50px',
+                }}
+              >
+                {typeof result.similarity === 'number'
+                  ? result.similarity.toFixed(4)
+                  : '—'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Empty state after search */}
+      {!loading && !error && results.length === 0 && (
+        <p
+          style={{
+            fontFamily: 'var(--at-serif)',
+            fontStyle: 'italic',
+            fontSize: '13px',
+            color: 'var(--at-ink-4)',
+            textAlign: 'center' as const,
+            padding: '16px 0',
+          }}
+        >
+          Press Discover to run a pgvector similarity query against the tool
+          registry.
+        </p>
+      )}
+
+      {/* Footer with timing + SQL */}
+      {(durationMs > 0 || sql) && (
+        <div
+          style={{
+            fontFamily: 'var(--at-mono)',
+            fontStyle: 'italic',
+            fontSize: '11px',
+            color: 'var(--at-ink-3)',
+            letterSpacing: '0.04em',
+            paddingTop: '14px',
+            marginTop: '14px',
+            borderTop: '1px dashed var(--at-rule-1)',
+          }}
+        >
+          {durationMs > 0 && (
+            <>
+              <span style={{ color: 'var(--at-red-1)', fontStyle: 'normal' }}>
+                {durationMs}ms
+              </span>{' '}
+              round-trip ·{' '}
+            </>
+          )}
+          {sql && (
+            <span style={{ color: 'var(--at-ink-4)' }}>
+              {sql.split('\n')[0]}
+            </span>
+          )}
+        </div>
+      )}
+    </ExpCard>
+  );
+};
+
+/* -----------------------------------------------------------------------
+ * Tool row card
+ * ----------------------------------------------------------------------- */
+
+interface ToolRowProps {
+  tool: Tool;
+}
+
+const ToolRow: React.FC<ToolRowProps> = ({ tool }) => {
+  const isExercise = tool.status === 'exercise';
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        background: isExercise ? 'transparent' : 'var(--at-card-bg)',
+        border: isExercise
+          ? '1.5px dashed var(--at-rule-3)'
+          : '1px solid var(--at-card-border)',
+        borderRadius: 'var(--at-card-radius)',
+        padding: '20px 24px 18px',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Burgundy accent line at top-left (shipped only) */}
+      {!isExercise && (
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: '20px',
+            width: 'var(--at-card-accent-width)',
+            height: '3px',
+            backgroundColor: 'var(--at-card-accent-color)',
+            borderRadius: '0 0 2px 2px',
+          }}
+        />
+      )}
+
+      {/* Head: numeral + name + description on left, status on right */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '32px 1fr auto',
+          gap: '14px',
+          alignItems: 'baseline',
+          marginBottom: '8px',
+        }}
+      >
+        {/* Numeral */}
+        <span
+          style={{
+            fontFamily: 'var(--at-serif)',
+            fontStyle: 'italic',
+            fontWeight: 400,
+            fontSize: '22px',
+            color: 'var(--at-red-1)',
+            letterSpacing: '-0.02em',
+            lineHeight: 1,
+          }}
+        >
+          {tool.numeral}.
+        </span>
+
+        {/* Name + description */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
+            minWidth: 0,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: 'var(--at-mono)',
+              fontSize: '17px',
+              fontWeight: 500,
+              color: isExercise ? 'var(--at-ink-2)' : 'var(--at-ink-1)',
+              letterSpacing: '0.005em',
+            }}
+          >
+            {tool.functionName}
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--at-serif)',
+              fontStyle: 'italic',
+              fontSize: '13.5px',
+              color: 'var(--at-ink-3)',
+              lineHeight: 1.4,
+            }}
+          >
+            {tool.description}
+          </span>
+        </div>
+
+        {/* Status: dot + pill */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexShrink: 0,
+          }}
+        >
+          <StatusDot status={isExercise ? 'empty' : 'idle'} />
+          <StatusPill status={tool.status} />
+        </div>
+      </div>
+
+      {/* Signature code block */}
+      <div
+        style={{
+          background: isExercise ? 'transparent' : 'var(--at-cream-2)',
+          border: isExercise ? '1px dashed var(--at-rule-2)' : 'none',
+          padding: '9px 12px',
+          borderRadius: '6px',
+          fontFamily: 'var(--at-mono)',
+          fontSize: '11px',
+          color: 'var(--at-ink-1)',
+          lineHeight: 1.5,
+          margin: '12px 0 12px 46px',
+          overflowX: 'auto' as const,
+        }}
+      >
+        <code>
+          <span style={{ color: 'var(--at-red-1)' }}>def</span>{' '}
+          {tool.functionName}
+          <span style={{ color: 'var(--at-ink-3)' }}>
+            ({tool.signature.split('(')[1]?.split(')')[0] ?? ''})
+          </span>
+          <span style={{ color: 'var(--at-ink-4)' }}>
+            {' '}
+            → {tool.signature.split('->')[1]?.trim() ?? 'str'}
+          </span>
+        </code>
+      </div>
+
+      {/* Meta row: used-by + invocation count + version */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '32px 1fr auto',
+          gap: '14px',
+          alignItems: 'center',
+        }}
+      >
+        {/* Spacer for numeral column */}
+        <span />
+
+        {/* Used by + meta */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '18px',
+            alignItems: 'center',
+          }}
+        >
+          {/* Used by chips */}
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '6px',
+              alignItems: 'center',
+            }}
+          >
+            <span
+              style={{
+                fontFamily: 'var(--at-mono)',
+                fontSize: '9px',
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase' as const,
+                color: 'var(--at-ink-4)',
+                marginRight: '4px',
+                fontWeight: 500,
+              }}
+            >
+              Used by
+            </span>
+            {tool.usedBy.map((agent) => (
+              <span
+                key={agent}
+                style={{
+                  fontFamily: 'var(--at-serif)',
+                  fontStyle: 'italic',
+                  fontSize: '11.5px',
+                  padding: '2px 9px',
+                  background: isExercise
+                    ? 'transparent'
+                    : 'var(--at-cream-1)',
+                  border: isExercise
+                    ? '1px dashed var(--at-red-1)'
+                    : '1px solid var(--at-rule-2)',
+                  borderRadius: '100px',
+                  color: isExercise ? 'var(--at-red-1)' : 'var(--at-ink-1)',
+                }}
+              >
+                {agent}
+              </span>
+            ))}
+          </div>
+
+          {/* Invocation count + version */}
+          <span
+            style={{
+              fontFamily: 'var(--at-mono)',
+              fontSize: '10px',
+              letterSpacing: '0.04em',
+              color: 'var(--at-ink-4)',
+            }}
+          >
+            <span
+              style={{ color: 'var(--at-ink-1)', fontWeight: 500 }}
+            >
+              {tool.invocationCount.toLocaleString()}
+            </span>{' '}
+            invocations · v
+            <span style={{ color: 'var(--at-ink-1)', fontWeight: 500 }}>
+              {tool.version}
+            </span>
+          </span>
+        </div>
+
+        {/* Spacer for right column */}
+        <span />
+      </div>
+    </div>
+  );
+};
+
+/* -----------------------------------------------------------------------
+ * Related callout card — links to Agents and Architecture · Tool Registry
+ * ----------------------------------------------------------------------- */
+
+const RelatedCard: React.FC = () => (
+  <ExpCard>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '130px 1fr 1fr',
+        gap: '24px',
+        alignItems: 'start',
+      }}
+    >
+      {/* Label */}
+      <div
+        style={{
+          fontFamily: 'var(--at-mono)',
+          fontSize: '9.5px',
+          letterSpacing: '0.22em',
+          textTransform: 'uppercase' as const,
+          color: 'var(--at-ink-4)',
+          fontWeight: 500,
+          paddingTop: '4px',
+          lineHeight: 1.6,
+        }}
+      >
+        Adjacent
+        <br />
+        to tools
+      </div>
+
+      {/* Agents cell */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          borderLeft: '1px solid var(--at-card-border)',
+          paddingLeft: '24px',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: 'var(--at-serif)',
+            fontWeight: 400,
+            fontStyle: 'italic',
+            fontSize: '18px',
+            color: 'var(--at-ink-1)',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Agents{' '}
+          <span style={{ color: 'var(--at-red-1)' }}>· five peers</span>
+        </div>
+        <p
+          style={{
+            fontFamily: 'var(--at-serif)',
+            fontStyle: 'italic',
+            fontSize: '13px',
+            color: 'var(--at-ink-3)',
+            lineHeight: 1.5,
+            margin: 0,
+          }}
+        >
+          Five specialist agents invoke these tools. Each agent has a curated
+          tool set —{' '}
+          <em style={{ color: 'var(--at-ink-1)', fontStyle: 'italic' }}>
+            Search
+          </em>{' '}
+          uses search_products and browse_category;{' '}
+          <em style={{ color: 'var(--at-ink-1)', fontStyle: 'italic' }}>
+            Recommendation
+          </em>{' '}
+          uses search_products and compare_products. The registry lets agents
+          discover tools they weren't explicitly given.
+        </p>
+        <Link
+          to="/atelier/agents"
+          style={{
+            fontFamily: 'var(--at-mono)',
+            fontSize: '10px',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase' as const,
+            color: 'var(--at-red-1)',
+            textDecoration: 'none',
+            fontWeight: 500,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginTop: '4px',
+          }}
+        >
+          Open Agents surface
+          <span
+            aria-hidden="true"
+            style={{ fontFamily: 'var(--at-serif)', fontStyle: 'italic' }}
+          >
+            →
+          </span>
+        </Link>
+      </div>
+
+      {/* Architecture · Tool Registry cell */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          borderLeft: '1px solid var(--at-card-border)',
+          paddingLeft: '24px',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: 'var(--at-serif)',
+            fontWeight: 400,
+            fontStyle: 'italic',
+            fontSize: '18px',
+            color: 'var(--at-ink-1)',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Tool Registry{' '}
+          <span style={{ color: 'var(--at-red-1)' }}>· architecture</span>
+        </div>
+        <p
+          style={{
+            fontFamily: 'var(--at-serif)',
+            fontStyle: 'italic',
+            fontSize: '13px',
+            color: 'var(--at-ink-3)',
+            lineHeight: 1.5,
+            margin: 0,
+          }}
+        >
+          The{' '}
+          <em style={{ color: 'var(--at-ink-1)', fontStyle: 'italic' }}>
+            tool_registry
+          </em>{' '}
+          table stores each tool's name, description, and a 1024-dim Cohere
+          Embed v4 embedding. Discovery is a single pgvector cosine query — the
+          same primitive that powers product search, applied to capabilities.
+        </p>
+        <Link
+          to="/atelier/architecture/tool-registry"
+          style={{
+            fontFamily: 'var(--at-mono)',
+            fontSize: '10px',
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase' as const,
+            color: 'var(--at-red-1)',
+            textDecoration: 'none',
+            fontWeight: 500,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            marginTop: '4px',
+          }}
+        >
+          Open Tool Registry detail
+          <span
+            aria-hidden="true"
+            style={{ fontFamily: 'var(--at-serif)', fontStyle: 'italic' }}
+          >
+            →
+          </span>
+        </Link>
+      </div>
+    </div>
+  </ExpCard>
+);
+
+/* -----------------------------------------------------------------------
+ * Loading state
+ * ----------------------------------------------------------------------- */
+
+const LoadingState: React.FC = () => (
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '14px',
+      padding: '24px 0',
+    }}
+  >
+    {Array.from({ length: 6 }, (_, i) => (
+      <div
+        key={i}
+        style={{
+          background: 'var(--at-cream-2)',
+          borderRadius: 'var(--at-card-radius)',
+          height: '120px',
+          opacity: 0.5,
+          animation: 'pulse 1.5s ease-in-out infinite',
+        }}
+      />
+    ))}
+  </div>
+);
+
+/* -----------------------------------------------------------------------
+ * Error state
+ * ----------------------------------------------------------------------- */
+
+interface ErrorStateProps {
+  message: string;
+  onRetry: () => void;
+}
+
+const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '80px 24px',
+      textAlign: 'center' as const,
+    }}
+  >
+    <Eyebrow label="Something went wrong" variant="muted" />
+    <p
+      style={{
+        fontFamily: 'var(--at-serif)',
+        fontStyle: 'italic',
+        fontSize: '20px',
+        lineHeight: 1.35,
+        color: 'var(--at-ink-3)',
+        maxWidth: '420px',
+        marginTop: '16px',
+      }}
+    >
+      We couldn't load the tools.
+    </p>
+    <p
+      style={{
+        fontFamily: 'var(--at-mono)',
+        fontSize: 'var(--at-mono-size)',
+        color: 'var(--at-ink-4)',
+        maxWidth: '480px',
+        marginTop: '8px',
+      }}
+    >
+      {message}
+    </p>
+    <button
+      onClick={onRetry}
+      style={{
+        marginTop: '24px',
+        fontFamily: 'var(--at-sans)',
+        fontSize: '14px',
+        fontWeight: 500,
+        color: 'var(--at-cream-1)',
+        backgroundColor: 'var(--at-ink-1)',
+        border: 'none',
+        borderRadius: '8px',
+        padding: '10px 24px',
+        cursor: 'pointer',
+      }}
+    >
+      Try again
+    </button>
+  </div>
+);
+
+/* -----------------------------------------------------------------------
+ * Empty state
+ * ----------------------------------------------------------------------- */
+
+const EmptyState: React.FC = () => (
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '80px 24px',
+      textAlign: 'center' as const,
+    }}
+  >
+    <Eyebrow label="No tools" variant="muted" />
+    <p
+      style={{
+        fontFamily: 'var(--at-serif)',
+        fontStyle: 'italic',
+        fontSize: '22px',
+        lineHeight: 1.35,
+        color: 'var(--at-ink-3)',
+        maxWidth: '420px',
+        marginTop: '16px',
+      }}
+    >
+      No tools have been loaded.
+    </p>
+    <p
+      style={{
+        fontFamily: 'var(--at-sans)',
+        fontSize: 'var(--at-body-size)',
+        color: 'var(--at-ink-4)',
+        maxWidth: '380px',
+        marginTop: '8px',
+      }}
+    >
+      Check that the tools fixture data is available and try again.
+    </p>
+  </div>
+);
+
+/* -----------------------------------------------------------------------
+ * Main component
+ * ----------------------------------------------------------------------- */
+
+const Tools: React.FC = () => {
+  const { data, loading, error, refetch } = useAtelierData<Tool[]>({
+    key: 'tools',
+  });
+  const buildState = useBuildState();
+
+  // Apply build state overrides — when the backend reports a different status
+  // than the fixture, the override takes precedence (exercise → shipped transition)
+  const tools: Tool[] = (data ?? []).map((tool) => {
+    const override = buildState.toolStatus[tool.functionName];
+    if (override && override !== tool.status) {
+      return { ...tool, status: override };
+    }
+    return tool;
+  });
+
+  const shippedCount = tools.filter((t) => t.status === 'shipped').length;
+  const totalCount = tools.length;
+  const segments = buildSegments(tools);
+
+  return (
+    <div style={{ padding: '40px 48px', maxWidth: '1100px' }}>
+      <EditorialTitle
+        eyebrow="Understand · Tools · nine functions · pgvector-discoverable"
+        title="The toolkit, by what each does."
+        summary="Nine tools. Six shipped reference, three to wire. Each lives in tool_registry with an embedding — the agent finds the right one with a single pgvector query."
+      />
+
+      {loading && <LoadingState />}
+
+      {error && <ErrorState message={error} onRetry={refetch} />}
+
+      {!loading && !error && tools.length === 0 && <EmptyState />}
+
+      {!loading && !error && tools.length > 0 && (
+        <>
+          {/* Workshop Progress Strip */}
+          <div style={{ marginBottom: '28px' }}>
+            <WorkshopProgressStrip
+              segments={segments}
+              shipped={shippedCount}
+              total={totalCount}
+            />
+          </div>
+
+          {/* Discovery Demo Card */}
+          <div style={{ marginBottom: '32px' }}>
+            <DiscoveryDemoCard />
+          </div>
+
+          {/* Tool rows */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              marginBottom: '32px',
+            }}
+          >
+            {tools.map((tool) => (
+              <ToolRow key={tool.numeral} tool={tool} />
+            ))}
+          </div>
+
+          {/* Related callout card */}
+          <RelatedCard />
+        </>
+      )}
+    </div>
+  );
+};
+
+export default Tools;

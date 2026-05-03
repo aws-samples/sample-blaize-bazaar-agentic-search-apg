@@ -1,0 +1,320 @@
+/**
+ * Sidebar — Espresso-colored left navigation for the Atelier Observatory.
+ *
+ * Three sections (OBSERVE, UNDERSTAND, MEASURE), a Settings divider,
+ * and a persona footer. Uses React Router `<NavLink>` for active state
+ * highlighting (espresso-2 bg, 2px burgundy accent bar, full-opacity icon).
+ *
+ * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.13
+ */
+
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { usePersona } from '../../contexts/PersonaContext';
+import { useBuildState } from '../hooks/useBuildState';
+import { StatusDot } from '../components/StatusDot';
+
+/* -----------------------------------------------------------------------
+ * Nav item definitions
+ * ----------------------------------------------------------------------- */
+
+interface NavItemDef {
+  label: string;
+  path: string;
+  badge?: string;
+  liveDot?: boolean;
+}
+
+interface NavSection {
+  eyebrow: string;
+  items: NavItemDef[];
+}
+
+/* -----------------------------------------------------------------------
+ * Sidebar component
+ * ----------------------------------------------------------------------- */
+
+const Sidebar: React.FC = () => {
+  const { persona } = usePersona();
+  const buildState = useBuildState();
+
+  const displayName = persona?.display_name ?? 'Marco';
+  const roleTag = persona?.role_tag ?? 'RETURNING CUSTOMER';
+  const avatarInitial = persona?.avatar_initial ?? 'M';
+  const avatarColor = persona?.avatar_color ?? '#a8423a';
+
+  // Build dynamic nav sections with live shipped/total badges from build state
+  const navSections: NavSection[] = [
+    {
+      eyebrow: 'OBSERVE',
+      items: [
+        { label: 'Sessions', path: 'sessions', badge: '—' },
+        { label: 'Observatory', path: 'observatory', liveDot: true },
+      ],
+    },
+    {
+      eyebrow: 'UNDERSTAND',
+      items: [
+        { label: 'Architecture', path: 'architecture', badge: '8' },
+        {
+          label: 'Agents',
+          path: 'agents',
+          badge: buildState.agentTotal > 0
+            ? `${buildState.agentShipped}/${buildState.agentTotal}`
+            : '3/5',
+        },
+        { label: 'Routing', path: 'routing', badge: '3' },
+        { label: 'Memory', path: 'memory' },
+        {
+          label: 'Tools',
+          path: 'tools',
+          badge: buildState.toolTotal > 0
+            ? `${buildState.toolShipped}/${buildState.toolTotal}`
+            : '6/9',
+        },
+      ],
+    },
+    {
+      eyebrow: 'MEASURE',
+      items: [
+        { label: 'Evaluations', path: 'evaluations' },
+        { label: 'Performance', path: 'performance' },
+      ],
+    },
+  ];
+
+  return (
+    <aside
+      data-testid="atelier-sidebar"
+      style={{
+        width: 'var(--at-sidebar-width)',
+        minHeight: '100vh',
+        background: 'var(--at-sidebar-bg)',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Brand row */}
+      <div
+        style={{
+          padding: '20px 20px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        }}
+      >
+        <div
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            background: 'var(--at-cream-1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'var(--at-serif)',
+            fontStyle: 'italic',
+            fontSize: '15px',
+            fontWeight: 400,
+            color: 'var(--at-ink-1)',
+            flexShrink: 0,
+          }}
+        >
+          B
+        </div>
+        <span
+          style={{
+            fontFamily: 'var(--at-serif)',
+            fontSize: '15px',
+            fontWeight: 400,
+            color: 'var(--at-sidebar-text-active)',
+          }}
+        >
+          Blaize Bazaar
+        </span>
+      </div>
+
+      {/* Navigation sections */}
+      <nav
+        style={{
+          flex: 1,
+          padding: '0 0 8px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+          overflowY: 'auto',
+        }}
+      >
+        {navSections.map((section) => (
+          <div key={section.eyebrow} style={{ marginBottom: '4px' }}>
+            {/* Section eyebrow */}
+            <div
+              style={{
+                padding: '12px 20px 6px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontFamily: 'var(--at-mono)',
+                fontSize: 'var(--at-eyebrow-size)',
+                fontWeight: 500,
+                letterSpacing: 'var(--at-eyebrow-tracking)',
+                textTransform: 'uppercase',
+                color: 'var(--at-red-1)',
+                lineHeight: 1,
+              }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  display: 'inline-block',
+                  width: '5px',
+                  height: '5px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--at-red-1)',
+                  flexShrink: 0,
+                }}
+              />
+              {section.eyebrow}
+            </div>
+
+            {/* Nav items */}
+            {section.items.map((item) => (
+              <SidebarNavItem key={item.path} item={item} />
+            ))}
+          </div>
+        ))}
+
+        {/* Divider */}
+        <div
+          style={{
+            margin: '8px 20px',
+            height: '1px',
+            background: 'rgba(250, 243, 232, 0.12)',
+          }}
+        />
+
+        {/* Settings */}
+        <SidebarNavItem
+          item={{ label: 'Settings', path: 'settings' }}
+        />
+      </nav>
+
+      {/* Persona footer */}
+      <div
+        style={{
+          padding: '16px 20px',
+          borderTop: '1px solid rgba(250, 243, 232, 0.08)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+        }}
+      >
+        <div
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            background: avatarColor,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: 'var(--at-sans)',
+            fontSize: '13px',
+            fontWeight: 600,
+            color: '#fff',
+            flexShrink: 0,
+          }}
+        >
+          {avatarInitial}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              fontFamily: 'var(--at-serif)',
+              fontStyle: 'italic',
+              fontSize: '14px',
+              color: 'var(--at-sidebar-text-active)',
+              lineHeight: 1.2,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {displayName}
+          </div>
+          <div
+            style={{
+              fontFamily: 'var(--at-mono)',
+              fontSize: '8.5px',
+              fontWeight: 500,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: 'var(--at-sidebar-text)',
+              lineHeight: 1,
+              marginTop: '3px',
+            }}
+          >
+            {roleTag}
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+};
+
+/* -----------------------------------------------------------------------
+ * SidebarNavItem — single nav link with active state
+ * ----------------------------------------------------------------------- */
+
+const SidebarNavItem: React.FC<{ item: NavItemDef }> = ({ item }) => {
+  return (
+    <NavLink
+      to={`/atelier/${item.path}`}
+      end={item.path === 'sessions' || item.path === 'architecture'}
+      style={({ isActive }) => ({
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '8px 20px',
+        margin: '0 8px',
+        borderRadius: '6px',
+        textDecoration: 'none',
+        fontFamily: 'var(--at-sans)',
+        fontSize: '13.5px',
+        fontWeight: isActive ? 500 : 400,
+        color: isActive
+          ? 'var(--at-sidebar-text-active)'
+          : 'var(--at-sidebar-text)',
+        background: isActive ? 'var(--at-sidebar-active-bg)' : 'transparent',
+        borderLeft: isActive
+          ? '2px solid var(--at-sidebar-accent)'
+          : '2px solid transparent',
+        transition: 'background 0.15s, color 0.15s',
+        position: 'relative',
+      })}
+    >
+      <span style={{ flex: 1 }}>{item.label}</span>
+
+      {item.liveDot && (
+        <StatusDot status="live" size={7} />
+      )}
+
+      {item.badge && !item.liveDot && (
+        <span
+          style={{
+            fontFamily: 'var(--at-mono)',
+            fontSize: '10px',
+            fontWeight: 500,
+            color: 'var(--at-sidebar-text)',
+            opacity: 0.7,
+          }}
+        >
+          {item.badge}
+        </span>
+      )}
+    </NavLink>
+  );
+};
+
+export default Sidebar;

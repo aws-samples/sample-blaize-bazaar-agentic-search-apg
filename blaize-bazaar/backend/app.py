@@ -39,6 +39,7 @@ from services.vector_search import VectorSearch
 from services.cache import init_cache, get_cache
 from routes import (
     agent_router,
+    atelier_observatory_router,
     auth_router,
     products_router,
     search_router,
@@ -271,6 +272,11 @@ app.include_router(search_router)
 # Intentionally separate from /api/agent/chat so the storefront SSE
 # stream isn't reshaped for the workshop's replay needs.
 app.include_router(workshop_router)
+
+# Atelier Observatory read-only API endpoints — sessions, agents, tools,
+# routing, memory, performance, evaluations, observatory dashboard.
+# Additive to workshop_router (same /api/atelier/ prefix, no path conflicts).
+app.include_router(atelier_observatory_router)
 
 # Pre-Week-3 storefront ambient chrome — briefing (concierge empty
 # state) + pulse (4 live metrics above the hero). Both endpoints are

@@ -106,7 +106,7 @@ export default {
         ],
         // Storefront display italic face. Used via ``font-display`` or
         // inline ``fontFamily`` on product titles.
-        display: ['Fraunces', 'Georgia', 'serif'],
+        display: ['Fraunces Variable', 'Fraunces', 'Georgia', 'serif'],
       },
       fontWeight: {
         'light': '300',

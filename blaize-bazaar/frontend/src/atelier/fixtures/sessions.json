@@ -1,0 +1,42 @@
+[
+  {
+    "id": "7F5A",
+    "personaId": "marco",
+    "openingQuery": "I'm looking for something linen for warm evenings out",
+    "elapsedMs": 4230,
+    "agentCount": 3,
+    "routingPattern": "Dispatcher",
+    "timestamp": "2025-01-15T19:42:00Z",
+    "status": "complete"
+  },
+  {
+    "id": "A3C1",
+    "personaId": "marco",
+    "openingQuery": "What's trending in summer accessories?",
+    "elapsedMs": 3180,
+    "agentCount": 2,
+    "routingPattern": "Dispatcher",
+    "timestamp": "2025-01-15T14:18:00Z",
+    "status": "complete"
+  },
+  {
+    "id": "D9E2",
+    "personaId": "marco",
+    "openingQuery": "Compare the linen trousers and the oxford shirt",
+    "elapsedMs": 5640,
+    "agentCount": 4,
+    "routingPattern": "Dispatcher",
+    "timestamp": "2025-01-14T21:05:00Z",
+    "status": "complete"
+  },
+  {
+    "id": "B4F8",
+    "personaId": "marco",
+    "openingQuery": "A thoughtful gift for someone who loves ceramics",
+    "elapsedMs": 6120,
+    "agentCount": 3,
+    "routingPattern": "Dispatcher",
+    "timestamp": "2025-01-14T10:33:00Z",
+    "status": "complete"
+  }
+]

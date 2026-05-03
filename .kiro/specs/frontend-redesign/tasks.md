@@ -264,33 +264,33 @@ Five-phase frontend rebuild of Blaize Bazaar, replacing every visible surface wi
     - Document design decisions, ChatDrawer/CommandPill visual diff results, and any deviations
     - _Requirements: 12.6_
 
-- [ ] 4. Checkpoint — Phase 2 complete
+- [x] 4. Checkpoint — Phase 2 complete
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Phase 3 — Atelier Shell Rebuild
-  - [ ] 5.1 Build AtelierPage shell replacing WorkshopPage layout
+- [x] 5. Phase 3 — Atelier Shell Rebuild
+  - [x] 5.1 Build AtelierPage shell replacing WorkshopPage layout
     - `/atelier` renders session list with cold-start fallback (editorial empty state with suggestion pills and chat drawer entry points) when no session is active
     - Dark espresso sidebar (fixed 240-260px), top bar with breadcrumb and live session indicator, main content area fills remaining viewport width fluidly
     - Main canvas uses `calc(100vw - sidebar-width)` or CSS Grid `1fr` to adapt to any laptop screen size (14" through 16")
     - _Requirements: 7.1, 7.2, 16.5_
 
-  - [ ] 5.2 Build dark Sidebar
+  - [x] 5.2 Build dark Sidebar
     - Espresso `#1F1410` background, cream text
     - Nav items: Observatory, Sessions, Memory, Inventory, Agents, Tools, Evaluations, Settings
     - Active state highlighting
     - _Requirements: 7.1_
 
-  - [ ] 5.3 Build top bar with breadcrumb trail and live session indicator
+  - [x] 5.3 Build top bar with breadcrumb trail and live session indicator
     - Breadcrumb updates to reflect current sidebar section
     - Live session indicator shows active session status
     - _Requirements: 7.2, 7.6_
 
-  - [ ] 5.4 Build session detail layout
+  - [x] 5.4 Build session detail layout
     - Mode Strip positioned above editorial title
     - Recommendation rail to the right
     - _Requirements: 7.3_
 
-  - [ ] 5.5 Build Mode Strip component
+  - [x] 5.5 Build Mode Strip component
     - Pattern I (Agents-as-Tools) and Pattern II (Graph) as selectable pills with active states
     - Pattern III (Dispatcher) as non-selectable pill with dashed border, reduced opacity, "Storefront · Production" label
     - Clicking Pattern III opens explainer popover but does NOT switch modes
@@ -298,11 +298,11 @@ Five-phase frontend rebuild of Blaize Bazaar, replacing every visible surface wi
     - Pass selected pattern to `useAgentChat` hook's pattern parameter
     - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-  - [ ] 5.6 Build session list view
+  - [x] 5.6 Build session list view
     - Card-based list of available sessions with timestamps and summary info
     - _Requirements: 7.4_
 
-  - [ ] 5.7 Build placeholder views for sidebar sections
+  - [x] 5.7 Build placeholder views for sidebar sections
     - Memory, Inventory, Agents, Tools, Evaluations, Settings
     - Each renders as placeholder card with "Coming soon" messaging
     - Accessible from sidebar navigation
@@ -334,16 +334,16 @@ Five-phase frontend rebuild of Blaize Bazaar, replacing every visible surface wi
       - For any selectable pattern (agents_as_tools or graph), selecting it visually highlights it and passes the corresponding parameter to the chat hook
       - **Validates: Requirements 8.2**
 
-  - [ ] 5.10 Verify Boutique still renders correctly
+  - [x] 5.10 Verify Boutique still renders correctly
     - Confirm `/` route renders the rebuilt Boutique without errors
     - Run `tsc && vite build` to verify no build errors
     - _Requirements: 12.3_
 
-  - [ ] 5.11 Lighthouse audit: Atelier >= 85
+  - [x] 5.11 Lighthouse audit: Atelier >= 85
     - Run Lighthouse performance audit on the Atelier shell
     - _Requirements: 7.7_
 
-  - [ ] 5.12 Create `PHASE_3_NOTES.md`
+  - [x] 5.12 Create `PHASE_3_NOTES.md`
     - Document design decisions, sidebar nav structure, Mode Strip behavior, and any deviations
     - _Requirements: 12.6_
 

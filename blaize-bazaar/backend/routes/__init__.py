@@ -26,9 +26,11 @@ from .search import router as search_router
 from .storefront import router as storefront_router
 from .user import router as user_router
 from .workshop import router as workshop_router
+from .atelier_observatory import router as atelier_observatory_router
 
 __all__ = [
     "agent_router",
+    "atelier_observatory_router",
     "auth_router",
     "products_router",
     "search_router",

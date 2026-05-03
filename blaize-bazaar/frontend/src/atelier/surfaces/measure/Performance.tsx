@@ -1,0 +1,855 @@
+/**
+ * Performance — System performance metrics surface.
+ *
+ * Stat cards, cold start histogram, latency budget table, pgvector comparison,
+ * storage usage bars, and measure controls.
+ *
+ * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7
+ */
+
+import React, { useState } from 'react';
+import {
+  EditorialTitle,
+  ExpCard,
+  Eyebrow,
+} from '../../components';
+import { useAtelierData } from '../../hooks/useAtelierData';
+import type { PerformanceData } from '../../types';
+
+/* -----------------------------------------------------------------------
+ * Helpers
+ * ----------------------------------------------------------------------- */
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`;
+  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(0)} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${bytes} B`;
+}
+
+function formatMs(ms: number): string {
+  if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
+  return `${ms}ms`;
+}
+
+const TYPE_COLORS: Record<string, string> = {
+  llm: 'var(--at-red-1)',
+  tool: 'var(--at-green-1)',
+  memory: '#7c6f64',
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  llm: 'LLM',
+  tool: 'Tool',
+  memory: 'Memory',
+};
+
+/* -----------------------------------------------------------------------
+ * Stat Card
+ * ----------------------------------------------------------------------- */
+
+interface StatCardProps {
+  label: string;
+  value: string;
+  unit: string;
+  detail: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ label, value, unit, detail }) => (
+  <ExpCard>
+    <Eyebrow label={label} variant="muted" />
+    <div style={{ marginTop: '14px', display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+      <span
+        style={{
+          fontFamily: 'var(--at-serif)',
+          fontSize: '48px',
+          fontWeight: 300,
+          letterSpacing: '-0.03em',
+          lineHeight: 1,
+          color: 'var(--at-ink-1)',
+        }}
+      >
+        {value}
+      </span>
+      <span
+        style={{
+          fontFamily: 'var(--at-mono)',
+          fontSize: '12px',
+          letterSpacing: '0.1em',
+          color: 'var(--at-ink-4)',
+          textTransform: 'uppercase',
+        }}
+      >
+        {unit}
+      </span>
+    </div>
+    <p
+      style={{
+        fontFamily: 'var(--at-mono)',
+        fontSize: '10.5px',
+        color: 'var(--at-ink-4)',
+        marginTop: '8px',
+        margin: '8px 0 0',
+        letterSpacing: '0.04em',
+      }}
+    >
+      {detail}
+    </p>
+  </ExpCard>
+);
+
+/* -----------------------------------------------------------------------
+ * Cold Start Histogram (SVG)
+ * ----------------------------------------------------------------------- */
+
+interface HistogramProps {
+  histogram: PerformanceData['histogram'];
+}
+
+const ColdStartHistogram: React.FC<HistogramProps> = ({ histogram }) => {
+  const maxCount = Math.max(...histogram.map((b) => b.count), 1);
+  const barWidth = 56;
+  const barGap = 8;
+  const chartHeight = 180;
+  const chartWidth = histogram.length * (barWidth + barGap) - barGap;
+  const svgPadding = { top: 10, bottom: 50, left: 10, right: 10 };
+  const totalWidth = chartWidth + svgPadding.left + svgPadding.right;
+  const totalHeight = chartHeight + svgPadding.top + svgPadding.bottom;
+
+  return (
+    <ExpCard>
+      <Eyebrow label="Cold start distribution" />
+      <div style={{ marginTop: '16px', overflowX: 'auto' }}>
+        <svg
+          width={totalWidth}
+          height={totalHeight}
+          viewBox={`0 0 ${totalWidth} ${totalHeight}`}
+          role="img"
+          aria-label="Cold start histogram showing bimodal distribution of cold vs warm starts"
+          style={{ display: 'block' }}
+        >
+          {histogram.map((bucket, i) => {
+            const barHeight = (bucket.count / maxCount) * chartHeight;
+            const x = svgPadding.left + i * (barWidth + barGap);
+            const y = svgPadding.top + chartHeight - barHeight;
+            const fill = bucket.type === 'warm' ? 'var(--at-green-1)' : 'var(--at-red-1)';
+
+            return (
+              <g key={bucket.bucket}>
+                <rect
+                  x={x}
+                  y={y}
+                  width={barWidth}
+                  height={barHeight}
+                  rx={4}
+                  fill={fill}
+                  opacity={0.8}
+                />
+                {/* Count label */}
+                <text
+                  x={x + barWidth / 2}
+                  y={y - 6}
+                  textAnchor="middle"
+                  style={{
+                    fontFamily: 'var(--at-mono)',
+                    fontSize: '10px',
+                    fill: 'var(--at-ink-3)',
+                  }}
+                >
+                  {bucket.count}
+                </text>
+                {/* Bucket label */}
+                <text
+                  x={x + barWidth / 2}
+                  y={svgPadding.top + chartHeight + 16}
+                  textAnchor="middle"
+                  style={{
+                    fontFamily: 'var(--at-mono)',
+                    fontSize: '9px',
+                    fill: 'var(--at-ink-4)',
+                  }}
+                >
+                  {bucket.bucket}
+                </text>
+                {/* Type label */}
+                <text
+                  x={x + barWidth / 2}
+                  y={svgPadding.top + chartHeight + 30}
+                  textAnchor="middle"
+                  style={{
+                    fontFamily: 'var(--at-mono)',
+                    fontSize: '8px',
+                    fill: bucket.type === 'warm' ? 'var(--at-green-1)' : 'var(--at-red-1)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.15em',
+                  }}
+                >
+                  {bucket.type}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+      {/* Legend */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '20px',
+          marginTop: '12px',
+          fontFamily: 'var(--at-mono)',
+          fontSize: '10px',
+          color: 'var(--at-ink-4)',
+          letterSpacing: '0.08em',
+        }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span
+            style={{
+              width: '10px',
+              height: '10px',
+              borderRadius: '2px',
+              backgroundColor: 'var(--at-green-1)',
+              opacity: 0.8,
+              display: 'inline-block',
+            }}
+          />
+          Warm reuse
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span
+            style={{
+              width: '10px',
+              height: '10px',
+              borderRadius: '2px',
+              backgroundColor: 'var(--at-red-1)',
+              opacity: 0.8,
+              display: 'inline-block',
+            }}
+          />
+          Cold start
+        </span>
+      </div>
+    </ExpCard>
+  );
+};
+
+/* -----------------------------------------------------------------------
+ * Latency Budget Table
+ * ----------------------------------------------------------------------- */
+
+interface LatencyBudgetProps {
+  budget: PerformanceData['latencyBudget'];
+}
+
+const LatencyBudgetTable: React.FC<LatencyBudgetProps> = ({ budget }) => {
+  const maxMs = Math.max(...budget.map((r) => r.maxMs), 1);
+
+  return (
+    <ExpCard>
+      <Eyebrow label="Per-panel latency budget" />
+      <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {budget.map((row) => {
+          const barPct = Math.min((row.p50Ms / maxMs) * 100, 100);
+          const color = TYPE_COLORS[row.type] ?? 'var(--at-ink-4)';
+
+          return (
+            <div key={row.panel} style={{ display: 'grid', gridTemplateColumns: '200px 1fr 80px', gap: '12px', alignItems: 'center' }}>
+              {/* Panel name + type badge */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                <span
+                  style={{
+                    fontFamily: 'var(--at-mono)',
+                    fontSize: '8px',
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                    color,
+                    backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    fontWeight: 600,
+                    flexShrink: 0,
+                  }}
+                >
+                  {TYPE_LABELS[row.type] ?? row.type}
+                </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--at-sans)',
+                    fontSize: '13px',
+                    color: 'var(--at-ink-2)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {row.panel}
+                </span>
+              </div>
+
+              {/* Bar */}
+              <div
+                style={{
+                  height: '14px',
+                  backgroundColor: 'var(--at-cream-2)',
+                  borderRadius: '7px',
+                  overflow: 'hidden',
+                  position: 'relative',
+                }}
+              >
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${barPct}%`,
+                    backgroundColor: color,
+                    borderRadius: '7px',
+                    opacity: 0.7,
+                    transition: 'width 0.4s ease',
+                  }}
+                />
+              </div>
+
+              {/* Value */}
+              <span
+                style={{
+                  fontFamily: 'var(--at-mono)',
+                  fontSize: '11px',
+                  color: 'var(--at-ink-2)',
+                  textAlign: 'right',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {row.p50Ms}ms
+                <span style={{ color: 'var(--at-ink-5)', marginLeft: '4px', fontSize: '9px' }}>
+                  / {row.maxMs}
+                </span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </ExpCard>
+  );
+};
+
+/* -----------------------------------------------------------------------
+ * pgvector Comparison Table
+ * ----------------------------------------------------------------------- */
+
+interface PgvectorComparisonProps {
+  strategies: PerformanceData['pgvectorComparison'];
+}
+
+const PgvectorComparison: React.FC<PgvectorComparisonProps> = ({ strategies }) => {
+  const headerStyle: React.CSSProperties = {
+    fontFamily: 'var(--at-mono)',
+    fontSize: '9px',
+    letterSpacing: '0.22em',
+    textTransform: 'uppercase',
+    color: 'var(--at-ink-4)',
+    fontWeight: 500,
+    padding: '8px 12px',
+    textAlign: 'left',
+    borderBottom: '1px solid var(--at-card-border)',
+  };
+
+  const cellStyle: React.CSSProperties = {
+    fontFamily: 'var(--at-mono)',
+    fontSize: '12px',
+    color: 'var(--at-ink-2)',
+    padding: '10px 12px',
+    letterSpacing: '0.02em',
+  };
+
+  return (
+    <ExpCard>
+      <Eyebrow label="pgvector index comparison" />
+      <div style={{ marginTop: '16px', overflowX: 'auto' }}>
+        <table
+          style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            borderSpacing: 0,
+          }}
+        >
+          <thead>
+            <tr>
+              <th style={headerStyle}>Strategy</th>
+              <th style={{ ...headerStyle, textAlign: 'right' }}>Recall</th>
+              <th style={{ ...headerStyle, textAlign: 'right' }}>QPS</th>
+              <th style={{ ...headerStyle, textAlign: 'right' }}>Build time</th>
+              <th style={{ ...headerStyle, textAlign: 'right' }}>Storage</th>
+              <th style={{ ...headerStyle, textAlign: 'center' }}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {strategies.map((s) => {
+              const isShipped = s.isShipped;
+              const rowBg = isShipped ? 'color-mix(in srgb, var(--at-green-1) 6%, transparent)' : 'transparent';
+
+              return (
+                <tr key={s.strategy} style={{ backgroundColor: rowBg }}>
+                  <td style={{ ...cellStyle, fontWeight: isShipped ? 600 : 400, color: isShipped ? 'var(--at-ink-1)' : cellStyle.color }}>
+                    {s.strategy}
+                    {isShipped && (
+                      <span
+                        style={{
+                          marginLeft: '8px',
+                          fontFamily: 'var(--at-mono)',
+                          fontSize: '8px',
+                          letterSpacing: '0.18em',
+                          textTransform: 'uppercase',
+                          color: 'var(--at-green-1)',
+                          backgroundColor: 'color-mix(in srgb, var(--at-green-1) 14%, transparent)',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Shipped
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ ...cellStyle, textAlign: 'right' }}>{(s.recall * 100).toFixed(0)}%</td>
+                  <td style={{ ...cellStyle, textAlign: 'right' }}>{s.qps.toLocaleString()}</td>
+                  <td style={{ ...cellStyle, textAlign: 'right' }}>{s.buildTime}</td>
+                  <td style={{ ...cellStyle, textAlign: 'right' }}>{s.storage}</td>
+                  <td style={{ ...cellStyle, textAlign: 'center' }}>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: isShipped ? 'var(--at-green-1)' : 'var(--at-ink-5)',
+                      }}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </ExpCard>
+  );
+};
+
+/* -----------------------------------------------------------------------
+ * Storage Usage Bars
+ * ----------------------------------------------------------------------- */
+
+interface StorageUsageProps {
+  usage: PerformanceData['storageUsage'];
+}
+
+const StorageUsageBars: React.FC<StorageUsageProps> = ({ usage }) => {
+  const barColors = ['var(--at-red-1)', 'var(--at-green-1)', '#7c6f64'];
+
+  return (
+    <ExpCard>
+      <Eyebrow label="Storage usage" />
+      <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {usage.map((item, i) => (
+          <div key={item.label}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                marginBottom: '6px',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'var(--at-sans)',
+                  fontSize: '13px',
+                  color: 'var(--at-ink-2)',
+                }}
+              >
+                {item.label}
+              </span>
+              <span
+                style={{
+                  fontFamily: 'var(--at-mono)',
+                  fontSize: '11px',
+                  color: 'var(--at-ink-4)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {formatBytes(item.sizeBytes)} · {item.percentage}%
+              </span>
+            </div>
+            <div
+              style={{
+                height: '10px',
+                backgroundColor: 'var(--at-cream-2)',
+                borderRadius: '5px',
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  height: '100%',
+                  width: `${item.percentage}%`,
+                  backgroundColor: barColors[i % barColors.length],
+                  borderRadius: '5px',
+                  opacity: 0.7,
+                  transition: 'width 0.4s ease',
+                }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </ExpCard>
+  );
+};
+
+/* -----------------------------------------------------------------------
+ * Measure Controls
+ * ----------------------------------------------------------------------- */
+
+interface MeasureControlsProps {
+  activeWindow: string;
+  onWindowChange: (w: string) => void;
+  sampleSize: number;
+  onSampleSizeChange: (s: number) => void;
+}
+
+const TIME_WINDOWS = ['1h', '6h', '24h', '7d'];
+
+const MeasureControls: React.FC<MeasureControlsProps> = ({
+  activeWindow,
+  onWindowChange,
+  sampleSize,
+  onSampleSizeChange,
+}) => (
+  <ExpCard>
+    <Eyebrow label="Measure controls" />
+    <div
+      style={{
+        marginTop: '16px',
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: '24px',
+      }}
+    >
+      {/* Time window pills */}
+      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+        <span
+          style={{
+            fontFamily: 'var(--at-mono)',
+            fontSize: '9px',
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            color: 'var(--at-ink-4)',
+            fontWeight: 500,
+            marginRight: '6px',
+          }}
+        >
+          Window
+        </span>
+        {TIME_WINDOWS.map((w) => (
+          <button
+            key={w}
+            onClick={() => onWindowChange(w)}
+            style={{
+              fontFamily: 'var(--at-mono)',
+              fontSize: '11px',
+              letterSpacing: '0.06em',
+              padding: '5px 14px',
+              borderRadius: '100px',
+              border: activeWindow === w ? '1px solid var(--at-ink-1)' : '1px solid var(--at-card-border)',
+              backgroundColor: activeWindow === w ? 'var(--at-ink-1)' : 'transparent',
+              color: activeWindow === w ? 'var(--at-cream-1)' : 'var(--at-ink-3)',
+              cursor: 'pointer',
+              fontWeight: activeWindow === w ? 600 : 400,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {w}
+          </button>
+        ))}
+      </div>
+
+      {/* Sample size slider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span
+          style={{
+            fontFamily: 'var(--at-mono)',
+            fontSize: '9px',
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            color: 'var(--at-ink-4)',
+            fontWeight: 500,
+          }}
+        >
+          Samples
+        </span>
+        <input
+          type="range"
+          min={50}
+          max={2000}
+          step={50}
+          value={sampleSize}
+          onChange={(e) => onSampleSizeChange(Number(e.target.value))}
+          aria-label="Sample size"
+          style={{
+            width: '120px',
+            accentColor: 'var(--at-red-1)',
+          }}
+        />
+        <span
+          style={{
+            fontFamily: 'var(--at-mono)',
+            fontSize: '11px',
+            color: 'var(--at-ink-2)',
+            minWidth: '40px',
+            textAlign: 'right',
+          }}
+        >
+          {sampleSize}
+        </span>
+      </div>
+
+      {/* Run benchmark button */}
+      <button
+        style={{
+          fontFamily: 'var(--at-sans)',
+          fontSize: '13px',
+          fontWeight: 500,
+          color: 'var(--at-cream-1)',
+          backgroundColor: 'var(--at-ink-1)',
+          border: 'none',
+          borderRadius: '8px',
+          padding: '9px 22px',
+          cursor: 'pointer',
+          letterSpacing: '0.02em',
+          transition: 'opacity 0.15s ease',
+        }}
+      >
+        Run benchmark
+      </button>
+    </div>
+  </ExpCard>
+);
+
+/* -----------------------------------------------------------------------
+ * Loading state
+ * ----------------------------------------------------------------------- */
+
+const LoadingState: React.FC = () => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px 0' }}>
+    {/* Stat card skeletons */}
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+      {[0, 1].map((i) => (
+        <div
+          key={i}
+          style={{
+            background: 'var(--at-cream-2)',
+            borderRadius: 'var(--at-card-radius)',
+            height: '130px',
+            opacity: 0.5,
+            animation: 'pulse 1.5s ease-in-out infinite',
+          }}
+        />
+      ))}
+    </div>
+    {/* Chart skeletons */}
+    {[0, 1, 2, 3].map((i) => (
+      <div
+        key={i}
+        style={{
+          background: 'var(--at-cream-2)',
+          borderRadius: 'var(--at-card-radius)',
+          height: i === 0 ? '260px' : '180px',
+          opacity: 0.5,
+          animation: 'pulse 1.5s ease-in-out infinite',
+        }}
+      />
+    ))}
+  </div>
+);
+
+/* -----------------------------------------------------------------------
+ * Error state
+ * ----------------------------------------------------------------------- */
+
+interface ErrorStateProps {
+  message: string;
+  onRetry: () => void;
+}
+
+const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '80px 24px',
+      textAlign: 'center',
+    }}
+  >
+    <Eyebrow label="Something went wrong" variant="muted" />
+    <p
+      style={{
+        fontFamily: 'var(--at-serif)',
+        fontStyle: 'italic',
+        fontSize: '20px',
+        lineHeight: 1.35,
+        color: 'var(--at-ink-3)',
+        maxWidth: '420px',
+        marginTop: '16px',
+      }}
+    >
+      We couldn't load the performance data.
+    </p>
+    <p
+      style={{
+        fontFamily: 'var(--at-mono)',
+        fontSize: 'var(--at-mono-size)',
+        color: 'var(--at-ink-4)',
+        maxWidth: '480px',
+        marginTop: '8px',
+      }}
+    >
+      {message}
+    </p>
+    <button
+      onClick={onRetry}
+      style={{
+        marginTop: '24px',
+        fontFamily: 'var(--at-sans)',
+        fontSize: '14px',
+        fontWeight: 500,
+        color: 'var(--at-cream-1)',
+        backgroundColor: 'var(--at-ink-1)',
+        border: 'none',
+        borderRadius: '8px',
+        padding: '10px 24px',
+        cursor: 'pointer',
+      }}
+    >
+      Try again
+    </button>
+  </div>
+);
+
+/* -----------------------------------------------------------------------
+ * Empty state
+ * ----------------------------------------------------------------------- */
+
+const EmptyState: React.FC = () => (
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '80px 24px',
+      textAlign: 'center',
+    }}
+  >
+    <Eyebrow label="No data" variant="muted" />
+    <p
+      style={{
+        fontFamily: 'var(--at-serif)',
+        fontStyle: 'italic',
+        fontSize: '22px',
+        lineHeight: 1.35,
+        color: 'var(--at-ink-3)',
+        maxWidth: '420px',
+        marginTop: '16px',
+      }}
+    >
+      No performance metrics have been recorded yet.
+    </p>
+    <p
+      style={{
+        fontFamily: 'var(--at-sans)',
+        fontSize: 'var(--at-body-size)',
+        color: 'var(--at-ink-4)',
+        maxWidth: '380px',
+        marginTop: '8px',
+      }}
+    >
+      Run a benchmark or wait for session data to populate performance metrics.
+    </p>
+  </div>
+);
+
+/* -----------------------------------------------------------------------
+ * Main component
+ * ----------------------------------------------------------------------- */
+
+const Performance: React.FC = () => {
+  const { data, loading, error, refetch } = useAtelierData<PerformanceData>({
+    key: 'performance',
+  });
+
+  const [activeWindow, setActiveWindow] = useState('24h');
+  const [sampleSize, setSampleSize] = useState(512);
+
+  const isEmpty = !data || (data.sampleCount === 0 && data.histogram.length === 0);
+
+  return (
+    <div style={{ padding: '40px 48px', maxWidth: '1100px' }}>
+      <EditorialTitle
+        eyebrow="Measure · Performance · latency · pgvector · storage"
+        title="Under the hood."
+        summary="Cold start times, per-panel latency budgets, pgvector index benchmarks, and storage footprint. All metrics from fixture data — wire to live telemetry in Phase 2."
+      />
+
+      {loading && <LoadingState />}
+
+      {error && <ErrorState message={error} onRetry={refetch} />}
+
+      {!loading && !error && isEmpty && <EmptyState />}
+
+      {!loading && !error && data && !isEmpty && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Stat cards row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <StatCard
+              label="P50 cold start"
+              value={formatMs(data.coldStartP50)}
+              unit="median"
+              detail={`${data.sampleCount} samples · bimodal distribution`}
+            />
+            <StatCard
+              label="P50 warm reuse"
+              value={formatMs(data.warmReuseP50)}
+              unit="median"
+              detail={`${data.sampleCount} samples · warm path`}
+            />
+          </div>
+
+          {/* Cold start histogram */}
+          <ColdStartHistogram histogram={data.histogram} />
+
+          {/* Latency budget table */}
+          <LatencyBudgetTable budget={data.latencyBudget} />
+
+          {/* pgvector comparison table */}
+          <PgvectorComparison strategies={data.pgvectorComparison} />
+
+          {/* Storage usage bars */}
+          <StorageUsageBars usage={data.storageUsage} />
+
+          {/* Measure controls */}
+          <MeasureControls
+            activeWindow={activeWindow}
+            onWindowChange={setActiveWindow}
+            sampleSize={sampleSize}
+            onSampleSizeChange={setSampleSize}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Performance;

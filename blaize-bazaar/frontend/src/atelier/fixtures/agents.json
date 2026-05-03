@@ -1,0 +1,54 @@
+[
+  {
+    "numeral": "I",
+    "name": "Search",
+    "role": "Semantic product discovery via pgvector similarity search",
+    "status": "shipped",
+    "tools": ["search_products", "browse_category", "trending_products"],
+    "model": "Opus 4.6",
+    "temperature": 0.2
+  },
+  {
+    "numeral": "II",
+    "name": "Recommendation",
+    "role": "Preference-weighted product ranking and editorial descriptions",
+    "status": "shipped",
+    "tools": ["search_products", "compare_products"],
+    "model": "Opus 4.6",
+    "temperature": 0.2
+  },
+  {
+    "numeral": "III",
+    "name": "Pricing",
+    "role": "Price analysis, value positioning, and return policy lookup",
+    "status": "shipped",
+    "tools": ["price_analysis", "return_policy"],
+    "model": "Opus 4.6",
+    "temperature": 0.2
+  },
+  {
+    "numeral": "IV",
+    "name": "Inventory",
+    "role": "Stock level monitoring, restock triggers, and availability checks",
+    "status": "exercise",
+    "tools": ["inventory_health", "restock_product", "low_stock"],
+    "model": "Opus 4.6",
+    "temperature": 0.2,
+    "exerciseFiles": [
+      "agents/inventory_agent.py",
+      "tools/inventory_tools.py"
+    ]
+  },
+  {
+    "numeral": "V",
+    "name": "Customer Support",
+    "role": "Order inquiries, return processing, and satisfaction follow-up",
+    "status": "exercise",
+    "tools": ["return_policy"],
+    "model": "Opus 4.6",
+    "temperature": 0.2,
+    "exerciseFiles": [
+      "agents/customer_support_agent.py"
+    ]
+  }
+]

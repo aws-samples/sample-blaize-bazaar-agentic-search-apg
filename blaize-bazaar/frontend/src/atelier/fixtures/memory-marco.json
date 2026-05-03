@@ -1,0 +1,78 @@
+{
+  "persona": "marco",
+  "stm": {
+    "turnCount": 4,
+    "recentIntents": [
+      "Looking for linen evening wear",
+      "Interested in sundress for outdoor dining",
+      "Comparing linen trousers and oxford shirt",
+      "Gift for ceramics lover"
+    ],
+    "items": [
+      {
+        "id": "stm-001",
+        "content": "Currently browsing linen evening wear options",
+        "tier": "stm",
+        "timestamp": "2025-01-15T19:42:00Z"
+      },
+      {
+        "id": "stm-002",
+        "content": "Interested in Sundress in Washed Linen for outdoor dinners",
+        "tier": "stm",
+        "timestamp": "2025-01-15T19:42:45Z"
+      },
+      {
+        "id": "stm-003",
+        "content": "Asked about sundress suitability for outdoor dining occasions",
+        "tier": "stm",
+        "timestamp": "2025-01-15T19:42:48Z"
+      }
+    ]
+  },
+  "ltm": {
+    "preferences": ["minimal", "warm tones", "linen", "classic", "neutral"],
+    "priorOrders": [
+      "Italian Linen Camp Shirt — Sand — $128",
+      "Leather Slide Sandal — Chestnut — $112",
+      "Ceramic Tumbler Set — 4pc — $52"
+    ],
+    "behavioralPatterns": [
+      "Tends to browse in the evening (7-10 PM)",
+      "Prefers natural materials over synthetics",
+      "Responds well to editorial product descriptions",
+      "Average order value: $97"
+    ],
+    "items": [
+      {
+        "id": "ltm-001",
+        "content": "Prefers minimal aesthetic with warm, neutral tones",
+        "tier": "ltm",
+        "similarity": 0.94
+      },
+      {
+        "id": "ltm-002",
+        "content": "Strong affinity for linen and natural fabrics",
+        "tier": "ltm",
+        "similarity": 0.91
+      },
+      {
+        "id": "ltm-003",
+        "content": "Previously purchased Italian Linen Camp Shirt (Sand, $128)",
+        "tier": "ltm",
+        "similarity": 0.87
+      },
+      {
+        "id": "ltm-004",
+        "content": "Enjoys slow, considered shopping experiences",
+        "tier": "ltm",
+        "similarity": 0.82
+      },
+      {
+        "id": "ltm-005",
+        "content": "Interested in home goods (purchased Ceramic Tumbler Set)",
+        "tier": "ltm",
+        "similarity": 0.76
+      }
+    ]
+  }
+}

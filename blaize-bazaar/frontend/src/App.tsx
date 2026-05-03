@@ -32,7 +32,23 @@ import ChatDrawer from './components/ChatDrawer'
 import ComparisonHost from './components/ComparisonHost'
 import SignInPage from './components/SignInPage'
 import StorefrontPage from './pages/StorefrontPage'
-import WorkshopPage from './pages/WorkshopPage'
+// WorkshopPage removed — Atelier is now served by AtelierFrame
+import AtelierFrame from './atelier/shell/AtelierFrame'
+import SessionsList from './atelier/surfaces/observe/SessionsList'
+import SessionView from './atelier/surfaces/observe/SessionView'
+import ChatTab from './atelier/surfaces/observe/ChatTab'
+import TelemetryTab from './atelier/surfaces/observe/TelemetryTab'
+import BriefTab from './atelier/surfaces/observe/BriefTab'
+import Observatory from './atelier/surfaces/observe/Observatory'
+import ArchitectureIndex from './atelier/surfaces/understand/ArchitectureIndex'
+import ArchitectureDetail from './atelier/surfaces/understand/ArchitectureDetail'
+import Agents from './atelier/surfaces/understand/Agents'
+import Tools from './atelier/surfaces/understand/Tools'
+import Routing from './atelier/surfaces/understand/Routing'
+import MemoryDashboard from './atelier/surfaces/understand/MemoryDashboard'
+import Performance from './atelier/surfaces/measure/Performance'
+import Evaluations from './atelier/surfaces/measure/Evaluations'
+import AtelierSettings from './atelier/surfaces/Settings'
 import InspectorPage from './pages/InspectorPage'
 import StoryboardPage from './pages/StoryboardPage'
 import DiscoverPage from './pages/DiscoverPage'
@@ -171,14 +187,31 @@ function App() {
                  *   *           → redirect to /
                  */}
                 <Route path="/" element={<StorefrontPage />} />
-                <Route path="/atelier" element={<WorkshopPage />} />
-                {/* Architecture detail pages — deep-linkable. The
-                    underlying WorkshopPage reads the :section param
-                    and opens the matching detail panel on mount. */}
-                <Route
-                  path="/atelier/architecture/:section"
-                  element={<WorkshopPage />}
-                />
+                {/* Atelier Observatory — nested routes under AtelierFrame shell.
+                    The frame renders the 240px sidebar + canvas grid with
+                    React Router <Outlet /> for surface rendering. */}
+                <Route path="/atelier" element={<AtelierFrame />}>
+                  <Route index element={<Navigate to="sessions" replace />} />
+                  <Route path="sessions" element={<SessionsList />} />
+                  <Route path="sessions/:id" element={<SessionView />}>
+                    <Route index element={<Navigate to="chat" replace />} />
+                    <Route path="chat" element={<ChatTab />} />
+                    <Route path="telemetry" element={<TelemetryTab />} />
+                    <Route path="brief" element={<BriefTab />} />
+                  </Route>
+                  <Route path="architecture" element={<ArchitectureIndex />} />
+                  <Route path="architecture/:concept" element={<ArchitectureDetail />} />
+                  <Route path="agents" element={<Agents />} />
+                  <Route path="tools" element={<Tools />} />
+                  <Route path="routing" element={<Routing />} />
+                  <Route path="memory" element={<MemoryDashboard />} />
+                  <Route path="performance" element={<Performance />} />
+                  <Route path="evaluations" element={<Evaluations />} />
+                  <Route path="observatory" element={<Observatory />} />
+                  <Route path="settings" element={<AtelierSettings />} />
+                </Route>
+                {/* Legacy WorkshopPage route removed — Atelier is now
+                    served exclusively by AtelierFrame with nested routes. */}
                 {/* Dev-only: preview gallery for shared atelier/ primitives.
                     Guarded by import.meta.env.DEV so production bundles
                     never include it. */}

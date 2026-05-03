@@ -50,7 +50,7 @@
     --persona-anna: #6b3d2a;
 
     /* Type stacks */
-    --serif: 'Fraunces', 'Times New Roman', Georgia, serif;
+    --serif: 'Fraunces Variable', 'Fraunces', 'Times New Roman', Georgia, serif;
     --sans: 'Inter', system-ui, sans-serif;
     --mono: 'JetBrains Mono', ui-monospace, monospace;
   }
@@ -119,7 +119,7 @@
   /* ProductCard name: Fraunces italic, bumps 20→22px on ≥1024px for
      editorial weight at desktop width. Inline `color` still wins. */
   .product-name {
-    font-family: 'Fraunces', Georgia, serif;
+    font-family: 'Fraunces Variable', 'Fraunces', Georgia, serif;
     font-style: italic;
     font-size: 20px;
     line-height: 1.2;
