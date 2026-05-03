@@ -92,7 +92,7 @@ const ConceptCard: React.FC<ConceptCardProps> = ({ concept, onOpen }) => (
         style={{
           fontFamily: 'var(--at-serif)',
           fontStyle: 'italic',
-          fontSize: '14px',
+          fontSize: '15px',
           lineHeight: 1.4,
           color: 'var(--at-red-1)',
           margin: 0,
