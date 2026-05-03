@@ -39,7 +39,6 @@ export function AtelierTopBar() {
   const timer = `${mm}:${ss}`
 
   const labelStyle: React.CSSProperties = {
-    fontFamily: 'var(--sans)',
     fontSize: '11px',
     fontWeight: 500,
     letterSpacing: '0.22em',
@@ -48,7 +47,7 @@ export function AtelierTopBar() {
 
   return (
     <div
-      className="flex items-center justify-between px-8"
+      className="flex items-center justify-between px-8 font-sans"
       style={{
         height: '64px',
         background: '#faf3e8',
@@ -81,7 +80,7 @@ export function AtelierTopBar() {
       <div className="flex items-center" style={{ gap: '24px' }}>
         <span style={{ ...labelStyle, color: 'rgba(31, 20, 16, 0.55)' }}>
           Live session ·{' '}
-          <span style={{ fontFamily: 'var(--mono)', letterSpacing: '0.04em', color: '#1f1410' }}>{timer}</span>
+          <span className="font-mono" style={{ letterSpacing: '0.04em', color: '#1f1410' }}>{timer}</span>
         </span>
         <span style={{ ...labelStyle, color: 'rgba(31, 20, 16, 0.55)' }}>
           Agents online ·{' '}
@@ -95,7 +94,6 @@ export function AtelierTopBar() {
             borderRadius: '999px',
             background: persona?.avatar_color || '#1f1410',
             color: '#faf3e8',
-            fontFamily: 'var(--sans)',
             fontSize: '13px',
             fontWeight: 600,
             letterSpacing: '0.02em',

@@ -34,7 +34,6 @@ const cardStyle: React.CSSProperties = {
   padding: '24px',
   border: `1px solid ${BORDER}`,
   minHeight: '380px',
-  fontFamily: 'var(--sans)',
   color: INK,
 }
 
@@ -43,22 +42,14 @@ const eyebrowStyle: React.CSSProperties = {
   textTransform: 'uppercase',
   letterSpacing: '0.22em',
   color: BURGUNDY,
-  fontFamily: 'var(--sans)',
 }
 
 const titleStyle: React.CSSProperties = {
-  fontFamily: 'var(--serif)',
-  fontStyle: 'italic',
-  fontWeight: 400,
-  fontSize: '22px',
   color: INK,
   margin: '8px 0 4px',
-  lineHeight: 1.2,
 }
 
 const subtitleStyle: React.CSSProperties = {
-  fontFamily: 'var(--sans)',
-  fontSize: '13px',
   color: MUTED,
   margin: 0,
 }
@@ -69,7 +60,6 @@ const chipStyle: React.CSSProperties = {
   padding: '6px 10px',
   fontSize: '12px',
   color: INK,
-  fontFamily: 'var(--sans)',
   display: 'inline-flex',
   alignItems: 'center',
 }
@@ -117,29 +107,28 @@ const CLASSIFICATIONS: Array<[string, string]> = [
 
 function ObservatoryCard({ sessionId }: { sessionId: string }) {
   return (
-    <div style={cardStyle}>
+    <div className="font-sans" style={cardStyle}>
       <CloseButton />
       <div style={eyebrowStyle}>SESSION #{sessionId} · OBSERVATORY</div>
-      <h3 style={titleStyle}>How we arrived at this.</h3>
-      <p style={subtitleStyle}>Expand any step to see details, context and reasoning.</p>
+      <h3 className="text-headline italic" style={titleStyle}>How we arrived at this.</h3>
+      <p className="text-body-sm" style={subtitleStyle}>Expand any step to see details, context and reasoning.</p>
 
       <div className="mt-5 flex flex-col gap-2">
         {OBSERVATORY_STEPS.map((step) => (
           <div key={step.num}>
             <div className="flex items-center" style={{ gap: '12px' }}>
               <span
+                className="text-mono"
                 style={{
                   background: CREAM_WARM,
                   borderRadius: '6px',
                   padding: '4px 8px',
-                  fontSize: '11px',
-                  fontFamily: 'var(--mono)',
                   color: INK,
                 }}
               >
                 {step.num}
               </span>
-              <span style={{ fontSize: '13px', color: INK, flex: 1 }}>{step.title}</span>
+              <span className="text-body-sm" style={{ color: INK, flex: 1 }}>{step.title}</span>
               <span
                 style={{
                   background: '#dcebd8',
@@ -151,7 +140,7 @@ function ObservatoryCard({ sessionId }: { sessionId: string }) {
               >
                 {step.state}
               </span>
-              <span style={{ fontSize: '11px', color: MUTED, fontFamily: 'var(--mono)' }}>{step.time}</span>
+              <span className="text-mono" style={{ color: MUTED }}>{step.time}</span>
             </div>
 
             {step.expanded && (
@@ -166,10 +155,8 @@ function ObservatoryCard({ sessionId }: { sessionId: string }) {
               >
                 <div style={{ fontSize: '11px', color: MUTED, marginBottom: '4px' }}>Intent</div>
                 <div
+                  className="font-display italic text-body"
                   style={{
-                    fontFamily: 'var(--serif)',
-                    fontStyle: 'italic',
-                    fontSize: '14px',
                     color: INK,
                     marginBottom: '12px',
                   }}
@@ -198,7 +185,7 @@ function ObservatoryCard({ sessionId }: { sessionId: string }) {
 
                 <div style={{ fontSize: '11px', color: MUTED, marginBottom: '6px' }}>Confidence</div>
                 <div className="flex items-baseline" style={{ gap: '8px' }}>
-                  <span style={{ fontFamily: 'var(--serif)', fontSize: '32px', color: INK }}>0.94</span>
+                  <span className="font-display" style={{ fontSize: '32px', color: INK }}>0.94</span>
                   <span
                     style={{
                       fontSize: '11px',
@@ -266,11 +253,11 @@ function MemoryOrbit() {
 
 function MemoryCard({ sessionId }: { sessionId: string }) {
   return (
-    <div style={cardStyle}>
+    <div className="font-sans" style={cardStyle}>
       <CloseButton />
       <div style={eyebrowStyle}>SESSION #{sessionId} · MEMORY</div>
-      <h3 style={titleStyle}>What we know about you.</h3>
-      <p style={subtitleStyle}>Signals and preferences that shaped this recommendation.</p>
+      <h3 className="text-headline italic" style={titleStyle}>What we know about you.</h3>
+      <p className="text-body-sm" style={subtitleStyle}>Signals and preferences that shaped this recommendation.</p>
 
       <div className="mt-4 flex" style={{ gap: '16px' }}>
         <div className="flex flex-col" style={{ gap: '12px', flex: 1 }}>
@@ -313,11 +300,8 @@ function MemoryCard({ sessionId }: { sessionId: string }) {
 
       <a
         href="#memory"
-        className="mt-4 inline-block"
+        className="mt-4 inline-block text-body-sm text-accent"
         style={{
-          color: BURGUNDY,
-          fontSize: '13px',
-          fontFamily: 'var(--sans)',
           textDecoration: 'none',
         }}
       >
@@ -364,15 +348,15 @@ const AGENTS = [
 
 function AgentsCard({ sessionId }: { sessionId: string }) {
   return (
-    <div style={cardStyle}>
+    <div className="font-sans" style={cardStyle}>
       <CloseButton />
       <div style={eyebrowStyle}>SESSION #{sessionId} · AGENTS</div>
-      <h3 style={titleStyle}>
+      <h3 className="text-headline italic" style={titleStyle}>
         A team of specialists.
         <br />
         Working in harmony.
       </h3>
-      <p style={subtitleStyle}>Each agent contributes a perspective.</p>
+      <p className="text-body-sm" style={subtitleStyle}>Each agent contributes a perspective.</p>
 
       <div
         className="mt-5 grid"
@@ -388,10 +372,10 @@ function AgentsCard({ sessionId }: { sessionId: string }) {
                 background: '#e8d9bf',
               }}
             />
-            <div style={{ fontFamily: 'var(--sans)', fontSize: '13px', fontWeight: 500, color: INK }}>
+            <div className="text-body-sm" style={{ fontWeight: 500, color: INK }}>
               {a.name}
             </div>
-            <div style={{ fontSize: '11px', color: MUTED }}>{a.role}</div>
+            <div className="text-microcopy" style={{ color: MUTED }}>{a.role}</div>
             <div
               style={{
                 background: '#dcebd8',
@@ -403,19 +387,16 @@ function AgentsCard({ sessionId }: { sessionId: string }) {
             >
               Completed
             </div>
-            <div style={{ fontFamily: 'var(--mono)', fontSize: '11px', color: MUTED }}>{a.latency}</div>
-            <div style={{ fontSize: '11px', color: MUTED, lineHeight: 1.4 }}>{a.desc}</div>
+            <div className="text-mono" style={{ color: MUTED }}>{a.latency}</div>
+            <div className="text-microcopy" style={{ color: MUTED }}>{a.desc}</div>
           </div>
         ))}
       </div>
 
       <a
         href="#agents"
-        className="mt-5 inline-block"
+        className="mt-5 inline-block text-body-sm text-accent"
         style={{
-          color: BURGUNDY,
-          fontSize: '13px',
-          fontFamily: 'var(--sans)',
           textDecoration: 'none',
         }}
       >

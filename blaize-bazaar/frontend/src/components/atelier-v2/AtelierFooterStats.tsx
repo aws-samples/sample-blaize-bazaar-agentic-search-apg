@@ -8,7 +8,6 @@
  * Part of the Atelier v2 redesign. Self-contained; no cross-imports.
  */
 
-import React from 'react'
 import { Sparkles, Download } from 'lucide-react'
 
 interface AtelierFooterStatsProps {
@@ -49,7 +48,7 @@ export function AtelierFooterStats({
 
   return (
     <div
-      className="flex items-center"
+      className="flex items-center font-sans"
       style={{
         width: '100%',
         background: CREAM_WARM,
@@ -57,7 +56,6 @@ export function AtelierFooterStats({
         borderTop: `1px solid ${BORDER}`,
         gap: '32px',
         flexWrap: 'wrap',
-        fontFamily: 'var(--sans)',
         color: INK,
       }}
     >
@@ -65,9 +63,8 @@ export function AtelierFooterStats({
       <div className="flex items-start" style={{ gap: '10px', flex: 1, minWidth: '240px' }}>
         <Sparkles size={20} color={BURGUNDY} style={{ flexShrink: 0, marginTop: '2px' }} />
         <p
+          className="font-display italic"
           style={{
-            fontFamily: 'var(--serif)',
-            fontStyle: 'italic',
             fontSize: '15px',
             color: MUTED,
             margin: 0,
@@ -88,7 +85,6 @@ export function AtelierFooterStats({
             textTransform: 'uppercase',
             letterSpacing: '0.14em',
             color: MUTED,
-            fontFamily: 'var(--sans)',
           }}
         >
           AT A GLANCE
@@ -96,12 +92,11 @@ export function AtelierFooterStats({
         <div className="flex" style={{ gap: '32px' }}>
           {metrics.map((m) => (
             <div key={m.label} className="flex flex-col" style={{ gap: '2px' }}>
-              <span style={{ fontFamily: 'var(--serif)', fontSize: '28px', color: INK, lineHeight: 1 }}>
+              <span className="font-display" style={{ fontSize: '28px', color: INK, lineHeight: 1 }}>
                 {m.value}
               </span>
               <span
                 style={{
-                  fontFamily: 'var(--sans)',
                   fontSize: '11px',
                   letterSpacing: '0.14em',
                   textTransform: 'uppercase',
@@ -126,7 +121,6 @@ export function AtelierFooterStats({
           border: '1px solid rgba(31,20,16,0.12)',
           borderRadius: '9999px',
           padding: '10px 16px',
-          fontFamily: 'var(--sans)',
           fontSize: '13px',
           color: INK,
           cursor: 'pointer',

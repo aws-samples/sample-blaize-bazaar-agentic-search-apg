@@ -1,5 +1,4 @@
-import { Brain, Database, Search, BarChart3, Users, Sparkles } from 'lucide-react'
-import type { ComponentType } from 'react'
+import { Brain, Database, Search, BarChart3, Users, Sparkles, type LucideIcon } from 'lucide-react'
 
 /**
  * AtelierTimeline — the six-step editorial trace that anchors the Atelier.
@@ -34,7 +33,7 @@ export interface AtelierTimelineProps {
   steps?: TimelineStep[]
 }
 
-const ICONS: Record<TimelineStep['icon'], ComponentType<{ size?: number; strokeWidth?: number; color?: string }>> = {
+const ICONS: Record<TimelineStep['icon'], LucideIcon> = {
   brain: Brain,
   database: Database,
   search: Search,
@@ -93,8 +92,6 @@ export function AtelierTimeline({ steps }: AtelierTimelineProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: 'var(--sans)',
-            fontSize: '13px',
             fontWeight: 500,
             color: '#1f1410',
             background: active ? '#3d261c' : '#faf3e8',
@@ -115,7 +112,6 @@ export function AtelierTimeline({ steps }: AtelierTimelineProps) {
             borderRadius: '999px',
             background: completed ? '#dcebd8' : '#f5e8d3',
             color: completed ? '#2f4a2b' : '#1f1410',
-            fontFamily: 'var(--sans)',
             fontSize: '11px',
             fontWeight: 500,
             letterSpacing: '0.1em',
@@ -133,7 +129,7 @@ export function AtelierTimeline({ steps }: AtelierTimelineProps) {
                 opacity: rowOpacity,
               }}
             >
-              <div style={badgeStyle}>{step.number}</div>
+              <div className="text-body-sm" style={badgeStyle}>{step.number}</div>
 
               <div
                 className="flex items-center justify-center"
@@ -151,22 +147,18 @@ export function AtelierTimeline({ steps }: AtelierTimelineProps) {
 
               <div className="flex-1 min-w-0" style={{ paddingTop: '2px' }}>
                 <div
+                  className="font-sans text-espresso"
                   style={{
-                    fontFamily: 'var(--sans)',
                     fontSize: '15px',
                     fontWeight: 500,
-                    color: '#1f1410',
                     lineHeight: 1.3,
                   }}
                 >
                   {step.title}
                 </div>
                 <div
+                  className="text-body-sm text-ink-soft"
                   style={{
-                    fontFamily: 'var(--sans)',
-                    fontSize: '13px',
-                    lineHeight: 1.5,
-                    color: 'rgba(31, 20, 16, 0.65)',
                     marginTop: '4px',
                   }}
                 >
@@ -178,13 +170,11 @@ export function AtelierTimeline({ steps }: AtelierTimelineProps) {
                 className="flex items-center"
                 style={{ gap: '12px', flexShrink: 0, paddingTop: '4px' }}
               >
-                <span style={chipStyle}>{step.state}</span>
+                <span className="font-sans" style={chipStyle}>{step.state}</span>
                 {step.timestamp && (
                   <span
+                    className="text-mono text-ink-quiet"
                     style={{
-                      fontFamily: 'var(--mono)',
-                      fontSize: '11px',
-                      color: 'rgba(31, 20, 16, 0.55)',
                       letterSpacing: '0.02em',
                       minWidth: '92px',
                       textAlign: 'right',

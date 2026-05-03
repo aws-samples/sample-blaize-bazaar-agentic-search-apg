@@ -47,7 +47,6 @@ const eyebrow: React.CSSProperties = {
   textTransform: 'uppercase',
   letterSpacing: '0.22em',
   color: 'rgba(31,20,16,0.55)',
-  fontFamily: 'var(--sans)',
 }
 
 const pill: React.CSSProperties = {
@@ -55,13 +54,11 @@ const pill: React.CSSProperties = {
   color: INK,
   padding: '10px',
   fontSize: '12px',
-  fontFamily: 'var(--sans)',
   border: 'none',
   cursor: 'pointer',
 }
 
 const productTitle: React.CSSProperties = {
-  fontFamily: 'var(--serif)',
   fontWeight: 500,
   fontSize: 'clamp(20px, 2vw, 26px)',
   lineHeight: 1.15,
@@ -70,18 +67,12 @@ const productTitle: React.CSSProperties = {
 }
 
 const desc: React.CSSProperties = {
-  fontFamily: 'var(--sans)',
-  fontSize: '14px',
-  lineHeight: 1.55,
   color: 'rgba(31,20,16,0.65)',
   margin: 0,
 }
 
 const whyText: React.CSSProperties = {
-  fontFamily: 'var(--sans)',
-  fontSize: '13px',
   color: 'rgba(31,20,16,0.72)',
-  lineHeight: 1.45,
 }
 
 export function AtelierRecommendationPanel({
@@ -98,14 +89,13 @@ export function AtelierRecommendationPanel({
 
   return (
     <div
-      className="flex flex-col"
+      className="flex flex-col font-sans"
       style={{
         background: '#ffffff',
         borderRadius: '20px',
         padding: '24px',
         border: '1px solid rgba(31,20,16,0.08)',
         maxWidth: '380px',
-        fontFamily: 'var(--sans)',
         color: INK,
       }}
     >
@@ -131,7 +121,7 @@ export function AtelierRecommendationPanel({
 
       <div className="mt-5">
         <span style={eyebrow}>{brand}</span>
-        <h3 className="mt-2" style={productTitle}>
+        <h3 className="mt-2 font-display" style={productTitle}>
           {nameLine1}
           {nameLine2 && (
             <>
@@ -140,18 +130,18 @@ export function AtelierRecommendationPanel({
             </>
           )}
         </h3>
-        <div className="mt-2" style={{ fontFamily: 'var(--serif)', fontSize: '18px', color: INK }}>
+        <div className="mt-2 font-display" style={{ fontSize: '18px', color: INK }}>
           ${product.price}
         </div>
         {description && (
-          <p className="mt-3" style={desc}>
+          <p className="mt-3 text-body" style={desc}>
             {description}
           </p>
         )}
       </div>
 
       <div className="mt-5">
-        <div style={{ fontFamily: 'var(--sans)', fontSize: '13px', fontWeight: 500, color: INK }}>
+        <div className="text-body-sm" style={{ fontWeight: 500, color: INK }}>
           Why this
         </div>
         <ul
@@ -161,7 +151,7 @@ export function AtelierRecommendationPanel({
           {reasons.map((reason, idx) => (
             <li key={idx} className="flex items-start gap-2">
               <Check size={14} strokeWidth={2} color={BURGUNDY} style={{ flexShrink: 0, marginTop: '2px' }} />
-              <span style={whyText}>{reason}</span>
+              <span className="text-body-sm" style={whyText}>{reason}</span>
             </li>
           ))}
         </ul>

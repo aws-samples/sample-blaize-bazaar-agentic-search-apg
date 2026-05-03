@@ -71,22 +71,20 @@ export function AtelierInputBar({
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
         disabled={isLoading}
-        className="flex-1"
+        className="flex-1 font-sans"
         style={{
           border: 'none',
           background: 'transparent',
           outline: 'none',
-          fontFamily: 'var(--sans)',
           fontSize: '15px',
           color: INK,
         }}
       />
       <span
+        className="text-mono"
         style={{
           background: CREAM_WARM,
           color: INK,
-          fontFamily: 'var(--mono)',
-          fontSize: '11px',
           padding: '4px 8px',
           borderRadius: '8px',
           whiteSpace: 'nowrap',

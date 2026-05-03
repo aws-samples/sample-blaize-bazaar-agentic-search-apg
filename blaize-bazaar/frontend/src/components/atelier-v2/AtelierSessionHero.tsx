@@ -36,7 +36,6 @@ export function AtelierSessionHero({
   const headline = query && query.trim().length > 0 ? query : 'Ready when you are.'
 
   const eyebrowStyle: React.CSSProperties = {
-    fontFamily: 'var(--sans)',
     fontSize: '11px',
     fontWeight: 500,
     letterSpacing: '0.22em',
@@ -64,17 +63,13 @@ export function AtelierSessionHero({
                 display: 'inline-block',
               }}
             />
-            <span style={eyebrowStyle}>Live session · #{sessionId}</span>
+            <span className="font-sans" style={eyebrowStyle}>Live session · #{sessionId}</span>
           </div>
 
           <h1
+            className="text-display italic text-espresso"
             style={{
-              fontFamily: 'var(--serif)',
-              fontStyle: 'italic',
-              fontWeight: 400,
               fontSize: 'clamp(36px, 4.5vw, 56px)',
-              lineHeight: 1.1,
-              color: '#1f1410',
               margin: 0,
               letterSpacing: '-0.01em',
             }}
@@ -83,11 +78,9 @@ export function AtelierSessionHero({
           </h1>
 
           <p
+            className="font-display italic text-ink-quiet"
             style={{
-              fontFamily: 'var(--serif)',
-              fontStyle: 'italic',
               fontSize: '13px',
-              color: 'rgba(31, 20, 16, 0.55)',
               margin: '16px 0 0',
             }}
           >
@@ -96,10 +89,8 @@ export function AtelierSessionHero({
 
           <div style={{ marginTop: '24px' }}>
             <p
+              className="text-body"
               style={{
-                fontFamily: 'var(--sans)',
-                fontSize: '14px',
-                lineHeight: 1.55,
                 color: 'rgba(31, 20, 16, 0.66)',
                 margin: 0,
               }}
@@ -107,10 +98,8 @@ export function AtelierSessionHero({
               The Atelier is reasoning in real time.
             </p>
             <p
+              className="text-body"
               style={{
-                fontFamily: 'var(--sans)',
-                fontSize: '14px',
-                lineHeight: 1.55,
                 color: 'rgba(31, 20, 16, 0.66)',
                 margin: '2px 0 0',
               }}

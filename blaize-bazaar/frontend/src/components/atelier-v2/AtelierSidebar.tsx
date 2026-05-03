@@ -79,7 +79,6 @@ const containerStyle: CSSProperties = {
   flexDirection: 'column',
   backgroundColor: COLORS.sidebarBg,
   color: COLORS.wordmarkText,
-  fontFamily: 'var(--sans)',
 }
 
 const wordmarkRowStyle: CSSProperties = {
@@ -100,8 +99,6 @@ const logoCircleStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontFamily: 'var(--serif)',
-  fontStyle: 'italic',
   fontSize: 18,
   fontWeight: 500,
   lineHeight: 1,
@@ -109,7 +106,6 @@ const logoCircleStyle: CSSProperties = {
 }
 
 const wordmarkTextStyle: CSSProperties = {
-  fontFamily: 'var(--serif)',
   fontSize: 15,
   color: COLORS.wordmarkText,
   letterSpacing: 0.1,
@@ -142,7 +138,6 @@ const avatarStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  fontFamily: 'var(--serif)',
   fontSize: 15,
   fontWeight: 500,
   flexShrink: 0,
@@ -157,8 +152,6 @@ const personaTextColStyle: CSSProperties = {
 }
 
 const personaNameStyle: CSSProperties = {
-  fontFamily: 'var(--sans)',
-  fontSize: 13,
   color: COLORS.wordmarkText,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -166,8 +159,6 @@ const personaNameStyle: CSSProperties = {
 }
 
 const personaRoleStyle: CSSProperties = {
-  fontFamily: 'var(--sans)',
-  fontSize: 11,
   color: COLORS.itemInactive,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -198,8 +189,6 @@ function NavButton({ item, active, onClick }: NavButtonProps) {
     border: 'none',
     textAlign: 'left',
     cursor: 'pointer',
-    fontFamily: 'var(--sans)',
-    fontSize: 13,
     fontWeight: active ? 500 : 400,
     backgroundColor: active ? COLORS.itemBgActive : 'transparent',
     color: active ? COLORS.itemActive : COLORS.itemInactive,
@@ -233,6 +222,7 @@ function NavButton({ item, active, onClick }: NavButtonProps) {
       onClick={onClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      className="text-body-sm"
       style={buttonStyle}
       aria-current={active ? 'page' : undefined}
     >
@@ -253,12 +243,12 @@ export default function AtelierSidebar({
   const avatarInitial = displayName.charAt(0).toUpperCase()
 
   return (
-    <aside style={containerStyle} aria-label="Atelier navigation">
+    <aside className="font-sans" style={containerStyle} aria-label="Atelier navigation">
       <div style={wordmarkRowStyle}>
-        <div style={logoCircleStyle} aria-hidden="true">
+        <div className="font-display italic" style={logoCircleStyle} aria-hidden="true">
           B
         </div>
-        <span style={wordmarkTextStyle}>Blaize Bazaar</span>
+        <span className="font-display" style={wordmarkTextStyle}>Blaize Bazaar</span>
       </div>
 
       <nav style={navListStyle}>
@@ -273,12 +263,12 @@ export default function AtelierSidebar({
       </nav>
 
       <div style={footerStyle}>
-        <div style={avatarStyle} aria-hidden="true">
+        <div className="font-display" style={avatarStyle} aria-hidden="true">
           {avatarInitial}
         </div>
         <div style={personaTextColStyle}>
-          <span style={personaNameStyle}>{displayName}</span>
-          <span style={personaRoleStyle}>Administrator</span>
+          <span className="text-body-sm" style={personaNameStyle}>{displayName}</span>
+          <span className="text-microcopy" style={personaRoleStyle}>Administrator</span>
         </div>
         <ChevronDown size={16} strokeWidth={1.75} style={chevronStyle} />
       </div>
