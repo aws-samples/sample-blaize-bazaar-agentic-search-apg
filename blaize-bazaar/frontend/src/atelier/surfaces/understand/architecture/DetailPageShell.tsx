@@ -15,6 +15,8 @@
  */
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import { Eyebrow, ExpCard, CategoryBadge, StatusDot } from '../../../components';
 import type { CategoryType } from '../../../components/CategoryBadge';
 
@@ -225,8 +227,34 @@ const DetailPageShell: React.FC<DetailPageShellProps> = ({
   cheatSheet,
   liveState,
 }) => {
+  const navigate = useNavigate();
+
   return (
     <div style={{ padding: '40px 48px', maxWidth: '1100px' }}>
+      {/* Back link — returns to architecture index */}
+      <button
+        onClick={() => navigate('/atelier/architecture')}
+        className="font-sans"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '13px',
+          fontWeight: 500,
+          color: 'var(--at-ink-3)',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 0,
+          marginBottom: '24px',
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--at-ink-1)'; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--at-ink-3)'; }}
+      >
+        <ArrowLeft size={16} strokeWidth={1.75} />
+        Back to Architecture
+      </button>
+
       {/* Detail Eyebrow: numeral + concept name + CategoryBadge */}
       <div
         style={{
