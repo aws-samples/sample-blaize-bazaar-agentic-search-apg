@@ -152,7 +152,7 @@ const LiveStateCallout: React.FC<LiveStateCalloutProps> = ({ label, values }) =>
         <p
           style={{
             fontFamily: 'var(--at-sans)',
-            fontSize: '15px',
+            fontSize: '14px',
             lineHeight: 1.5,
             color: 'var(--at-ink-1)',
             margin: 0,
@@ -238,7 +238,7 @@ const DetailPageShell: React.FC<DetailPageShellProps> = ({
           display: 'inline-flex',
           alignItems: 'center',
           gap: '8px',
-          fontSize: '15px',
+          fontSize: '14px',
           fontWeight: 500,
           color: 'var(--at-ink-1)',
           background: 'none',

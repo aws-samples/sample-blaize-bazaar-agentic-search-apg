@@ -118,7 +118,7 @@ const ConceptCard: React.FC<ConceptCardProps> = ({ concept, onOpen }) => (
       <pre
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '15px',
+          fontSize: '14px',
           lineHeight: 1.7,
           color: 'var(--at-ink-1)',
           backgroundColor: 'var(--at-cream-2)',
@@ -168,10 +168,11 @@ const LegendCard: React.FC = () => (
       <h3
         style={{
           fontFamily: 'var(--at-serif)',
-          fontSize: '20px',
+          fontSize: '18px',
           fontWeight: 400,
           color: 'var(--at-ink-1)',
           margin: 0,
+          whiteSpace: 'nowrap',
         }}
       >
         Understanding the four badges
@@ -377,7 +378,7 @@ const ArchitectureIndex: React.FC = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 280px',
+            gridTemplateColumns: '1fr 320px',
             gap: '32px',
             alignItems: 'start',
           }}

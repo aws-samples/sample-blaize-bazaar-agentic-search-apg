@@ -168,7 +168,7 @@ const proseStyle: React.CSSProperties = {
 };
 
 const codeStyle: React.CSSProperties = {
-  fontFamily: 'var(--at-mono)', fontSize: '15px', lineHeight: 1.7,
+  fontFamily: 'var(--at-mono)', fontSize: '14px', lineHeight: 1.7,
   color: 'var(--at-ink-1)', backgroundColor: 'var(--at-cream-2)', borderRadius: '8px',
   padding: '14px 16px', margin: 0, overflowX: 'auto', whiteSpace: 'pre',
 };

@@ -269,7 +269,7 @@ const TierCard: React.FC<TierCardProps> = ({
       <pre
         style={{
           fontFamily: 'var(--at-mono)',
-          fontSize: '15px',
+          fontSize: '14px',
           lineHeight: 1.7,
           color: 'var(--at-ink-1)',
           backgroundColor: 'var(--at-cream-2)',
@@ -501,7 +501,7 @@ const MemoryErrorState: React.FC<{ message: string; onRetry: () => void }> = ({
     <p
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: '15px',
+        fontSize: '14px',
         color: 'var(--at-ink-4)',
         maxWidth: '480px',
         marginTop: '8px',

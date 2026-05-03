@@ -78,7 +78,7 @@ export const DetailErrorState: React.FC<DetailErrorStateProps> = ({ message, onR
     <p
       style={{
         fontFamily: 'var(--at-mono)',
-        fontSize: '15px',
+        fontSize: '14px',
         color: 'var(--at-ink-4)',
         maxWidth: '480px',
         marginTop: '8px',
