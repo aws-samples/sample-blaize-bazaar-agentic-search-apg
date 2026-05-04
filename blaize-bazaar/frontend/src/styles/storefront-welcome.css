@@ -50,7 +50,7 @@
 }
 .sf-cover-eyebrow {
   font-family: var(--sans);
-  font-size: 9.5px;
+  font-size: 11px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: rgba(250, 243, 232, 0.96);
@@ -70,7 +70,7 @@
 }
 .sf-cover-edition {
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: 11px;
   letter-spacing: 0.18em;
   color: rgba(250, 243, 232, 0.85);
   text-transform: uppercase;
@@ -91,11 +91,11 @@
 }
 .sf-eyebrow-sm {
   font-family: var(--sans);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--ink-4);
+  color: var(--ink-2);
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -110,7 +110,7 @@
 
 /* Greeting */
 .sf-greeting {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-weight: 400;
   font-size: 30px;
   line-height: 1.1;
@@ -118,14 +118,14 @@
   margin-bottom: 14px;
   color: var(--ink-1);
 }
-.sf-greeting em { font-style: italic; }
+.sf-greeting em { font-style: normal; }
 
 /* Context line */
 .sf-context {
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.6;
-  color: var(--ink-3);
+  color: var(--ink-1);
 }
 .sf-context-num {
   font-family: var(--serif);
@@ -135,7 +135,7 @@
 }
 .sf-context-product {
   font-family: var(--serif);
-  font-style: italic;
+  
   color: var(--ink-1);
   border-bottom: 1px solid var(--rule-2);
   padding-bottom: 1px;
@@ -159,7 +159,7 @@
 .sf-count {
   font-family: var(--mono);
   font-size: 10px;
-  color: var(--ink-4);
+  color: var(--ink-2);
   letter-spacing: 0.15em;
 }
 
@@ -177,8 +177,8 @@
   background: transparent;
   border: 1px solid var(--rule-2);
   border-radius: 100px;
-  font-family: var(--serif);
-  font-style: italic;
+  font-family: var(--sans);
+  
   font-size: 15px;
   color: var(--ink-1);
   cursor: pointer;
@@ -227,8 +227,8 @@
 
 /* Prompt */
 .sf-prompt {
-  font-family: var(--serif);
-  font-size: 16.5px;
+  font-family: var(--sans);
+  font-size: 17px;
   line-height: 1.5;
   margin-bottom: 4px;
   color: var(--ink-1);
@@ -237,19 +237,19 @@
 /* P.S. section */
 .sf-postscript {
   margin-top: 18px;
-  font-family: var(--serif);
-  font-size: 14.5px;
+  font-family: var(--sans);
+  font-size: 15px;
   line-height: 1.55;
-  color: var(--ink-3);
+  color: var(--ink-1);
 }
 .sf-postscript-lead { margin-bottom: 10px; }
 .sf-ps-mark {
-  font-family: var(--serif);
-  font-style: italic;
+  font-family: var(--sans);
+  
   font-weight: 500;
   color: var(--red-1);
   letter-spacing: 0.04em;
-  font-size: 15.5px;
+  font-size: 16px;
 }
 .sf-ps-dash {
   color: var(--red-1);
@@ -265,9 +265,9 @@
   display: flex;
   align-items: baseline;
   gap: 10px;
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 14.5px;
+  font-family: var(--sans);
+  
+  font-size: 15px;
   color: var(--ink-1);
   background: none;
   border: none;
@@ -280,7 +280,7 @@
 .sf-overheard-bullet {
   color: var(--red-1);
   font-style: normal;
-  font-size: 14px;
+  font-size: 15px;
   flex-shrink: 0;
   font-weight: 500;
 }

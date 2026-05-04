@@ -23,7 +23,7 @@ import BoutiqueHero from '../components/BoutiqueHero'
 import BecauseYouAsked from '../components/BecauseYouAsked'
 import ProductCard from '../components/ProductCard'
 import Footer from '../components/Footer'
-import CommandPill from '../components/CommandPill'
+// CommandPill removed — hero search bar is the primary entry point
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { usePersona } from '../contexts/PersonaContext'
@@ -291,7 +291,7 @@ export default function StorefrontPage() {
       </main>
 
       <Footer />
-      <CommandPill />
+      {/* CommandPill removed — hero search bar opens the drawer directly */}
     </div>
   )
 }

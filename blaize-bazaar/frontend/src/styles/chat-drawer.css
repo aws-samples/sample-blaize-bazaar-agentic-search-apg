@@ -66,7 +66,7 @@
 }
 .cd-head-eyebrow {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 9.5px;
+  font-size: 13px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: #C44536;
@@ -82,11 +82,11 @@
   color: #3B2F2F;
 }
 .cd-head-title em {
-  font-style: italic;
+  font-style: normal;
 }
 .cd-head-meta {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 9.5px;
+  font-size: 13px;
   letter-spacing: 0.05em;
   color: rgba(59, 47, 47, 0.42);
   margin-top: 2px;
@@ -110,16 +110,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Fraunces', Georgia, serif;
-  font-style: italic;
-  font-size: 9px;
+  font-family: 'Inter', system-ui, sans-serif;
+  
+  font-size: 13px;
   font-weight: 500;
 }
 .cd-persona-name {
   color: #3B2F2F;
-  font-family: 'Fraunces', Georgia, serif;
-  font-style: italic;
-  font-size: 11px;
+  font-family: 'Inter', system-ui, sans-serif;
+  
+  font-size: 13px;
 }
 .cd-meta-sep {
   color: rgba(59, 47, 47, 0.22);
@@ -154,9 +154,9 @@
   min-height: 0;
 }
 .cd-empty-state {
-  font-family: 'Fraunces', Georgia, serif;
-  font-style: italic;
-  font-size: 14px;
+  font-family: 'Inter', system-ui, sans-serif;
+  
+  font-size: 15px;
   color: rgba(59, 47, 47, 0.66);
   line-height: 1.5;
   text-align: center;
@@ -184,15 +184,15 @@
   border: none;
   background: transparent;
   outline: none;
-  font-family: 'Fraunces', Georgia, serif;
-  font-style: italic;
+  font-family: 'Inter', system-ui, sans-serif;
+  
   font-size: 15px;
   line-height: 1.5;
   color: #3B2F2F;
 }
 .cd-input::placeholder {
   color: rgba(59, 47, 47, 0.42);
-  font-style: italic;
+  font-style: normal;
 }
 .cd-input:disabled {
   opacity: 0.5;
@@ -204,7 +204,7 @@
   padding: 7px 16px;
   border-radius: 100px;
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: 12.5px;
+  font-size: 15px;
   font-weight: 500;
   cursor: pointer;
   transition: opacity 180ms ease-out;
@@ -218,7 +218,7 @@
   display: flex;
   justify-content: space-between;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 9.5px;
+  font-size: 13px;
   color: rgba(59, 47, 47, 0.42);
   letter-spacing: 0.05em;
 }
