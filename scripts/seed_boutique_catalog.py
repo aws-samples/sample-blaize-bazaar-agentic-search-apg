@@ -2,8 +2,8 @@
 """
 Seed the boutique catalog — 36 curated products with real Cohere Embed v4 embeddings.
 
-9 products per persona (Marco / Anna / Theo / Fresh), zero overlap.
-Each persona: 1 featured hero product + 8 grid products = 9 total.
+10 products per persona (Marco / Anna / Theo / Fresh), zero overlap.
+Each persona: 1 hero + 1 weekend edit featured + 8 grid = 10 total.
 Each product gets a 1024-dim embedding via Bedrock's Cohere Embed v4,
 stored in Aurora's pgvector column for HNSW-indexed similarity search.
 
@@ -96,12 +96,28 @@ class Product:
 
     @property
     def search_text(self) -> str:
-        """The text we embed — rich enough for semantic search."""
+        """The text we embed — rich enough for high-quality semantic search.
+
+        Includes name, full description, brand, color, category, tags,
+        AND persona context so intra-persona products cluster tightly
+        in embedding space. This is what makes the pgvector demo work:
+        a query like "linen for travel" lands close to Marco's products
+        because the embedding captured both the product attributes AND
+        the shopper context.
+        """
         tag_str = ", ".join(self.tags)
+        persona_context = {
+            "marco": "For a traveler who loves natural fibers, linen, leather, and warm neutrals. Travel-ready, packable, timeless.",
+            "anna": "For a gift-giver who values thoughtful, wrap-ready pieces across price bands. Milestone occasions, considered objects.",
+            "theo": "For a slow-living enthusiast who values ceramics, artisanal craft, patina, and home ritual objects.",
+            "fresh": "For a new visitor exploring a curated boutique. Editorial bestsellers, versatile everyday pieces.",
+        }
+        context = persona_context.get(self.persona, "")
         return (
             f"{self.name}. {self.description} "
             f"Brand: {self.brand}. Color: {self.color}. "
-            f"Category: {self.category_name}. Tags: {tag_str}."
+            f"Category: {self.category_name}. Tags: {tag_str}. "
+            f"{context}"
         )
 
     def to_csv_row(self) -> dict:
@@ -163,6 +179,10 @@ FRESH_PRODUCTS: List[Product] = [
             "Lightweight knit runner with cloud-foam midsole. Breathable, packable, built for all-day wear.",
             CAT_FOOTWEAR, ["activewear", "neutral", "minimal", "wellness", "footwear"],
             4.6, 234, "fresh-cloudform-studio-runner.png", persona="fresh"),
+    Product(10, "Washed Canvas Tote", "Blaize Everyday", "Cream", 68,
+            "Washed canvas tote with leather handle straps. Roomy, lightweight, universally appealing.",
+            CAT_ACCESSORIES, ["canvas", "everyday", "neutral", "accessories", "minimal"],
+            4.5, 310, "fresh-linen-tote-bag.png", persona="fresh"),
 ]
 
 MARCO_PRODUCTS: List[Product] = [
@@ -202,6 +222,10 @@ MARCO_PRODUCTS: List[Product] = [
             "Woven straw panama with black grosgrain ribbon. UPF 50+. Rolls without creasing.",
             CAT_ACCESSORIES, ["accessories", "travel", "resort", "classic", "warm"],
             4.8, 98, "marco-straw-panama-hat.png", persona="marco", badge="JUST_IN"),
+    Product(20, "Merino Travel Socks", "Blaize Active", "Multi", 38,
+            "Three-pack of merino wool crew socks in charcoal, oat, and olive. Temperature-regulating, odor-resistant.",
+            CAT_APPAREL, ["merino", "travel", "everyday", "minimal", "accessories"],
+            4.6, 534, "marco-merino-travel-socks.png", persona="marco"),
 ]
 
 ANNA_PRODUCTS: List[Product] = [
@@ -241,6 +265,10 @@ ANNA_PRODUCTS: List[Product] = [
             "Hammered brass photo frame, 5x7. Stands or hangs. The kind of frame that makes a photo feel kept.",
             CAT_HOME, ["home", "gift", "classic", "warm", "accessories"],
             4.7, 156, "anna-brass-photo-frame.png", persona="anna"),
+    Product(30, "Gift Wrapping Kit", "Blaize Gifting", "Blush", 28,
+            "Cream tissue paper, blush satin ribbon, kraft gift tags with cotton string. Enough for three gifts.",
+            CAT_GIFTS, ["gift", "minimal", "artisanal", "accessories"],
+            4.5, 478, "anna-gift-wrapping-kit.png", persona="anna"),
 ]
 
 THEO_PRODUCTS: List[Product] = [
@@ -280,6 +308,10 @@ THEO_PRODUCTS: List[Product] = [
             "Hand-woven linen table runner in natural undyed flax. The kind of piece that makes a Tuesday feel intentional.",
             CAT_HOME, ["linen", "home", "slow", "neutral", "artisanal"],
             4.7, 178, "theo-linen-table-runner.png", persona="theo", badge="JUST_IN"),
+    Product(40, "Charcoal Soap Bar", "Blaize Apothecary", "Black", 24,
+            "Japanese-style activated charcoal soap. Handmade in small batches. Detoxifying, grounding, minimal.",
+            CAT_BEAUTY, ["beauty", "slow", "artisanal", "minimal", "home"],
+            4.5, 412, "theo-charcoal-soap-bar.png", persona="theo"),
 ]
 
 ALL_PRODUCTS = FRESH_PRODUCTS + MARCO_PRODUCTS + ANNA_PRODUCTS + THEO_PRODUCTS
@@ -307,7 +339,7 @@ def generate_embeddings(products: List[Product], region: str) -> None:
             })
             response = client.invoke_model(
                 body=payload,
-                modelId="cohere.embed-english-v3",
+                modelId="us.cohere.embed-v4:0",
                 contentType="application/json",
                 accept="application/json",
             )
@@ -368,7 +400,7 @@ def seed_database(products: List[Product]) -> None:
         with conn.cursor() as cur:
             # Clear existing boutique products (IDs 1-40)
             cur.execute(
-                'DELETE FROM blaize_bazaar.product_catalog WHERE "productId"::int BETWEEN 1 AND 39'
+                'DELETE FROM blaize_bazaar.product_catalog WHERE "productId"::int BETWEEN 1 AND 40'
             )
             logger.info("Cleared existing boutique products (IDs 1-39)")
 
