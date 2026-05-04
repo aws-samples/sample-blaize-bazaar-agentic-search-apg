@@ -104,6 +104,14 @@ export interface UseAgentChatOptions {
   initialMessages?: AgentChatMessage[]
   /** localStorage key for conversation persistence. Omit to disable. */
   persistKey?: string
+  /**
+   * Session ID for AgentCore STM hydration. When provided, the hook
+   * fetches `/api/agent/session/{sessionId}` on mount and hydrates
+   * the message list from the backend's authoritative STM store if
+   * localStorage is empty or stale. This bridges the Boutique chat
+   * with the same STM layer the Atelier teaches.
+   */
+  sessionId?: string
 }
 
 export interface UseAgentChatReturn {
@@ -227,6 +235,7 @@ export function useAgentChat(
     guardrailsEnabled = false,
     initialMessages = [],
     persistKey,
+    sessionId,
   } = options
 
   const [messages, setMessages] = useState<AgentChatMessage[]>(() =>
@@ -236,6 +245,40 @@ export function useAgentChat(
   const [isLoading, setIsLoading] = useState(false)
   const [backendOnline, setBackendOnline] = useState(true)
   const [sessionCost, setSessionCost] = useState(0)
+
+  // STM hydration — fetch the authoritative turn history from the
+  // backend's AgentCore Memory (or in-memory fallback). If the backend
+  // has turns that localStorage doesn't, hydrate from backend. This
+  // bridges the Boutique chat with the STM the Atelier teaches.
+  useEffect(() => {
+    if (!sessionId) return
+    let alive = true
+    fetch(`/api/agent/session/${encodeURIComponent(sessionId)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (!alive) return
+        const turns = data?.turns
+        if (!Array.isArray(turns) || turns.length === 0) return
+        // Only hydrate if localStorage had nothing beyond the greeting
+        // (≤1 message = just the initial greeting, no real turns)
+        if (messages.length > 1) return
+        const hydrated: AgentChatMessage[] = turns.map((t: { role?: string; content?: string; timestamp?: string }) => ({
+          role: (t.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+          content: typeof t.content === 'string' ? t.content : '',
+          timestamp: t.timestamp ? new Date(t.timestamp) : new Date(),
+        }))
+        setMessages(prev => {
+          // Keep the greeting (first message) + append backend turns
+          const greeting = prev.length > 0 ? [prev[0]] : initialMessages
+          return [...greeting, ...hydrated]
+        })
+      })
+      .catch(() => {
+        // Silent — localStorage is the fallback
+      })
+    return () => { alive = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps — only on sessionId change
+  }, [sessionId])
 
   // Active persona (if any) — used to scope backend LTM reads to the
   // right customer_id. Read from context so persona switches take

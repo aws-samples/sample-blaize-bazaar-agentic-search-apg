@@ -103,6 +103,13 @@ export default function ChatDrawer() {
     ]
   }, [persona])
 
+  // Read session ID for AgentCore STM hydration — same ID the backend
+  // uses to scope the conversation namespace.
+  const currentSessionId = (() => {
+    try { return localStorage.getItem('blaize-session-id') ?? undefined }
+    catch { return undefined }
+  })()
+
   const {
     messages,
     inputValue,
@@ -115,6 +122,7 @@ export default function ChatDrawer() {
     guardrailsEnabled,
     initialMessages,
     persistKey: 'blaize-drawer-storefront',
+    sessionId: currentSessionId,
   })
 
   // Clear the conversation when the persona changes so the new
