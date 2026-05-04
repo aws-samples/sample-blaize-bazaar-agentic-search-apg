@@ -155,6 +155,9 @@ export default function ChatDrawer() {
   // message appears. sendMessage adds the user message to state
   // synchronously (via setMessages) so the first visible paint already
   // shows the user bubble + the "thinking" placeholder.
+  // When the drawer opens with a pending query (pill click), reset
+  // the conversation to the greeting + new query so the user always
+  // sees the personalized welcome above their question.
   const hasConsumedRef = useRef(false)
   useLayoutEffect(() => {
     if (!isOpen) {
@@ -165,9 +168,17 @@ export default function ChatDrawer() {
     hasConsumedRef.current = true
     const seeded = consumePendingQuery()
     if (seeded) {
-      void sendMessage(seeded)
+      // Reset to greeting + fire the query so the user sees:
+      //   1. Personalized welcome message (greeting)
+      //   2. Their query (user bubble)
+      //   3. Agent response (streaming)
+      clearChat(initialMessages)
+      // Small delay so clearChat settles before sendMessage
+      requestAnimationFrame(() => {
+        void sendMessage(seeded)
+      })
     }
-  }, [isOpen, consumePendingQuery, sendMessage])
+  }, [isOpen, consumePendingQuery, sendMessage, clearChat, initialMessages])
 
   // Auto-scroll
   const messagesEndRef = useRef<HTMLDivElement>(null)

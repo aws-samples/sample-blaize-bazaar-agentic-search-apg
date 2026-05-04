@@ -633,9 +633,10 @@ const ComposerBar: React.FC = () => (
 
 const EmptyState: React.FC = () => {
   const suggestions = [
-    'Something linen for warm evenings',
-    'A thoughtful gift for a runner',
-    'Pieces that travel well',
+    'A linen shirt for warm evenings out',
+    'What goes well with the pour-over set?',
+    'Compare the camp shirt and the overshirt',
+    'Something beautiful under $100 for a gift',
   ];
 
   return (

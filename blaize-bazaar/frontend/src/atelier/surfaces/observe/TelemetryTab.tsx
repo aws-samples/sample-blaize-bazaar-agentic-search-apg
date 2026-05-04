@@ -407,7 +407,7 @@ const ProductRecommendationCard: React.FC = () => (
         marginBottom: '12px',
       }}
     >
-      $148
+      $228
     </div>
 
     {/* Editorial blurb */}
@@ -420,8 +420,8 @@ const ProductRecommendationCard: React.FC = () => (
         margin: '0 0 14px 0',
       }}
     >
-      Golden ochre washed linen that catches the light at golden hour.
-      Relaxed enough for a terrace, present enough for a candlelit table.
+      Camp-collar shirt in deep indigo European linen. Relaxed fit, mother of pearl buttons.
+      Pre-washed softness that earns its golden hour on any terrace.
     </p>
 
     {/* Why this pick */}
@@ -449,10 +449,10 @@ const ProductRecommendationCard: React.FC = () => (
         }}
       >
         {[
-          'Highest semantic match (0.91)',
-          'Matches "linen" + "evening" intent',
-          'Aligns with stored preference: warm tones',
-          'Trending this week (+23% views)',
+          'Cosine similarity: 0.60 (linen + travel cluster)',
+          'Matches "linen" + "warm evenings" query intent',
+          'LTM recall: Marco prefers natural fibers, indigo',
+          'Price within persona range ($68–$485)',
         ].map((reason, i) => (
           <li
             key={i}

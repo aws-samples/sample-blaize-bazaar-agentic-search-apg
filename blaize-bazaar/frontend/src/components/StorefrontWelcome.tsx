@@ -152,44 +152,36 @@ interface PersonaCopy {
 const FRESH_COPY: PersonaCopy = {
   greetingSuffix: () => '',
   context: (stats) => {
-    // During the first paint (stats === null) we keep the sentence
-    // grammatical without numbers — "I've been watching the boutique."
-    // — so the layout doesn't flash.
     if (!stats || stats.product_count === 0) {
       return (
         <>
-          I've been watching the boutique. Tell me what you're after and
-          I'll curate from the floor.
+          Welcome to Blaize Bazaar. I'm Blaize — your personal shopping
+          concierge. Tell me what you're looking for and I'll find the
+          right pieces.
         </>
       )
     }
-    const standout = stats.standout_name?.trim()
-    const category = stats.standout_category?.trim()
     return (
       <>
         I've been watching the floor —{' '}
         <span className="sf-context-num">{stats.product_count}</span>{' '}
-        pieces across {stats.category_count} categories.
-        {standout && category && (
-          <>
-            {' '}
-            Today's standout is the{' '}
-            <span className="sf-context-product">{standout}</span> in{' '}
-            {category}.
-          </>
-        )}
+        curated pieces across {stats.category_count} categories. The{' '}
+        <span className="sf-context-product">Nocturne Leather Weekender</span>{' '}
+        and{' '}
+        <span className="sf-context-product">Pellier Linen Shirt</span>{' '}
+        are the standouts this week.
       </>
     )
   },
   picks: [
-    { label: "Show me today's picks", primary: true },
-    { label: "What's new since my last visit", primary: false },
-    { label: 'Why did the agent pick these?', primary: false },
+    { label: 'A thoughtful gift for someone who runs', primary: true },
+    { label: 'Linen pieces that travel well', primary: false },
+    { label: 'Something for slow Sunday mornings', primary: false },
   ],
   ps: [
-    'something for long summer walks',
-    'a linen piece that earns its golden hour',
-    'pieces that travel well',
+    'a cozy layer for cooler nights',
+    'pieces for slow Sunday mornings',
+    'something to wear for warm evenings out',
   ],
 }
 
@@ -197,22 +189,22 @@ const MARCO_COPY: PersonaCopy = {
   greetingSuffix: (firstName) => `, ${firstName}. Welcome back.`,
   context: () => (
     <>
-      It's been three weeks since your last visit. Seven orders in your
-      history, with a steady thread of{' '}
-      <span className="sf-context-product">natural fibers and oat tones</span>.
-      A new sage linen camp shirt just landed that picks up where your
-      last saved piece left off.
+      I remember you love natural fabrics and pieces that travel well.
+      The{' '}
+      <span className="sf-context-product">Italian Linen Camp Shirt</span>{' '}
+      in indigo just landed — it picks up where your last saved piece
+      left off. Want to build a packing list?
     </>
   ),
   picks: [
-    { label: 'Show me what I saved last time', primary: true },
-    { label: 'New linen arrivals since my last visit', primary: false },
-    { label: 'Something wrinkle-resistant for travel', primary: false },
+    { label: 'A linen shirt for warm evenings out', primary: true },
+    { label: 'What linen layers pack well for coastal travel?', primary: false },
+    { label: 'Compare the camp shirt and the overshirt', primary: false },
   ],
   ps: [
-    'what did I buy last time?',
-    'something similar to what I bought last time',
-    'pieces that travel well for Lisbon',
+    'what goes well with the camp shirt?',
+    'lightweight layers that pack flat',
+    'what would you wear in coastal Goa?',
   ],
 }
 
@@ -220,22 +212,23 @@ const ANNA_COPY: PersonaCopy = {
   greetingSuffix: (firstName) => `, ${firstName}. Welcome back.`,
   context: () => (
     <>
-      Nine days since your last visit. Five orders in your history, all
-      gift-shaped across milestone and everyday price bands. A handful of{' '}
-      <span className="sf-context-product">gift-ready pieces</span>{' '}
-      arrived since — I can narrow by occasion or recipient whenever
-      you're ready.
+      I know you have an eye for thoughtful gifts. The{' '}
+      <span className="sf-context-product">Beeswax Taper Candles</span>{' '}
+      and{' '}
+      <span className="sf-context-product">Ceramic Ring Dish</span>{' '}
+      are our most-gifted pieces this month. Tell me who you're shopping
+      for and I'll find something that lands.
     </>
   ),
   picks: [
-    { label: 'Show me gift-ready pieces this week', primary: true },
-    { label: 'Milestone gifts under $200', primary: false },
-    { label: 'Help me build a small gift set', primary: false },
+    { label: 'A thoughtful gift for someone who loves morning rituals', primary: true },
+    { label: 'Something beautiful under $100', primary: false },
+    { label: 'Wrap-ready gifts with no extra effort', primary: false },
   ],
   ps: [
-    'a thoughtful gift for my mother',
-    'something milestone-shaped under $200',
-    'help me build a small gift set with wrapping',
+    'a milestone gift for a new homeowner',
+    'candles that feel considered, not generic',
+    'help me pair a candle with something else under $100',
   ],
 }
 
@@ -243,21 +236,23 @@ const THEO_COPY: PersonaCopy = {
   greetingSuffix: (firstName) => `, ${firstName}. Good to see you.`,
   context: () => (
     <>
-      Two weeks since your last visit. Four orders in your history, all{' '}
-      <span className="sf-context-product">ceramics, linen, and stoneware</span>.
-      A new run of serving bowls landed last week that sits beside your
-      tumbler set as if they were fired together.
+      I see you gravitate toward slow-craft pieces. The{' '}
+      <span className="sf-context-product">Stoneware Pour-Over Set</span>{' '}
+      pairs beautifully with the{' '}
+      <span className="sf-context-product">Ceramic Tumblers</span>{' '}
+      — they're from the same kiln run. Your morning table is one piece
+      away from complete.
     </>
   ),
   picks: [
-    { label: 'New home arrivals since my last visit', primary: true },
-    { label: 'Stoneware pieces that wear in', primary: false },
-    { label: 'Linen throws for a small room', primary: false },
+    { label: 'Hand-thrown ceramics for a slower morning routine', primary: true },
+    { label: 'What goes well with the pour-over set?', primary: false },
+    { label: 'Artisanal objects worth keeping', primary: false },
   ],
   ps: [
-    'pieces that wear in slowly',
-    'something for quiet mornings',
-    'stoneware for serving, not just display',
+    'linen that softens over seasons',
+    'something for the home, not the wardrobe',
+    'pieces with real patina',
   ],
 }
 
