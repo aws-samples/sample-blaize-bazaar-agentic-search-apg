@@ -29,7 +29,10 @@ export default function PersonaModal({ open, onClose }: PersonaModalProps) {
     if (!open || personas.length > 0) return
     fetch('/api/atelier/personas')
       .then((r) => r.json())
-      .then((data) => setPersonas(Array.isArray(data) ? data : []))
+      .then((data) => {
+        const list = Array.isArray(data) ? data : []
+        setPersonas(list.filter((p: { id: string }) => p.id !== 'fresh'))
+      })
       .catch(() => {})
   }, [open, personas.length])
 

@@ -380,15 +380,8 @@ const FALLBACK_PERSONAS: PersonaListItem[] = [
     avatar_initial: 'T',
     stats: { visits: 8, orders: 4, last_seen_days: 14 },
   },
-  {
-    id: 'fresh',
-    display_name: 'A new visitor',
-    role_tag: 'Empty',
-    blurb: 'Nothing in long-term memory. Nothing in past purchases. The boutique with the lights just on.',
-    avatar_color: 'transparent',
-    avatar_initial: '·',
-    stats: { visits: 0, orders: 0, last_seen_days: null },
-  },
+  // Fresh visitor removed — signed-out state IS the baseline.
+  // The boutique renders editorial defaults when no persona is active.
 ];
 
 const Settings: React.FC = () => {

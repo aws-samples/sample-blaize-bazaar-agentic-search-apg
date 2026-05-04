@@ -152,13 +152,10 @@ function PersonaDropdown() {
       .then((r) => r.json())
       .then((data) => {
         const list = Array.isArray(data) ? data : []
-        // Fresh visitor first so the default demo starts with them
-        list.sort((a: { id: string }, b: { id: string }) => {
-          if (a.id === 'fresh') return -1
-          if (b.id === 'fresh') return 1
-          return 0
-        })
-        setPersonas(list)
+        // Remove Fresh — signed-out state IS the baseline.
+        // Only show Marco, Anna, Theo as selectable personas.
+        const withoutFresh = list.filter((p: { id: string }) => p.id !== 'fresh')
+        setPersonas(withoutFresh)
         setFetched(true)
       })
       .catch(() => setFetched(true))
