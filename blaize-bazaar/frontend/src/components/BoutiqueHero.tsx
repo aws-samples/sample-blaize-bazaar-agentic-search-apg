@@ -225,7 +225,7 @@ export default function BoutiqueHero() {
               className="mt-6 md:mt-8"
               style={{
                 fontFamily: 'var(--sans)',
-                fontSize: '14px',
+                fontSize: '16px',
                 fontWeight: 500,
                 color: '#1f1410',
               }}
@@ -257,14 +257,14 @@ export default function BoutiqueHero() {
                   "
                   style={{
                     fontFamily: 'var(--sans)',
-                    fontSize: '12.5px',
+                    fontSize: '14px',
                     fontWeight: 400,
                     lineHeight: 1.35,
                     color: '#1f1410',
-                    padding: '10px 16px',
+                    padding: '12px 20px',
                     background: '#faf3e8',
-                    width: '168px',
-                    minHeight: '54px',
+                    width: '185px',
+                    minHeight: '58px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
