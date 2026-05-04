@@ -47,6 +47,7 @@ from routes import (
     user_router,
     workshop_router,
 )
+from routes.transcribe import router as transcribe_router
 
 # Configure logging for Strands SDK
 logging.basicConfig(
@@ -283,6 +284,7 @@ app.include_router(atelier_observatory_router)
 # contract-typed via Pydantic and degrade gracefully; they are never
 # allowed to 5xx the homepage.
 app.include_router(storefront_router)
+app.include_router(transcribe_router)
 
 
 # Dependency injection

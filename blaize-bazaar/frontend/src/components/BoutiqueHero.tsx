@@ -13,10 +13,11 @@
  * ensures readability against the photograph's underlying composition.
  */
 import { useCallback, useState } from 'react'
-import { Sparkles, Mic, Send } from 'lucide-react'
+import { Sparkles, Mic, Send, MicOff } from 'lucide-react'
 import { useUI } from '../contexts/UIContext'
 import { usePersona } from '../contexts/PersonaContext'
 import { heroPillsForPersona } from '../data/personaCurations'
+import { useVoiceSearch } from '../hooks/useVoiceSearch'
 
 // Per-persona hero images (landscape, in public/products/).
 // Falls back to the fresh hero for unknown personas.
@@ -41,6 +42,16 @@ export default function BoutiqueHero() {
   const suggestions = heroPillsForPersona(persona?.id)
   const heroImage = PERSONA_HERO_IMAGES[persona?.id ?? 'fresh'] ?? PERSONA_HERO_IMAGES.fresh
   const [searchValue, setSearchValue] = useState('')
+
+  // Amazon Transcribe voice search — interim transcripts fill the
+  // search bar, final transcript auto-fires the query.
+  const { isListening, startListening, stopListening } = useVoiceSearch({
+    onInterimTranscript: (text) => setSearchValue(text),
+    onFinalTranscript: (text) => {
+      setSearchValue('')
+      openDrawerWithQuery(text)
+    },
+  })
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -170,7 +181,7 @@ export default function BoutiqueHero() {
                       setSearchValue('')
                     }
                   }}
-                  placeholder="Ask Blaize anything..."
+                  placeholder={isListening ? 'Listening...' : 'Ask Blaize anything...'}
                   aria-label="Ask Blaize anything"
                   className="
                     w-full rounded-full
@@ -194,11 +205,23 @@ export default function BoutiqueHero() {
                   }}
                 />
 
-                {/* Right button: Mic when empty, Send arrow when typing */}
+                {/* Right button: Send when typing, Mic when empty, MicOff when listening */}
                 <button
                   type={searchValue.trim() ? 'submit' : 'button'}
-                  onClick={searchValue.trim() ? undefined : handleMicClick}
-                  aria-label={searchValue.trim() ? 'Send' : 'Voice search'}
+                  onClick={
+                    searchValue.trim()
+                      ? undefined // form submit handles it
+                      : isListening
+                        ? stopListening
+                        : startListening
+                  }
+                  aria-label={
+                    searchValue.trim()
+                      ? 'Send'
+                      : isListening
+                        ? 'Stop listening'
+                        : 'Voice search'
+                  }
                   className="
                     absolute right-[7px] top-1/2 -translate-y-1/2
                     flex items-center justify-center rounded-full
@@ -209,13 +232,20 @@ export default function BoutiqueHero() {
                   style={{
                     width: '50px',
                     height: '50px',
-                    background: '#1f1410',
+                    background: isListening ? '#a8423a' : '#1f1410',
                     color: '#faf3e8',
                     cursor: 'pointer',
+                    // Pulsing ring when listening
+                    boxShadow: isListening
+                      ? '0 0 0 4px rgba(168, 66, 58, 0.3), 0 0 0 8px rgba(168, 66, 58, 0.15)'
+                      : 'none',
+                    animation: isListening ? 'pulse 1.5s ease-in-out infinite' : 'none',
                   }}
                 >
                   {searchValue.trim() ? (
                     <Send size={20} strokeWidth={2} />
+                  ) : isListening ? (
+                    <MicOff size={20} strokeWidth={1.75} />
                   ) : (
                     <Mic size={20} strokeWidth={1.75} />
                   )}
