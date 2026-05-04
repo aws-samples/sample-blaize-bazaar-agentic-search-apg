@@ -180,8 +180,9 @@ export default function ProductCard({
           src={product.imageUrl}
           alt={product.name}
           loading="lazy"
-          className="w-full h-full object-cover transition-transform duration-[600ms] ease-out"
+          className="w-full h-full object-cover transition-transform ease-out"
           style={{
+            transitionDuration: '600ms',
             transform: hovered ? 'scale(1.03)' : 'scale(1)',
             objectPosition: product.imagePosition ?? 'center center',
           }}
