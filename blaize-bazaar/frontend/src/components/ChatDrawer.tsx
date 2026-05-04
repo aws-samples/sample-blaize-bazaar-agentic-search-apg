@@ -168,15 +168,12 @@ export default function ChatDrawer() {
     hasConsumedRef.current = true
     const seeded = consumePendingQuery()
     if (seeded) {
-      // Reset to greeting + fire the query so the user sees:
-      //   1. Personalized welcome message (greeting)
-      //   2. Their query (user bubble)
-      //   3. Agent response (streaming)
+      // Reset to greeting then immediately fire the query.
+      // Both use setMessages updater functions so React 18 batches
+      // them — sendMessage's `prev` sees clearChat's result.
+      // Result: greeting + user bubble appear on the same paint.
       clearChat(initialMessages)
-      // Small delay so clearChat settles before sendMessage
-      requestAnimationFrame(() => {
-        void sendMessage(seeded)
-      })
+      void sendMessage(seeded)
     }
   }, [isOpen, consumePendingQuery, sendMessage, clearChat, initialMessages])
 
