@@ -21,7 +21,7 @@ import { heroPillsForPersona } from '../data/personaCurations'
 // Per-persona hero images (landscape, in public/products/).
 // Falls back to the fresh hero for unknown personas.
 const PERSONA_HERO_IMAGES: Record<string, string> = {
-  fresh: '/products/hero-fresh-2.png',
+  fresh: '/products/hero-fresh-3.png',
   marco: '/products/hero-marco.png',
   anna: '/products/hero-anna.png',
   theo: '/products/hero-theo.png',
