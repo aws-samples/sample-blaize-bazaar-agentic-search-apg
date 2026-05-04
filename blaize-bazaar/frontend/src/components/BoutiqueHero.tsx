@@ -80,7 +80,7 @@ export default function BoutiqueHero() {
         src={heroImage}
         alt="Sculptural ceramic vase with olive branch in warm editorial light"
         className="absolute inset-0 h-full w-full object-cover"
-        style={{ objectPosition: 'center 80%' }}
+        style={{ objectPosition: '30% 80%' }}
       />
 
       {/* ── Mobile-only gradient overlay for readability ── */}
