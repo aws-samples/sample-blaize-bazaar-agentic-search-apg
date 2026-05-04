@@ -15,15 +15,9 @@
 import { useCallback, useState } from 'react'
 import { Sparkles, Mic } from 'lucide-react'
 import { useUI } from '../contexts/UIContext'
+import { usePersona } from '../contexts/PersonaContext'
+import { heroPillsForPersona } from '../data/personaCurations'
 import heroImage from '../assets/hero/boutique-hero.png'
-
-const SUGGESTIONS = [
-  'a thoughtful gift for someone who runs',
-  'pieces for slow Sunday mornings',
-  'something to wear for warm evenings out',
-  'linen pieces that travel well',
-  'a cozy layer for cooler nights',
-]
 
 const TRUST_ITEMS = [
   'Curated by hand',
@@ -35,6 +29,8 @@ const TRUST_ITEMS = [
 
 export default function BoutiqueHero() {
   const { openDrawerWithQuery } = useUI()
+  const { persona } = usePersona()
+  const suggestions = heroPillsForPersona(persona?.id)
   const [searchValue, setSearchValue] = useState('')
 
   const handleSubmit = useCallback(
@@ -254,7 +250,7 @@ export default function BoutiqueHero() {
               aria-label="Suggested queries"
               style={{ maxWidth: '900px' }}
             >
-              {SUGGESTIONS.map((query) => (
+              {suggestions.map((query) => (
                 <button
                   key={query}
                   type="button"

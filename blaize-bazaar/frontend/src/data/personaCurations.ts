@@ -290,3 +290,114 @@ export function editorialForPersona(
   if (!personaId) return CANONICAL_EDITORIAL
   return PERSONA_EDITORIAL[personaId] ?? CANONICAL_EDITORIAL
 }
+
+// ---------------------------------------------------------------------
+// Hero suggestion pills — persona-specific "Try asking" queries.
+// Each persona sees 5 pills grounded in their interests.
+// Fresh visitors see the canonical set.
+// ---------------------------------------------------------------------
+
+export const PERSONA_HERO_PILLS: Record<string, string[]> = {
+  marco: [
+    'a linen shirt for warm evenings out',
+    'leather weekender bags for travel',
+    'lightweight layers that pack flat',
+    'neutral accessories for the road',
+    'what would you wear in coastal Goa?',
+  ],
+  anna: [
+    'a thoughtful gift for someone who runs',
+    'something beautiful under $100',
+    'a milestone gift for a new homeowner',
+    'candles that feel considered, not generic',
+    'wrap-ready gifts with no extra effort',
+  ],
+  theo: [
+    'ceramics for a slow morning routine',
+    'hand-thrown pieces with real patina',
+    'linen that softens over seasons',
+    'something for the home, not the wardrobe',
+    'artisanal objects worth keeping',
+  ],
+  fresh: [
+    'a thoughtful gift for someone who runs',
+    'pieces for slow Sunday mornings',
+    'something to wear for warm evenings out',
+    'linen pieces that travel well',
+    'a cozy layer for cooler nights',
+  ],
+}
+
+export function heroPillsForPersona(
+  personaId: string | null | undefined,
+): string[] {
+  if (!personaId) return PERSONA_HERO_PILLS.fresh
+  return PERSONA_HERO_PILLS[personaId] ?? PERSONA_HERO_PILLS.fresh
+}
+
+// ---------------------------------------------------------------------
+// Featured product ID — the big hero product slot per persona.
+// Maps persona → product ID from SHOWCASE_PRODUCTS.
+// Fresh visitors see the Nocturne Leather Weekender (id:3 in the
+// original lineup; check actual IDs in showcaseProducts.ts).
+// ---------------------------------------------------------------------
+
+export const PERSONA_FEATURED_PRODUCT_ID: Record<string, number> = {
+  marco: 1,   // Italian Linen Camp Shirt — Marco's signature piece
+  anna: 3,    // Signature Straw Tote — gift-forward, wrap-ready
+  theo: 8,    // Ceramic Tumbler Set — slow ritual centerpiece
+  fresh: 7,   // Cashmere-Blend Cardigan — a cozy entry point
+}
+
+export function featuredProductIdForPersona(
+  personaId: string | null | undefined,
+): number {
+  if (!personaId) return PERSONA_FEATURED_PRODUCT_ID.fresh
+  return PERSONA_FEATURED_PRODUCT_ID[personaId] ?? PERSONA_FEATURED_PRODUCT_ID.fresh
+}
+
+// ---------------------------------------------------------------------
+// Weekend Edit — persona-specific editorial eyebrow + headline + copy.
+// The "Weekend, re:defined." block on StorefrontPage swaps entirely
+// based on persona so the editorial voice matches the shopper.
+// ---------------------------------------------------------------------
+
+export interface WeekendEditContent {
+  eyebrow: string
+  headline: string
+  subheadline: string
+}
+
+export const PERSONA_WEEKEND_EDIT: Record<string, WeekendEditContent> = {
+  marco: {
+    eyebrow: 'The Travel Edit',
+    headline: 'Packed light,\nlived fully.',
+    subheadline:
+      'Linen that softens on the road, leather that earns its patina. A 48-hour wardrobe that never feels rushed.',
+  },
+  anna: {
+    eyebrow: 'The Gift Edit',
+    headline: 'Giving,\nre:considered.',
+    subheadline:
+      'Pieces that arrive wrapped with intention. For the milestone, the just-because, and the person who has everything.',
+  },
+  theo: {
+    eyebrow: 'The Slow Edit',
+    headline: 'Ritual,\nnot routine.',
+    subheadline:
+      'Hand-thrown ceramic, washed linen, stoneware that rewards slowness. The morning table, made intentional.',
+  },
+  fresh: {
+    eyebrow: 'Weekend Edit',
+    headline: 'Weekend,\nre:defined.',
+    subheadline:
+      'Pieces that move with you from morning markets to golden-hour terraces. Linen, leather, ceramic — the weekend wardrobe, considered.',
+  },
+}
+
+export function weekendEditForPersona(
+  personaId: string | null | undefined,
+): WeekendEditContent {
+  if (!personaId) return PERSONA_WEEKEND_EDIT.fresh
+  return PERSONA_WEEKEND_EDIT[personaId] ?? PERSONA_WEEKEND_EDIT.fresh
+}

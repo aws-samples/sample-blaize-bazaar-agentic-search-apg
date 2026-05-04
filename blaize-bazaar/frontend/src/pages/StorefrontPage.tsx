@@ -29,7 +29,12 @@ import { useCart } from '../contexts/CartContext'
 import { usePersona } from '../contexts/PersonaContext'
 import { useUI } from '../contexts/UIContext'
 import { SHOWCASE_PRODUCTS } from '../data/showcaseProducts'
-import { PERSONA_INTERESTS, rankProductsForPersona } from '../data/personaCurations'
+import {
+  PERSONA_INTERESTS,
+  rankProductsForPersona,
+  featuredProductIdForPersona,
+  weekendEditForPersona,
+} from '../data/personaCurations'
 
 const NAV_ROUTES: Record<NavItem, string> = {
   home: '/',
@@ -42,10 +47,7 @@ const NAV_ROUTES: Record<NavItem, string> = {
   'ask-blaize': '/',
 }
 
-// The featured product is the Nocturne Leather Weekender (id: 3)
-const FEATURED_PRODUCT = SHOWCASE_PRODUCTS.find(p => p.id === 3) ?? SHOWCASE_PRODUCTS[2]
-// The remaining 8 products (everything except the featured one)
-const GRID_PRODUCTS = SHOWCASE_PRODUCTS.filter(p => p.id !== FEATURED_PRODUCT.id)
+// Featured product + grid are now persona-aware (computed inside component)
 
 export default function StorefrontPage() {
   const { prefsVersion } = useAuth()
@@ -54,13 +56,24 @@ export default function StorefrontPage() {
   const { persona } = usePersona()
   const navigate = useNavigate()
 
-  // Persona-aware product order for "Curated for you". Fresh / unknown
-  // personas fall through to the canonical showcase order; Marco, Anna,
-  // and Theo get their own tag-weighted ranking from personaCurations.
+  // Persona-aware featured product + grid ordering + weekend edit.
   const personaId = persona?.id ?? null
+
+  const featuredProduct = useMemo(() => {
+    const fid = featuredProductIdForPersona(personaId)
+    return SHOWCASE_PRODUCTS.find(p => p.id === fid) ?? SHOWCASE_PRODUCTS[0]
+  }, [personaId])
+
+  const gridProducts = useMemo(
+    () => SHOWCASE_PRODUCTS.filter(p => p.id !== featuredProduct.id),
+    [featuredProduct],
+  )
+
+  const weekendEdit = weekendEditForPersona(personaId)
+
   const rankedGridProducts = useMemo(
-    () => rankProductsForPersona(GRID_PRODUCTS, personaId),
-    [personaId],
+    () => rankProductsForPersona(gridProducts, personaId),
+    [gridProducts, personaId],
   )
   const personaInterests = personaId ? PERSONA_INTERESTS[personaId] : undefined
   const isPersonalized =
@@ -133,8 +146,8 @@ export default function StorefrontPage() {
               {/* Left: featured image */}
               <div className="relative aspect-[4/5] rounded-2xl overflow-hidden shadow-warm-md">
                 <img
-                  src={FEATURED_PRODUCT.imageUrl}
-                  alt={FEATURED_PRODUCT.name}
+                  src={featuredProduct.imageUrl}
+                  alt={featuredProduct.name}
                   className="w-full h-full object-cover"
                   loading="lazy"
                 />
@@ -151,7 +164,7 @@ export default function StorefrontPage() {
               {/* Right: editorial title + product info */}
               <div className="flex flex-col justify-center py-8 lg:py-0">
                 <p className="text-[11px] font-sans font-semibold tracking-[0.22em] uppercase text-ink-quiet mb-4">
-                  Weekend Edit
+                  {weekendEdit.eyebrow}
                 </p>
                 <h2
                   className="font-display italic text-espresso"
@@ -160,11 +173,10 @@ export default function StorefrontPage() {
                     lineHeight: 1.05,
                     letterSpacing: '-0.02em',
                     fontWeight: 400,
+                    whiteSpace: 'pre-line',
                   }}
                 >
-                  Weekend,
-                  <br />
-                  re:defined.
+                  {weekendEdit.headline}
                 </h2>
                 <p
                   className="mt-5 max-w-[440px] font-sans text-ink-soft"
@@ -173,27 +185,25 @@ export default function StorefrontPage() {
                     lineHeight: 1.65,
                   }}
                 >
-                  Pieces that move with you from morning markets to golden-hour
-                  terraces. Linen, leather, ceramic — the weekend wardrobe,
-                  considered.
+                  {weekendEdit.subheadline}
                 </p>
 
                 {/* Featured product details */}
                 <div className="mt-8 pt-6 border-t border-sand/50">
                   <p className="text-[10px] font-sans font-semibold tracking-[0.2em] uppercase text-ink-quiet mb-1">
-                    {FEATURED_PRODUCT.brand}
+                    {featuredProduct.brand}
                   </p>
                   <p className="font-display italic text-espresso text-xl">
-                    {FEATURED_PRODUCT.name}
+                    {featuredProduct.name}
                   </p>
                   <div className="flex items-center gap-3 mt-2 text-sm text-ink-soft font-sans">
-                    <span className="text-espresso font-medium">${FEATURED_PRODUCT.price}</span>
-                    <span>★ {FEATURED_PRODUCT.rating.toFixed(1)}</span>
-                    <span className="text-ink-quiet">({FEATURED_PRODUCT.reviewCount})</span>
+                    <span className="text-espresso font-medium">${featuredProduct.price}</span>
+                    <span>★ {featuredProduct.rating.toFixed(1)}</span>
+                    <span className="text-ink-quiet">({featuredProduct.reviewCount})</span>
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleAddToBag(FEATURED_PRODUCT)}
+                    onClick={() => handleAddToBag(featuredProduct)}
                     className="mt-5 rounded-full bg-espresso text-cream-50 px-8 py-3 text-sm font-sans font-medium transition-colors duration-fade hover:bg-dusk cursor-pointer"
                   >
                     Add to bag
