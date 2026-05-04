@@ -22,6 +22,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -104,6 +105,11 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const [comparisonProducts, setComparisonProducts] = useState<
     ComparisonProduct[]
   >([])
+  // Ref mirror for synchronous reads — React 18 batches state updates,
+  // so setPendingConciergeQuery's updater may not run synchronously.
+  // The ref is always in sync so consumePendingQuery can read it
+  // immediately inside useLayoutEffect.
+  const pendingQueryRef = useRef<string | null>(null)
   const [pendingConciergeQuery, setPendingConciergeQuery] = useState<
     string | null
   >(null)
@@ -146,6 +152,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const openConciergeWithQuery = useCallback((text: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
+    pendingQueryRef.current = trimmed
     setPendingConciergeQuery(trimmed)
     setActiveModal('concierge')
   }, [])
@@ -153,18 +160,18 @@ export function UIProvider({ children }: { children: ReactNode }) {
   const openDrawerWithQuery = useCallback((text: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
+    pendingQueryRef.current = trimmed
     setPendingConciergeQuery(trimmed)
     setActiveModal('drawer')
   }, [])
 
-  // Read-and-clear so the concierge only dispatches the seeded query once,
-  // even across re-renders.
+  // Read-and-clear. Uses the ref for a synchronous read so
+  // useLayoutEffect in ChatDrawer gets the value immediately,
+  // even when React 18 batches the state update.
   const consumePendingQuery = useCallback(() => {
-    let value: string | null = null
-    setPendingConciergeQuery(prev => {
-      value = prev
-      return null
-    })
+    const value = pendingQueryRef.current
+    pendingQueryRef.current = null
+    setPendingConciergeQuery(null)
     return value
   }, [])
 
