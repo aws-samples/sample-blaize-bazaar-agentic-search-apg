@@ -28,7 +28,20 @@ import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
 import { usePersona } from '../contexts/PersonaContext'
 import { useUI } from '../contexts/UIContext'
-import { SHOWCASE_PRODUCTS } from '../data/showcaseProducts'
+import {
+  SHOWCASE_PRODUCTS,
+  FRESH_PRODUCTS,
+  MARCO_PRODUCTS,
+  ANNA_PRODUCTS,
+  THEO_PRODUCTS,
+} from '../data/showcaseProducts'
+
+const PERSONA_PRODUCTS: Record<string, typeof SHOWCASE_PRODUCTS> = {
+  fresh: FRESH_PRODUCTS,
+  marco: MARCO_PRODUCTS,
+  anna: ANNA_PRODUCTS,
+  theo: THEO_PRODUCTS,
+}
 import {
   PERSONA_INTERESTS,
   rankProductsForPersona,
@@ -59,14 +72,17 @@ export default function StorefrontPage() {
   // Persona-aware featured product + grid ordering + weekend edit.
   const personaId = persona?.id ?? null
 
+  // Each persona sees ONLY their 9 products — zero overlap
+  const personaProducts = PERSONA_PRODUCTS[personaId ?? 'fresh'] ?? FRESH_PRODUCTS
+
   const featuredProduct = useMemo(() => {
     const fid = featuredProductIdForPersona(personaId)
-    return SHOWCASE_PRODUCTS.find(p => p.id === fid) ?? SHOWCASE_PRODUCTS[0]
-  }, [personaId])
+    return personaProducts.find(p => p.id === fid) ?? personaProducts[0]
+  }, [personaId, personaProducts])
 
   const gridProducts = useMemo(
-    () => SHOWCASE_PRODUCTS.filter(p => p.id !== featuredProduct.id),
-    [featuredProduct],
+    () => personaProducts.filter(p => p.id !== featuredProduct.id),
+    [personaProducts, featuredProduct],
   )
 
   const weekendEdit = weekendEditForPersona(personaId)
