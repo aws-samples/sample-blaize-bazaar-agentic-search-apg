@@ -72,43 +72,26 @@ export default function BoutiqueHero() {
     <section
       data-testid="boutique-hero"
       aria-label="Search and discover"
-      className="relative w-full overflow-hidden"
-      style={{ minHeight: 'min(85vh, calc(100dvh - 100px))' }}
+      className="relative h-[78vh] min-h-[720px] overflow-hidden"
     >
-      {/* ── Full-bleed photograph ── */}
+      {/* ── Full-bleed photograph — pushed left so text reads clean ── */}
       <img
         src={heroImage}
-        alt="Sculptural ceramic vase with olive branch in warm editorial light"
-        className="absolute inset-0 h-full w-full object-cover"
-        style={{ objectPosition: '30% 80%' }}
+        alt="Editorial boutique hero"
+        className="absolute inset-0 h-full w-full object-cover object-[20%_center]"
       />
 
-      {/* ── Mobile-only gradient overlay for readability ── */}
+      {/* ── Soft gradient overlay for text readability ── */}
       <div
-        className="absolute inset-0 md:hidden pointer-events-none"
+        className="absolute inset-0 bg-gradient-to-r from-transparent via-[#f7f0e6]/20 to-[#f7f0e6]/45"
         aria-hidden="true"
-        style={{
-          background:
-            'linear-gradient(180deg, rgba(250,243,232,0) 0%, rgba(250,243,232,0.7) 55%, rgba(250,243,232,0.95) 100%)',
-        }}
       />
 
-      {/* ── Typography overlay — asymmetric placement, centered contents ── */}
-      <div
-        className="relative z-10 h-full w-full"
-        style={{ minHeight: 'min(85vh, calc(100dvh - 100px))' }}
-      >
-        <div
-          className="h-full max-w-[1440px] mx-auto px-6 md:px-8 lg:px-12
-                     grid grid-cols-1 md:grid-cols-12 items-center"
-          style={{ minHeight: 'min(85vh, calc(100dvh - 100px))' }}
-        >
-          {/* Typography column: centered within full width. The vase
-              on the left and linen on the right frame it naturally. */}
+      {/* ── Typography overlay — right-aligned content, text reads against the gradient ── */}
+      <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center justify-end px-8">
           <div
-            className="md:col-start-2 md:col-span-10 py-12 md:py-0
+            className="w-full max-w-2xl py-12 md:py-0
                        flex flex-col items-center text-center"
-            style={{ maxWidth: '960px', justifySelf: 'center' }}
           >
             {/* Eyebrow — "• SUMMER EDIT • NO. 06 •" — matches
                 WeekendEditorial eyebrow type treatment exactly, with
@@ -295,7 +278,6 @@ export default function BoutiqueHero() {
             </div>
 
           </div>
-        </div>
       </div>
     </section>
 
