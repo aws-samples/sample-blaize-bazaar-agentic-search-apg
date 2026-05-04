@@ -216,7 +216,7 @@ def create_single_agent():
     """Create a single-agent (Lab 2 mode) for testing."""
     from strands import Agent
     from strands.models.bedrock import BedrockModel
-    from services.agent_tools import search_products, trending_products, price_analysis
+    from services.agent_tools import find_pieces, whats_trending, price_intelligence
     from config import settings
 
     # Import the prompt from chat.py
@@ -225,7 +225,7 @@ def create_single_agent():
     return Agent(
         model=BedrockModel(model_id=settings.BEDROCK_CHAT_MODEL, max_tokens=8192, temperature=0.0),
         system_prompt=SINGLE_AGENT_PROMPT,
-        tools=[search_products, trending_products, price_analysis],
+        tools=[find_pieces, whats_trending, price_intelligence],
     )
 
 

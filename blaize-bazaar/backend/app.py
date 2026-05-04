@@ -398,7 +398,7 @@ async def health_check(
 # global service singleton.
 
 @app.get("/api/products/category/{category_query}")
-async def browse_category(
+async def explore_collection(
     category_query: str,
     limit: int = Query(default=5, ge=1, le=50),
     db: DatabaseService = Depends(get_db_service),
@@ -482,14 +482,14 @@ async def general_exception_handler(request, exc):
 async def list_custom_tools():
     """List all custom business logic tools available"""
     return [
-        {"name": "search_products", "description": "Search for products by natural language query with optional filters"},
-        {"name": "trending_products", "description": "Get trending products by reviews and ratings"},
-        {"name": "browse_category", "description": "Browse products filtered by category, rating, and price"},
-        {"name": "inventory_health", "description": "Check stock levels and inventory alerts"},
-        {"name": "price_analysis", "description": "Price analytics by category"},
-        {"name": "restock_product", "description": "Update product stock quantities"},
-        {"name": "compare_products", "description": "Side-by-side product comparison"},
-        {"name": "low_stock", "description": "Find products running low on inventory"},
+        {"name": "find_pieces", "description": "Search for products by natural language query with optional filters"},
+        {"name": "whats_trending", "description": "Get trending products by reviews and ratings"},
+        {"name": "explore_collection", "description": "Browse products filtered by category, rating, and price"},
+        {"name": "floor_check", "description": "Check stock levels and inventory alerts"},
+        {"name": "price_intelligence", "description": "Price analytics by category"},
+        {"name": "restock_shelf", "description": "Update product stock quantities"},
+        {"name": "side_by_side", "description": "Side-by-side product comparison"},
+        {"name": "running_low", "description": "Find products running low on inventory"},
     ]
 
 
@@ -503,21 +503,21 @@ async def get_trending(
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(db)
-        return await logic.trending_products(limit, category)
+        return await logic.whats_trending(limit, category)
     except Exception as e:
         logger.error(f"Failed to get trending products: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/tools/inventory-health")
-async def inventory_health_endpoint(
+async def floor_check_endpoint(
     db: DatabaseService = Depends(get_db_service)
 ):
     """Get inventory health using business logic"""
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(db)
-        return await logic.inventory_health()
+        return await logic.floor_check()
     except Exception as e:
         logger.error(f"Failed to get inventory health: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -532,14 +532,14 @@ async def get_price_stats(
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(db)
-        return await logic.price_analysis(category)
+        return await logic.price_intelligence(category)
     except Exception as e:
         logger.error(f"Failed to get price statistics: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/tools/restock")
-async def restock_product_endpoint(
+async def restock_shelf_endpoint(
     request: dict,
     db: DatabaseService = Depends(get_db_service)
 ):
@@ -547,7 +547,7 @@ async def restock_product_endpoint(
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(db)
-        return await logic.restock_product(
+        return await logic.restock_shelf(
             product_id=request["product_id"],
             quantity=request["quantity"]
         )
@@ -1046,56 +1046,56 @@ async def atelier_catalog():
     # actual per-call latencies via the existing tool-call SSE.
     tools = [
         {
-            "name": "search_products",
+            "name": "find_pieces",
             "version": "v2.1",
             "headline": "Semantic search across the catalog.",
             "description": "Natural-language query against pgvector; returns top-k matched products.",
             "p50_ms": 280,
         },
         {
-            "name": "trending_products",
+            "name": "whats_trending",
             "version": "v1.3",
             "headline": "Current bestsellers and just-ins.",
             "description": "Returns products tagged BESTSELLER / JUST_IN / EDITORS_PICK from the catalog.",
             "p50_ms": 120,
         },
         {
-            "name": "browse_category",
+            "name": "explore_collection",
             "version": "v1.2",
             "headline": "Browse by named category.",
             "description": "Filter-by-category read for shoppers who know what shelf they want.",
             "p50_ms": 80,
         },
         {
-            "name": "compare_products",
+            "name": "side_by_side",
             "version": "v1.0",
             "headline": "Side-by-side product comparison.",
             "description": "Takes two product IDs, returns attributes arranged for comparison.",
             "p50_ms": 180,
         },
         {
-            "name": "price_analysis",
+            "name": "price_intelligence",
             "version": "v1.1",
             "headline": "Price trends, deals, and budget fit.",
             "description": "Analyzes pricing across a category or a specific product family.",
             "p50_ms": 220,
         },
         {
-            "name": "inventory_health",
+            "name": "floor_check",
             "version": "v1.0",
             "headline": "Stock levels at a glance.",
             "description": "Inventory summary by category with low-stock flags.",
             "p50_ms": 95,
         },
         {
-            "name": "low_stock",
+            "name": "running_low",
             "version": "v1.0",
             "headline": "What's running low right now.",
             "description": "Reads products below the restock threshold, ordered by urgency.",
             "p50_ms": 110,
         },
         {
-            "name": "restock_product",
+            "name": "restock_shelf",
             "version": "v1.0",
             "headline": "Place a restock signal.",
             "description": "Writes a restock request. Gated — requires explicit user confirmation.",
@@ -1103,7 +1103,7 @@ async def atelier_catalog():
             "gated": True,
         },
         {
-            "name": "return_policy",
+            "name": "returns_and_care",
             "version": "v1.0",
             "headline": "Return windows by category.",
             "description": "Policy lookup used by customer support for returns / refunds questions.",
@@ -1116,25 +1116,25 @@ async def atelier_catalog():
     # 'gated' = requires user confirmation (espresso-dashed in the UI).
     grants = [
         # search agent imports
-        {"agent": "search", "tool": "search_products", "style": "solid"},
-        {"agent": "search", "tool": "browse_category", "style": "solid"},
-        {"agent": "search", "tool": "compare_products", "style": "solid"},
+        {"agent": "search", "tool": "find_pieces", "style": "solid"},
+        {"agent": "search", "tool": "explore_collection", "style": "solid"},
+        {"agent": "search", "tool": "side_by_side", "style": "solid"},
         # recommendation agent imports
-        {"agent": "recommendation", "tool": "search_products", "style": "solid"},
-        {"agent": "recommendation", "tool": "trending_products", "style": "solid"},
-        {"agent": "recommendation", "tool": "compare_products", "style": "solid"},
-        {"agent": "recommendation", "tool": "browse_category", "style": "solid"},
+        {"agent": "recommendation", "tool": "find_pieces", "style": "solid"},
+        {"agent": "recommendation", "tool": "whats_trending", "style": "solid"},
+        {"agent": "recommendation", "tool": "side_by_side", "style": "solid"},
+        {"agent": "recommendation", "tool": "explore_collection", "style": "solid"},
         # pricing agent imports
-        {"agent": "pricing", "tool": "price_analysis", "style": "solid"},
-        {"agent": "pricing", "tool": "browse_category", "style": "solid"},
-        {"agent": "pricing", "tool": "search_products", "style": "dashed"},
+        {"agent": "pricing", "tool": "price_intelligence", "style": "solid"},
+        {"agent": "pricing", "tool": "explore_collection", "style": "solid"},
+        {"agent": "pricing", "tool": "find_pieces", "style": "dashed"},
         # inventory agent imports
-        {"agent": "inventory", "tool": "inventory_health", "style": "solid"},
-        {"agent": "inventory", "tool": "low_stock", "style": "solid"},
-        {"agent": "inventory", "tool": "restock_product", "style": "gated"},
+        {"agent": "inventory", "tool": "floor_check", "style": "solid"},
+        {"agent": "inventory", "tool": "running_low", "style": "solid"},
+        {"agent": "inventory", "tool": "restock_shelf", "style": "gated"},
         # support agent imports
-        {"agent": "support", "tool": "return_policy", "style": "solid"},
-        {"agent": "support", "tool": "search_products", "style": "dashed"},
+        {"agent": "support", "tool": "returns_and_care", "style": "solid"},
+        {"agent": "support", "tool": "find_pieces", "style": "dashed"},
     ]
 
     return {
@@ -1276,13 +1276,13 @@ async def get_workshop_status():
     from services.vector_search import VectorSearch
     from services.business_logic import BusinessLogic
     m1a = is_stub(VectorSearch.vector_search, "# TODO: Your implementation here")
-    m1b = is_stub(BusinessLogic.search_products, "# TODO: Your implementation here")
+    m1b = is_stub(BusinessLogic.find_pieces, "# TODO: Your implementation here")
 
     # Module 2 — Agentic AI (tools + agents + orchestrator)
-    from services.agent_tools import trending_products
+    from services.agent_tools import whats_trending
     from agents.recommendation_agent import recommendation
     from agents.orchestrator import create_orchestrator
-    m2_tools = is_stub(trending_products, "# TODO: Your implementation here")
+    m2_tools = is_stub(whats_trending, "# TODO: Your implementation here")
     m2_rec = is_stub(recommendation, "# TODO: Your implementation here")
     m2_orch = is_stub(create_orchestrator, "# TODO: Your implementation here")
 
@@ -1297,9 +1297,9 @@ async def get_workshop_status():
     return {
         "modules": {
             "module1": {"complete": not m1a and not m1b, "label": "Smart Search",
-                        "stubs": {"vector_search": not m1a, "search_products": not m1b}},
+                        "stubs": {"vector_search": not m1a, "find_pieces": not m1b}},
             "module2": {"complete": not m2_tools and not m2_rec and not m2_orch, "label": "Agentic AI",
-                        "stubs": {"trending_products": not m2_tools, "recommendation_agent": not m2_rec, "orchestrator": not m2_orch}},
+                        "stubs": {"whats_trending": not m2_tools, "recommendation_agent": not m2_rec, "orchestrator": not m2_orch}},
             "module3": {"complete": not m3_mem and not m3_gw and not m3_pol, "label": "Production Patterns",
                         "stubs": {"memory": not m3_mem, "gateway": not m3_gw, "policy": not m3_pol}},
         }

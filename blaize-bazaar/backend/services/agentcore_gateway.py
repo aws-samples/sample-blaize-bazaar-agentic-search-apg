@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 #
 # The 9 tools come from workshop-content.md steering and MUST be registered
 # under these exact names (Req 2.2.3):
-#   search_products, trending_products, price_analysis,
-#   browse_category, inventory_health, low_stock,
-#   restock_product, compare_products, return_policy
+#   find_pieces, whats_trending, price_intelligence,
+#   explore_collection, floor_check, running_low,
+#   restock_shelf, side_by_side, returns_and_care
 #
 # ⏩ SHORT ON TIME? Run:
 #    cp solutions/module3/services/agentcore_gateway.py blaize-bazaar/backend/services/agentcore_gateway.py
@@ -38,15 +38,16 @@ logger = logging.getLogger(__name__)
 # The 9 tool names exposed by the gateway, in stable order. Tests assert
 # discovery returns exactly this set by exact name (workshop-content.md).
 GATEWAY_TOOL_NAMES: List[str] = [
-    "search_products",
-    "trending_products",
-    "price_analysis",
-    "browse_category",
-    "inventory_health",
-    "low_stock",
-    "restock_product",
-    "compare_products",
-    "return_policy",
+    "find_pieces",
+    "whats_trending",
+    "price_intelligence",
+    "explore_collection",
+    "floor_check",
+    "running_low",
+    "restock_shelf",
+    "side_by_side",
+    "returns_and_care",
+    "style_match",
 ]
 
 

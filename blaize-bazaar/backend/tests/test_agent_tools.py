@@ -1,4 +1,4 @@
-"""Tests for `services.agent_tools.trending_products` (Module 2 — Challenge 2).
+"""Tests for `services.agent_tools.whats_trending` (Module 2 — Challenge 2).
 
 Covers Requirement 2.4.1 and 2.4.2 from
 `.kiro/specs/blaize-bazaar-storefront/requirements.md` and the coding-standards
@@ -97,7 +97,7 @@ class _StubBusinessLogic:
         self._payload = payload
         self._raise_exc = raise_exc
 
-    async def trending_products(
+    async def whats_trending(
         self, limit: int = 5, category: Optional[str] = None
     ) -> Dict[str, Any]:
         if self._raise_exc is not None:
@@ -131,8 +131,8 @@ def _invoke_tool(**kwargs: Any) -> str:
     Fall back to calling the decorated object itself when the attribute is
     missing so the test survives SDK upgrades that inline the decorator.
     """
-    fn = getattr(agent_tools.trending_products, "__wrapped__",
-                 agent_tools.trending_products)
+    fn = getattr(agent_tools.whats_trending, "__wrapped__",
+                 agent_tools.whats_trending)
     return fn(**kwargs)
 
 

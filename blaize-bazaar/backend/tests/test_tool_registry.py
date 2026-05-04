@@ -93,8 +93,8 @@ def test_discover_tools_uses_cte_and_cosine(embedding: List[float]) -> None:
         rows_by_call_index={
             1: [  # the SELECT is call index 1 (after SET LOCAL at 0)
                 {
-                    "tool_id": "search_products",
-                    "name": "search_products",
+                    "tool_id": "find_pieces",
+                    "name": "find_pieces",
                     "description": "Semantic product search.",
                     "similarity": 0.87,
                 },
@@ -136,14 +136,14 @@ def test_discover_tools_returns_rows_in_similarity_shape(
         rows_by_call_index={
             1: [
                 {
-                    "tool_id": "search_products",
-                    "name": "search_products",
+                    "tool_id": "find_pieces",
+                    "name": "find_pieces",
                     "description": "Semantic product search.",
                     "similarity": 0.87,
                 },
                 {
-                    "tool_id": "trending_products",
-                    "name": "trending_products",
+                    "tool_id": "whats_trending",
+                    "name": "whats_trending",
                     "description": "Bestsellers.",
                     "similarity": 0.42,
                 },
@@ -154,8 +154,8 @@ def test_discover_tools_returns_rows_in_similarity_shape(
     result = _run(discover_tools(FakeDB(cur), embedding))
 
     assert [r["name"] for r in result["rows"]] == [
-        "search_products",
-        "trending_products",
+        "find_pieces",
+        "whats_trending",
     ]
     assert result["rows"][0]["similarity"] == pytest.approx(0.87)
     assert result["total_count"] == 9
@@ -229,8 +229,8 @@ def test_tool_registry_panel_emits_panel_event(embedding: List[float]) -> None:
         rows_by_call_index={
             1: [
                 {
-                    "tool_id": "search_products",
-                    "name": "search_products",
+                    "tool_id": "find_pieces",
+                    "name": "find_pieces",
                     "description": "Semantic product search.",
                     "similarity": 0.91,
                 },
@@ -250,7 +250,7 @@ def test_tool_registry_panel_emits_panel_event(embedding: List[float]) -> None:
     assert p["tag"] == "TOOL REGISTRY · DISCOVER"
     assert p["tag_class"] == "cyan"
     assert p["columns"] == ["name", "similarity"]
-    assert p["rows"] == [["search_products", "0.910"]]
+    assert p["rows"] == [["find_pieces", "0.910"]]
     assert "9 tool(s) indexed" in p["meta"]
 
 

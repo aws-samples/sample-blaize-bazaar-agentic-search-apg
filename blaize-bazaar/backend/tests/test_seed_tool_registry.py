@@ -51,12 +51,12 @@ def test_every_tool_has_nonempty_description(seeder_module) -> None:
         assert "SHORT ON TIME" not in s["description"], s["tool_id"]
 
 
-def test_restock_product_is_the_only_sensitive_tool(seeder_module) -> None:
+def test_restock_shelf_is_the_only_sensitive_tool(seeder_module) -> None:
     """The approvals gate is narrow. Widening it needs a deliberate code
     change here + a test update, not accidental drift."""
     specs = {s["tool_id"]: s for s in seeder_module._load_tool_specs()}
     sensitive = {name for name, spec in specs.items() if spec["requires_approval"]}
-    assert sensitive == {"restock_product"}
+    assert sensitive == {"restock_shelf"}
 
 
 def test_owner_agent_assigned_for_every_tool(seeder_module) -> None:

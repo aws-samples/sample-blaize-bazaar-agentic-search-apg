@@ -5,8 +5,8 @@ Validates Requirement 2.4.3-2.4.5 from
 
   2.4.3  The specialist is a Strands `Agent` wrapping `BedrockModel` with
          `temperature=0.2` and the four tools
-         `[search_products, trending_products, compare_products,
-         browse_category]`.
+         `[find_pieces, whats_trending, side_by_side,
+         explore_collection]`.
   2.4.4  The system prompt emphasizes warm, editorial, catalog-style
          reasoning grounded in specific product attributes.
   2.4.5  Calling the agent with `something for warm evenings out` returns
@@ -181,10 +181,10 @@ def test_agent_is_constructed_with_temperature_0_2_and_four_tools(
         unwrapped.append(getattr(inner, "__name__", repr(inner)))
 
     assert set(unwrapped) == {
-        "search_products",
-        "trending_products",
-        "compare_products",
-        "browse_category",
+        "find_pieces",
+        "whats_trending",
+        "side_by_side",
+        "explore_collection",
     }, f"expected the four Req 2.4.3 tools, got {unwrapped!r} / {tool_names!r}"
 
 

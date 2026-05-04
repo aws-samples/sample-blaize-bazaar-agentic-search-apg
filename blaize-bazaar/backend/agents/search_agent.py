@@ -14,7 +14,7 @@ import re
 from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
-from services.agent_tools import search_products, browse_category, compare_products
+from services.agent_tools import find_pieces, explore_collection, side_by_side, style_match
 from skills import inject_skills
 from services.persona_context import inject_persona_preamble
 
@@ -22,15 +22,15 @@ from services.persona_context import inject_persona_preamble
 _SEARCH_SYSTEM_PROMPT = (
     "You are Blaize Bazaar's Product Search Specialist. "
     "<tools>"
-    "- search_products: Use for natural language or intent-based product queries "
+    "- find_pieces: Use for natural language or intent-based product queries "
     "(e.g. 'gift for a cook', 'noise-canceling headphones under $200'). "
     "Extract price limits from the query and pass as max_price. "
     "Extract category hints and pass as category. "
-    "- browse_category: Use when the user wants to browse a specific category "
+    "- explore_collection: Use when the user wants to browse a specific category "
     "(e.g. 'show me all laptops'). "
-    "- compare_products: Use when the user wants a side-by-side comparison of two products. "
+    "- side_by_side: Use when the user wants a side-by-side comparison of two products. "
     "This tool requires product IDs. If the user mentions product names instead of IDs, "
-    "first use search_products to find each product's productId, then call compare_products "
+    "first use find_pieces to find each product's productId, then call side_by_side "
     "with the two IDs. "
     "</tools>"
     "<output-rules>"
@@ -80,7 +80,7 @@ def build_search_agent() -> Agent:
         system_prompt=inject_persona_preamble(
             inject_skills(_SEARCH_SYSTEM_PROMPT)
         ),
-        tools=[search_products, browse_category, compare_products],
+        tools=[find_pieces, explore_collection, side_by_side, style_match],
     )
 
 

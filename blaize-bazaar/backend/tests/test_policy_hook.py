@@ -4,8 +4,8 @@ Scope:
   * DENY outcomes set ``event.cancel_tool`` to a human-readable string
     so Strands short-circuits the tool with a synthetic result.
   * ALLOW outcomes leave ``cancel_tool`` untouched.
-  * Unmapped tools bypass the policy engine (reads-only: trending_products,
-    compare_products, inventory_health, etc.).
+  * Unmapped tools bypass the policy engine (reads-only: whats_trending,
+    side_by_side, floor_check, etc.).
   * Decisions are recorded in the per-session buffer and reachable via
     ``get_decisions``.
 """
@@ -42,7 +42,7 @@ def test_allow_for_unmapped_tool_bypasses_policy():
     from services.policy_hook import PolicyEnforcementHook, get_decisions
 
     hook = PolicyEnforcementHook(session_id="s1")
-    event = _event_for("trending_products", limit=5)
+    event = _event_for("whats_trending", limit=5)
 
     with patch.object(hook._policy, "evaluate") as evaluate_mock:
         hook._on_before_tool(event)
@@ -59,7 +59,7 @@ def test_allow_result_does_not_cancel_and_records_decision():
     from services.policy_hook import PolicyEnforcementHook, get_decisions
 
     hook = PolicyEnforcementHook(session_id="s-allow")
-    event = _event_for("search_products", query="leather sneakers")
+    event = _event_for("find_pieces", query="leather sneakers")
 
     hook._on_before_tool(event)
     assert event.cancel_tool is False
@@ -67,7 +67,7 @@ def test_allow_result_does_not_cancel_and_records_decision():
     decisions = get_decisions("s-allow")
     assert len(decisions) == 1
     assert decisions[0]["decision"] == "ALLOW"
-    assert decisions[0]["tool_name"] == "search_products"
+    assert decisions[0]["tool_name"] == "find_pieces"
 
 
 def test_deny_for_restricted_category_cancels_tool():
@@ -78,7 +78,7 @@ def test_deny_for_restricted_category_cancels_tool():
     from services.policy_hook import PolicyEnforcementHook, get_decisions
 
     hook = PolicyEnforcementHook(session_id="s-deny")
-    event = _event_for("search_products", query="a gift with a gun charm")
+    event = _event_for("find_pieces", query="a gift with a gun charm")
 
     hook._on_before_tool(event)
 
@@ -97,7 +97,7 @@ def test_deny_for_restock_over_limit():
     from services.policy_hook import PolicyEnforcementHook
 
     hook = PolicyEnforcementHook(session_id="s-restock")
-    event = _event_for("restock_product", product_id=42, quantity=5000)
+    event = _event_for("restock_shelf", product_id=42, quantity=5000)
 
     hook._on_before_tool(event)
 
@@ -112,7 +112,7 @@ def test_evaluate_exception_fails_open():
     from services.policy_hook import PolicyEnforcementHook, get_decisions
 
     hook = PolicyEnforcementHook(session_id="s-error")
-    event = _event_for("search_products", query="ok")
+    event = _event_for("find_pieces", query="ok")
 
     with patch.object(hook._policy, "evaluate", side_effect=RuntimeError("boom")):
         hook._on_before_tool(event)
@@ -127,7 +127,7 @@ def test_get_decisions_returns_newest_first_and_respects_limit():
 
     hook = PolicyEnforcementHook(session_id="s-many")
     for i in range(5):
-        event = _event_for("search_products", query=f"ok-{i}")
+        event = _event_for("find_pieces", query=f"ok-{i}")
         hook._on_before_tool(event)
 
     top2 = get_decisions("s-many", limit=2)

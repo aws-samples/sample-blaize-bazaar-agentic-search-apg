@@ -44,10 +44,10 @@ def create_analytics_agent():
         from strands.models import BedrockModel
         from strands_tools.code_interpreter import AgentCoreCodeInterpreter
         from services.agent_tools import (
-            search_products,
-            trending_products,
-            price_analysis,
-            inventory_health,
+            find_pieces,
+            whats_trending,
+            price_intelligence,
+            floor_check,
         )
 
         # Initialize Code Interpreter with sandboxed execution
@@ -64,8 +64,8 @@ def create_analytics_agent():
                 "You are Blaize Bazaar's Data Analyst. You help users understand "
                 "product data through analysis, visualization, and computation.\n\n"
                 "WORKFLOW:\n"
-                "1. Use product tools (search_products, trending_products, "
-                "price_analysis) to retrieve data\n"
+                "1. Use product tools (find_pieces, whats_trending, "
+                "price_intelligence) to retrieve data\n"
                 "2. Use the code_interpreter tool to write and execute Python code "
                 "for analysis, charts, and calculations\n"
                 "3. Available libraries: pandas, matplotlib, numpy, statistics\n\n"
@@ -77,10 +77,10 @@ def create_analytics_agent():
             ),
             tools=[
                 code_interpreter,
-                search_products,
-                trending_products,
-                price_analysis,
-                inventory_health,
+                find_pieces,
+                whats_trending,
+                price_intelligence,
+                floor_check,
             ],
         )
 

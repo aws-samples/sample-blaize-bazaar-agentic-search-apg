@@ -140,7 +140,7 @@ def stubbed_specialists(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[str]]
     """Replace each specialist @tool's wrapped callable with a closure
     that emits an ``execute_tool {specialist}`` span containing a
     nested ``invoke_agent {specialist}`` span (Strands' real shape)
-    and a child ``execute_tool search_products`` span so the extractor
+    and a child ``execute_tool find_pieces`` span so the extractor
     sees a full orchestrator → specialist → tool trace.
     """
     import agents.orchestrator as orch
@@ -171,12 +171,12 @@ def stubbed_specialists(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[str]]
                 ) as aspan:
                     aspan.set_attribute("gen_ai.agent.name", name)
                     # Leaf tool call — the specialist calls one of its
-                    # own tools (e.g. search_products, compare_products).
+                    # own tools (e.g. find_pieces, side_by_side).
                     with tracer.start_as_current_span(
-                        "execute_tool search_products"
+                        "execute_tool find_pieces"
                     ) as leaf:
                         leaf.set_attribute(
-                            "gen_ai.tool.name", "search_products"
+                            "gen_ai.tool.name", "find_pieces"
                         )
                         leaf.set_attribute(
                             "gen_ai.tool.call.id", "call-search-products"
@@ -308,9 +308,9 @@ def test_extract_trace_span_kind_classification(
         ) as specialist:
             specialist.set_attribute("gen_ai.tool.name", "search")
             with tracer.start_as_current_span(
-                "execute_tool trending_products"
+                "execute_tool whats_trending"
             ) as tool:
-                tool.set_attribute("gen_ai.tool.name", "trending_products")
+                tool.set_attribute("gen_ai.tool.name", "whats_trending")
 
     trace = extract_trace()
 
@@ -320,7 +320,7 @@ def test_extract_trace_span_kind_classification(
 
     assert kinds["orchestrator"] == "orchestrator"
     assert kinds["search"] == "specialist"
-    assert kinds["trending_products"] == "tool"
+    assert kinds["whats_trending"] == "tool"
     assert trace["specialistRoute"] == "search"
 
 

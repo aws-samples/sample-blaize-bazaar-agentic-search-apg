@@ -126,10 +126,10 @@ def _load_fixture(name: str) -> Any:
 # ---------------------------------------------------------------------------
 
 _SHIPPED_TOOLS = {
-    "search_products", "browse_category", "compare_products",
-    "trending_products", "price_analysis", "return_policy",
+    "find_pieces", "explore_collection", "side_by_side",
+    "whats_trending", "price_intelligence", "returns_and_care",
 }
-_EXERCISE_TOOLS = {"inventory_health", "restock_product", "low_stock"}
+_EXERCISE_TOOLS = {"floor_check", "restock_shelf", "running_low"}
 
 
 def _tool_status(name: str) -> str:

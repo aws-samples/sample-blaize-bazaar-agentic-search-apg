@@ -6,7 +6,7 @@ earlier hybrid (vector + keyword + RRF) and Cohere Rerank branches were
 removed after the concierge switched to semantic-only retrieval.
 
 ``VectorSearch.vector_search`` is the canonical ``CHALLENGE 1`` block
-referenced from ``agent_tools.search_products`` and from
+referenced from ``agent_tools.find_pieces`` and from
 ``tests/test_vector_search.py``.
 """
 import logging

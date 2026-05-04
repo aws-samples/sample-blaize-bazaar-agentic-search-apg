@@ -49,10 +49,10 @@ logger = logging.getLogger(__name__)
 # read-only catalog queries with no risk surface worth enforcing.
 _TOOL_TO_POLICY_ACTION: Dict[str, str] = {
     # Restock gates on quantity.
-    "restock_product": "restock_product",
+    "restock_shelf": "restock_shelf",
     # Search gates on restricted categories/keywords.
-    "search_products": "search_products",
-    "browse_category": "search_products",
+    "find_pieces": "find_pieces",
+    "explore_collection": "find_pieces",
     # Pricing-changing tools gate on ceiling. (The current tool set
     # doesn't have a direct ``set_price`` tool — the mapping exists
     # so a future pricing-write tool inherits enforcement automatically.)

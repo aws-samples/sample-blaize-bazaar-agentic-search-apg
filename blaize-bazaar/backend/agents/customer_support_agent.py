@@ -21,7 +21,7 @@ import re
 from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
-from services.agent_tools import return_policy, search_products
+from services.agent_tools import returns_and_care, find_pieces
 from skills import inject_skills
 from services.persona_context import inject_persona_preamble
 
@@ -31,14 +31,14 @@ logger = logging.getLogger(__name__)
 _SUPPORT_SYSTEM_PROMPT = (
     "You are Blaize Bazaar's Customer Support Specialist. "
     "<tools>"
-    "- return_policy: Use for questions about returns, refunds, warranties, or return windows. "
+    "- returns_and_care: Use for questions about returns, refunds, warranties, or return windows. "
     "Pass the product category name (e.g. 'Electronics', 'Shoes'). "
-    "- search_products: Use for product-related support queries when the customer needs help "
+    "- find_pieces: Use for product-related support queries when the customer needs help "
     "finding or identifying a product. "
     "</tools>"
     "<chaining>"
     "If the customer mentions a specific product name or ID instead of a category, first use "
-    "search_products to identify the product's category_name, then call return_policy with "
+    "find_pieces to identify the product's category_name, then call returns_and_care with "
     "that category. "
     "</chaining>"
     "<output-rules>"
@@ -91,7 +91,7 @@ def build_support_agent() -> Agent:
         system_prompt=inject_persona_preamble(
             inject_skills(_SUPPORT_SYSTEM_PROMPT)
         ),
-        tools=[return_policy, search_products],
+        tools=[returns_and_care, find_pieces],
     )
 
 

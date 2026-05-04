@@ -83,7 +83,7 @@ class InventoryStats(BaseModel):
         json_schema_extra={
             "example": {
                 "total_products": 1000,
-                "low_stock_count": 42,
+                "running_low_count": 42,
                 "out_of_stock_count": 8,
                 "avg_price": 149.99,
             }
@@ -91,6 +91,6 @@ class InventoryStats(BaseModel):
     )
 
     total_products: int = Field(..., description="Total number of products")
-    low_stock_count: int = Field(default=0, description="Number of low stock items")
+    running_low_count: int = Field(default=0, description="Number of low stock items")
     out_of_stock_count: int = Field(default=0, description="Number of out of stock items")
     avg_price: Optional[float] = Field(None, description="Average product price")

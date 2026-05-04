@@ -63,7 +63,7 @@ def _run_async(coro):
             loop.close()
 
 @tool
-def inventory_health() -> str:
+def floor_check() -> str:
     """Get current inventory health statistics including stock levels and alerts. Use for warehouse, stock status, or inventory overview questions."""
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
@@ -71,13 +71,13 @@ def inventory_health() -> str:
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
-        result = _run_async(logic.inventory_health())
+        result = _run_async(logic.floor_check())
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
 
 @tool
-def trending_products(limit: int = 5, category: str = None) -> str:
+def whats_trending(limit: int = 5, category: str = None) -> str:
     """Get the most popular and trending products, optionally filtered by category. Use when customers ask about bestsellers, what's hot, or popular items.
 
     Args:
@@ -97,14 +97,14 @@ def trending_products(limit: int = 5, category: str = None) -> str:
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
-        result = _run_async(logic.trending_products(limit, category))
+        result = _run_async(logic.whats_trending(limit, category))
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
     # === CHALLENGE 2: END ===
 
 @tool
-def price_analysis(category: str = None) -> str:
+def price_intelligence(category: str = None) -> str:
     """Get pricing statistics and price distribution analysis for a product category. Use for price comparisons, budget analysis, or average price questions."""
     if not _db_service:
         return json.dumps({"error": "Database service not initialized"})
@@ -112,13 +112,13 @@ def price_analysis(category: str = None) -> str:
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
-        result = _run_async(logic.price_analysis(category))
+        result = _run_async(logic.price_intelligence(category))
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
 
 @tool
-def restock_product(product_id: int, quantity: int) -> str:
+def restock_shelf(product_id: int, quantity: int) -> str:
     """Restock a specific product by adding inventory quantity. Use when an inventory manager needs to replenish stock for a product ID.
 
     Args:
@@ -131,7 +131,7 @@ def restock_product(product_id: int, quantity: int) -> str:
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
-        result = _run_async(logic.restock_product(product_id, quantity))
+        result = _run_async(logic.restock_shelf(product_id, quantity))
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -182,7 +182,7 @@ def _detect_category(query: str) -> str | None:
     return None
 
 @tool
-def search_products(
+def find_pieces(
     query: str,
     max_price: float = None,
     min_rating: float = 0.0,
@@ -269,7 +269,7 @@ def search_products(
         return json.dumps({"error": str(e)})
 
 @tool
-def browse_category(
+def explore_collection(
     category: str,
     min_rating: float = 0.0,
     max_price: float = None,
@@ -297,7 +297,7 @@ def browse_category(
         return json.dumps({"error": str(e)})
 
 @tool
-def low_stock(limit: int = 5) -> str:
+def running_low(limit: int = 5) -> str:
     """Get products that are running low on stock, prioritized by demand. Use to identify items that need restocking soon.
 
     Args:
@@ -309,7 +309,7 @@ def low_stock(limit: int = 5) -> str:
     try:
         from services.business_logic import BusinessLogic
         logic = BusinessLogic(_db_service)
-        result = _run_async(logic.low_stock(limit))
+        result = _run_async(logic.running_low(limit))
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -317,7 +317,7 @@ def low_stock(limit: int = 5) -> str:
 
 # === WIRE IT LIVE (Lab 2) ===
 @tool
-def compare_products(product_id_1: int, product_id_2: int) -> str:
+def side_by_side(product_id_1: int, product_id_2: int) -> str:
     """Compare two products side by side by their product IDs. Use when customers want to see differences in price, rating, and features.
 
     Args:
@@ -387,7 +387,7 @@ def compare_products(product_id_1: int, product_id_2: int) -> str:
 # === RETURN POLICY TOOL (backed by blaize_bazaar.return_policies table) ===
 
 @tool
-def return_policy(category: str = "default") -> str:
+def returns_and_care(category: str = "default") -> str:
     """Look up the return and refund policy for a specific product category. Use when customers ask about returns, refunds, warranties, or return windows.
 
     Args:
@@ -421,3 +421,72 @@ def return_policy(category: str = "default") -> str:
         })
     except Exception as e:
         return json.dumps({"error": f"Return policy lookup error: {str(e)}"})
+
+
+@tool
+def style_match(product_id: int, limit: int = 5) -> str:
+    """Find complementary pieces that pair well with a given product.
+
+    Uses pgvector cosine similarity to find products whose embeddings
+    are closest to the given product's embedding — semantic style
+    matching, not keyword overlap. Great for "what goes with this?"
+
+    Args:
+        product_id: The product to match against (1-40 in the curated catalog)
+        limit: Number of matches to return (default: 5)
+
+    Returns:
+        JSON with the source product and its closest style matches,
+        including cosine similarity scores.
+    """
+    try:
+        source = _run_async(db_service.fetch_one(
+            'SELECT "productId", name, brand, price, category_name, embedding '
+            'FROM blaize_bazaar.product_catalog WHERE "productId" = %s',
+            str(product_id).ljust(10),
+        ))
+        if not source:
+            return json.dumps({"error": f"Product {product_id} not found"})
+        if not source.get("embedding"):
+            return json.dumps({"error": f"Product {product_id} has no embedding"})
+
+        matches = _run_async(db_service.fetch_all(
+            'SELECT "productId", name, brand, color, price, rating, reviews, '
+            'category_name, "imgUrl", '
+            '1 - (embedding <=> %s::vector) AS similarity_score '
+            'FROM blaize_bazaar.product_catalog '
+            'WHERE "productId" != %s '
+            'ORDER BY embedding <=> %s::vector '
+            'LIMIT %s',
+            str(source["embedding"]), str(product_id).ljust(10),
+            str(source["embedding"]), limit,
+        ))
+
+        return json.dumps({
+            "source": {
+                "productId": str(source["productId"]).strip(),
+                "name": source["name"],
+                "brand": source["brand"],
+                "price": float(source["price"]),
+            },
+            "matches": [
+                {
+                    "productId": str(m["productId"]).strip(),
+                    "name": m["name"],
+                    "brand": m["brand"],
+                    "color": m.get("color", ""),
+                    "price": float(m["price"]),
+                    "rating": float(m.get("rating", 0)),
+                    "reviews": int(m.get("reviews", 0)),
+                    "category": m.get("category_name", ""),
+                    "imgUrl": m.get("imgUrl", ""),
+                    "similarity_score": round(float(m.get("similarity_score", 0)), 4),
+                }
+                for m in matches
+            ],
+            "query_type": "pgvector_cosine_similarity",
+            "index": "hnsw",
+        })
+    except Exception as e:
+        logger.error(f"style_match error: {e}")
+        return json.dumps({"error": str(e)})

@@ -20,12 +20,12 @@ DEFAULT_POLICIES = [
         "cedar": (
             'forbid (\n'
             '  principal,\n'
-            '  action == Action::"restock_product",\n'
+            '  action == Action::"restock_shelf",\n'
             '  resource\n'
             ')\n'
             'when { resource.quantity > 500 };'
         ),
-        "applies_to": "restock_product",
+        "applies_to": "restock_shelf",
     },
     {
         "id": "restrict-categories",
@@ -34,7 +34,7 @@ DEFAULT_POLICIES = [
         "cedar": (
             'forbid (\n'
             '  principal,\n'
-            '  action == Action::"search_products",\n'
+            '  action == Action::"find_pieces",\n'
             '  resource\n'
             ')\n'
             'when {\n'
@@ -45,7 +45,7 @@ DEFAULT_POLICIES = [
             '  resource.query like "*ammunition*"\n'
             '};'
         ),
-        "applies_to": "search_products",
+        "applies_to": "find_pieces",
     },
     {
         "id": "price-ceiling",
@@ -219,7 +219,7 @@ def create_policy_from_natural_language(
     Example natural language rules:
         - "Forbid restocking more than 500 units in a single operation"
         - "Allow all agents to search products but block weapons and tobacco"
-        - "Only allow the inventory agent to call restock_product"
+        - "Only allow the inventory agent to call restock_shelf"
 
     Args:
         gateway_id: AgentCore Gateway ID to attach the policy to

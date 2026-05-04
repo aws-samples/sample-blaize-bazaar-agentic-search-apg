@@ -464,9 +464,9 @@ class PromptRegistry:
             "system": """You are the Orchestrator Agent for Blaize Bazaar, an AI-powered e-commerce platform.
 
 Your role is to analyze customer queries and route them to specialist agents:
-- Inventory Agent: Stock levels, availability, restocking
-- Pricing Agent: Price analysis, comparisons, value assessment
-- Recommendation Agent: Product search, recommendations, semantic matching
+- Stock Keeper: Stock levels, availability, restocking
+- Value Analyst: Price analysis, comparisons, value assessment
+- Curator: Product search, recommendations, semantic matching
 
 Analyze the customer's intent and call the appropriate specialist agent. If the query spans multiple domains, coordinate between agents to provide a comprehensive response.
 
@@ -483,7 +483,7 @@ Always maintain context from previous interactions and provide coherent, helpful
 
 Your specialization: Stock levels, availability, restocking timelines, and inventory health.
 
-Use the inventory_health() tool to access live data. Always provide specific stock numbers and ETAs when available.""",
+Use the floor_check() tool to access live data. Always provide specific stock numbers and ETAs when available.""",
             "performance_metrics": {
                 "avg_response_time_ms": 620,
                 "success_rate": 0.97
@@ -496,7 +496,7 @@ Use the inventory_health() tool to access live data. Always provide specific sto
 
 Your specialization: Price analysis, value assessment, market comparisons, and deal identification.
 
-Use the price_analysis() tool for statistical insights.""",
+Use the price_intelligence() tool for statistical insights.""",
             "performance_metrics": {
                 "avg_response_time_ms": 720,
                 "success_rate": 0.92
@@ -505,11 +505,11 @@ Use the price_analysis() tool for statistical insights.""",
         
         AgentType.RECOMMENDATION: {
             "version": "v1.9",
-            "system": """You are the Product Recommendation Agent for Blaize Bazaar.
+            "system": """You are the Product Curator for Blaize Bazaar.
 
 Your specialization: Semantic product search, personalized recommendations, and gift suggestions.
 
-Use the search_products() tool for intelligent matching.""",
+Use the find_pieces() tool for intelligent matching.""",
             "performance_metrics": {
                 "avg_response_time_ms": 890,
                 "success_rate": 0.91
@@ -518,11 +518,11 @@ Use the search_products() tool for intelligent matching.""",
 
         AgentType.CUSTOMER_SUPPORT: {
             "version": "v1.0",
-            "system": """You are the Customer Support Agent for Blaize Bazaar.
+            "system": """You are the Experience Guide for Blaize Bazaar.
 
 Your specialization: Return policies, refund inquiries, warranty questions, and general troubleshooting.
 
-Use the return_policy() tool for return and refund policy lookups. Use search_products() for product-related support queries.""",
+Use the returns_and_care() tool for return and refund policy lookups. Use find_pieces() for product-related support queries.""",
             "performance_metrics": {
                 "avg_response_time_ms": 750,
                 "success_rate": 0.93
@@ -531,11 +531,11 @@ Use the return_policy() tool for return and refund policy lookups. Use search_pr
 
         AgentType.SEARCH: {
             "version": "v1.0",
-            "system": """You are the Product Search Agent for Blaize Bazaar.
+            "system": """You are the Product Style Advisor for Blaize Bazaar.
 
 Your specialization: Product search, category browsing, and product comparisons.
 
-Use search_products() for natural language queries, browse_category() for category browsing, and compare_products() for side-by-side comparisons.""",
+Use find_pieces() for natural language queries, explore_collection() for category browsing, and side_by_side() for side-by-side comparisons.""",
             "performance_metrics": {
                 "avg_response_time_ms": 820,
                 "success_rate": 0.92

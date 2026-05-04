@@ -21,10 +21,10 @@ from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
 from services.agent_tools import (
-    search_products,
-    trending_products,
-    compare_products,
-    browse_category,
+    find_pieces,
+    whats_trending,
+    side_by_side,
+    explore_collection,
 )
 from skills import inject_skills
 from services.persona_context import inject_persona_preamble
@@ -77,10 +77,10 @@ def build_recommendation_agent() -> Agent:
             inject_skills(RECOMMENDATION_SYSTEM_PROMPT)
         ),
         tools=[
-            search_products,
-            trending_products,
-            compare_products,
-            browse_category,
+            find_pieces,
+            whats_trending,
+            side_by_side,
+            explore_collection,
         ],
     )
 

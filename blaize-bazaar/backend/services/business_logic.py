@@ -10,7 +10,7 @@ Aligned to the boutique catalog schema:
 
 The ``quantity`` column was added by migration 004_add_quantity.sql
 with realistic stock numbers seeded by tier + rating. Stock-level
-functions (inventory_health, low_stock, restock_product) now issue
+functions (floor_check, running_low, restock_shelf) now issue
 real SQL against this column.
 """
 from typing import Dict, Any, List
@@ -34,7 +34,7 @@ class BusinessLogic:
     def __init__(self, db_service):
         self.db = db_service
 
-    async def trending_products(self, limit: int = 5, category: str = None) -> Dict[str, Any]:
+    async def whats_trending(self, limit: int = 5, category: str = None) -> Dict[str, Any]:
         """Trending products by rating × reviews.
 
         The ``reviews::int`` cast is safe for today's catalog (numeric
@@ -86,13 +86,13 @@ class BusinessLogic:
             },
         }
 
-    async def inventory_health(self) -> Dict[str, Any]:
+    async def floor_check(self) -> Dict[str, Any]:
         """Overall inventory health — stock counts, low-stock alerts, health score."""
         stats = await self.db.fetch_one("""
             SELECT
                 COUNT(*)                                  AS total_products,
                 SUM(quantity)                             AS total_units,
-                COUNT(*) FILTER (WHERE quantity <= 5)     AS low_stock_count,
+                COUNT(*) FILTER (WHERE quantity <= 5)     AS running_low_count,
                 COUNT(*) FILTER (WHERE quantity = 0)      AS out_of_stock_count,
                 ROUND(AVG(quantity), 1)                   AS avg_quantity
             FROM blaize_bazaar.product_catalog
@@ -115,7 +115,7 @@ class BusinessLogic:
             alerts.append(f"{r['name']} — {label}")
 
         total = stats.get("total_products", 1) or 1
-        low = stats.get("low_stock_count", 0)
+        low = stats.get("running_low_count", 0)
         oos = stats.get("out_of_stock_count", 0)
         health_score = round(max(0, 100 - oos * 10 - low * 3), 1)
 
@@ -127,7 +127,7 @@ class BusinessLogic:
             "alerts": alerts,
         }
 
-    async def price_analysis(self, category: str = None) -> Dict[str, Any]:
+    async def price_intelligence(self, category: str = None) -> Dict[str, Any]:
         """Per-category price statistics."""
         params: List[Any] = []
         if category:
@@ -184,7 +184,7 @@ class BusinessLogic:
             "filter": category if category else "all",
         }
 
-    async def restock_product(self, product_id: int, quantity: int) -> Dict[str, Any]:
+    async def restock_shelf(self, product_id: int, quantity: int) -> Dict[str, Any]:
         """Add `quantity` units to a product's stock. Returns the new total."""
         if quantity <= 0:
             return {"status": "error", "message": "Quantity must be positive."}
@@ -217,7 +217,7 @@ class BusinessLogic:
             "added": quantity,
         }
 
-    async def search_products(
+    async def find_pieces(
         self,
         query: str,
         max_price: float = None,
@@ -360,7 +360,7 @@ class BusinessLogic:
             },
         }
 
-    async def low_stock(self, limit: int = 5) -> Dict[str, Any]:
+    async def running_low(self, limit: int = 5) -> Dict[str, Any]:
         """Products running low on stock, sorted by quantity ascending."""
         rows = await self.db.fetch_all(
             """
@@ -393,7 +393,7 @@ class BusinessLogic:
         limit: int = 5,
     ) -> Dict[str, Any]:
         """Semantic search + preference-based boost re-ranking."""
-        base_results = await self.search_products(query, limit=limit * 2)
+        base_results = await self.find_pieces(query, limit=limit * 2)
         products = base_results.get("products", [])
         preferences = preferences or {}
 

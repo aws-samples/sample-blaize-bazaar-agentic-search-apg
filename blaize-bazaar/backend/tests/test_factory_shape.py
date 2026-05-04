@@ -40,15 +40,15 @@ from services.persona_context import persona_preamble_var, set_persona_preamble
 # Expected tool names bound to each specialist's Agent. If you rename a
 # tool in ``services/agent_tools.py`` you have to update this list.
 SPECIALIST_SPECS = [
-    ("search", build_search_agent, {"search_products", "browse_category", "compare_products"}),
+    ("search", build_search_agent, {"find_pieces", "explore_collection", "side_by_side"}),
     ("recommendation", build_recommendation_agent,
-     {"search_products", "trending_products", "compare_products", "browse_category"}),
+     {"find_pieces", "whats_trending", "side_by_side", "explore_collection"}),
     ("pricing", build_pricing_agent,
-     {"price_analysis", "browse_category", "search_products"}),
+     {"price_intelligence", "explore_collection", "find_pieces"}),
     ("inventory", build_inventory_agent,
-     {"inventory_health", "restock_product", "low_stock"}),
+     {"floor_check", "restock_shelf", "running_low"}),
     ("support", build_support_agent,
-     {"return_policy", "search_products"}),
+     {"returns_and_care", "find_pieces"}),
 ]
 
 SPECIALIST_WRAPPERS = [

@@ -14,7 +14,7 @@ import re
 from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
-from services.agent_tools import inventory_health, restock_product, low_stock
+from services.agent_tools import floor_check, restock_shelf, running_low
 from skills import inject_skills
 from services.persona_context import inject_persona_preamble
 
@@ -22,9 +22,9 @@ from services.persona_context import inject_persona_preamble
 _INVENTORY_SYSTEM_PROMPT = (
     "You are Blaize Bazaar's Inventory Specialist. "
     "<tools>"
-    "- inventory_health: Use for overall stock statistics and warehouse health overview. "
-    "- low_stock: Use to find items that need restocking, prioritized by demand. "
-    "- restock_product: Use when the user provides a specific product ID and quantity to restock. "
+    "- floor_check: Use for overall stock statistics and warehouse health overview. "
+    "- running_low: Use to find items that need restocking, prioritized by demand. "
+    "- restock_shelf: Use when the user provides a specific product ID and quantity to restock. "
     "If the user mentions a product by name instead of ID, inform them you need the product ID. "
     "</tools>"
     "<output-rules>"
@@ -77,7 +77,7 @@ def build_inventory_agent() -> Agent:
         system_prompt=inject_persona_preamble(
             inject_skills(_INVENTORY_SYSTEM_PROMPT)
         ),
-        tools=[inventory_health, restock_product, low_stock],
+        tools=[floor_check, restock_shelf, running_low],
     )
 
 

@@ -11,7 +11,7 @@ Covers Requirement 2.5.3 and 2.2.3 from
 No live Gateway, no Bedrock, no network. The MCP server is driven
 in-process through FastMCP's `list_tools` / `call_tool` surface (same
 code path a streamable-HTTP client hits on the server side) and
-`BusinessLogic` is stubbed so `trending_products` returns a
+`BusinessLogic` is stubbed so `whats_trending` returns a
 deterministic payload.
 
 Run from the repo root per `pytest.ini`:
@@ -40,15 +40,15 @@ import services.business_logic as business_logic_module
 # ---------------------------------------------------------------------------
 
 EXPECTED_TOOL_NAMES = {
-    "search_products",
-    "trending_products",
-    "price_analysis",
-    "browse_category",
-    "inventory_health",
-    "low_stock",
-    "restock_product",
-    "compare_products",
-    "return_policy",
+    "find_pieces",
+    "whats_trending",
+    "price_intelligence",
+    "explore_collection",
+    "floor_check",
+    "running_low",
+    "restock_shelf",
+    "side_by_side",
+    "returns_and_care",
 }
 
 
@@ -63,7 +63,7 @@ class _SentinelDB:
 
 @pytest.fixture
 def trending_payload() -> Dict[str, Any]:
-    """Same shape `agent_tools.trending_products` would emit."""
+    """Same shape `agent_tools.whats_trending` would emit."""
     return {
         "status": "success",
         "count": 3,
@@ -124,7 +124,7 @@ class _StubBusinessLogic:
         self._db = db_service
         self._payload = payload
 
-    async def trending_products(
+    async def whats_trending(
         self, limit: int = 5, category: Optional[str] = None
     ) -> Dict[str, Any]:
         payload = dict(self._payload or {})
@@ -206,7 +206,7 @@ def test_each_discovered_tool_exposes_an_input_schema() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Req 2.5.3 — MCP invocation of trending_products returns the same
+# Req 2.5.3 — MCP invocation of whats_trending returns the same
 # JSON envelope as the in-process @tool call.
 # ---------------------------------------------------------------------------
 
@@ -214,8 +214,8 @@ def test_each_discovered_tool_exposes_an_input_schema() -> None:
 def _invoke_in_process(**kwargs: Any) -> str:
     """Invoke the Strands @tool directly (bypassing the decorator wrapper)."""
     fn = getattr(
-        agent_tools.trending_products, "__wrapped__",
-        agent_tools.trending_products,
+        agent_tools.whats_trending, "__wrapped__",
+        agent_tools.whats_trending,
     )
     return fn(**kwargs)
 
@@ -223,7 +223,7 @@ def _invoke_in_process(**kwargs: Any) -> str:
 def test_mcp_invocation_matches_in_process_tool_envelope(
     monkeypatch: pytest.MonkeyPatch, trending_payload: Dict[str, Any]
 ) -> None:
-    """Invoking trending_products via the gateway SHALL produce the
+    """Invoking whats_trending via the gateway SHALL produce the
     same JSON envelope as calling the in-process @tool directly.
     """
     agent_tools._db_service = _SentinelDB()
@@ -237,8 +237,8 @@ def test_mcp_invocation_matches_in_process_tool_envelope(
     # Gateway build + invoke via FastMCP (the same object served over
     # streamable HTTP; an external client would get the identical result).
     server = gateway.build_mcp_server()
-    tool = server._tool_manager.get_tool("trending_products")
-    assert tool is not None, "trending_products was not registered"
+    tool = server._tool_manager.get_tool("whats_trending")
+    assert tool is not None, "whats_trending was not registered"
 
     # Call the registered function the way FastMCP would, without MCP
     # content-block conversion, so we can compare JSON envelopes directly.
@@ -288,7 +288,7 @@ def test_mcp_invocation_through_call_tool_returns_valid_json_envelope(
         agent_tools._main_loop = main_loop
         raw = _run(
             server._tool_manager.call_tool(
-                "trending_products",
+                "whats_trending",
                 {"limit": 5},
                 context=None,
                 convert_result=False,

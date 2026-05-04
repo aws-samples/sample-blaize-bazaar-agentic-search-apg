@@ -39,9 +39,9 @@ GUARDRAILS (ACTIVE):
 SINGLE_AGENT_PROMPT = """You are Blaize AI, the shopping assistant for Blaize Bazaar.
 
 TOOL SELECTION:
-- trending_products → When user asks about trending, popular, or best-selling items. Pass category if they mention one (e.g. "trending in electronics" → category="Electronics").
-- search_products → Descriptive or intent-based product queries (e.g. "gift for a cook", "noise-canceling headphones under $200")
-- price_analysis → Pricing statistics and category comparisons
+- whats_trending → When user asks about trending, popular, or best-selling items. Pass category if they mention one (e.g. "trending in electronics" → category="Electronics").
+- find_pieces → Descriptive or intent-based product queries (e.g. "gift for a cook", "noise-canceling headphones under $200")
+- price_intelligence → Pricing statistics and category comparisons
 
 Call exactly one tool per query. Extract price limits and pass as max_price.
 The search tool handles category mapping automatically — pass the user's words directly.
@@ -615,9 +615,9 @@ CURRENT REQUEST: {message}"""
             from strands import Agent
             from strands.models.bedrock import BedrockModel
             from services.agent_tools import (
-                search_products,
-                trending_products,
-                price_analysis,
+                find_pieces,
+                whats_trending,
+                price_intelligence,
             )
 
             single_prompt = SINGLE_AGENT_PROMPT
@@ -627,7 +627,7 @@ CURRENT REQUEST: {message}"""
             agent = Agent(
                 model=BedrockModel(model_id=self.model_id, max_tokens=8192, temperature=0.0),
                 system_prompt=single_prompt,
-                tools=[search_products, trending_products, price_analysis]
+                tools=[find_pieces, whats_trending, price_intelligence]
             )
 
             # Build conversation context
@@ -829,9 +829,9 @@ CURRENT REQUEST: {message}"""
             from strands import Agent
             from strands.models.bedrock import BedrockModel
             from services.agent_tools import (
-                search_products,
-                trending_products,
-                price_analysis,
+                find_pieces,
+                whats_trending,
+                price_intelligence,
             )
 
             single_prompt = SINGLE_AGENT_PROMPT
@@ -845,7 +845,7 @@ CURRENT REQUEST: {message}"""
                     temperature=0.0
                 ),
                 system_prompt=single_prompt,
-                tools=[search_products, trending_products, price_analysis]
+                tools=[find_pieces, whats_trending, price_intelligence]
             )
 
             # Build conversation context
@@ -1186,13 +1186,13 @@ CURRENT REQUEST: {message}"""
     def _tool_to_agent_name(tool_name: str) -> str:
         """Map tool function names to user-facing agent names."""
         return {
-            'recommendation': 'Recommendation Agent',
-            'pricing': 'Pricing Agent',
-            'inventory': 'Inventory Agent',
-            'support': 'Support Agent',
-            'search': 'Search Agent',
-            'search_products': 'Search Agent',
-        }.get(tool_name, 'Search Agent')
+            'recommendation': 'Curator',
+            'pricing': 'Value Analyst',
+            'inventory': 'Stock Keeper',
+            'support': 'Experience Guide',
+            'search': 'Style Advisor',
+            'find_pieces': 'Style Advisor',
+        }.get(tool_name, 'Style Advisor')
 
     async def chat_stream(
         self,
@@ -1980,7 +1980,7 @@ CURRENT REQUEST: {message}"""
         # placed_at" injection often showed cards that didn't match the
         # specialist's prose (the specialist highlights specific orders
         # from the LTM preamble; the injection grabbed the most recent
-        # regardless). The specialist can call search_products if it
+        # regardless). The specialist can call find_pieces if it
         # wants to surface product cards; for retrospective queries
         # answered from the preamble, the prose is the answer.
         #
@@ -2054,7 +2054,7 @@ CURRENT REQUEST: {message}"""
             products_sent = parsed["products"]
         elif persona_orders_for_cards:
             # Retrospective path: the specialist answered from the LTM
-            # preamble without calling search_products, so no tool
+            # preamble without calling find_pieces, so no tool
             # products were buffered. Surface up to 3 past-order cards
             # whose product names appear literally in the specialist's
             # prose — evidence for "your Italian Linen Camp Shirt"

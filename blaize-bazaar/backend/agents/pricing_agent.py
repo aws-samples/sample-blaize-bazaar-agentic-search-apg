@@ -13,7 +13,7 @@ import re
 from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
-from services.agent_tools import price_analysis, browse_category, search_products
+from services.agent_tools import price_intelligence, explore_collection, find_pieces
 from skills import inject_skills
 from services.persona_context import inject_persona_preamble
 
@@ -21,10 +21,10 @@ from services.persona_context import inject_persona_preamble
 _PRICING_SYSTEM_PROMPT = (
     "You are Blaize Bazaar's Pricing Specialist. "
     "<tools>"
-    "- price_analysis: Use for category-level pricing statistics (average, min, max, distribution). "
-    "- search_products: Use when the user describes specific products with price constraints "
+    "- price_intelligence: Use for category-level pricing statistics (average, min, max, distribution). "
+    "- find_pieces: Use when the user describes specific products with price constraints "
     "(e.g. 'laptops under $500'). "
-    "- browse_category: Use to browse products in a category when the user wants to see "
+    "- explore_collection: Use to browse products in a category when the user wants to see "
     "what is available at various price points. "
     "</tools>"
     "<output-rules>"
@@ -79,7 +79,7 @@ def build_pricing_agent() -> Agent:
         system_prompt=inject_persona_preamble(
             inject_skills(_PRICING_SYSTEM_PROMPT)
         ),
-        tools=[price_analysis, browse_category, search_products],
+        tools=[price_intelligence, explore_collection, find_pieces],
     )
 
 
