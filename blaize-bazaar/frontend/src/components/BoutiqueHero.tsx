@@ -13,7 +13,7 @@
  * ensures readability against the photograph's underlying composition.
  */
 import { useCallback, useState } from 'react'
-import { Sparkles, Mic } from 'lucide-react'
+import { Sparkles, Mic, ArrowRight } from 'lucide-react'
 import { useUI } from '../contexts/UIContext'
 import { usePersona } from '../contexts/PersonaContext'
 import { heroPillsForPersona } from '../data/personaCurations'
@@ -194,15 +194,15 @@ export default function BoutiqueHero() {
                   }}
                 />
 
-                {/* Espresso-filled circular mic button — right */}
+                {/* Right button: Mic when empty, Send arrow when typing */}
                 <button
-                  type="button"
-                  onClick={handleMicClick}
-                  aria-label="Submit search"
+                  type={searchValue.trim() ? 'submit' : 'button'}
+                  onClick={searchValue.trim() ? undefined : handleMicClick}
+                  aria-label={searchValue.trim() ? 'Send' : 'Voice search'}
                   className="
                     absolute right-[7px] top-1/2 -translate-y-1/2
                     flex items-center justify-center rounded-full
-                    transition-transform duration-fade ease-out
+                    transition-all duration-fade ease-out
                     hover:scale-105
                     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(31,20,16,0.3)]
                   "
@@ -214,7 +214,11 @@ export default function BoutiqueHero() {
                     cursor: 'pointer',
                   }}
                 >
-                  <Mic size={20} strokeWidth={1.75} />
+                  {searchValue.trim() ? (
+                    <ArrowRight size={20} strokeWidth={2} />
+                  ) : (
+                    <Mic size={20} strokeWidth={1.75} />
+                  )}
                 </button>
               </div>
             </form>
