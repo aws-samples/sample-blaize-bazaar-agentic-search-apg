@@ -183,6 +183,7 @@ export default function ProductCard({
           className="w-full h-full object-cover transition-transform duration-[600ms] ease-out"
           style={{
             transform: hovered ? 'scale(1.03)' : 'scale(1)',
+            objectPosition: product.imagePosition ?? 'center center',
           }}
         />
         {/* Warm wash overlay (Req 1.6.5 step 1) */}

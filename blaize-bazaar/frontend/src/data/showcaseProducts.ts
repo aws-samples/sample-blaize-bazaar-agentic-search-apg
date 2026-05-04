@@ -102,6 +102,7 @@ export const SHOWCASE_PRODUCTS: StorefrontProduct[] = [
     reviewCount: 127,
     category: 'Home Decor',
     imageUrl: '/products/olive-branch-vessel.png',
+    imagePosition: 'center 60%',
     tags: ['ceramic', 'sculptural', 'minimal', 'warm', 'neutral', 'home'],
     reasoning: CHIPS[0],
   },

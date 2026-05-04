@@ -138,6 +138,8 @@ export interface StorefrontProduct {
   badge?: StorefrontBadge
   tags: string[]
   reasoning?: ReasoningChip
+  /** Optional CSS object-position override for the card image crop. */
+  imagePosition?: string
 }
 
 export interface User {
