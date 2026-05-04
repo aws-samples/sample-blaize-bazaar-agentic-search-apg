@@ -13,7 +13,7 @@
  * ensures readability against the photograph's underlying composition.
  */
 import { useCallback, useState } from 'react'
-import { Sparkles, Mic, ArrowRight } from 'lucide-react'
+import { Sparkles, Mic, Send } from 'lucide-react'
 import { useUI } from '../contexts/UIContext'
 import { usePersona } from '../contexts/PersonaContext'
 import { heroPillsForPersona } from '../data/personaCurations'
@@ -215,7 +215,7 @@ export default function BoutiqueHero() {
                   }}
                 >
                   {searchValue.trim() ? (
-                    <ArrowRight size={20} strokeWidth={2} />
+                    <Send size={20} strokeWidth={2} />
                   ) : (
                     <Mic size={20} strokeWidth={1.75} />
                   )}
