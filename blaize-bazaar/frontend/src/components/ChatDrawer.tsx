@@ -71,7 +71,7 @@ function detectMac(): boolean {
 // ---------------------------------------------------------------------------
 
 export default function ChatDrawer() {
-  const { activeModal, closeModal, consumePendingQuery } = useUI()
+  const { activeModal, closeModal, openModal, consumePendingQuery } = useUI()
   const { guardrailsEnabled } = useLayout()
   const { addToCart } = useCart()
   const { persona } = usePersona()
@@ -241,6 +241,7 @@ export default function ChatDrawer() {
   const keycap = isMac ? '⌘K' : 'Ctrl+K'
 
   return createPortal(
+    <>
     <AnimatePresence>
       {isOpen && (
         <>
@@ -366,7 +367,48 @@ export default function ChatDrawer() {
           </motion.div>
         </>
       )}
-    </AnimatePresence>,
+    </AnimatePresence>
+
+    {/* "Continue chat" pill — shows when drawer is closed but has
+        an active conversation. Gives the user a way to reopen. */}
+    <AnimatePresence>
+      {!isOpen && hasUserMessages && (
+        <motion.button
+          data-testid="continue-chat-pill"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          transition={{ duration: 0.25, delay: 0.3 }}
+          onClick={() => openModal('drawer')}
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 39,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px 20px',
+            borderRadius: '999px',
+            background: '#1f1410',
+            color: '#faf3e8',
+            border: 'none',
+            cursor: 'pointer',
+            fontFamily: 'var(--sans)',
+            fontSize: '14px',
+            fontWeight: 500,
+            boxShadow: '0 4px 16px rgba(31, 20, 16, 0.2), 0 2px 6px rgba(31, 20, 16, 0.1)',
+          }}
+        >
+          <span style={{ fontSize: '16px' }}>💬</span>
+          Continue chat
+          <span style={{ fontSize: '11px', opacity: 0.6, fontFamily: 'var(--mono)' }}>
+            {keycap}
+          </span>
+        </motion.button>
+      )}
+    </AnimatePresence>
+    </>,
     document.body,
   )
 }
