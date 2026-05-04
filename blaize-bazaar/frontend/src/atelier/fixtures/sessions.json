@@ -12,7 +12,7 @@
   {
     "id": "A3C1",
     "personaId": "marco",
-    "openingQuery": "What's trending in summer accessories?",
+    "openingQuery": "What linen layers pack well for coastal travel?",
     "elapsedMs": 3180,
     "agentCount": 2,
     "routingPattern": "Dispatcher",
@@ -21,8 +21,8 @@
   },
   {
     "id": "D9E2",
-    "personaId": "marco",
-    "openingQuery": "Compare the linen trousers and the oxford shirt",
+    "personaId": "anna",
+    "openingQuery": "A thoughtful gift for someone who loves morning rituals",
     "elapsedMs": 5640,
     "agentCount": 4,
     "routingPattern": "Dispatcher",
@@ -31,8 +31,8 @@
   },
   {
     "id": "B4F8",
-    "personaId": "marco",
-    "openingQuery": "A thoughtful gift for someone who loves ceramics",
+    "personaId": "theo",
+    "openingQuery": "Hand-thrown ceramics for a slower morning routine",
     "elapsedMs": 6120,
     "agentCount": 3,
     "routingPattern": "Dispatcher",

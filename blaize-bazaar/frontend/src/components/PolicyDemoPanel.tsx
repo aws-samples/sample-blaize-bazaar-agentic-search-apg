@@ -35,17 +35,17 @@ interface EvalResult {
 }
 
 const TEST_SCENARIOS = [
-  { label: 'Restock 100 units', action: 'restock_product', params: { quantity: 100 } },
-  { label: 'Restock 1000 units', action: 'restock_product', params: { quantity: 1000 } },
-  { label: 'Search headphones', action: 'search_products', params: { query: 'wireless headphones' } },
-  { label: 'Search weapons', action: 'search_products', params: { query: 'best weapons for hunting' } },
+  { label: 'Restock 100 units', action: 'restock_shelf', params: { quantity: 100 } },
+  { label: 'Restock 1000 units', action: 'restock_shelf', params: { quantity: 1000 } },
+  { label: 'Search headphones', action: 'find_pieces', params: { query: 'wireless headphones' } },
+  { label: 'Search weapons', action: 'find_pieces', params: { query: 'best weapons for hunting' } },
   { label: 'Set price $50', action: 'set_price', params: { price: 50 } },
   { label: 'Set price $15,000', action: 'set_price', params: { price: 15000 } },
 ]
 
 const PolicyDemoPanel = ({ isOpen, onClose }: PolicyDemoPanelProps) => {
   const [policies, setPolicies] = useState<Policy[]>([])
-  const [action, setAction] = useState('restock_product')
+  const [action, setAction] = useState('restock_shelf')
   const [paramJson, setParamJson] = useState('{"quantity": 1000}')
   const [result, setResult] = useState<EvalResult | null>(null)
   const [loading, setLoading] = useState(false)
@@ -163,8 +163,8 @@ const PolicyDemoPanel = ({ isOpen, onClose }: PolicyDemoPanelProps) => {
                 className="w-full px-3 py-2 rounded-lg text-sm text-white focus:outline-none"
                 style={{ background: 'rgba(255, 255, 255, 0.06)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
               >
-                <option value="restock_product" style={{ background: '#1a1a1a' }}>restock_product</option>
-                <option value="search_products" style={{ background: '#1a1a1a' }}>search_products</option>
+                <option value="restock_shelf" style={{ background: '#1a1a1a' }}>restock_shelf</option>
+                <option value="find_pieces" style={{ background: '#1a1a1a' }}>find_pieces</option>
                 <option value="set_price" style={{ background: '#1a1a1a' }}>set_price</option>
               </select>
             </div>

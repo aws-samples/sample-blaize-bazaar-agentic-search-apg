@@ -30,10 +30,10 @@ export interface AgentIdentity {
 export const AGENT_IDENTITIES: Record<AgentType, AgentIdentity> = {
   orchestrator: { name: 'Orchestrator', icon: 'O', gradient: '', bgColor: '', borderColor: '', textColor: '', accentHex: '#a855f7' },
   support: { name: 'Support Agent', icon: 'H', gradient: '', bgColor: '', borderColor: '', textColor: '', accentHex: '#14b8a6' },
-  search: { name: 'Search Agent', icon: 'S', gradient: '', bgColor: '', borderColor: '', textColor: '', accentHex: '#3b82f6' },
-  inventory: { name: 'Inventory Agent', icon: 'I', gradient: '', bgColor: '', borderColor: '', textColor: '', accentHex: '#10b981' },
-  pricing: { name: 'Pricing Agent', icon: 'P', gradient: '', bgColor: '', borderColor: '', textColor: '', accentHex: '#f59e0b' },
-  recommendation: { name: 'Recommendation Agent', icon: 'R', gradient: '', bgColor: '', borderColor: '', textColor: '', accentHex: '#eab308' },
+  search: { name: 'Style Advisor', icon: 'S', gradient: '', bgColor: '', borderColor: '', textColor: '', accentHex: '#3b82f6' },
+  inventory: { name: 'Stock Keeper', icon: 'I', gradient: '', bgColor: '', borderColor: '', textColor: '', accentHex: '#10b981' },
+  pricing: { name: 'Value Analyst', icon: 'P', gradient: '', bgColor: '', borderColor: '', textColor: '', accentHex: '#f59e0b' },
+  recommendation: { name: 'Curator', icon: 'R', gradient: '', bgColor: '', borderColor: '', textColor: '', accentHex: '#eab308' },
 }
 
 export function resolveAgentType(_agentName: string): AgentType {

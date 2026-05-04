@@ -1,54 +1,7 @@
 [
-  {
-    "numeral": "I",
-    "name": "Search",
-    "role": "Semantic product discovery via pgvector similarity search",
-    "status": "shipped",
-    "tools": ["search_products", "browse_category", "trending_products"],
-    "model": "Opus 4.6",
-    "temperature": 0.2
-  },
-  {
-    "numeral": "II",
-    "name": "Recommendation",
-    "role": "Preference-weighted product ranking and editorial descriptions",
-    "status": "shipped",
-    "tools": ["search_products", "compare_products"],
-    "model": "Opus 4.6",
-    "temperature": 0.2
-  },
-  {
-    "numeral": "III",
-    "name": "Pricing",
-    "role": "Price analysis, value positioning, and return policy lookup",
-    "status": "shipped",
-    "tools": ["price_analysis", "return_policy"],
-    "model": "Opus 4.6",
-    "temperature": 0.2
-  },
-  {
-    "numeral": "IV",
-    "name": "Inventory",
-    "role": "Stock level monitoring, restock triggers, and availability checks",
-    "status": "exercise",
-    "tools": ["inventory_health", "restock_product", "low_stock"],
-    "model": "Opus 4.6",
-    "temperature": 0.2,
-    "exerciseFiles": [
-      "agents/inventory_agent.py",
-      "tools/inventory_tools.py"
-    ]
-  },
-  {
-    "numeral": "V",
-    "name": "Customer Support",
-    "role": "Order inquiries, return processing, and satisfaction follow-up",
-    "status": "exercise",
-    "tools": ["return_policy"],
-    "model": "Opus 4.6",
-    "temperature": 0.2,
-    "exerciseFiles": [
-      "agents/customer_support_agent.py"
-    ]
-  }
+  {"name":"Style Advisor","role":"Interprets intent, searches the catalog, and curates options. The lead agent.","status":"active","tools":["find_pieces","explore_collection","side_by_side","style_match"],"model":"Claude Opus 4.6","temperature":0.2},
+  {"name":"Curator","role":"Personalized recommendations, trending picks, gift curation. Reads persona memory.","status":"active","tools":["find_pieces","whats_trending","side_by_side","explore_collection"],"model":"Claude Opus 4.6","temperature":0.2},
+  {"name":"Value Analyst","role":"Price intelligence — deals, comparisons, value-per-dollar across collections.","status":"active","tools":["price_intelligence","explore_collection","find_pieces"],"model":"Claude Opus 4.6","temperature":0.1},
+  {"name":"Stock Keeper","role":"Inventory — stock levels, restock operations, low-stock alerts.","status":"active","tools":["floor_check","restock_shelf","running_low"],"model":"Claude Opus 4.6","temperature":0.1},
+  {"name":"Experience Guide","role":"Returns, care instructions, post-purchase support.","status":"active","tools":["returns_and_care","find_pieces"],"model":"Claude Opus 4.6","temperature":0.2}
 ]

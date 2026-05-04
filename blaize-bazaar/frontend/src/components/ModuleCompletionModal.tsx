@@ -42,7 +42,7 @@ const MODULE_INFO: Record<ModuleKey, ModuleInfo> = {
     headline: 'A multi-agent team is live in the storefront.',
     subhead: 'You built @tool functions, specialist agents, and a multi-agent orchestrator.',
     capabilities: [
-      { icon: '\u{1f6e0}\ufe0f', label: 'Agent tools active', detail: 'get_trending_products and other @tool functions query Aurora on demand' },
+      { icon: '\u{1f6e0}\ufe0f', label: 'Agent tools active', detail: 'get_whats_trending and other @tool functions query Aurora on demand' },
       { icon: '\u{1f3af}', label: 'Orchestrator routing live', detail: 'Queries routed to the right specialist automatically' },
       { icon: '\u{1f91d}', label: 'Agent-as-tool pattern', detail: '5 specialist agents collaborate: search, pricing, inventory, recommendation, support' },
     ],

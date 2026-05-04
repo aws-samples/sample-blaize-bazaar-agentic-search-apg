@@ -243,13 +243,13 @@ export default function StateManagementArchPage() {
             </div>
             <p className="sm-rel-text">
               The agent never writes raw SQL. Every read goes through a typed
-              tool — <em>search_products</em>, <em>get_order_history</em>. The
+              tool — <em>find_pieces</em>, <em>get_order_history</em>. The
               tool owns the query; the agent owns the question.
             </p>
             <MonoBlock>
               <MonoBlock.Comment># tool layer holds the SQL</MonoBlock.Comment>
               <br />
-              <MonoBlock.Key>def</MonoBlock.Key> search_products(q: str):
+              <MonoBlock.Key>def</MonoBlock.Key> find_pieces(q: str):
               <br />
               &nbsp;&nbsp;<MonoBlock.Key>return</MonoBlock.Key> db.fetch(
               <br />

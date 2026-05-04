@@ -320,8 +320,8 @@ function TriangleSection() {
             <div className="sk-tri-text">
               Discrete, deterministic functions an agent invokes. Typed
               inputs and outputs, no opinions.{' '}
-              <span className="sk-mono">search_products</span>,{' '}
-              <span className="sk-mono">get_trending_products</span>,{' '}
+              <span className="sk-mono">find_pieces</span>,{' '}
+              <span className="sk-mono">get_whats_trending</span>,{' '}
               <span className="sk-mono">check_inventory</span>,{' '}
               <span className="sk-mono">get_pricing</span>.
             </div>
@@ -525,7 +525,7 @@ function ImpactSection() {
               <span className="sk-price">$128</span>, the{' '}
               <span className="sk-product">Linen Wrap Dress</span> at{' '}
               <span className="sk-price">$158</span>, and the{' '}
-              <span className="sk-product">Sundress in Washed Linen</span> at{' '}
+              <span className="sk-product">Italian Linen Camp Shirt</span> at{' '}
               <span className="sk-price">$148</span>.
             </p>
             <div className="sk-impact-callouts">
@@ -554,7 +554,7 @@ function ImpactSection() {
               ties at the waist so fit is flexible.
             </p>
             <p>
-              · <span className="sk-product">Sundress in Washed Linen</span>{' '}
+              · <span className="sk-product">Italian Linen Camp Shirt</span>{' '}
               <span className="sk-price">($148)</span> — natural fibers, golden
               ochre colorway that photographs warmer than the russet.
             </p>

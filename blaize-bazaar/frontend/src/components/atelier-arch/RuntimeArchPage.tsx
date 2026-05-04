@@ -288,7 +288,7 @@ export default function RuntimeArchPage() {
             desc={
               <>
                 During step v, the specialist invokes one or more tools —
-                usually <em>search_products</em>, <em>check_inventory</em>,{' '}
+                usually <em>find_pieces</em>, <em>check_inventory</em>,{' '}
                 <em>get_recommendations</em>. The Gateway routes calls; results
                 return to the specialist mid-reasoning. Cost is wall-clock
                 parallel with v.

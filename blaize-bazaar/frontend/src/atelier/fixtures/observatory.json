@@ -6,7 +6,7 @@
     { "name": "Recommendation", "status": "live" },
     { "name": "Pricing", "status": "live" },
     { "name": "Inventory", "status": "idle" },
-    { "name": "Customer Support", "status": "idle" }
+    { "name": "Experience Guide", "status": "idle" }
   ],
   "toolInvocations": 3720,
   "memoryItems": { "stm": 3, "ltm": 5 },

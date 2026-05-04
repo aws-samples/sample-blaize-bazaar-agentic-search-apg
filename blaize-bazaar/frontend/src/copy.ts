@@ -96,7 +96,7 @@ export interface Intent {
 }
 
 // The 8 rotating intents (Requirement 1.3.1, storefront.md). Intent 2 carries
-// a productOverride for the Featherweight Trail Runner.
+// a productOverride for the Cloudform Studio Runner.
 export const INTENTS: Intent[] = [
   {
     id: 1,
@@ -111,7 +111,7 @@ export const INTENTS: Intent[] = [
     matchedOn: ["athletic", "footwear", "gift"],
     latency: "412 ms",
     productOverride: {
-      name: "Featherweight Trail Runner",
+      name: "Cloudform Studio Runner",
       brand: "Blaize Editions",
       color: "Ember \u00b7 9.5",
       price: 168,
@@ -127,42 +127,42 @@ export const INTENTS: Intent[] = [
     query: "something to wear for warm evenings out",
     matchedOn: ["evening", "warm", "dresses"],
     latency: "298 ms",
-    productRef: { name: "Sundress in Washed Linen" },
+    productRef: { name: "Pellier Linen Shirt" },
   },
   {
     id: 4,
     query: "pieces that travel well",
     matchedOn: ["travel", "accessories", "neutral"],
     latency: "325 ms",
-    productRef: { name: "Signature Straw Tote" },
+    productRef: { name: "Canvas Dopp Kit" },
   },
   {
     id: 5,
     query: "something for slow Sunday mornings",
     matchedOn: ["slow", "soft", "home"],
     latency: "367 ms",
-    productRef: { name: "Ceramic Tumbler Set" },
+    productRef: { name: "Stoneware Pour-Over Set" },
   },
   {
     id: 6,
     query: "a linen piece that earns its golden hour",
     matchedOn: ["linen", "evening", "warm"],
     latency: "288 ms",
-    productRef: { name: "Sundress in Washed Linen" },
+    productRef: { name: "Pellier Linen Shirt" },
   },
   {
     id: 7,
     query: "a cozy layer for cool summer nights",
     matchedOn: ["outerwear", "evening", "slow"],
     latency: "315 ms",
-    productRef: { name: "Cashmere-Blend Cardigan" },
+    productRef: { name: "Linen Overshirt" },
   },
   {
     id: 8,
     query: "something relaxed for weekend markets",
     matchedOn: ["everyday", "linen", "classic"],
     latency: "302 ms",
-    productRef: { name: "Relaxed Oxford Shirt" },
+    productRef: { name: "Cotton-Linen Crew Tee" },
   },
 ];
 

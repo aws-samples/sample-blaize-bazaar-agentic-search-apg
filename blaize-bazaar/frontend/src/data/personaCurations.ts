@@ -344,8 +344,8 @@ export function heroPillsForPersona(
 
 export const PERSONA_FEATURED_PRODUCT_ID: Record<string, number> = {
   marco: 2,   // Pellier Linen Shirt — Marco's signature linen piece
-  anna: 4,    // Santal & Fig Candle — gift-forward, wrap-ready
-  theo: 7,    // Solstice Woven Mat Set — slow ritual centerpiece
+  anna: 21,    // Beeswax Taper Candles & Fig Candle — gift-forward, wrap-ready
+  theo: 31,    // Stoneware Pour-Over Set Woven Mat Set — slow ritual centerpiece
   fresh: 3,   // Nocturne Leather Weekender — editorial hero for new visitors
 }
 

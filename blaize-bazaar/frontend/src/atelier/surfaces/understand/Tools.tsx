@@ -649,11 +649,11 @@ const RelatedCard: React.FC = () => (
           <em style={{ color: 'var(--at-ink-1)', fontStyle: 'italic' }}>
             Search
           </em>{' '}
-          uses search_products and browse_category;{' '}
+          uses find_pieces and explore_collection;{' '}
           <em style={{ color: 'var(--at-ink-1)', fontStyle: 'italic' }}>
             Recommendation
           </em>{' '}
-          uses search_products and compare_products. The registry lets agents
+          uses find_pieces and side_by_side. The registry lets agents
           discover tools they weren't explicitly given.
         </p>
         <Link

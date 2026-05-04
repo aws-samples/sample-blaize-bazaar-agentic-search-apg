@@ -97,14 +97,14 @@ LIMIT 5;`}</pre>
               <SectionLabel label="Registered tools" />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                 {[
-                  { name: 'search_products', status: 'shipped' },
-                  { name: 'browse_category', status: 'shipped' },
-                  { name: 'compare_products', status: 'shipped' },
-                  { name: 'trending_products', status: 'shipped' },
-                  { name: 'price_analysis', status: 'shipped' },
-                  { name: 'return_policy', status: 'shipped' },
-                  { name: 'inventory_health', status: 'exercise' },
-                  { name: 'restock_product', status: 'exercise' },
+                  { name: 'find_pieces', status: 'shipped' },
+                  { name: 'explore_collection', status: 'shipped' },
+                  { name: 'side_by_side', status: 'shipped' },
+                  { name: 'whats_trending', status: 'shipped' },
+                  { name: 'price_intelligence', status: 'shipped' },
+                  { name: 'returns_and_care', status: 'shipped' },
+                  { name: 'floor_check', status: 'exercise' },
+                  { name: 'restock_shelf', status: 'exercise' },
                   { name: 'low_stock', status: 'exercise' },
                 ].map((tool) => (
                   <div

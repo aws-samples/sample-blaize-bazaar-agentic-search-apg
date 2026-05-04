@@ -371,7 +371,7 @@ export function useAgentChat(
           ? 'AgentCore'
           : workshopMode === 'agentic'
             ? 'Orchestrator'
-            : 'Search Agent'
+            : 'Style Advisor'
       const loadingMessage: AgentChatMessage = {
         role: 'assistant',
         content: '',

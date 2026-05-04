@@ -86,11 +86,11 @@ const PERSONA_COVERS: Record<string, PersonaCover> = {
   anna: {
     // Swapped from Ceramic Tumbler Set (now Theo's) to the Straw
     // Tote — bestseller, under $100, reads as a considered gift.
-    coverName: 'Signature Straw Tote',
+    coverName: 'Beeswax Taper Candles',
     eyebrow: 'A gift, ready to go',
   },
   theo: {
-    coverName: 'Ceramic Tumbler Set',
+    coverName: 'Stoneware Pour-Over Set',
     eyebrow: 'Quiet pieces for slow days',
   },
 }

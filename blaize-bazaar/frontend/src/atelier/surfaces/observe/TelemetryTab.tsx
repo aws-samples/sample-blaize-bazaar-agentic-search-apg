@@ -394,7 +394,7 @@ const ProductRecommendationCard: React.FC = () => (
         marginBottom: '4px',
       }}
     >
-      Sundress in Washed Linen
+      Italian Linen Camp Shirt
     </div>
 
     {/* Price */}

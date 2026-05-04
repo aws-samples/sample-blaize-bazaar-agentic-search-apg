@@ -30,11 +30,17 @@
     ]
   },
   "ltm": {
-    "preferences": ["minimal", "warm tones", "linen", "classic", "neutral"],
+    "preferences": [
+      "minimal",
+      "warm tones",
+      "linen",
+      "classic",
+      "neutral"
+    ],
     "priorOrders": [
-      "Italian Linen Camp Shirt — Sand — $128",
-      "Leather Slide Sandal — Chestnut — $112",
-      "Ceramic Tumbler Set — 4pc — $52"
+      "Italian Linen Camp Shirt \u2014 Sand \u2014 $128",
+      "Leather Slide Sandal \u2014 Chestnut \u2014 $112",
+      "Ceramic Tumbler Set \u2014 4pc \u2014 $52"
     ],
     "behavioralPatterns": [
       "Tends to browse in the evening (7-10 PM)",

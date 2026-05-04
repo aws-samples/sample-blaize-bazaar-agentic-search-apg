@@ -54,13 +54,13 @@ function toolLabel(
   _status: string,
 ): { label: string; meta?: string } {
   const n = toolName.toLowerCase()
-  if (n.includes('search_products') || n.includes('search'))
+  if (n.includes('find_pieces') || n.includes('search'))
     return { label: 'Searched the boutique' }
   if (n.includes('get_trending') || n.includes('recommendation') || n.includes('get_recommendations'))
     return { label: 'Pulled recommendations' }
   if (n.includes('check_inventory') || n.includes('inventory') || n.includes('get_low_stock'))
     return { label: 'Checked the floor' }
-  if (n.includes('get_price') || n.includes('pricing') || n.includes('price_analysis'))
+  if (n.includes('get_price') || n.includes('pricing') || n.includes('price_intelligence'))
     return { label: 'Confirmed pricing' }
   if (n.includes('recall') || n.includes('memory') || n.includes('session'))
     return { label: 'Read your last visit' }

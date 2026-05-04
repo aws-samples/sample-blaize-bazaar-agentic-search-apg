@@ -25,14 +25,14 @@
       },
       "toolCalls": [
         {
-          "toolName": "search_products",
+          "toolName": "find_pieces",
           "description": "Semantic search for linen evening wear",
           "durationMs": 340,
           "sql": "SELECT name, brand, price, 1 - (embedding <=> $1) AS similarity FROM product_catalog WHERE category ILIKE '%linen%' ORDER BY embedding <=> $1 LIMIT 10;",
           "resultSummary": "Found 6 linen products with similarity > 0.78"
         },
         {
-          "toolName": "trending_products",
+          "toolName": "whats_trending",
           "description": "Check trending items in linen category",
           "durationMs": 180,
           "resultSummary": "3 trending linen items this week"
@@ -40,24 +40,24 @@
       ],
       "products": [
         {
-          "name": "Sundress in Washed Linen",
+          "name": "Italian Linen Camp Shirt",
           "brand": "Blaize Editions",
-          "price": 148,
-          "imageUrl": "/images/products/sundress-linen.jpg",
+          "price": 228,
+          "imageUrl": "/products/marco-linen-camp-shirt-indigo.png",
           "traceRef": "panel-3"
         },
         {
           "name": "Italian Linen Camp Shirt",
           "brand": "Blaize Editions",
           "price": 128,
-          "imageUrl": "/images/products/linen-camp-shirt.jpg",
+          "imageUrl": "/products/marco-linen-camp-shirt-indigo.png",
           "traceRef": "panel-4"
         },
         {
-          "name": "Wide-Leg Linen Trousers",
+          "name": "Linen Drawstring Trousers",
           "brand": "Blaize Editions",
           "price": 98,
-          "imageUrl": "/images/products/linen-trousers.jpg",
+          "imageUrl": "/products/marco-linen-drawstring-trousers.png",
           "traceRef": "panel-5"
         }
       ],
@@ -77,12 +77,12 @@
     },
     {
       "role": "assistant",
-      "content": "The Sundress in Washed Linen is one of our most versatile evening pieces. The golden ochre color catches the light beautifully at golden hour, and the washed linen fabric breathes well even on the warmest nights. It's perfect for outdoor dinners — relaxed enough for a terrace but with enough presence for a candlelit table.",
+      "content": "The Italian Linen Camp Shirt is one of our most versatile evening pieces. The golden ochre color catches the light beautifully at golden hour, and the washed linen fabric breathes well even on the warmest nights. It's perfect for outdoor dinners — relaxed enough for a terrace but with enough presence for a candlelit table.",
       "timestamp": "2025-01-15T19:42:48Z",
       "toolCalls": [
         {
-          "toolName": "search_products",
-          "description": "Detailed lookup for Sundress in Washed Linen",
+          "toolName": "find_pieces",
+          "description": "Detailed lookup for Italian Linen Camp Shirt",
           "durationMs": 120,
           "resultSummary": "Product details retrieved with 4.8 rating, 23 reviews"
         }
@@ -173,7 +173,7 @@
       "index": 9,
       "category": "both",
       "title": "Product Detail Lookup",
-      "description": "Retrieved full details for Sundress in Washed Linen including reviews",
+      "description": "Retrieved full details for Italian Linen Camp Shirt including reviews",
       "status": "complete",
       "durationMs": 120,
       "agent": "Search"
@@ -230,15 +230,15 @@
         "numeral": "ii.",
         "title": "How We Found the Pieces",
         "paragraphs": [
-          "The Search agent executed a pgvector similarity query against 444 products, filtering for linen category items. Six candidates emerged with similarity scores above 0.78, led by the Sundress in Washed Linen at 0.91.",
+          "The Search agent executed a pgvector similarity query against 444 products, filtering for linen category items. Six candidates emerged with similarity scores above 0.78, led by the Italian Linen Camp Shirt at 0.91.",
           "Trending data from the past seven days confirmed the sundress and camp shirt as popular choices, reinforcing the semantic results."
         ],
         "evidencePanel": {
           "sql": "SELECT name, brand, price, 1 - (embedding <=> $1) AS similarity FROM product_catalog WHERE category ILIKE '%linen%' ORDER BY embedding <=> $1 LIMIT 10;",
           "toolRanking": [
-            { "name": "search_products", "distance": 0.12 },
-            { "name": "trending_products", "distance": 0.34 },
-            { "name": "browse_category", "distance": 0.45 }
+            { "name": "find_pieces", "distance": 0.12 },
+            { "name": "whats_trending", "distance": 0.34 },
+            { "name": "explore_collection", "distance": 0.45 }
           ]
         },
         "tracePills": ["panel-2", "panel-3"]
@@ -259,7 +259,7 @@
         "numeral": "iv.",
         "title": "The Recommendations",
         "paragraphs": [
-          "Three pieces emerged from the ranking: the Sundress in Washed Linen ($148), the Italian Linen Camp Shirt ($128), and the Wide-Leg Linen Trousers ($98). Each scored highly on both semantic relevance and preference overlap.",
+          "Three pieces emerged from the ranking: the Italian Linen Camp Shirt ($228), the Italian Linen Camp Shirt ($128), and the Linen Drawstring Trousers ($178). Each scored highly on both semantic relevance and preference overlap.",
           "The Pricing agent confirmed all three sit within Marco's typical spend range, with the sundress representing the strongest value proposition given its versatility."
         ],
         "tracePills": ["panel-4", "panel-5"]
@@ -274,24 +274,24 @@
     ],
     "products": [
       {
-        "name": "Sundress in Washed Linen",
+        "name": "Italian Linen Camp Shirt",
         "brand": "Blaize Editions",
-        "price": 148,
-        "imageUrl": "/images/products/sundress-linen.jpg",
+        "price": 228,
+        "imageUrl": "/products/marco-linen-camp-shirt-indigo.png",
         "traceRef": "panel-3"
       },
       {
         "name": "Italian Linen Camp Shirt",
         "brand": "Blaize Editions",
         "price": 128,
-        "imageUrl": "/images/products/linen-camp-shirt.jpg",
+        "imageUrl": "/products/marco-linen-camp-shirt-indigo.png",
         "traceRef": "panel-4"
       },
       {
-        "name": "Wide-Leg Linen Trousers",
+        "name": "Linen Drawstring Trousers",
         "brand": "Blaize Editions",
         "price": 98,
-        "imageUrl": "/images/products/linen-trousers.jpg",
+        "imageUrl": "/products/marco-linen-drawstring-trousers.png",
         "traceRef": "panel-5"
       }
     ],

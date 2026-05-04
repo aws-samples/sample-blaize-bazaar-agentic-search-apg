@@ -101,7 +101,7 @@ export function useCatalog() {
  * cross-route. Returns an empty list if nothing has fired yet.
  */
 export interface RecentToolCall {
-  /** Tool function name, e.g. ``search_products``. */
+  /** Tool function name, e.g. ``find_pieces``. */
   tool: string
   /** Optional agent name that invoked the tool. */
   agent?: string
