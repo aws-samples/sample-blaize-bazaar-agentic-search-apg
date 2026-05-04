@@ -38,8 +38,20 @@ import '../styles/chat-drawer.css'
 // Constants
 // ---------------------------------------------------------------------------
 
-const WELCOME_STOREFRONT =
-  "Tell me what you're after. Linen for a slow Sunday, a piece that travels, a gift that lands."
+// Persona-specific welcome greetings with personal touch.
+// Each returning persona gets a warm callback to their interests.
+// Fresh visitors get a clean, inviting intro.
+const PERSONA_GREETINGS: Record<string, string> = {
+  marco:
+    "I remember you love natural fabrics and pieces that travel well. Last time you were eyeing linen — shall we pick up where you left off, or explore something new?",
+  anna:
+    "Always great to see you. I know you have an eye for thoughtful gifts and milestone pieces. Tell me who you're shopping for and I'll find something that lands.",
+  theo:
+    "Welcome back. I see you gravitate toward slow-craft pieces — ceramics, washed linen, things with patina. What are you looking for today?",
+}
+
+const FRESH_GREETING =
+  "Welcome to Blaize Bazaar. I'm Blaize — your personal shopping concierge. Tell me what you're looking for and I'll find the right pieces for you."
 
 // ---------------------------------------------------------------------------
 // Platform detection for keyboard hint
@@ -73,14 +85,15 @@ export default function ChatDrawer() {
     setIsMac(detectMac())
   }, [])
 
-  // Initial welcome message
+  // Initial welcome message — persona-aware with personal touch
   const initialMessages = useMemo<AgentChatMessage[]>(() => {
     const firstName = persona ? persona.display_name.split(' ')[0] : ''
     const h = new Date().getHours()
     const tod = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
-    const content = persona
-      ? `${tod}, ${firstName}. ${WELCOME_STOREFRONT}`
-      : WELCOME_STOREFRONT
+    const personaGreeting = persona?.id ? PERSONA_GREETINGS[persona.id] : null
+    const content = personaGreeting
+      ? `${tod}, ${firstName}. ${personaGreeting}`
+      : FRESH_GREETING
     return [
       {
         role: 'assistant',

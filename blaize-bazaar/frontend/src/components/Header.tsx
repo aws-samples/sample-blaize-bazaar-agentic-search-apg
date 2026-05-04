@@ -151,7 +151,14 @@ function PersonaDropdown() {
     fetch('/api/atelier/personas')
       .then((r) => r.json())
       .then((data) => {
-        setPersonas(Array.isArray(data) ? data : [])
+        const list = Array.isArray(data) ? data : []
+        // Fresh visitor first so the default demo starts with them
+        list.sort((a: { id: string }, b: { id: string }) => {
+          if (a.id === 'fresh') return -1
+          if (b.id === 'fresh') return 1
+          return 0
+        })
+        setPersonas(list)
         setFetched(true)
       })
       .catch(() => setFetched(true))
