@@ -17,7 +17,15 @@ import { Sparkles, Mic } from 'lucide-react'
 import { useUI } from '../contexts/UIContext'
 import { usePersona } from '../contexts/PersonaContext'
 import { heroPillsForPersona } from '../data/personaCurations'
-import heroImage from '../assets/hero/boutique-hero.png'
+
+// Per-persona hero images (landscape, in public/products/).
+// Falls back to the fresh hero for unknown personas.
+const PERSONA_HERO_IMAGES: Record<string, string> = {
+  fresh: '/products/hero-fresh.png',
+  marco: '/products/hero-marco.png',
+  anna: '/products/hero-anna.png',
+  theo: '/products/hero-theo.png',
+}
 
 const TRUST_ITEMS = [
   'Curated by hand',
@@ -31,6 +39,7 @@ export default function BoutiqueHero() {
   const { openDrawerWithQuery } = useUI()
   const { persona } = usePersona()
   const suggestions = heroPillsForPersona(persona?.id)
+  const heroImage = PERSONA_HERO_IMAGES[persona?.id ?? 'fresh'] ?? PERSONA_HERO_IMAGES.fresh
   const [searchValue, setSearchValue] = useState('')
 
   const handleSubmit = useCallback(
