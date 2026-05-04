@@ -93,7 +93,7 @@ async def lifespan(app: FastAPI):
     Handles startup and shutdown events
     """
     # Startup
-    logger.info("Starting Blaize Bazaar Workshop API...")
+    logger.info("Starting Blaize Bazaar Boutique API...")
     
     global db_service, embedding_service, chat_service, query_logger, index_performance_service
     
@@ -208,7 +208,7 @@ async def lifespan(app: FastAPI):
         from skills import load_registry
         load_registry()
 
-        logger.info("🚀 Blaize Bazaar Workshop API is ready!")
+        logger.info("🚀 Blaize Bazaar Boutique API is ready!")
         
     except Exception as e:
         logger.error(f"Failed to initialize services: {e}")
@@ -217,7 +217,7 @@ async def lifespan(app: FastAPI):
     yield
     
     # Shutdown
-    logger.info("Shutting down Blaize Bazaar Workshop API...")
+    logger.info("Shutting down Blaize Bazaar Boutique API...")
     
     if db_service:
         await db_service.disconnect()
@@ -227,7 +227,7 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="Blaize Bazaar Workshop API",
+    title="Blaize Bazaar Boutique API",
     description="Agentic AI-Powered Search with Amazon Aurora PostgreSQL and pgvector",
     version="1.0.0",
     lifespan=lifespan,
@@ -333,7 +333,7 @@ async def root():
         return FileResponse(index_html)
     return JSONResponse(
         {
-            "message": "Blaize Bazaar Workshop API",
+            "message": "Blaize Bazaar Boutique API",
             "version": "1.0.0",
             "note": (
                 "Frontend bundle not found at "
