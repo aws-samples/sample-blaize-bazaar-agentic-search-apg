@@ -87,10 +87,10 @@ export default function BoutiqueHero() {
         aria-hidden="true"
       />
 
-      {/* ── Typography overlay — right-aligned content, text reads against the gradient ── */}
-      <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center justify-end px-8">
+      {/* ── Typography overlay — centered content ── */}
+      <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center justify-center px-8">
           <div
-            className="w-full max-w-2xl py-12 md:py-0
+            className="w-full max-w-4xl py-12 md:py-0
                        flex flex-col items-center text-center"
           >
             {/* Eyebrow — "• SUMMER EDIT • NO. 06 •" — matches
