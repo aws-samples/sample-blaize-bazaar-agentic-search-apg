@@ -17,7 +17,10 @@ import type { PersonaSnapshot } from '../contexts/PersonaContext'
 import type { CartItemOrigin } from '../contexts/CartContext'
 import MarkdownMessage from './MarkdownMessage'
 import ProductArtifactCard from './ProductArtifactCard'
+import { resolveCover } from './BoutiqueWelcome'
+import { useCatalogStats } from '../hooks/useCatalogStats'
 import '../styles/boutique-chat.css'
+import '../styles/boutique-welcome.css'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -127,6 +130,42 @@ function followupsForPersona(persona?: PersonaSnapshot | null): string[] {
   return FOLLOWUPS_BY_PERSONA[persona.id] ?? FOLLOWUPS_BY_PERSONA.fresh
 }
 
+// Time-of-day helper for cover eyebrow resolution. Duplicated from
+// BoutiqueWelcome so the chat body stays self-contained.
+type TimeOfDay = 'morning' | 'afternoon' | 'evening'
+function timeOfDay(): TimeOfDay {
+  const h = new Date().getHours()
+  if (h < 12) return 'morning'
+  if (h < 17) return 'afternoon'
+  return 'evening'
+}
+
+// ---------------------------------------------------------------------------
+// Persona cover banner
+//
+// Compact editorial banner that sits above the chat stream. Shows the
+// same persona-matched cover image the BoutiqueWelcome hero used, so
+// the warm "standout" moment doesn't vanish the second the user fires
+// their first query. Resolves per persona via resolveCover().
+// ---------------------------------------------------------------------------
+function PersonaCoverBanner({ persona }: { persona: PersonaSnapshot | null }) {
+  const stats = useCatalogStats()
+  const tod = timeOfDay()
+  const { product, eyebrow } = resolveCover(persona, stats, tod)
+
+  return (
+    <div className="ec-persona-cover">
+      <img src={product.imageUrl} alt={product.name} className="ec-persona-cover-img" />
+      <div className="ec-persona-cover-overlay">
+        <div className="ec-persona-cover-eyebrow">
+          <span className="ec-persona-cover-dot" />
+          {eyebrow}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Body component
 // ---------------------------------------------------------------------------
@@ -145,6 +184,8 @@ export default function BoutiqueChatBody({
   })()
 
   return (
+    <>
+      <PersonaCoverBanner persona={persona} />
     <AnimatePresence initial={false}>
       {messages.map((message, index) => {
         return (
@@ -169,6 +210,7 @@ export default function BoutiqueChatBody({
         )
       })}
     </AnimatePresence>
+    </>
   )
 }
 
