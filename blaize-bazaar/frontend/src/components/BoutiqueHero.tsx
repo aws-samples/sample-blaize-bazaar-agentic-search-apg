@@ -98,13 +98,13 @@ export default function BoutiqueHero() {
                 burgundy dot separators. */}
             <div
               data-testid="boutique-hero-eyebrow"
-              className="flex items-center gap-2 mb-4 text-[11px] font-sans font-semibold tracking-[0.22em] uppercase text-ink-quiet"
+              className="flex items-center gap-3 mb-5 text-[13px] font-sans font-semibold tracking-[0.22em] uppercase text-espresso"
             >
-              <span aria-hidden="true" style={{ color: '#a8423a', fontSize: '7px' }}>&#9679;</span>
+              <span aria-hidden="true" style={{ color: '#a8423a', fontSize: '9px' }}>&#9679;</span>
               <span>Summer Edit</span>
-              <span aria-hidden="true" style={{ color: '#a8423a', fontSize: '7px' }}>&#9679;</span>
+              <span aria-hidden="true" style={{ color: '#a8423a', fontSize: '5px' }}>&#9679;</span>
               <span>No. 06</span>
-              <span aria-hidden="true" style={{ color: '#a8423a', fontSize: '7px' }}>&#9679;</span>
+              <span aria-hidden="true" style={{ color: '#a8423a', fontSize: '9px' }}>&#9679;</span>
             </div>
 
             {/* Headline — same Fraunces italic treatment as
