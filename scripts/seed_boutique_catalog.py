@@ -405,42 +405,49 @@ def seed_database(products: List[Product]) -> None:
             logger.info("Cleared existing boutique products (IDs 1-39)")
 
             for p in products:
-                embedding_str = json.dumps(p.embedding) if p.embedding else None
+                tags_json = json.dumps(p.tags)
+                # Use zero vector as placeholder when no embedding generated
+                if p.embedding:
+                    embedding_str = json.dumps(p.embedding)
+                else:
+                    embedding_str = json.dumps([0.0] * 1024)
                 cur.execute(
                     """
                     INSERT INTO blaize_bazaar.product_catalog
-                        ("productId", product_description, "imgUrl", "productURL",
-                         stars, reviews, price, category_id, "isBestSeller",
-                         "boughtInLastMonth", category_name, quantity, embedding)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                            CASE WHEN %s IS NOT NULL THEN %s::vector ELSE NULL END)
+                        ("productId", name, brand, color, price, description,
+                         category, tags, rating, reviews, "imgUrl",
+                         badge, tier, quantity, embedding)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1, %s, %s::vector)
                     ON CONFLICT ("productId") DO UPDATE SET
-                        product_description = EXCLUDED.product_description,
-                        "imgUrl" = EXCLUDED."imgUrl",
-                        stars = EXCLUDED.stars,
-                        reviews = EXCLUDED.reviews,
+                        name = EXCLUDED.name,
+                        brand = EXCLUDED.brand,
+                        color = EXCLUDED.color,
                         price = EXCLUDED.price,
-                        category_id = EXCLUDED.category_id,
-                        "isBestSeller" = EXCLUDED."isBestSeller",
-                        "boughtInLastMonth" = EXCLUDED."boughtInLastMonth",
-                        category_name = EXCLUDED.category_name,
+                        description = EXCLUDED.description,
+                        category = EXCLUDED.category,
+                        tags = EXCLUDED.tags,
+                        rating = EXCLUDED.rating,
+                        reviews = EXCLUDED.reviews,
+                        "imgUrl" = EXCLUDED."imgUrl",
+                        badge = EXCLUDED.badge,
+                        tier = EXCLUDED.tier,
                         quantity = EXCLUDED.quantity,
                         embedding = EXCLUDED.embedding
                     """,
                     (
-                        str(p.productId).ljust(10),
+                        str(p.productId),
+                        p.name,
+                        p.brand,
+                        p.color,
+                        p.price,
                         p.description,
-                        f"/products/{p.imgPath}",
-                        f"/p/{p.productId}",
+                        p.category_name,
+                        tags_json,
                         p.rating,
                         p.reviews,
-                        p.price,
-                        p.category_id,
-                        p.isBestSeller,
-                        p.boughtInLastMonth,
-                        p.category_name,
+                        f"/products/{p.imgPath}",
+                        p.badge or '',
                         p.quantity,
-                        embedding_str,
                         embedding_str,
                     ),
                 )
