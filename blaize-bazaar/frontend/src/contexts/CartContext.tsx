@@ -50,6 +50,8 @@ interface CartContextValue {
   removeFromCart: (productId: number) => void
   clearCart: () => void
   handleCheckout: () => void
+  checkoutComplete: boolean
+  resetCheckout: () => void
   incrementSearch: () => void
   incrementProductView: () => void
 }
@@ -128,6 +130,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // UI state
   const [cartOpen, setCartOpen] = useState(false)
+  const [checkoutComplete, setCheckoutComplete] = useState(false)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
 
@@ -258,11 +261,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [toast])
 
   const handleCheckout = useCallback(() => {
-    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    alert(`Demo Checkout\n\nTotal: $${total.toFixed(2)}\n\nThis is a demo - no real transaction will occur.`)
+    setCheckoutComplete(true)
+  }, [])
+
+  const resetCheckout = useCallback(() => {
+    setCheckoutComplete(false)
     setItems([])
     setCartOpen(false)
-  }, [items])
+    toast('Order complete — demo reset')
+  }, [toast])
 
   const incrementSearch = useCallback(() => {
     setMetrics(prev => ({ ...prev, searchCount: prev.searchCount + 1 }))
@@ -288,6 +295,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeFromCart,
       clearCart,
       handleCheckout,
+      checkoutComplete,
+      resetCheckout,
       incrementSearch,
       incrementProductView,
     }}>

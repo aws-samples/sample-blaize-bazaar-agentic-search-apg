@@ -25,6 +25,7 @@ import { LayoutProvider } from './contexts/LayoutContext'
 import { PersonaProvider } from './contexts/PersonaContext'
 import AuthModal from './components/AuthModal'
 import CartPanel from './components/CartPanel'
+import Toast from './components/Toast'
 import PersonaTransitionOverlay from './components/PersonaTransitionOverlay'
 import PreferencesModal from './components/PreferencesModal'
 import ConciergeModal from './components/ConciergeModal'
@@ -129,6 +130,14 @@ function CartPanelSlot() {
   return <CartPanel isOpen={cartOpen} onClose={() => setCartOpen(false)} />
 }
 
+// ---------------------------------------------------------------------------
+// ToastSlot — bridges CartContext's toast state to the Toast component.
+// ---------------------------------------------------------------------------
+function ToastSlot() {
+  const { showToast, toastMessage, dismissToast } = useCart()
+  return <Toast message={toastMessage} show={showToast} onClose={dismissToast} />
+}
+
 const TRANSIENT_MODALS = new Set(['auth', 'preferences', 'cart', 'checkout'])
 
 function ModalRouteGuard() {
@@ -167,6 +176,7 @@ function App() {
             <PreferencesModal />
             <PersonaTransitionOverlay />
             <CartPanelSlot />
+            <ToastSlot />
             <BrowserRouter
               future={{
                 v7_startTransition: true,
