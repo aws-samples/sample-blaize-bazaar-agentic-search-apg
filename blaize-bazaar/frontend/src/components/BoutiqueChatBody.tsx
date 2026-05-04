@@ -74,8 +74,11 @@ function toolLabel(
 }
 
 const SKILL_DISPLAY_NAMES: Record<string, string> = {
-  'style-advisor': 'style advisor',
-  'gift-concierge': 'gift concierge',
+  'style-advisor': 'Style Advisor',
+  'gift-concierge': 'Gift Concierge',
+  'the-packing-list': 'Packing List',
+  'the-gift-table': 'Gift Table',
+  'the-makers-shelf': "Maker's Shelf",
 }
 
 function skillDisplayName(canonicalName: string): string {
@@ -144,15 +147,6 @@ export default function BoutiqueChatBody({
   return (
     <AnimatePresence initial={false}>
       {messages.map((message, index) => {
-        // Skip the initial assistant welcome (index 0, before any user message)
-        if (
-          index === 0 &&
-          message.role === 'assistant' &&
-          messages.length > 1 &&
-          messages[1]?.role === 'user'
-        ) {
-          return null
-        }
         return (
           <motion.div
             key={`msg-${index}-${message.timestamp.getTime()}`}
