@@ -22,6 +22,7 @@ import Header, { type NavItem } from '../components/Header'
 import BoutiqueHero from '../components/BoutiqueHero'
 import BecauseYouAsked from '../components/BecauseYouAsked'
 import ProductCard from '../components/ProductCard'
+import EditorialBrief from '../components/EditorialBrief'
 import Footer from '../components/Footer'
 // CommandPill removed — hero search bar is the primary entry point
 import { useAuth } from '../contexts/AuthContext'
@@ -314,6 +315,9 @@ export default function StorefrontPage() {
 
         {/* "Because you asked..." editorial cards */}
         <BecauseYouAsked />
+
+        {/* Editorial brief — workshop credit */}
+        <EditorialBrief />
       </main>
 
       <Footer />

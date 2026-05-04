@@ -74,6 +74,12 @@
         "logs:PutLogEvents"
       ],
       "Resource": "arn:aws:logs:us-west-2:${AWS::AccountId}:log-group:/aws/blaize-bazaar/*"
+    },
+    {
+      "Sid": "TranscribeStreamingAccess",
+      "Effect": "Allow",
+      "Action": "transcribe:StartStreamTranscription",
+      "Resource": "*"
     }
   ]
 }
