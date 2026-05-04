@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Seed the boutique catalog — 40 curated products with real Cohere Embed v4 embeddings.
+Seed the boutique catalog — 36 curated products with real Cohere Embed v4 embeddings.
 
-10 products per persona (Marco / Anna / Theo / Fresh), zero overlap.
+9 products per persona (Marco / Anna / Theo / Fresh), zero overlap.
+Each persona: 1 featured hero product + 8 grid products = 9 total.
 Each product gets a 1024-dim embedding via Bedrock's Cohere Embed v4,
 stored in Aurora's pgvector column for HNSW-indexed similarity search.
 
@@ -129,43 +130,39 @@ FRESH_PRODUCTS: List[Product] = [
     Product(1, "Olive Branch Vessel", "Blaize Home", "Ivory", 185,
             "Sculptural ceramic vase with olive branch motif. Hand-thrown stoneware with a matte ivory glaze.",
             CAT_HOME, ["ceramic", "sculptural", "minimal", "warm", "neutral", "home"],
-            4.9, 127, "olive-branch-vessel-portrait.png", persona="fresh"),
+            4.9, 127, "fresh-olive-branch-vessel.png", persona="fresh"),
     Product(2, "Pellier Linen Shirt", "Blaize Editions", "Ivory", 248,
             "Airy, textured, and endlessly versatile. Cut from pure European linen with a relaxed silhouette and mother of pearl buttons.",
             CAT_APPAREL, ["linen", "minimal", "resort", "warm", "neutral", "everyday"],
-            4.8, 312, "pellier-linen-shirt.png", persona="fresh", badge="EDITORS_PICK"),
+            4.8, 312, "fresh-pellier-linen-shirt.png", persona="fresh", badge="EDITORS_PICK"),
     Product(3, "Nocturne Leather Weekender", "Blaize Travel", "Espresso", 425,
             "Full-grain leather weekend bag with canvas lining. Burnished brass hardware. The quiet kind of heft.",
             CAT_ACCESSORIES, ["leather", "travel", "classic", "warm", "earth", "accessories"],
-            4.9, 89, "nocturne-leather-weekender.png", persona="fresh"),
+            4.9, 89, "fresh-nocturne-leather-weekender.png", persona="fresh"),
     Product(4, "Santal & Fig Candle", "Blaize Home", "Amber", 92,
             "Hand-poured soy candle with santal, fig leaf, and cedarwood. 60-hour burn time in a reusable amber glass vessel.",
             CAT_HOME, ["candle", "home", "minimal", "warm", "slow"],
-            4.7, 445, "santal-fig-candle.png", persona="fresh"),
+            4.7, 445, "fresh-santal-fig-candle.png", persona="fresh"),
     Product(5, "Heritage Rectangular Watch", "Blaize Editions", "Tan", 420,
             "Swiss movement, rectangular case in brushed steel. Italian leather strap in warm tan.",
             CAT_ACCESSORIES, ["watch", "classic", "minimal", "timeless", "accessories"],
-            4.8, 203, "heritage-rectangular-watch.png", persona="fresh", badge="JUST_IN"),
+            4.8, 203, "fresh-heritage-rectangular-watch.png", persona="fresh", badge="JUST_IN"),
     Product(6, "Neroli Apothecary Bottle", "Blaize Home", "Clear", 78,
             "Cold-pressed neroli oil in a hand-blown apothecary bottle. For pulse points or a warm bath.",
             CAT_BEAUTY, ["beauty", "apothecary", "minimal", "home", "warm"],
-            4.6, 178, "neroli-apothecary-bottle.png", persona="fresh"),
+            4.6, 178, "fresh-neroli-apothecary-bottle.png", persona="fresh"),
     Product(7, "Solstice Woven Mat Set", "Blaize Home", "Natural", 145,
             "Set of four hand-woven placemats in natural jute. Each one slightly different — the mark of handcraft.",
             CAT_HOME, ["wellness", "home", "neutral", "artisanal", "slow"],
-            4.5, 92, "solstice-woven-mat-set.png", persona="fresh"),
+            4.5, 92, "fresh-solstice-woven-mat-set.png", persona="fresh"),
     Product(8, "Alba Linen Lounge Set", "Blaize Editions", "Oat", 298,
             "Two-piece lounge set in pre-washed European linen. Relaxed-fit top and drawstring trousers.",
             CAT_APPAREL, ["linen", "loungewear", "neutral", "minimal", "everyday", "slow"],
-            4.7, 156, "alba-linen-lounge-set.png", persona="fresh"),
+            4.7, 156, "fresh-alba-linen-lounge-set.png", persona="fresh"),
     Product(9, "Cloudform Studio Runner", "Blaize Active", "Stone", 165,
             "Lightweight knit runner with cloud-foam midsole. Breathable, packable, built for all-day wear.",
             CAT_FOOTWEAR, ["activewear", "neutral", "minimal", "wellness", "footwear"],
-            4.6, 234, "cloudform-studio-runner.png", persona="fresh"),
-    Product(10, "Washed Canvas Tote", "Blaize Everyday", "Cream", 68,
-            "Washed canvas tote with leather handle straps. Roomy, lightweight, universally appealing.",
-            CAT_ACCESSORIES, ["canvas", "everyday", "neutral", "accessories", "minimal"],
-            4.5, 310, "fresh-linen-tote-bag.png", persona="fresh"),
+            4.6, 234, "fresh-cloudform-studio-runner.png", persona="fresh"),
 ]
 
 MARCO_PRODUCTS: List[Product] = [
@@ -205,10 +202,6 @@ MARCO_PRODUCTS: List[Product] = [
             "Woven straw panama with black grosgrain ribbon. UPF 50+. Rolls without creasing.",
             CAT_ACCESSORIES, ["accessories", "travel", "resort", "classic", "warm"],
             4.8, 98, "marco-straw-panama-hat.png", persona="marco", badge="JUST_IN"),
-    Product(20, "Merino Travel Socks", "Blaize Active", "Multi", 38,
-            "Three-pack of merino wool crew socks in charcoal, oat, and olive. Temperature-regulating, odor-resistant.",
-            CAT_APPAREL, ["merino", "travel", "everyday", "minimal", "accessories"],
-            4.6, 534, "marco-merino-travel-socks.png", persona="marco"),
 ]
 
 ANNA_PRODUCTS: List[Product] = [
@@ -248,10 +241,6 @@ ANNA_PRODUCTS: List[Product] = [
             "Hammered brass photo frame, 5x7. Stands or hangs. The kind of frame that makes a photo feel kept.",
             CAT_HOME, ["home", "gift", "classic", "warm", "accessories"],
             4.7, 156, "anna-brass-photo-frame.png", persona="anna"),
-    Product(30, "Gift Wrapping Kit", "Blaize Gifting", "Blush", 28,
-            "Cream tissue paper, blush satin ribbon, kraft gift tags with cotton string. Enough for three gifts.",
-            CAT_GIFTS, ["gift", "minimal", "artisanal", "accessories"],
-            4.5, 478, "anna-gift-wrapping-kit.png", persona="anna"),
 ]
 
 THEO_PRODUCTS: List[Product] = [
@@ -291,10 +280,6 @@ THEO_PRODUCTS: List[Product] = [
             "Hand-woven linen table runner in natural undyed flax. The kind of piece that makes a Tuesday feel intentional.",
             CAT_HOME, ["linen", "home", "slow", "neutral", "artisanal"],
             4.7, 178, "theo-linen-table-runner.png", persona="theo", badge="JUST_IN"),
-    Product(40, "Charcoal Soap Bar", "Blaize Apothecary", "Black", 24,
-            "Japanese-style activated charcoal soap. Handmade in small batches. Detoxifying, grounding, minimal.",
-            CAT_BEAUTY, ["beauty", "slow", "artisanal", "minimal", "home"],
-            4.5, 412, "theo-charcoal-soap-bar.png", persona="theo"),
 ]
 
 ALL_PRODUCTS = FRESH_PRODUCTS + MARCO_PRODUCTS + ANNA_PRODUCTS + THEO_PRODUCTS
@@ -383,9 +368,9 @@ def seed_database(products: List[Product]) -> None:
         with conn.cursor() as cur:
             # Clear existing boutique products (IDs 1-40)
             cur.execute(
-                'DELETE FROM blaize_bazaar.product_catalog WHERE "productId"::int BETWEEN 1 AND 40'
+                'DELETE FROM blaize_bazaar.product_catalog WHERE "productId"::int BETWEEN 1 AND 39'
             )
-            logger.info("Cleared existing boutique products (IDs 1-40)")
+            logger.info("Cleared existing boutique products (IDs 1-39)")
 
             for p in products:
                 embedding_str = json.dumps(p.embedding) if p.embedding else None
@@ -442,8 +427,9 @@ def print_summary(products: List[Product]) -> None:
     for p in products:
         personas.setdefault(p.persona, []).append(p)
 
+    total = len(products)
     print("\n" + "=" * 72)
-    print("BOUTIQUE CATALOG — 40 PRODUCTS")
+    print(f"BOUTIQUE CATALOG — {total} PRODUCTS (9 per persona)")
     print("=" * 72)
 
     for persona_id in ["fresh", "marco", "anna", "theo"]:
