@@ -24,7 +24,7 @@ export default function ProductArtifactCard({
 }: ProductArtifactCardProps) {
   const hasImage =
     product.image &&
-    (product.image.startsWith('http') || product.image.startsWith('data:'))
+    (product.image.startsWith('http') || product.image.startsWith('data:') || product.image.startsWith('/'))
 
   const displayName = (() => {
     const name = product.name || ''
