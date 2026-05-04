@@ -15,6 +15,7 @@
 import React, { useEffect, useState } from 'react';
 import { EditorialTitle, Eyebrow } from '../components';
 import { usePersona, type PersonaListItem } from '../../contexts/PersonaContext';
+import { getPersonaPhoto } from '../../data/personaPhotos';
 
 /* -----------------------------------------------------------------------
  * Persona card
@@ -83,32 +84,50 @@ const PersonaCard: React.FC<PersonaCardProps> = ({
           gap: '14px',
         }}
       >
-        {/* Avatar circle */}
-        <div
-          style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '50%',
-            background: persona.avatar_color === 'transparent'
-              ? 'var(--at-cream-2)'
-              : persona.avatar_color,
-            border: persona.avatar_color === 'transparent'
-              ? '1.5px dashed var(--at-rule-3)'
-              : 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: 'var(--at-sans)',
-            fontSize: '16px',
-            fontWeight: 600,
-            color: persona.avatar_color === 'transparent'
-              ? 'var(--at-ink-1)'
-              : '#fff',
-            flexShrink: 0,
-          }}
-        >
-          {persona.avatar_initial}
-        </div>
+        {/* Avatar — photo when available, monogram fallback */}
+        {(() => {
+          const photoUrl = getPersonaPhoto(persona.id);
+          return photoUrl ? (
+            <img
+              src={photoUrl}
+              alt={persona.display_name}
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                flexShrink: 0,
+                border: '2px solid var(--at-card-border)',
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                background: persona.avatar_color === 'transparent'
+                  ? 'var(--at-cream-2)'
+                  : persona.avatar_color,
+                border: persona.avatar_color === 'transparent'
+                  ? '1.5px dashed var(--at-rule-3)'
+                  : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: 'var(--at-sans)',
+                fontSize: '18px',
+                fontWeight: 600,
+                color: persona.avatar_color === 'transparent'
+                  ? 'var(--at-ink-1)'
+                  : '#fff',
+                flexShrink: 0,
+              }}
+            >
+              {persona.avatar_initial}
+            </div>
+          );
+        })()}
 
         {/* Name + role */}
         <div style={{ flex: 1, minWidth: 0 }}>
