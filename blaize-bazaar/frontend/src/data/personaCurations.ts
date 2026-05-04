@@ -343,10 +343,10 @@ export function heroPillsForPersona(
 // ---------------------------------------------------------------------
 
 export const PERSONA_FEATURED_PRODUCT_ID: Record<string, number> = {
-  marco: 1,   // Italian Linen Camp Shirt — Marco's signature piece
-  anna: 3,    // Signature Straw Tote — gift-forward, wrap-ready
-  theo: 8,    // Ceramic Tumbler Set — slow ritual centerpiece
-  fresh: 7,   // Cashmere-Blend Cardigan — a cozy entry point
+  marco: 2,   // Pellier Linen Shirt — Marco's signature linen piece
+  anna: 4,    // Santal & Fig Candle — gift-forward, wrap-ready
+  theo: 7,    // Solstice Woven Mat Set — slow ritual centerpiece
+  fresh: 3,   // Nocturne Leather Weekender — editorial hero for new visitors
 }
 
 export function featuredProductIdForPersona(
