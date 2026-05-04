@@ -8,7 +8,7 @@ from .recommendation_agent import recommendation
 from .pricing_agent import pricing
 from .customer_support_agent import support
 from .search_agent import search
-from storefront_copy import ORCHESTRATOR_SYSTEM_PROMPT
+from boutique_copy import ORCHESTRATOR_SYSTEM_PROMPT
 
 
 # === CHALLENGE 4: Multi-Agent Orchestrator — START ===
@@ -16,7 +16,7 @@ from storefront_copy import ORCHESTRATOR_SYSTEM_PROMPT
 # one specialist using the Strands "Agents as Tools" pattern. Uses Haiku
 # 4.5 at temperature 0.0 for deterministic routing. Priority order
 # (pricing > inventory > support > search > recommendation) is enforced
-# by the system prompt in storefront_copy.ORCHESTRATOR_SYSTEM_PROMPT.
+# by the system prompt in boutique_copy.ORCHESTRATOR_SYSTEM_PROMPT.
 #
 # ⏩ SHORT ON TIME? Run:
 #    cp solutions/module2/agents/orchestrator.py blaize-bazaar/backend/agents/orchestrator.py

@@ -33,7 +33,7 @@ export const NAV = {
 // Global surface toggle (Header). Replaces the standalone Workshop
 // link with a segmented control that flips between the shopper-facing
 // storefront and the operator-facing /workshop surface. Labels
-// deliberately pair boutique register (Storefront) with editorial /
+// deliberately pair boutique register (Boutique) with editorial /
 // atelier register (Atelier) instead of operator jargon.
 export const SURFACE_TOGGLE = {
   ARIA_LABEL: "Switch surface",
@@ -190,7 +190,7 @@ export const CURATED_BANNER = {
 // Live status strip (Requirement 1.5.1)
 export const LIVE_STATUS =
   "Live inventory \u00b7 refreshed daily \u00b7 curated by hand";
-// Storefront policy phrases rendered as plain labels on the right side of
+// Boutique policy phrases rendered as plain labels on the right side of
 // the live status strip (mock blaize-bazaar_5.html parity).
 export const SHIPPING = "Free shipping over $150";
 export const RETURNS = "Ships within 1 to 2 days";

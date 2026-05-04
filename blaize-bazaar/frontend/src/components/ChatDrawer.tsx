@@ -30,8 +30,8 @@ import {
   useAgentChat,
   type AgentChatMessage,
 } from '../hooks/useAgentChat'
-import StorefrontChatBody from './StorefrontChatBody'
-import StorefrontWelcome from './StorefrontWelcome'
+import BoutiqueChatBody from './BoutiqueChatBody'
+import BoutiqueWelcome from './BoutiqueWelcome'
 import '../styles/chat-drawer.css'
 
 // ---------------------------------------------------------------------------
@@ -316,13 +316,13 @@ export default function ChatDrawer() {
             {/* Body */}
             <div className="cd-body" ref={scrollAreaRef}>
               {!hasUserMessages && (
-                <StorefrontWelcome
+                <BoutiqueWelcome
                   persona={persona}
                   onSend={(text) => void sendMessage(text)}
                 />
               )}
               {hasUserMessages && (
-                <StorefrontChatBody
+                <BoutiqueChatBody
                   messages={messages}
                   sendMessage={sendMessage}
                   addToCart={addToCart}

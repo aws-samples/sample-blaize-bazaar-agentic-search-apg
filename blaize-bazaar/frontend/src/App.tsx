@@ -31,7 +31,7 @@ import ConciergeModal from './components/ConciergeModal'
 import ChatDrawer from './components/ChatDrawer'
 import ComparisonHost from './components/ComparisonHost'
 import SignInPage from './components/SignInPage'
-import StorefrontPage from './pages/StorefrontPage'
+import BoutiquePage from './pages/BoutiquePage'
 // WorkshopPage removed — Atelier is now served by AtelierFrame
 import AtelierFrame from './atelier/shell/AtelierFrame'
 import SessionsList from './atelier/surfaces/observe/SessionsList'
@@ -179,14 +179,14 @@ function App() {
               <ComparisonHost />
               <Routes>
                 {/*
-                 *   /           → StorefrontPage (storefront shell)
+                 *   /           → BoutiquePage (storefront shell)
                  *   /atelier    → WorkshopPage (instrumentation, gated by AuthGate)
                  *   /inspector  → InspectorPage (frozen session-scoped trace view)
                  *   /storyboard → StoryboardPage
                  *   /discover   → DiscoverPage
                  *   *           → redirect to /
                  */}
-                <Route path="/" element={<StorefrontPage />} />
+                <Route path="/" element={<BoutiquePage />} />
                 {/* Atelier Observatory — nested routes under AtelierFrame shell.
                     The frame renders the 240px sidebar + canvas grid with
                     React Router <Outlet /> for surface rendering. */}

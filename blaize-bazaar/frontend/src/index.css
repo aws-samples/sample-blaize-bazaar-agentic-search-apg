@@ -10,7 +10,7 @@
   }
 
   /* ========================================================================
-   * Storefront palette (storefront.md). Mirrored here for keyframes and
+   * Boutique palette (storefront.md). Mirrored here for keyframes and
    * non-Tailwind consumers; Tailwind tokens of the same name live in
    * tailwind.config.js.
    * ======================================================================== */
@@ -486,7 +486,7 @@
   .animate-dash-flow { animation: dashFlow 1s linear infinite; }
 
   /* ------------------------------------------------------------------
-   * Storefront keyframes (mock blaize-bazaar_5.html parity).
+   * Boutique keyframes (mock blaize-bazaar_5.html parity).
    * Mirrors the names, durations, and easings from the reference mock
    * so React components can opt in via utility classes.
    * ------------------------------------------------------------------ */

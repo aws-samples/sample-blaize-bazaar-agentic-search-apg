@@ -5,7 +5,7 @@
  * Deliberately not the storefront's ProductCard: no hover, no add-to-
  * cart, no wishlist, no swatches. This surface is teaching; the
  * agentic demo needs product identity at a glance, not commerce
- * affordances. Storefront for buying; Atelier for watching.
+ * affordances. Boutique for buying; Atelier for watching.
  *
  * Visual: white card, 1px ink-at-14% border, 8px radius. A solid
  * color block across the top (78px) stands in for the product image

@@ -28,7 +28,7 @@ from services.agent_tools import (
 )
 from skills import inject_skills
 from services.persona_context import inject_persona_preamble
-from storefront_copy import RECOMMENDATION_SYSTEM_PROMPT
+from boutique_copy import RECOMMENDATION_SYSTEM_PROMPT
 
 
 def _ensure_products_in_output(text: str, tool_results: list) -> str:

@@ -91,7 +91,7 @@ export interface AgentChatMessage {
   agentStatus?: 'thinking' | 'streaming' | 'complete'
   agentExecution?: AgentExecution
   /** Skill routing decision for this turn. Set when the backend emits
-   * a ``skill_routing`` SSE event. Storefront uses ``loaded_skills`` to
+   * a ``skill_routing`` SSE event. Boutique uses ``loaded_skills`` to
    * render the italic burgundy attribution line; Atelier renders the
    * full decision in its live activation log. */
   skillRouting?: SkillRouting
@@ -642,7 +642,7 @@ export function useAgentChat(
               }
             }
           },
-          // Storefront mode always gets full chat access regardless of
+          // Boutique mode always gets full chat access regardless of
           // which workshop module the participant has completed.
           mode === 'storefront' ? undefined : workshopMode,
           guardrailsEnabled,

@@ -30,7 +30,7 @@ const single = (id: number): Intent[] => {
 }
 
 const meta: Meta<typeof HeroStage> = {
-  title: 'Storefront/HeroStage',
+  title: 'Boutique/HeroStage',
   component: HeroStage,
   parameters: {
     // Hero stage is tall; full-screen layout matches production chrome.

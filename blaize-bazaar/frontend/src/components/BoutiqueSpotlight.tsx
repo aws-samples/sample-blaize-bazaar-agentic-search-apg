@@ -1,5 +1,5 @@
 /**
- * StorefrontSpotlight — guided first-visit walkthrough for the boutique.
+ * BoutiqueSpotlight — guided first-visit walkthrough for the boutique.
  *
  * A three-step spotlight that introduces visitors to Blaize Bazaar: the
  * editorial storefront, the Ask Blaize concierge, and the Atelier toggle
@@ -87,7 +87,7 @@ function markSpotlightSeen(): void {
   }
 }
 
-export default function StorefrontSpotlight() {
+export default function BoutiqueSpotlight() {
   // Initialize from sessionStorage so the overlay stays dismissed
   // across the lifetime of a tab.
   const [visible, setVisible] = useState(() => !hasSeenSpotlight())

@@ -316,7 +316,7 @@ export default function ConciergeModal() {
   const isWorkshopRoute = location.pathname.startsWith('/atelier')
 
   // After the storefront hero-drawer redesign, the ConciergeModal only
-  // renders on atelier routes. Storefront chat is handled by ChatDrawer.
+  // renders on atelier routes. Boutique chat is handled by ChatDrawer.
   const mode: 'storefront' | 'atelier' = 'atelier'
 
   // Time-of-day greeting for the personalized storefront welcome. Boundaries
@@ -406,7 +406,7 @@ export default function ConciergeModal() {
   }
 
   // Gate: ConciergeModal only renders on atelier routes after the
-  // storefront hero-drawer redesign. Storefront chat is ChatDrawer.
+  // storefront hero-drawer redesign. Boutique chat is ChatDrawer.
   if (!isWorkshopRoute) return null
 
   return (
@@ -437,7 +437,7 @@ export default function ConciergeModal() {
           >
               {/* ============================================================
                * ATELIER MODE — the only mode ConciergeModal renders now.
-               * Storefront chat is handled by ChatDrawer.
+               * Boutique chat is handled by ChatDrawer.
                * ============================================================ */}
               <>
             {/* Header */}
@@ -542,7 +542,7 @@ export default function ConciergeModal() {
             <div className="flex-1 overflow-y-auto px-5 py-5 flex flex-col gap-4">
               {/* Messages — atelier mode only renders the instrumented
                   conversation. Welcome state is handled by the storefront
-                  branch via StorefrontChat. */}
+                  branch via BoutiqueChat. */}
               <AnimatePresence initial={false}>
                 {messages.map((message, index) => (
                   <motion.div
@@ -579,7 +579,7 @@ export default function ConciergeModal() {
                             </div>
                           ) : message.role === 'assistant' ? (
                             // Streaming cursor intentionally removed —
-                            // see StorefrontChatBody for rationale. The
+                            // see BoutiqueChatBody for rationale. The
                             // prose growing in place is the indicator;
                             // a blinking caret on top fights the
                             // Claude-desktop feel we're matching.

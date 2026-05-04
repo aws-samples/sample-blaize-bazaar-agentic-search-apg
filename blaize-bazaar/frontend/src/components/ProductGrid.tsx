@@ -34,7 +34,7 @@
  * for fluid column adjustment. Uses new design tokens for container and
  * background.
  */
-import type { StorefrontProduct } from '../services/types'
+import type { BoutiqueProduct } from '../services/types'
 import { SHOWCASE_PRODUCTS } from '../data/showcaseProducts'
 import ProductCard from './ProductCard'
 
@@ -44,9 +44,9 @@ interface ProductGridProps {
    * `storefront.md`. When the personalized endpoint lands, the parent
    * passes in the server-sorted list instead.
    */
-  products?: StorefrontProduct[]
+  products?: BoutiqueProduct[]
   /** Called when a card's `Add to bag` button is clicked. */
-  onAddToBag?: (product: StorefrontProduct) => void
+  onAddToBag?: (product: BoutiqueProduct) => void
 }
 
 export default function ProductGrid({

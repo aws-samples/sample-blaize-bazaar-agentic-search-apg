@@ -415,7 +415,7 @@ const RelatedCard: React.FC = () => (
         >
           Three patterns:{' '}
           <em style={{ color: 'var(--at-ink-1)', fontStyle: 'italic' }}>Dispatcher</em> (active
-          in storefront),{' '}
+          in the boutique),{' '}
           <em style={{ color: 'var(--at-ink-1)', fontStyle: 'italic' }}>Agents-as-Tools</em>,{' '}
           <em style={{ color: 'var(--at-ink-1)', fontStyle: 'italic' }}>Graph</em>. The first
           runs without an orchestrator; the other two use a Haiku 4.5 router. None of the five
@@ -608,7 +608,7 @@ const Agents: React.FC = () => {
       <EditorialTitle
         eyebrow="Understand · Agents · five peers · all Opus 4.6 · 0.2"
         title="The cast of five."
-        summary="Five peer specialists. None is a lead — routing happens at a separate layer (currently Dispatcher in storefront). Three are shipped reference; two are yours to wire in Module 2."
+        summary="Five peer specialists. None is a lead — routing happens at a separate layer (currently Dispatcher in the boutique). Three are shipped reference; two are yours to wire in Module 2."
       />
 
       {loading && <LoadingState />}

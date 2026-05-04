@@ -15,7 +15,7 @@ import type { Meta, StoryObj } from '@storybook/react'
 import DiscoverPage from '../pages/DiscoverPage'
 
 const meta: Meta<typeof DiscoverPage> = {
-  title: 'Storefront/DiscoverPage',
+  title: 'Boutique/DiscoverPage',
   component: DiscoverPage,
   parameters: {
     layout: 'fullscreen',

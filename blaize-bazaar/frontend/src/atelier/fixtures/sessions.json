@@ -2,7 +2,7 @@
   {
     "id": "7F5A",
     "personaId": "marco",
-    "openingQuery": "I'm looking for something linen for warm evenings out",
+    "openingQuery": "A linen shirt for warm evenings out",
     "elapsedMs": 4230,
     "agentCount": 3,
     "routingPattern": "Dispatcher",
@@ -12,7 +12,7 @@
   {
     "id": "A3C1",
     "personaId": "marco",
-    "openingQuery": "What linen layers pack well for coastal travel?",
+    "openingQuery": "What goes well with the camp shirt?",
     "elapsedMs": 3180,
     "agentCount": 2,
     "routingPattern": "Dispatcher",

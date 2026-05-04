@@ -1,5 +1,5 @@
 /**
- * SurfaceToggle tests — global Storefront ↔ Atelier segmented control.
+ * SurfaceToggle tests — global Boutique ↔ Atelier segmented control.
  *
  * Covers:
  *   - Both segments render with the correct labels + testids.
@@ -42,7 +42,7 @@ describe('SurfaceToggle — render', () => {
 })
 
 describe('SurfaceToggle — active state reflects route', () => {
-  it('marks Storefront active on /', () => {
+  it('marks Boutique active on /', () => {
     renderAt('/')
     expect(
       screen.getByTestId('surface-toggle-storefront').getAttribute('data-active'),

@@ -18,7 +18,7 @@ import type { Meta, StoryObj } from '@storybook/react'
 import StoryboardPage from '../pages/StoryboardPage'
 
 const meta: Meta<typeof StoryboardPage> = {
-  title: 'Storefront/StoryboardPage',
+  title: 'Boutique/StoryboardPage',
   component: StoryboardPage,
   parameters: {
     layout: 'fullscreen',

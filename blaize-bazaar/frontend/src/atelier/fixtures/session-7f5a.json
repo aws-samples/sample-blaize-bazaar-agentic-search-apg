@@ -1,7 +1,7 @@
 {
   "id": "7F5A",
   "personaId": "marco",
-  "openingQuery": "I'm looking for something linen for warm evenings out",
+  "openingQuery": "A linen shirt for warm evenings out",
   "elapsedMs": 4230,
   "agentCount": 3,
   "routingPattern": "Dispatcher",
@@ -10,7 +10,7 @@
   "chat": [
     {
       "role": "user",
-      "content": "I'm looking for something linen for warm evenings out",
+      "content": "A linen shirt for warm evenings out",
       "timestamp": "2025-01-15T19:42:00Z"
     },
     {
@@ -72,27 +72,27 @@
     },
     {
       "role": "user",
-      "content": "Tell me more about the sundress — is it good for outdoor dinners?",
+      "content": "What goes well with the camp shirt?",
       "timestamp": "2025-01-15T19:42:45Z"
     },
     {
       "role": "assistant",
-      "content": "The Italian Linen Camp Shirt is one of our most versatile evening pieces. The golden ochre color catches the light beautifully at golden hour, and the washed linen fabric breathes well even on the warmest nights. It's perfect for outdoor dinners — relaxed enough for a terrace but with enough presence for a candlelit table.",
+      "content": "The Camp Shirt pairs beautifully with a few pieces from the collection. The Linen Drawstring Trousers in oat keep the same tonal register — relaxed, warm, breathable. For cooler evenings, the Washed Cotton Overshirt layers over it without adding bulk. And the Leather Weekender ties the whole travel wardrobe together.",
       "timestamp": "2025-01-15T19:42:48Z",
       "toolCalls": [
         {
-          "toolName": "find_pieces",
-          "description": "Detailed lookup for Italian Linen Camp Shirt",
-          "durationMs": 120,
-          "resultSummary": "Product details retrieved with 4.8 rating, 23 reviews"
+          "toolName": "style_match",
+          "description": "Product-to-product pgvector similarity from Italian Linen Camp Shirt",
+          "durationMs": 210,
+          "resultSummary": "3 complementary pieces found with cosine similarity > 0.60"
         }
       ],
       "confidence": {
         "percentage": 92,
-        "reasoning": "Direct product inquiry with strong match to stated occasion (outdoor dinners) and existing preference profile."
+        "reasoning": "Complementary pairing query — style_match found high-similarity companions from Marco's travel-linen cluster."
       },
       "memoryPills": [
-        { "tier": "stm", "content": "Interested in sundress for outdoor dining" }
+        { "tier": "stm", "content": "Looking for pieces to pair with the Camp Shirt" }
       ]
     }
   ],

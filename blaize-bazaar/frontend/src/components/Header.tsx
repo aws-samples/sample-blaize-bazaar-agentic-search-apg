@@ -4,7 +4,7 @@
  * Centered "Blaize Bazaar" wordmark with circular B logo, four left nav
  * items (Shop, Stories, Ask Blaize, About), and right cluster: search
  * IconButton, persona Avatar dropdown, wishlist heart IconButton, bag
- * IconButton with count badge, and the Storefront ↔ Atelier surface toggle.
+ * IconButton with count badge, and the Boutique ↔ Atelier surface toggle.
  *
  * The persona Avatar dropdown replaces the old PersonaPill + PersonaModal
  * pattern. It calls `switchPersona` and `signOut` directly from `usePersona()`.

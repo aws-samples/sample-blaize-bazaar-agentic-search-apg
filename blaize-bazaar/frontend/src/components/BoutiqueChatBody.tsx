@@ -1,12 +1,12 @@
 /**
- * StorefrontChatBody — message rendering for the storefront chat.
+ * BoutiqueChatBody — message rendering for the storefront chat.
  *
  * Body-only component: renders user bubbles, agent blocks, product
  * cards, and follow-up chips. No header, no footer, no input — those
  * live in the parent surface (ChatDrawer for storefront, ConciergeModal
  * for atelier).
  *
- * Extracted from StorefrontChat.tsx so both the drawer and the legacy
+ * Extracted from BoutiqueChat.tsx so both the drawer and the legacy
  * modal can consume the same editorial rendering without duplication.
  * All styling comes from storefront-chat.css (the ``ec-*`` classes).
  */
@@ -17,13 +17,13 @@ import type { PersonaSnapshot } from '../contexts/PersonaContext'
 import type { CartItemOrigin } from '../contexts/CartContext'
 import MarkdownMessage from './MarkdownMessage'
 import ProductArtifactCard from './ProductArtifactCard'
-import '../styles/storefront-chat.css'
+import '../styles/boutique-chat.css'
 
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
-interface StorefrontChatBodyProps {
+interface BoutiqueChatBodyProps {
   messages: AgentChatMessage[]
   sendMessage: (text?: string) => Promise<void>
   addToCart: (item: {
@@ -37,7 +37,7 @@ interface StorefrontChatBodyProps {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers (shared with StorefrontChat — kept here as the canonical copy)
+// Helpers (shared with BoutiqueChat — kept here as the canonical copy)
 // ---------------------------------------------------------------------------
 
 function relativeTime(ts: Date): string {
@@ -92,26 +92,30 @@ function formatAttribution(loadedSkills: string[]): string {
   return `Drawing from ${head}, and the ${names[names.length - 1]}`
 }
 
+// Follow-up chips align with the canonical 3-turn persona journeys:
+//   Turn 1 fires from the hero pill / BoutiqueWelcome pick.
+//   Turn 2 + Turn 3 appear as follow-up chips after the first response.
+// This keeps the Boutique ↔ Atelier demo narrative coherent.
 const FOLLOWUPS_BY_PERSONA: Record<string, string[]> = {
   marco: [
-    'what did I buy last time?',
-    'something similar to what I bought last time',
-    'pieces that travel well for Lisbon',
+    'what goes well with the camp shirt?',              // Turn 2
+    'compare the camp shirt and the overshirt',          // Turn 3
+    'lightweight layers that pack flat',
   ],
   anna: [
-    'a thoughtful gift for my mother',
-    'something similar to what I bought last time',
-    'milestone pieces under $200',
+    'something beautiful under $100',                    // Turn 2
+    'help me pair a candle with something else',          // Turn 3
+    'wrap-ready gifts with no extra effort',
   ],
   theo: [
-    'what did I buy last time?',
-    'stoneware that wears in well',
-    'linen throws for a small room',
+    'what goes well with the pour-over set?',             // Turn 2
+    'linen pieces that soften over seasons',              // Turn 3
+    'something for the home, not the wardrobe',
   ],
   fresh: [
-    'something for long summer walks',
-    "what's trending tonight",
-    'pieces that travel well',
+    'a cozy layer for cooler nights',
+    'pieces for slow Sunday mornings',
+    'something to wear for warm evenings out',
   ],
 }
 
@@ -124,12 +128,12 @@ function followupsForPersona(persona?: PersonaSnapshot | null): string[] {
 // Body component
 // ---------------------------------------------------------------------------
 
-export default function StorefrontChatBody({
+export default function BoutiqueChatBody({
   messages,
   sendMessage,
   addToCart,
   persona,
-}: StorefrontChatBodyProps) {
+}: BoutiqueChatBodyProps) {
   const lastAssistantIndex = (() => {
     for (let i = messages.length - 1; i >= 0; i--) {
       if (messages[i].role === 'assistant') return i
@@ -198,7 +202,7 @@ function AgentMessage({
   isLastAssistantMessage,
 }: {
   message: AgentChatMessage
-  addToCart: StorefrontChatBodyProps['addToCart']
+  addToCart: BoutiqueChatBodyProps['addToCart']
   onFollowUp: (text: string) => void
   persona: PersonaSnapshot | null
   isLastAssistantMessage: boolean
@@ -251,7 +255,7 @@ function AgentMessage({
       {/* Thinking block — collapsible with shimmer. In storefront mode
           agentExecution is typically undefined so hasReasoning is false
           and this block never renders. Kept for structural parity with
-          StorefrontChat.tsx so the rendering path is byte-identical. */}
+          BoutiqueChat.tsx so the rendering path is byte-identical. */}
       {hasReasoning && (
         <div className={`ec-thinking ${thinkingOpen ? 'ec-thinking-open' : ''}`}>
           <button

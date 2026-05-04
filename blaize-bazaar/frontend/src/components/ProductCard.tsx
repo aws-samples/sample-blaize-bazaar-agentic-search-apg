@@ -35,21 +35,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { Star } from 'lucide-react'
 
-import type { StorefrontBadge, StorefrontProduct } from '../services/types'
+import type { BoutiqueBadge, BoutiqueProduct } from '../services/types'
 import ReasoningChip from './ReasoningChip'
 
-const BADGE_LABEL: Record<StorefrontBadge, string> = {
+const BADGE_LABEL: Record<BoutiqueBadge, string> = {
   EDITORS_PICK: "EDITOR'S PICK",
   BESTSELLER: 'BESTSELLER',
   JUST_IN: 'JUST IN',
 }
 
 interface ProductCardProps {
-  product: StorefrontProduct
+  product: BoutiqueProduct
   /** Row-wise index (0..2). Drives per-column stagger (`index * 220ms`). */
   index: number
   /** Optional `Add to bag` handler. Defaults to a no-op. */
-  onAddToBag?: (product: StorefrontProduct) => void
+  onAddToBag?: (product: BoutiqueProduct) => void
 }
 
 // Per-column stagger in ms. Matches storefront.md — columns within a row play

@@ -5,7 +5,7 @@
  * the Atelier concept, the conversation pane, and the reasoning tabs.
  * Shows once per browser session (sessionStorage gate).
  *
- * Mirrors StorefrontSpotlight in structure, animation, keyboard
+ * Mirrors BoutiqueSpotlight in structure, animation, keyboard
  * handling, and visual language — editorial roman numerals, Fraunces
  * italic headlines, warm cream card. Only the content, the final-step
  * CTA copy, and the sessionStorage key differ.

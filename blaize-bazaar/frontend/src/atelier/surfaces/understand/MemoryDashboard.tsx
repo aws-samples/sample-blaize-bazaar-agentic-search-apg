@@ -813,7 +813,7 @@ const EmptyState: React.FC = () => (
         marginTop: '8px',
       }}
     >
-      Start a conversation in the storefront to build short-term memory, or check that the
+      Start a conversation in the boutique to build short-term memory, or check that the
       memory fixture data is available.
     </p>
   </div>

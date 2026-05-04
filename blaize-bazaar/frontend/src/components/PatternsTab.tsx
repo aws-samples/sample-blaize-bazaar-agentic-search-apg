@@ -12,7 +12,7 @@
  *   - "Shape" diagram line (ASCII-style)
  *   - LLM-call-count badge
  *   - Short bullet list of when-to-use / when-not-to
- *   - Plus the "Why Dispatcher for Storefront?" monograph at the
+ *   - Plus the "Why Dispatcher for the Boutique?" monograph at the
  *     bottom — the one question the workshop audience always asks.
  *
  * The tab renders inside WorkshopPage's main zone; it has no
@@ -285,7 +285,7 @@ export default function PatternsTab() {
         ))}
       </div>
 
-      {/* Why Dispatcher for Storefront — monograph */}
+      {/* Why Dispatcher for the Boutique — monograph */}
       <article
         data-testid="pattern-rationale-dispatcher"
         style={{

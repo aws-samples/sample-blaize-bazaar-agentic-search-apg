@@ -2,7 +2,7 @@
 
 This module is the single source of truth for every customer-facing string
 that the backend authors. Error envelopes, validation messages, and any
-server-rendered strings that surface to the storefront live here.
+server-rendered strings that surface to the boutique live here.
 
 Specialist system prompts (RECOMMENDATION_SYSTEM_PROMPT, and later the
 orchestrator prompt) also live here so a single file review catches copy
@@ -11,10 +11,10 @@ and 2.4). The compliance scanner applies the same forbidden-word and
 no-emoji rules to these prompts; the prompts are phrased with "specialist"
 and "Blaize" instead of the forbidden terms.
 
-All strings in this module must satisfy the storefront copy rules:
+All strings in this module must satisfy the boutique copy rules:
   - no emoji
   - no em dashes (use regular hyphens)
-  - none of the forbidden words listed in the storefront conventions
+  - none of the forbidden words listed in the boutique conventions
 
 The companion scanner lives at tests/test_copy_compliance.py.
 """

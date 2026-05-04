@@ -1,6 +1,6 @@
-"""``/api/storefront/*`` — concierge briefing + pulse bar.
+"""``/api/storefront/*`` — boutique concierge briefing + pulse bar.
 
-Two small GET endpoints that power the storefront's "premium agentic"
+Two small GET endpoints that power the boutique's "premium agentic"
 chrome (see the pre-Week-3 enhancement plan):
 
 - ``GET /api/storefront/briefing`` — shift-handover greeting for the
@@ -32,7 +32,7 @@ from services.embeddings import get_cache_stats
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/storefront", tags=["storefront"])
+router = APIRouter(prefix="/api/storefront", tags=["boutique"])
 
 
 # ---------------------------------------------------------------------------
@@ -79,7 +79,7 @@ class PulseResponse(BaseModel):
 
 
 class CatalogStatsResponse(BaseModel):
-    """Lightweight catalog-size payload for the storefront welcome card.
+    """Lightweight catalog-size payload for the boutique welcome card.
 
     Exposes only the three signals the concierge briefing cites —
     product count, category count, and the current standout pick — so
@@ -343,7 +343,7 @@ async def catalog_stats() -> CatalogStatsResponse:
     """Real-time catalog size signals for the concierge welcome card.
 
     No auth required. Always 200 — DB errors degrade to zeros so the
-    storefront welcome never breaks on a briefing miss. Cached briefly
+    boutique welcome never breaks on a briefing miss. Cached briefly
     at the HTTP layer via ``Cache-Control`` since the catalog size
     changes on the order of minutes, not seconds.
     """

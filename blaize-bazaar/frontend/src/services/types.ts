@@ -90,15 +90,15 @@ export interface ApiError {
 // `/api/search` endpoint (snake_case plus camelCase, matching the backend's
 // historical column names).
 //
-// The storefront types below are the editorial façade consumed by the new
+// The boutique types below are the editorial façade consumed by the new
 // home page and the personalization endpoints (`/api/products?personalized=…`
 // and the personalized `SearchResponse` shape from design.md). They are named
-// with a `Storefront` prefix so they never collide with the legacy types.
+// with a `Boutique` prefix so they never collide with the legacy types.
 // The legacy `/api/search` endpoint keeps its current `SearchResponse` shape;
-// personalization endpoints use `StorefrontSearchResponse`.
+// personalization endpoints use `BoutiqueSearchResponse`.
 
-import type { Intent as StorefrontIntent } from '../copy'
-export type { StorefrontIntent }
+import type { Intent as BoutiqueIntent } from '../copy'
+export type { BoutiqueIntent }
 
 export type ReasoningStyle = 'picked' | 'matched' | 'pricing' | 'context'
 
@@ -108,7 +108,7 @@ export interface ReasoningChip {
   urgentClause?: string
 }
 
-export type StorefrontCategory =
+export type BoutiqueCategory =
   | 'Linen'
   | 'Dresses'
   | 'Accessories'
@@ -123,9 +123,9 @@ export type StorefrontCategory =
   | 'Beauty'
   | 'Wellness'
 
-export type StorefrontBadge = 'EDITORS_PICK' | 'BESTSELLER' | 'JUST_IN'
+export type BoutiqueBadge = 'EDITORS_PICK' | 'BESTSELLER' | 'JUST_IN'
 
-export interface StorefrontProduct {
+export interface BoutiqueProduct {
   id: number
   brand: string
   name: string
@@ -133,9 +133,9 @@ export interface StorefrontProduct {
   price: number
   rating: number
   reviewCount: number
-  category: StorefrontCategory
+  category: BoutiqueCategory
   imageUrl: string
-  badge?: StorefrontBadge
+  badge?: BoutiqueBadge
   tags: string[]
   reasoning?: ReasoningChip
   /** Optional CSS object-position override for the card image crop. */
@@ -178,11 +178,11 @@ export interface Preferences {
   categories: CategoryTag[]
 }
 
-export interface StorefrontSearchResponse {
-  products: StorefrontProduct[]
+export interface BoutiqueSearchResponse {
+  products: BoutiqueProduct[]
   queryEmbeddingMs: number
   searchMs: number
   totalMs: number
 }
 
-export type StorefrontSearchResult = StorefrontSearchResponse
+export type BoutiqueSearchResult = BoutiqueSearchResponse

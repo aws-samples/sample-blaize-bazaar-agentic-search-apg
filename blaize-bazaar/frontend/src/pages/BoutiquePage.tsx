@@ -1,5 +1,5 @@
 /**
- * StorefrontPage — the `/` route composition (Boutique redesign).
+ * BoutiquePage — the `/` route composition (Boutique redesign).
  *
  * Two-act layout:
  *
@@ -63,7 +63,7 @@ const NAV_ROUTES: Record<NavItem, string> = {
 
 // Featured product + grid are now persona-aware (computed inside component)
 
-export default function StorefrontPage() {
+export default function BoutiquePage() {
   const { prefsVersion } = useAuth()
   const { openModal, setChatSurface } = useUI()
   const { addToCart } = useCart()

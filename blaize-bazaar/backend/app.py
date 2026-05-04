@@ -43,7 +43,7 @@ from routes import (
     auth_router,
     products_router,
     search_router,
-    storefront_router,
+    boutique_router,
     user_router,
     workshop_router,
 )
@@ -270,7 +270,7 @@ app.include_router(search_router)
 
 # DAT406 /workshop telemetry surface (Week 1) — returns flat
 # {session_id, events: list[dict]} payloads for the panel renderer.
-# Intentionally separate from /api/agent/chat so the storefront SSE
+# Intentionally separate from /api/agent/chat so the boutique SSE
 # stream isn't reshaped for the workshop's replay needs.
 app.include_router(workshop_router)
 
@@ -279,11 +279,11 @@ app.include_router(workshop_router)
 # Additive to workshop_router (same /api/atelier/ prefix, no path conflicts).
 app.include_router(atelier_observatory_router)
 
-# Pre-Week-3 storefront ambient chrome — briefing (concierge empty
-# state) + pulse (4 live metrics above the hero). Both endpoints are
-# contract-typed via Pydantic and degrade gracefully; they are never
-# allowed to 5xx the homepage.
-app.include_router(storefront_router)
+# Boutique ambient chrome — briefing (concierge empty state) + pulse
+# (4 live metrics above the hero). Both endpoints are contract-typed
+# via Pydantic and degrade gracefully; they are never allowed to 5xx
+# the homepage.
+app.include_router(boutique_router)
 app.include_router(transcribe_router)
 
 

@@ -6,7 +6,7 @@
  * 160px image area, italic-serif name, espresso "Add to bag" pill,
  * outlined heart button. Mounts with artifact-mount keyframe (380ms).
  *
- * Used exclusively in StorefrontChat. The atelier branch continues
+ * Used exclusively in BoutiqueChat. The atelier branch continues
  * to use ProductCardConcierge.
  */
 import { Heart } from 'lucide-react'

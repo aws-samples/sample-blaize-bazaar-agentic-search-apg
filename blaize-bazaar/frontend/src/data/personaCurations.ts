@@ -23,7 +23,7 @@
  * fallback that mirrors the server's ranking heuristic.
  */
 
-import type { StorefrontProduct } from '../services/types'
+import type { BoutiqueProduct } from '../services/types'
 
 // ---------------------------------------------------------------------
 // Persona interest profiles. Scores are 0-10; higher = stronger lean.
@@ -117,7 +117,7 @@ export const PERSONA_INTERESTS: Record<string, PersonaInterests> = {
  * callers fall through to the product's natural order.
  */
 export function scoreProduct(
-  product: StorefrontProduct,
+  product: BoutiqueProduct,
   weights: Record<string, number>,
 ): number {
   if (!product.tags || product.tags.length === 0) return 0
@@ -134,7 +134,7 @@ export function scoreProduct(
  * a persona without a full coverage of the catalog still sees the
  * remainder in a predictable sequence.
  */
-export function rankProductsForPersona<T extends StorefrontProduct>(
+export function rankProductsForPersona<T extends BoutiqueProduct>(
   products: readonly T[],
   personaId: string | null | undefined,
 ): T[] {
@@ -297,25 +297,29 @@ export function editorialForPersona(
 // Fresh visitors see the canonical set.
 // ---------------------------------------------------------------------
 
+// Hero pills — the first pill in each persona's list is their
+// canonical Turn 1 query, matching the Atelier session fixture
+// and the BoutiqueWelcome primary pick. The remaining pills are
+// Turn 2/3 follow-ups so the demo flows as one coherent journey.
 export const PERSONA_HERO_PILLS: Record<string, string[]> = {
   marco: [
-    'a linen shirt for warm evenings out',
-    'leather weekender bags for travel',
+    'a linen shirt for warm evenings out',           // Turn 1
+    'what goes well with the camp shirt?',            // Turn 2
+    'compare the camp shirt and the overshirt',       // Turn 3
     'lightweight layers that pack flat',
-    'neutral accessories for the road',
     'what would you wear in coastal Goa?',
   ],
   anna: [
-    'a thoughtful gift for someone who runs',
-    'something beautiful under $100',
-    'a milestone gift for a new homeowner',
-    'candles that feel considered, not generic',
+    'a thoughtful gift for someone who loves morning rituals',  // Turn 1
+    'something beautiful under $100',                            // Turn 2
+    'help me pair a candle with something else',                 // Turn 3
     'wrap-ready gifts with no extra effort',
+    'a milestone gift for a new homeowner',
   ],
   theo: [
-    'ceramics for a slow morning routine',
-    'hand-thrown pieces with real patina',
-    'linen that softens over seasons',
+    'hand-thrown ceramics for a slower morning routine',  // Turn 1
+    'what goes well with the pour-over set?',              // Turn 2
+    'linen pieces that soften over seasons',               // Turn 3
     'something for the home, not the wardrobe',
     'artisanal objects worth keeping',
   ],
@@ -358,7 +362,7 @@ export function featuredProductIdForPersona(
 
 // ---------------------------------------------------------------------
 // Weekend Edit — persona-specific editorial eyebrow + headline + copy.
-// The "Weekend, re:defined." block on StorefrontPage swaps entirely
+// The "Weekend, re:defined." block on BoutiquePage swaps entirely
 // based on persona so the editorial voice matches the shopper.
 // ---------------------------------------------------------------------
 

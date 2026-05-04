@@ -1,5 +1,5 @@
 /* ========================================================================
- * StorefrontChat — editorial active-chat styles.
+ * BoutiqueChat — editorial active-chat styles.
  * Matches docs/blaize-chat-experience.html.
  * All colors reference CSS custom properties from index.css :root.
  * ======================================================================== */
@@ -308,7 +308,7 @@
 
 /* Message body
  *
- * Canonical chat prose for both Storefront and Atelier. Inter at
+ * Canonical chat prose for both Boutique and Atelier. Inter at
  * 15px / 1.7 leading / -0.003em is the Claude-desktop register —
  * reads cleanly on any width and leaves enough air between lines
  * that a streamed reply doesn't feel cramped. Fraunces stays
@@ -563,7 +563,7 @@
   padding-top: 14px;
   border-top: 1px dashed rgba(45, 24, 16, 0.12);
 }
-/* Canonical follow-up pill — shared shape between Storefront
+/* Canonical follow-up pill — shared shape between Boutique
  * (persona chips) and Atelier (quick-query chips). Sans 12.5px /
  * 500 weight / -0.003em, neutral cream background with a hair of
  * red on hover. The Atelier side lives on the Tailwind classes

@@ -10,7 +10,7 @@
  */
 import type {
   ReasoningChip,
-  StorefrontProduct,
+  BoutiqueProduct,
 } from '../services/types'
 import { REASONING } from '../copy'
 import {
@@ -72,7 +72,7 @@ if (findAdjacentDuplicateStyleIndex(CHIPS) !== -1) {
   )
 }
 
-export const SHOWCASE_PRODUCTS: StorefrontProduct[] = [
+export const SHOWCASE_PRODUCTS: BoutiqueProduct[] = [
   // ─── FRESH (1-9) ───
   { id: 1, brand: 'Blaize Home', name: 'Olive Branch Vessel', color: 'Ivory', price: 185, rating: 4.9, reviewCount: 127, category: 'Home Decor', imageUrl: '/products/fresh-olive-branch-vessel.png', tags: ['ceramic', 'sculptural', 'minimal', 'warm', 'neutral', 'home'], reasoning: CHIPS[0] },
   { id: 2, brand: 'Blaize Editions', name: 'Pellier Linen Shirt', color: 'Ivory', price: 248, rating: 4.8, reviewCount: 312, category: 'Apparel', imageUrl: '/products/fresh-pellier-linen-shirt.png', badge: 'EDITORS_PICK', tags: ['linen', 'minimal', 'resort', 'warm', 'neutral', 'everyday'], reasoning: CHIPS[1] },

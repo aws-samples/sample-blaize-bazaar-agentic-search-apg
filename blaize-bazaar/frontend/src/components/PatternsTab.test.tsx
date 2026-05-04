@@ -19,15 +19,15 @@ describe('PatternsTab', () => {
     }
   })
 
-  it('tags each pattern with where it is used (Storefront / Atelier)', () => {
+  it('tags each pattern with where it is used (Boutique / Atelier)', () => {
     render(<PatternsTab />)
     const dispatcher = screen.getByTestId('pattern-card-dispatcher')
-    expect(dispatcher.textContent).toContain('Storefront')
+    expect(dispatcher.textContent).toContain('Boutique')
     const graph = screen.getByTestId('pattern-card-graph')
     expect(graph.textContent).toMatch(/Atelier/)
   })
 
-  it('renders the "Why Dispatcher for Storefront?" rationale monograph', () => {
+  it('renders the "Why Dispatcher for the Boutique?" rationale monograph', () => {
     render(<PatternsTab />)
     expect(
       screen.getByTestId('pattern-rationale-dispatcher'),

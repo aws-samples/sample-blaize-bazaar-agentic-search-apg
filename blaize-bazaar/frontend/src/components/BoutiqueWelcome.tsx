@@ -1,5 +1,5 @@
 /**
- * StorefrontWelcome — editorial welcome state for the storefront concierge.
+ * BoutiqueWelcome — editorial welcome state for the storefront concierge.
  *
  * Renders when the conversation is empty (no user messages yet) in
  * storefront mode. Matches the design in docs/blaize-chat-synthesis.html:
@@ -16,13 +16,13 @@
  * All picks and P.S. suggestions fire `onSend(text)` on click, which
  * the parent wires to `useAgentChat.sendMessage`.
  */
-import '../styles/storefront-welcome.css'
+import '../styles/boutique-welcome.css'
 import type { PersonaSnapshot } from '../contexts/PersonaContext'
 import { useCatalogStats, type CatalogStats } from '../hooks/useCatalogStats'
 import { SHOWCASE_PRODUCTS } from '../data/showcaseProducts'
-import type { StorefrontProduct } from '../services/types'
+import type { BoutiqueProduct } from '../services/types'
 
-interface StorefrontWelcomeProps {
+interface BoutiqueWelcomeProps {
   onSend: (text: string) => void
   persona?: PersonaSnapshot | null
 }
@@ -96,7 +96,7 @@ const PERSONA_COVERS: Record<string, PersonaCover> = {
 }
 
 export interface CoverResolution {
-  product: StorefrontProduct
+  product: BoutiqueProduct
   eyebrow: string
 }
 
@@ -104,7 +104,7 @@ export function resolveCover(
   persona: PersonaSnapshot | null | undefined,
   stats: CatalogStats | null,
   tod: TimeOfDay,
-  catalog: readonly StorefrontProduct[] = SHOWCASE_PRODUCTS,
+  catalog: readonly BoutiqueProduct[] = SHOWCASE_PRODUCTS,
 ): CoverResolution {
   // Persona-specific cover path. Try the pinned piece; fall through if
   // it isn't in the catalog.
@@ -197,14 +197,14 @@ const MARCO_COPY: PersonaCopy = {
     </>
   ),
   picks: [
-    { label: 'A linen shirt for warm evenings out', primary: true },
-    { label: 'What linen layers pack well for coastal travel?', primary: false },
-    { label: 'Compare the camp shirt and the overshirt', primary: false },
+    { label: 'A linen shirt for warm evenings out', primary: true },           // Turn 1
+    { label: 'What goes well with the camp shirt?', primary: false },           // Turn 2
+    { label: 'Compare the camp shirt and the overshirt', primary: false },      // Turn 3
   ],
   ps: [
-    'what goes well with the camp shirt?',
     'lightweight layers that pack flat',
     'what would you wear in coastal Goa?',
+    'neutral accessories for the road',
   ],
 }
 
@@ -221,14 +221,14 @@ const ANNA_COPY: PersonaCopy = {
     </>
   ),
   picks: [
-    { label: 'A thoughtful gift for someone who loves morning rituals', primary: true },
-    { label: 'Something beautiful under $100', primary: false },
-    { label: 'Wrap-ready gifts with no extra effort', primary: false },
+    { label: 'A thoughtful gift for someone who loves morning rituals', primary: true },  // Turn 1
+    { label: 'Something beautiful under $100', primary: false },                           // Turn 2
+    { label: 'Help me pair a candle with something else', primary: false },                // Turn 3
   ],
   ps: [
+    'wrap-ready gifts with no extra effort',
     'a milestone gift for a new homeowner',
     'candles that feel considered, not generic',
-    'help me pair a candle with something else under $100',
   ],
 }
 
@@ -245,13 +245,13 @@ const THEO_COPY: PersonaCopy = {
     </>
   ),
   picks: [
-    { label: 'Hand-thrown ceramics for a slower morning routine', primary: true },
-    { label: 'What goes well with the pour-over set?', primary: false },
-    { label: 'Artisanal objects worth keeping', primary: false },
+    { label: 'Hand-thrown ceramics for a slower morning routine', primary: true },  // Turn 1
+    { label: 'What goes well with the pour-over set?', primary: false },             // Turn 2
+    { label: 'Linen pieces that soften over seasons', primary: false },              // Turn 3
   ],
   ps: [
-    'linen that softens over seasons',
     'something for the home, not the wardrobe',
+    'artisanal objects worth keeping',
     'pieces with real patina',
   ],
 }
@@ -271,7 +271,7 @@ function copyForPersona(persona?: PersonaSnapshot | null): PersonaCopy {
   }
 }
 
-export default function StorefrontWelcome({ onSend, persona }: StorefrontWelcomeProps) {
+export default function BoutiqueWelcome({ onSend, persona }: BoutiqueWelcomeProps) {
   const copy = copyForPersona(persona)
   const tod = timeOfDay()
   const firstName = persona ? persona.display_name.split(' ')[0] : ''

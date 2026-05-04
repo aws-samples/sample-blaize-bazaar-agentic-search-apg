@@ -1166,7 +1166,7 @@ function WorkshopContent() {
     >
       <AtelierSpotlight />
 
-      {/* Global header chrome — wordmark + SurfaceToggle (Storefront /
+      {/* Global header chrome — wordmark + SurfaceToggle (Boutique /
           Atelier) + Account + Bag. Mounted on every route, including
           ``/workshop``, so the top navigation stays consistent and
           the surface-switch toggle has a permanent home. */}

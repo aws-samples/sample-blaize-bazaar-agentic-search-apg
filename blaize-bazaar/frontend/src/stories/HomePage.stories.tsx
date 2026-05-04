@@ -55,7 +55,7 @@ function HomePageComposition() {
 }
 
 const meta: Meta<typeof HomePageComposition> = {
-  title: 'Storefront/HomePage',
+  title: 'Boutique/HomePage',
   component: HomePageComposition,
   parameters: {
     layout: 'fullscreen',

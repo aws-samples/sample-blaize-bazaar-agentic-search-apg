@@ -1575,7 +1575,7 @@ CURRENT REQUEST: {message}"""
         # thanks) short-circuits before reaching here.
         #
         # The ``skill_routing`` SSE event must fire BEFORE any text tokens
-        # so the storefront UI can render the attribution line above the
+        # so the boutique UI can render the attribution line above the
         # reply. Storefront reads ``loaded_skills``; Atelier renders the
         # full decision in its live activation log.
         skill_decision = None
@@ -1594,7 +1594,7 @@ CURRENT REQUEST: {message}"""
         timing["skill_router"] = (time.perf_counter() - skill_t0) * 1000
 
         # Emit the routing event immediately — before any text — so the
-        # storefront attribution line is mounted above the streamed reply.
+        # boutique attribution line is mounted above the streamed reply.
         if skill_decision is not None:
             yield {
                 "type": "skill_routing",

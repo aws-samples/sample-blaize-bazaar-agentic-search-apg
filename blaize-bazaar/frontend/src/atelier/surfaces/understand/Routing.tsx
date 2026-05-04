@@ -6,7 +6,7 @@
  * cream-2 bg), agent list as chips, active indicator (StatusDot + "Active"
  * pill for Dispatcher).
  *
- * Dispatcher is shown as active for storefront sessions.
+ * Dispatcher is shown as active for boutique sessions.
  * Falls back to fixture data when unavailable.
  * Includes loading, error, and empty states.
  *
@@ -370,7 +370,7 @@ const Routing: React.FC = () => {
         title="How requests find their specialist."
         summary={
           activePattern
-            ? `Three orchestration strategies. ${activePattern.name} is the active pattern for storefront sessions — it classifies intent and dispatches to the best-fit specialist. The other two are alternative patterns you can explore.`
+            ? `Three orchestration strategies. ${activePattern.name} is the active pattern for boutique sessions — it classifies intent and dispatches to the best-fit specialist. The other two are alternative patterns you can explore.`
             : 'Three orchestration strategies for routing requests to specialist agents. Each pattern takes a different approach to intent classification and agent coordination.'
         }
       />
