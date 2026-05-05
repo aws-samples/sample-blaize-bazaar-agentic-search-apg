@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useCart } from '../contexts/CartContext'
 import { usePersona, type PersonaListItem } from '../contexts/PersonaContext'
+import { useUI } from '../contexts/UIContext'
 import { NAV } from '../copy'
 import { colors } from '../design/tokens'
 import { Avatar } from '../design/primitives'
@@ -350,8 +351,23 @@ export default function Header({
   current = 'home',
   onNavigate,
 }: HeaderProps) {
-  const { items: cartItems, setCartOpen } = useCart()
+  const { items: cartItems, setCartOpen, notify } = useCart()
+  const { openModal } = useUI()
   const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
+
+  // The boutique's search is Blaize — the chat drawer. Clicking the
+  // Search icon opens the same concierge pill uses, which keeps the
+  // header honest: one search surface, two entry points.
+  const handleSearchClick = useCallback(() => {
+    openModal('drawer')
+  }, [openModal])
+
+  // Wishlist isn't wired to a real store (demo scope). Fire a warm
+  // toast acknowledging the interaction instead of navigating to a
+  // dead route. Honest, non-blocking, matches the Add-to-bag pattern.
+  const handleWishlistClick = useCallback(() => {
+    notify('Wishlist is coming soon — ask Blaize to hold something for you.')
+  }, [notify])
 
   return (
     <header
@@ -395,7 +411,8 @@ export default function Header({
           <div className="flex items-center gap-2 flex-shrink-0">
             <IconButton
               icon={<Search className="w-5 h-5" />}
-              ariaLabel="Search"
+              ariaLabel="Search — ask Blaize"
+              onClick={handleSearchClick}
               size="md"
             />
 
@@ -404,6 +421,7 @@ export default function Header({
             <IconButton
               icon={<Heart className="w-5 h-5" />}
               ariaLabel="Wishlist"
+              onClick={handleWishlistClick}
               size="md"
             />
 

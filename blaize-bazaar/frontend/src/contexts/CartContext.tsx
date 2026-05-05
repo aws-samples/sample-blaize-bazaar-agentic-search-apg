@@ -44,6 +44,8 @@ interface CartContextValue {
   showToast: boolean
   toastMessage: string
   dismissToast: () => void
+  /** Fire a one-off toast from any consumer (e.g., "Wishlist is coming soon"). */
+  notify: (message: string) => void
   addToCart: (product: { productId: number; name: string; price: number; image?: string; origin: CartItemOrigin }) => void
   addAllToCart: (products: Array<{ productId: number; name: string; price: number; image?: string }>, origin: CartItemOrigin) => void
   updateQuantity: (productId: number, quantity: number) => void
@@ -289,6 +291,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       showToast,
       toastMessage,
       dismissToast,
+      notify: toast,
       addToCart,
       addAllToCart,
       updateQuantity,
