@@ -20,6 +20,7 @@ import { useNavigate } from 'react-router-dom'
 import AnnouncementBar from '../components/AnnouncementBar'
 import Header, { type NavItem } from '../components/Header'
 import BoutiqueHero from '../components/BoutiqueHero'
+import BoutiqueWelcomeBand from '../components/BoutiqueWelcomeBand'
 import BecauseYouAsked from '../components/BecauseYouAsked'
 import ProductCard from '../components/ProductCard'
 import EditorialBrief from '../components/EditorialBrief'
@@ -149,6 +150,12 @@ export default function BoutiquePage() {
       <main>
         {/* ── ACT 1: Full-viewport hero ── */}
         <BoutiqueHero />
+
+        {/* ── Welcome band — dismissible, sits between the hero and the
+             Weekend Edit. Symmetric with /atelier's AtelierWelcome so
+             first-visit shoppers get a one-glance orientation without
+             touching the photograph. ── */}
+        <BoutiqueWelcomeBand />
 
         {/* ── ACT 2: Below the fold ── */}
         <section
