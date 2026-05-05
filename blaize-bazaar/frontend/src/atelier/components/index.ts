@@ -41,3 +41,5 @@ export type { ModeStripProps } from './ModeStrip';
 
 export { ContextRail } from './ContextRail';
 export type { ContextRailProps } from './ContextRail';
+
+export { AtelierWelcome } from './AtelierWelcome';
