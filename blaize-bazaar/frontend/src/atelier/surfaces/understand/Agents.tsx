@@ -107,7 +107,7 @@ const AgentRow: React.FC<AgentRowProps> = ({ agent }) => {
               lineHeight: 1,
             }}
           >
-            {agent.numeral.toLowerCase()}.
+            {(agent.numeral ?? '').toLowerCase()}.
           </span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0 }}>
             <h3

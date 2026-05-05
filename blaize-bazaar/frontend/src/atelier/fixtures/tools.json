@@ -1,12 +1,102 @@
 [
-  {"functionName":"find_pieces","description":"Semantic search across the curated catalog using pgvector cosine similarity.","agentOwner":"Style Advisor","signature":"find_pieces(query, max_price, min_rating, category, limit) -> str"},
-  {"functionName":"explore_collection","description":"Browse a specific collection by category with optional filters.","agentOwner":"Style Advisor","signature":"explore_collection(category, min_rating, max_price, limit) -> str"},
-  {"functionName":"side_by_side","description":"Compare two products side by side — specs, price, rating.","agentOwner":"Style Advisor","signature":"side_by_side(product_id_1, product_id_2) -> str"},
-  {"functionName":"style_match","description":"Product-to-product pgvector cosine similarity. Semantic style matching.","agentOwner":"Style Advisor","signature":"style_match(product_id, limit) -> str"},
-  {"functionName":"whats_trending","description":"Trending pieces ranked by review velocity and rating.","agentOwner":"Curator","signature":"whats_trending(limit, category) -> str"},
-  {"functionName":"price_intelligence","description":"Price distribution — percentiles, averages, value picks.","agentOwner":"Value Analyst","signature":"price_intelligence(category) -> str"},
-  {"functionName":"floor_check","description":"Warehouse health — total stock, low-stock alerts.","agentOwner":"Stock Keeper","signature":"floor_check() -> str"},
-  {"functionName":"restock_shelf","description":"Add inventory. Cedar policy enforces 500-unit ceiling.","agentOwner":"Stock Keeper","signature":"restock_shelf(product_id, quantity) -> str"},
-  {"functionName":"running_low","description":"Products with ≤5 units, ranked by rating.","agentOwner":"Stock Keeper","signature":"running_low(limit) -> str"},
-  {"functionName":"returns_and_care","description":"Return window, conditions, care instructions by category.","agentOwner":"Experience Guide","signature":"returns_and_care(category) -> str"}
+  {
+    "numeral": 1,
+    "functionName": "find_pieces",
+    "description": "Semantic search across the curated catalog using pgvector cosine similarity.",
+    "status": "shipped",
+    "signature": "find_pieces(query, max_price, min_rating, category, limit) -> str",
+    "usedBy": ["Style Advisor", "Curator", "Value Analyst", "Experience Guide"],
+    "invocationCount": 1842,
+    "version": "1.2.0"
+  },
+  {
+    "numeral": 2,
+    "functionName": "explore_collection",
+    "description": "Browse a specific collection by category with optional filters.",
+    "status": "shipped",
+    "signature": "explore_collection(category, min_rating, max_price, limit) -> str",
+    "usedBy": ["Style Advisor", "Curator", "Value Analyst"],
+    "invocationCount": 612,
+    "version": "1.0.0"
+  },
+  {
+    "numeral": 3,
+    "functionName": "side_by_side",
+    "description": "Compare two products side by side — specs, price, rating.",
+    "status": "shipped",
+    "signature": "side_by_side(product_id_1, product_id_2) -> str",
+    "usedBy": ["Style Advisor", "Curator"],
+    "invocationCount": 248,
+    "version": "1.0.1"
+  },
+  {
+    "numeral": 4,
+    "functionName": "style_match",
+    "description": "Product-to-product pgvector cosine similarity. Semantic style matching.",
+    "status": "shipped",
+    "signature": "style_match(product_id, limit) -> str",
+    "usedBy": ["Style Advisor"],
+    "invocationCount": 156,
+    "version": "1.0.0"
+  },
+  {
+    "numeral": 5,
+    "functionName": "whats_trending",
+    "description": "Trending pieces ranked by review velocity and rating.",
+    "status": "shipped",
+    "signature": "whats_trending(limit, category) -> str",
+    "usedBy": ["Curator"],
+    "invocationCount": 384,
+    "version": "1.0.0"
+  },
+  {
+    "numeral": 6,
+    "functionName": "price_intelligence",
+    "description": "Price distribution — percentiles, averages, value picks.",
+    "status": "shipped",
+    "signature": "price_intelligence(category) -> str",
+    "usedBy": ["Value Analyst"],
+    "invocationCount": 192,
+    "version": "1.0.0"
+  },
+  {
+    "numeral": 7,
+    "functionName": "floor_check",
+    "description": "Warehouse health — total stock, low-stock alerts.",
+    "status": "exercise",
+    "signature": "floor_check() -> str",
+    "usedBy": ["Stock Keeper"],
+    "invocationCount": 0,
+    "version": "0.1.0"
+  },
+  {
+    "numeral": 8,
+    "functionName": "restock_shelf",
+    "description": "Add inventory. Cedar policy enforces 500-unit ceiling.",
+    "status": "exercise",
+    "signature": "restock_shelf(product_id, quantity) -> str",
+    "usedBy": ["Stock Keeper"],
+    "invocationCount": 0,
+    "version": "0.1.0"
+  },
+  {
+    "numeral": 9,
+    "functionName": "running_low",
+    "description": "Products with ≤5 units, ranked by rating.",
+    "status": "exercise",
+    "signature": "running_low(limit) -> str",
+    "usedBy": ["Stock Keeper"],
+    "invocationCount": 0,
+    "version": "0.1.0"
+  },
+  {
+    "numeral": 10,
+    "functionName": "returns_and_care",
+    "description": "Return window, conditions, care instructions by category.",
+    "status": "exercise",
+    "signature": "returns_and_care(category) -> str",
+    "usedBy": ["Experience Guide"],
+    "invocationCount": 0,
+    "version": "0.1.0"
+  }
 ]

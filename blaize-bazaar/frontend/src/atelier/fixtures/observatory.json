@@ -2,10 +2,10 @@
   "activeSessions": 1,
   "totalSessions": 4,
   "agentStatus": [
-    { "name": "Search", "status": "live" },
-    { "name": "Recommendation", "status": "live" },
-    { "name": "Pricing", "status": "live" },
-    { "name": "Inventory", "status": "idle" },
+    { "name": "Style Advisor", "status": "live" },
+    { "name": "Curator", "status": "live" },
+    { "name": "Value Analyst", "status": "live" },
+    { "name": "Stock Keeper", "status": "idle" },
     { "name": "Experience Guide", "status": "idle" }
   ],
   "toolInvocations": 3720,
