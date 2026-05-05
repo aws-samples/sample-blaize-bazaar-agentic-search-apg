@@ -53,6 +53,7 @@ import AtelierSettings from './atelier/surfaces/Settings'
 import InspectorPage from './pages/InspectorPage'
 import StoryboardPage from './pages/StoryboardPage'
 import DiscoverPage from './pages/DiscoverPage'
+import AboutPage from './pages/AboutPage'
 import AtelierComponentsPreview from './pages/AtelierComponentsPreview'
 import DesignSystemPreview from './pages/DesignSystemPreview'
 import './styles/premium-heading-styles.css'
@@ -240,6 +241,7 @@ function App() {
                 <Route path="/inspector" element={<InspectorPage />} />
                 <Route path="/storyboard" element={<StoryboardPage />} />
                 <Route path="/discover" element={<DiscoverPage />} />
+                <Route path="/about" element={<AboutPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </BrowserRouter>

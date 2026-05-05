@@ -16,11 +16,13 @@ export default function EditorialBrief() {
     <>
       {/* ── About band ── */}
       <section
+        id="about"
         data-testid="editorial-brief"
         aria-label="About this workshop"
         className="w-full"
         style={{
           background: 'linear-gradient(180deg, #F7F3EE 0%, #EDE4D6 100%)',
+          scrollMarginTop: 84,
         }}
       >
         <div className="max-w-[1440px] mx-auto px-container-x py-20 md:py-28">

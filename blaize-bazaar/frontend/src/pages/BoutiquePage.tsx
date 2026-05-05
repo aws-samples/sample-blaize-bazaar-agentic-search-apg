@@ -23,7 +23,6 @@ import BoutiqueHero from '../components/BoutiqueHero'
 import BoutiqueWelcomeBand from '../components/BoutiqueWelcomeBand'
 import BecauseYouAsked from '../components/BecauseYouAsked'
 import ProductCard from '../components/ProductCard'
-import EditorialBrief from '../components/EditorialBrief'
 import Footer from '../components/Footer'
 // CommandPill removed — hero search bar is the primary entry point
 import { useAuth } from '../contexts/AuthContext'
@@ -53,7 +52,7 @@ import {
 
 const NAV_ROUTES: Record<NavItem, string> = {
   home: '/',
-  shop: '/',
+  shop: '/#shop',
   storyboard: '/storyboard',
   stories: '/storyboard',
   discover: '/discover',
@@ -125,6 +124,11 @@ export default function BoutiquePage() {
     }
     if (item === 'shop') {
       document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })
+      return
+    }
+    if (item === 'ask-blaize') {
+      // Open the concierge drawer — that's what "Ask Blaize" promises.
+      openModal('drawer')
       return
     }
     const target = NAV_ROUTES[item]
@@ -322,9 +326,6 @@ export default function BoutiquePage() {
 
         {/* "Because you asked..." editorial cards */}
         <BecauseYouAsked />
-
-        {/* Editorial brief — workshop credit */}
-        <EditorialBrief />
       </main>
 
       <Footer />

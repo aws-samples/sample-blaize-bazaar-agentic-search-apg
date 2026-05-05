@@ -142,6 +142,10 @@ export default function DiscoverPage() {
       openModal('auth')
       return
     }
+    if (item === 'ask-blaize') {
+      openModal('drawer')
+      return
+    }
     const target = NAV_ROUTES[item]
     if (target) navigate(target)
   }
