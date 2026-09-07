@@ -469,7 +469,7 @@ describe('ClientRecord', () => {
     // told so on the surface where they are about to act.
     const record = screen.getByTestId('operator-record')
     expect(record).toHaveTextContent('Standing is business context')
-    expect(record).toHaveTextContent('AgentCore Policy still decides')
+    expect(record).toHaveTextContent('For tools exposed through Gateway, AgentCore Policy decides whether the action is permitted')
     expect(record).toHaveTextContent('Aurora still decides')
   })
 
