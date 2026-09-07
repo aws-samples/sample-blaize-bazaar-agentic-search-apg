@@ -866,9 +866,10 @@ const Evaluations: React.FC = () => {
         backToReferences
         eyebrow="Measure · Evaluations · accuracy · latency · citations"
         title="Evaluation harness"
-        summary="Review scorecards, retrieval metrics, and the checks that turn grounded answers into a repeatable release gate."
+        summary="Explore evaluation methods and checked-in example scorecards. Scores and trends on this page are reference fixtures; opening it does not run an evaluation or measure your session."
         references={[
-          { label: 'Source', value: 'tests/golden/journeys.json', code: true },
+          { label: 'Scorecards', value: 'fixtures/evaluations.json', code: true },
+          { label: 'Journey cases', value: 'tests/golden/journeys.json', code: true },
           { label: 'Pattern', value: 'golden journeys + scorecards', code: true },
         ]}
       />

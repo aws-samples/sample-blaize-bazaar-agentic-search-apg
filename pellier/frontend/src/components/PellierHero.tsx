@@ -6,8 +6,9 @@
  * submit a query once a profile is active. The catalog edit follows directly
  * below this component.
  */
-import { useCallback, useState } from 'react'
-import { Mic, MicOff, Send, Sparkles } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Send, Sparkles } from 'lucide-react'
 import { usePersona } from '../contexts/PersonaContext'
 import { useUI } from '../contexts/UIContext'
 import {
@@ -17,7 +18,6 @@ import {
 } from '../data/personaCurations'
 import { LOCAL_PERSONAS } from '../data/personas'
 import { getPersonaPhoto } from '../data/personaPhotos'
-import { useVoiceSearch } from '../hooks/useVoiceSearch'
 import ResponsiveImage from './ResponsiveImage'
 
 const PERSONA_HEROES: Record<
@@ -59,7 +59,13 @@ const PROFILE_FOCUS: Record<string, string> = {
 export default function PellierHero() {
   const { openDrawerWithQuery } = useUI()
   const { persona, switchPersona, switching } = usePersona()
-  const [searchValue, setSearchValue] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const suggestedQuery = searchParams.get('ask') ?? ''
+  const [searchValue, setSearchValue] = useState(suggestedQuery)
+
+  useEffect(() => {
+    setSearchValue(suggestedQuery)
+  }, [suggestedQuery])
 
   const personaId = persona?.id ?? 'fresh'
   const hero = PERSONA_HEROES[personaId] ?? PERSONA_HEROES.fresh
@@ -78,14 +84,14 @@ export default function PellierHero() {
       if (!trimmed) return
       openDrawerWithQuery(trimmed)
       setSearchValue('')
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current)
+        next.delete('ask')
+        return next
+      }, { replace: true })
     },
-    [openDrawerWithQuery, persona],
+    [openDrawerWithQuery, persona, setSearchParams],
   )
-
-  const { isListening, startListening, stopListening } = useVoiceSearch({
-    onInterimTranscript: setSearchValue,
-    onFinalTranscript: submitQuery,
-  })
 
   const handleSubmit = useCallback(
     (event: React.FormEvent) => {
@@ -169,9 +175,7 @@ export default function PellierHero() {
                     data-testid="pellier-hero-search"
                     value={searchValue}
                     onChange={(event) => setSearchValue(event.target.value)}
-                    placeholder={
-                      isListening ? 'Listening...' : 'Ask Pellier anything...'
-                    }
+                    placeholder="Ask Pellier anything..."
                     aria-label="Ask Pellier anything"
                     className="
                       h-[58px] w-full rounded-full border border-[rgba(24,26,31,0.16)]
@@ -184,36 +188,19 @@ export default function PellierHero() {
                     "
                   />
                   <button
-                    type={searchValue.trim() ? 'submit' : 'button'}
-                    onClick={
-                      searchValue.trim()
-                        ? undefined
-                        : isListening
-                          ? stopListening
-                          : startListening
-                    }
-                    aria-label={
-                      searchValue.trim()
-                        ? 'Send'
-                        : isListening
-                          ? 'Stop listening'
-                          : 'Voice search'
-                    }
+                    type="submit"
+                    disabled={!searchValue.trim()}
+                    aria-label="Send"
                     className="
                       absolute right-[5px] top-1/2 flex h-12 w-12
                       -translate-y-1/2 items-center justify-center rounded-full
                       bg-espresso text-cream transition hover:bg-accent
                       focus-visible:outline-none focus-visible:ring-2
                       focus-visible:ring-espresso focus-visible:ring-offset-2
+                      disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-espresso
                     "
                   >
-                    {searchValue.trim() ? (
-                      <Send size={18} />
-                    ) : isListening ? (
-                      <MicOff size={18} />
-                    ) : (
-                      <Mic size={18} />
-                    )}
+                    <Send size={18} aria-hidden="true" />
                   </button>
                 </form>
 

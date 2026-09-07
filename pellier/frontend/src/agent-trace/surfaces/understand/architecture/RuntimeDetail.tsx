@@ -43,10 +43,10 @@ const RuntimeDetail: React.FC = () => {
         },
       ]}
       liveState={{
-        label: 'Current runtime envelope. Shows the app-layer execution path plus optional managed services.',
+        label: 'Reference runtime configuration. Inspect a completed Workbench turn for observed timings and memory persistence.',
         values: [
           { label: 'Default path', value: 'Dispatcher' },
-          { label: 'Memory', value: 'Active' },
+          { label: 'Memory', value: 'Required' },
           { label: 'Gateway', value: 'Optional' },
         ],
       }}
@@ -75,22 +75,22 @@ const RuntimeDetail: React.FC = () => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <LayerCard
               name="Fast-path"
-              timing="~5ms"
+              timing="Deterministic"
               description="Deterministic greeting, thanks, and meta handling before any specialist work."
             />
             <LayerCard
               name="Intent classification"
-              timing="~120ms"
+              timing="Deterministic"
               description="Keyword and pattern routing in services/chat.py picks pricing, inventory, support, search, or recommendation."
             />
             <LayerCard
               name="Skill routing"
-              timing="~120ms"
+              timing="Model call when needed"
               description="SkillRouter may load one of five overlays: three persona skills plus shared care/proof handling."
             />
             <LayerCard
               name="Specialist execution"
-              timing="~800ms"
+              timing="Model and tool calls"
               description="The owning specialist composes the response using persona context, memory, and tool results."
             />
           </div>

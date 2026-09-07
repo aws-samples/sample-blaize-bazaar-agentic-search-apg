@@ -183,6 +183,7 @@ export interface StoryboardTeaser {
   title: string;
   excerpt: string;
   link: string;
+  href: string;
   imageUrl: string;
   imageAlt: string;
 }
@@ -195,6 +196,7 @@ export const STORYBOARD_TEASERS: StoryboardTeaser[] = [
     excerpt:
       "Linen, ceramic, travel, and gifting products create one controlled corpus for comparing retrieval and concierge behavior.",
     link: "Open the workshop story \u203a",
+    href: "/storyboard#catalog",
     imageUrl:
       "https://images.unsplash.com/photo-1693928126497-d9bda6903c03?w=1600&q=85",
     imageAlt: "Golden afternoon light falling across a linen-draped table",
@@ -207,6 +209,7 @@ export const STORYBOARD_TEASERS: StoryboardTeaser[] = [
     excerpt:
       "Marco, Anna, and Theo start from explicit tag weights and seeded order histories that participants can inspect.",
     link: "Open the workshop story \u203a",
+    href: "/storyboard#profiles",
     imageUrl:
       "https://images.unsplash.com/photo-1607556671927-78a6605e290b?w=1600&q=85",
     imageAlt: "A pair of hands shaping clay on a potter's wheel",
@@ -219,6 +222,7 @@ export const STORYBOARD_TEASERS: StoryboardTeaser[] = [
     excerpt:
       "Follow a request through Aurora retrieval, specialist tools, working memory, and a session-scoped action receipt.",
     link: "Open the workshop story \u203a",
+    href: "/storyboard#evidence",
     imageUrl:
       "https://images.unsplash.com/photo-1761896902115-49793a359daf?w=1600&q=85",
     imageAlt: "An open edit room with fabric swatches laid out on a warm wood table",

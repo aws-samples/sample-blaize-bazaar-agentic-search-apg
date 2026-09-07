@@ -5,7 +5,7 @@
     "title": "Grounding",
     "role": "Factual anchoring via Aurora PostgreSQL",
     "description": "The live Pellier path grounds recommendations in Aurora data: product_catalog for products, inventory/quantity fields for availability, return policy tables for support, and pgvector/FTS for retrieval.",
-    "codeSnippet": "# Ground a recommendation in catalog rows\nSELECT product_id, name, brand, price, quantity\nFROM product_catalog\nWHERE quantity > 0\nORDER BY embedding <=> $1::vector\nLIMIT 5;",
+    "codeSnippet": "-- Parameterized catalog retrieval example\nSELECT \"productId\", name, brand, price, quantity\nFROM pellier.product_catalog\nWHERE quantity > 0\nORDER BY embedding <=> $1::vector\nLIMIT 5;",
     "slug": "grounding"
   },
   {
@@ -50,7 +50,7 @@
     "title": "Evaluations",
     "role": "Quality checks and capability scorecards",
     "description": "Evaluation cards are the owned quality layer: latency, relevance, grounding, and scenario checks for the three workshop capabilities. They are not the request path; they are how the team decides whether a path is worth shipping.",
-    "codeSnippet": "# Evaluation scorecard shape\nscorecard = {\n    'capability': 'agentic (Sonnet → filter → vector → rerank)',\n    'recall_at_5': 0.96,\n    'latency_p50_ms': 2300,\n    'grounded': true\n}",
+    "codeSnippet": "# Illustrative scorecard shape, not a measured result\nscorecard = {\n    'capability': 'agentic (Sonnet → filter → vector → rerank)',\n    'recall_at_5': 0.96,\n    'latency_p50_ms': 2300,\n    'grounded': True\n}",
     "slug": "evaluations"
   },
   {
@@ -59,7 +59,7 @@
     "title": "Tool Registry",
     "role": "Semantic tool discovery via pgvector",
     "description": "The Aurora tool registry is the live workshop teaching surface for semantic discovery. Tool descriptions are embedded with Cohere Embed v4 (1024-dim) and ranked by cosine similarity. Pellier's default path still calls in-process Strands tools; the registry is how attendees see discovery as a first-class capability.",
-    "codeSnippet": "# Discover by semantic similarity\nSELECT name,\n       1 - (embedding <=> $1) AS similarity\nFROM pellier.tools\nORDER BY embedding <=> $1\nLIMIT 5;",
+    "codeSnippet": "-- Parameterized tool discovery example\nSELECT name,\n       1 - (description_emb <=> $1::vector) AS similarity\nFROM pellier.tools\nWHERE enabled\nORDER BY description_emb <=> $1::vector\nLIMIT 5;",
     "slug": "tool-registry"
   },
   {

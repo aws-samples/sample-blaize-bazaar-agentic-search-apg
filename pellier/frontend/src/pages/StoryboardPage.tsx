@@ -1,22 +1,9 @@
 /**
- * StoryboardPage - minimal `/storyboard` index route.
- *
- * Validates Requirements 1.13.1, 1.13.3, 1.13.4.
- *
- * Composition:
- *   - Header (sticky) with `current="stories"` so the Stories nav
- *     item takes the ink-highlighted current-page state (Req 1.13.4).
- *   - The 3-card StoryboardTeaser grid from the home page (Req 1.9 /
- *     4.8), reused as-is.
- *   - A single ComingSoonLine (`Coming soon - the full editorial hub
- *     arrives with the next Edit.`) in italic Fraunces (Req 1.13.1).
- *   - Footer and floating CommandPill, so the chrome matches the home
- *     page (Req 1.13.1).
- *
- * The route is intentionally small - the full editorial hub lands in
- * a later Edit. Copy from copy.ts; Req 1.12 rules enforced there.
+ * Stories at `/storyboard`: catalog, profile, and evidence introductions
+ * link to the matching field notes. Theo's returns note is optional depth.
  */
-import { useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import CommandPill from '../components/CommandPill'
 import FieldNotes from '../components/FieldNotes'
 import Footer from '../components/Footer'
@@ -37,7 +24,17 @@ const NAV_ROUTES: Record<NavItem, string> = {
 
 export default function StoryboardPage() {
   const navigate = useNavigate()
+  const { hash } = useLocation()
   const { openModal } = useUI()
+
+  // A direct URL can arrive before this lazy-loaded page has mounted.
+  // Resolve its story anchor after the essays exist in the document.
+  useEffect(() => {
+    if (hash) {
+      document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'instant' })
+    }
+  }, [hash])
+
   const handleNavigate = (item: NavItem) => {
     if (item === 'account') {
       openModal('auth')

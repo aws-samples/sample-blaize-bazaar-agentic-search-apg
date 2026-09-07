@@ -26,12 +26,12 @@ const EvaluationsDetail: React.FC = () => {
       numeral="VI"
       conceptName="Evaluations"
       category="quality"
-      title="Evaluations, measured."
-      prose="Evaluations are the quality layer. They are not in the request path; they help decide whether a retrieval, rerank, routing, or write-path change is worth shipping."
+      title="Evaluations, explained."
+      prose="These illustrative scorecards explain how to evaluate a change. The numbers are authored examples, not results collected from your workshop environment. Run an evaluation against a named dataset and source revision before using scores to make a release decision."
       cheatSheet={[
         {
           numeral: 'i.',
-          text: 'Every agent has a scorecard: accuracy, latency P50/P95, and citation rate. These are the four numbers that matter.',
+          text: 'A scorecard can track accuracy, latency P50/P95, and citation rate. Define the dataset, rubric, and sample size alongside each result.',
         },
         {
           numeral: 'ii.',
@@ -43,11 +43,11 @@ const EvaluationsDetail: React.FC = () => {
         },
       ]}
       liveState={{
-        label: 'Current evaluation state across all agents. Shows aggregate accuracy and the number of evaluation recipes tracked.',
+        label: 'Reference examples only. This page does not run evaluations or report the current session’s quality.',
         values: [
-          { label: 'Agents evaluated', value: '5' },
-          { label: 'Avg accuracy', value: '91%' },
-          { label: 'Recipes', value: '12' },
+          { label: 'Example scorecards', value: '4' },
+          { label: 'Source', value: 'Authored' },
+          { label: 'Live evaluation', value: 'Not run here' },
         ],
       }}
     >
@@ -59,13 +59,13 @@ const EvaluationsDetail: React.FC = () => {
           {/* Scorecard structure */}
           <ExpCard>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <SectionLabel label="The scorecard" />
+              <SectionLabel label="Illustrative scorecards" />
               <h3 style={titleStyle}>Four metrics, one card.</h3>
               <p style={proseStyle}>
                 Each agent's scorecard captures accuracy (how often the response is correct),
                 latency (P50 and P95 response times), and citation rate (how often the agent
-                grounds its response in data). These four numbers tell you if the agent is
-                working.
+                grounds its response in data). The examples below demonstrate the format;
+                they do not measure the current application.
               </p>
             </div>
           </ExpCard>

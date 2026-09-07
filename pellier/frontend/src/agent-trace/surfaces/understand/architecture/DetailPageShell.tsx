@@ -17,7 +17,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
-import { Eyebrow, ExpCard, CategoryBadge, StatusDot } from '../../../components';
+import { Eyebrow, ExpCard, CategoryBadge } from '../../../components';
 import type { CategoryType } from '../../../components/CategoryBadge';
 import { SurfaceCrossLink } from '../../../../shared';
 
@@ -149,7 +149,6 @@ const LiveStateCallout: React.FC<LiveStateCalloutProps> = ({ label, values }) =>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* Header with pulsing indicator */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <StatusDot status="live" size={8} />
           <span
             style={{
               fontFamily: 'var(--at-mono)',
@@ -160,7 +159,7 @@ const LiveStateCallout: React.FC<LiveStateCalloutProps> = ({ label, values }) =>
               fontWeight: 500,
             }}
           >
-            Live state
+            Evidence and configuration
           </span>
         </div>
 

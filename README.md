@@ -2,7 +2,7 @@
 
 <div align="center">
 
-_A production-oriented reference application for agentic commerce on Aurora PostgreSQL_
+_The focused Builders' Session edition of Pellier, built on Aurora PostgreSQL_
 
 <br/>
 
@@ -29,6 +29,12 @@ The repository pairs a polished commerce experience with an engineering
 surface that shows how each answer was routed, retrieved, executed, and
 recorded.
 
+**You are reading the `main` branch README.** This edition supports the
+60-minute **Build Agentic AI-Powered Search with Amazon Aurora and Amazon RDS**
+Builders' Session. The [`governed` edition](#governed-edition) is the more
+comprehensive implementation for exploring managed agent execution,
+authorization, and commerce transaction controls.
+
 > This is an educational reference implementation. It demonstrates
 > production-oriented architecture and controls, but it is not intended for
 > production deployment without workload-specific security, resilience,
@@ -36,26 +42,80 @@ recorded.
 
 ![Pellier first-visit tour over the profile-guided storefront](.github/readme/pellier-storefront.png)
 
-**Explore:** [Experience](#experience) | [Capabilities](#capabilities) |
+**Explore:** [Choose an edition](#choose-an-edition) | [Experience](#experience) | [Capabilities](#capabilities) |
 [Architecture](#architecture) | [Governed edition](#governed-edition) |
 [Technology](#technology) | [Run locally](#run-locally) |
 [Quality](#quality) | [Repository layout](#repository-layout)
 
 ---
 
+## Choose an edition
+
+| | `main` — Builders' Session | `governed` — comprehensive edition |
+|---|---|---|
+| Intended use | A focused, 60-minute hands-on build | A deeper implementation and workshop covering the full governed request and transaction path |
+| Learning path | Implement and verify `floor_check`, compare four retrieval strategies, grant the tool, and inspect its receipt | Follow identity, managed execution, tool authorization, business-state invariants, and transaction evidence across service boundaries |
+| Agent execution | FastAPI and in-process Strands specialists with explicit tool grants | AgentCore Runtime, Gateway, and Policy with shopper identity carried through the managed path |
+| Memory and data | AgentCore session turns and preferences; Aurora catalog, inventory, and tool receipts | Extends the shared foundation with broader state, policy, and transaction controls |
+| Commerce depth | A workshop storefront and bounded inventory proof; additional scenarios are optional | Quotes, explicit consent, reservations, sandbox payment events, outbox records, and immutable receipts |
+| Start here | Follow the [Builders' Session path below](#joining-the-60-minute-builders-session) | Read the [governed branch README](https://github.com/aws-samples/sample-pellier-agentic-search-apg/blob/governed/README.md) and its own setup instructions |
+
+The experience, capabilities, architecture, and local setup below describe
+`main`. Its Optional Deep Dives include reference patterns beyond the required
+build; opening those pages does not provision the governed edition. Use the
+matching branch, lab guide, and deployment revision for each edition.
+
 ## Experience
+
+### Joining the 60-minute Builders' Session
+
+Use the guide in `build-agentic-ai-powered-search-with-amazon-aurora-and-amazon-rds-builders`.
+Your Workshop Studio environment is already provisioned. Open `CodeEditorURL`
+and `PellierURL` from Event outputs, then follow the guide's readiness check.
+
+| Room clock | Participant outcome |
+|---|---|
+| 0–15 | Opening framing, two working tabs, verified starter state |
+| 15–30 | Implement the marked `floor_check` body and verify its Aurora output |
+| 30–45 | Compare four retrieval strategies and defend one decision |
+| 45–55 | Grant the tool to Stock Keeper, replay Marco's request, inspect the audit receipt |
+| 55–60 | Explain the control boundaries and save your edits and evidence |
+
+The deployed starter has two intentional gaps: the tool body and its agent
+grant. This `main` checkout is the reference application; provisioning installs
+the participant starter. A `shipped` label checks wiring; the direct tool check
+and receipt prove execution. Keep the guide's proof gates separate.
+
+For the optional visual retrieval comparison, open **Pellier Labs → Optional
+Deep Dives → Performance**. **Search** explains one hybrid pipeline, and
+**Live Workbench** runs a shopper conversation. Reference numbers are labeled;
+they do not establish a successful live run.
 
 Pellier has two connected surfaces:
 
 - **Pellier** (`/`) is the customer-facing storefront. It combines editorial
   merchandising, profile-guided discovery, semantic search, live inventory,
   product comparison, a shopping bag, and a conversational concierge.
+  Choose a profile, type a request, and use **Send** or Enter. The storefront
+  composer uses text input; it does not start microphone capture or transcription.
 - **Pellier Labs** (`/pellier-labs`) is the engineering and operator surface.
   It exposes routing, retrieval, tools, memory, evaluations, performance,
   architecture, and durable evidence from the same application path. Start in
   **Live Workbench** for the interactive participant path; **Optional Deep
   Dives** are reference views when you want the underlying architecture or
   evidence detail.
+
+**Stories** (`/storyboard`) connects the seeded catalog, declared profiles, and
+execution evidence through short field notes. Each story card links to its
+matching essay; Theo's returns scenario is optional follow-up. **About**
+(`/about`) explains the 60-minute build and the ownership of application state.
+Architecture links with `?ask=...` prefill the storefront composer and wait for
+you to send the request.
+
+The optional architecture and evaluation pages include authored configuration,
+SQL examples, and illustrative scorecards. Use a completed live comparison,
+Workbench turn, or Aurora receipt for participant proof. Opening a reference
+page does not run an evaluation or verify provisioned AWS services.
 
 A concise first-visit tour introduces the shopper point of view, the
 concierge, and the optional evidence surface. Three returning-customer
@@ -161,7 +221,15 @@ knew and what the system actually changed.
 ## Governed edition
 
 The [`governed`](https://github.com/aws-samples/sample-pellier-agentic-search-apg/tree/governed)
-branch extends Pellier with a managed, identity-aware execution path:
+branch is Pellier's more comprehensive edition. It extends the shared
+storefront and Aurora foundation with a managed, identity-aware execution path.
+The following controls belong to that edition's scope; its
+[README and setup instructions](https://github.com/aws-samples/sample-pellier-agentic-search-apg/blob/governed/README.md)
+describe how to deploy and verify them.
+
+Both editions use Cognito for shopper sign-in. The governed edition carries
+that identity through managed execution, tool authorization, and transaction
+checks across service boundaries.
 
 | Boundary | Governed implementation |
 |---|---|
@@ -173,8 +241,8 @@ branch extends Pellier with a managed, identity-aware execution path:
 | Observability | Correlated OpenTelemetry, Runtime, policy, tool, and Aurora evidence |
 | Commerce | Server-priced quotes, explicit consent, inventory reservations, sandbox payment events, outbox rows, and immutable receipts |
 
-Pellier is not merely conversational commerce. It is **proof-carrying
-commerce**: an agent can recommend and prepare a transaction, but identity,
+The governed edition demonstrates **proof-carrying commerce**: an agent can
+recommend and prepare a transaction, while identity,
 explicit consent, deterministic business rules, payment state, and durable
 evidence determine what actually executes.
 
@@ -186,8 +254,8 @@ testable without hiding those boundaries behind a mock success message.
 AWS Glue Data Catalog, Amazon DataZone, and Amazon SageMaker can govern
 analytical data products, metadata, and model development. They are adjacent
 to this architecture, but they do not prove that a shopper confirmed a
-specific total or that order, payment, and inventory state agree. Pellier
-keeps transaction governance at the identity, authorization, deterministic
+specific total or that order, payment, and inventory state agree. The governed
+edition keeps transaction governance at the identity, authorization, deterministic
 state-transition, and durable-evidence boundaries.
 
 ## Technology
@@ -202,8 +270,8 @@ state-transition, and durable-evidence boundaries.
 | Agent framework | Strands Agents SDK with `Agent`, `@tool`, hooks, and `GraphBuilder` |
 | Backend | Python, FastAPI, psycopg 3, boto3, Pydantic, and SSE streaming |
 | Frontend | React 18, TypeScript 5, Vite 6, Tailwind CSS 3, Framer Motion 12, and Lucide |
-| MCP | `awslabs.postgres-mcp-server` in read-only RDS Data API mode |
-| Managed agent services | Bedrock AgentCore Runtime, Memory, Gateway, Identity, Policy, and Evals |
+| Optional MCP | Generated configuration for `awslabs.postgres-mcp-server`; requires RDS Data API and matching IAM access |
+| Managed agent services | AgentCore Memory is required for the Builders' Session; Runtime, Gateway, Identity, Policy, and Evals are optional deployment paths |
 | Typography | Self-hosted Fraunces, Instrument Sans, Instrument Serif, and JetBrains Mono |
 
 MCP configuration is generated during bootstrap by
@@ -217,9 +285,11 @@ supports Python 3.12 or newer.
 
 ### Deterministic smoke mode
 
-Smoke mode serves the real production frontend bundle through FastAPI while
-replacing Aurora and Bedrock calls with deterministic responses. It is the
-fastest way to explore the repository without AWS credentials.
+Smoke mode serves the real production frontend bundle and deterministic chat
+responses without initializing Aurora, Bedrock, or AgentCore. It supports UI
+inspection; endpoints that need those services can still return errors. It
+does not prove retrieval, persistent memory, authentication, or database writes.
+Run these commands from the repository root:
 
 ```bash
 python3 -m venv .venv
@@ -233,6 +303,7 @@ npm run build
 cd ../backend
 
 PELLIER_SMOKE_MODE=true \
+PELLIER_DISABLE_DOTENV=1 \
 DB_HOST=localhost \
 DB_NAME=pellier_smoke \
 DB_USER=pellier_smoke \
@@ -244,11 +315,21 @@ python -m uvicorn app:app --host 0.0.0.0 --port 8000
 
 Open <http://localhost:8000> for Pellier or
 <http://localhost:8000/pellier-labs> for Pellier Labs.
+Keep the server terminal running while using the preview. The retrieval
+comparison is at <http://localhost:8000/pellier-labs/performance>.
 
 ### Aurora and Bedrock
 
-To run the complete path, configure Aurora PostgreSQL and Amazon Bedrock in the
-same AWS Region:
+The complete path needs Aurora PostgreSQL, accessible Bedrock models, Cognito
+for the seeded shopper identities, and AgentCore Memory with a
+`USER_PREFERENCE` strategy. Workshop Studio provisions these through the
+bootstrap scripts. For an existing local AWS environment, supply the actual
+Cognito settings and `AGENTCORE_MEMORY_ID`; copying the example file does not
+create them. See [Memory provisioning](scripts/provision_agentcore_memory.py)
+for the maintainer deployment entry point.
+
+The commands below prepare the database and start the backend after that AWS
+setup. Start from the repository root with your Python environment active:
 
 ```bash
 cp pellier/backend/.env.example pellier/backend/.env
@@ -299,9 +380,23 @@ proxy preserves a path prefix, set both values before building or starting the
 application:
 
 ```bash
-SPA_MOUNT_PATH=/app
-VITE_BASE_PATH=/app/
+export SPA_MOUNT_PATH=/app
+export VITE_BASE_PATH=/app/
 ```
+
+Rebuild the frontend after changing `VITE_BASE_PATH`. Workshop Studio uses
+`/ports/8000/` in the browser; its nginx proxy strips that prefix before
+forwarding to FastAPI, so that deployment keeps `SPA_MOUNT_PATH=/`.
+
+### Publishing workshop updates
+
+The application and Workshop Studio guides are separate repositories. Publish
+reviewed app changes to `main` first, then use the Workshop Studio repository's
+`scripts/set_source_revision.py` to update all three immutable source pins.
+Run its release validator, publish the updated guides/templates, and make sure
+the selected Workshop Studio asset version contains the matching nested
+templates before rehearsing a fresh environment. See that repository's README
+for the release order and S3 asset contract.
 
 ## Quality
 

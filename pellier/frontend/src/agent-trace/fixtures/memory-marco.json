@@ -33,7 +33,7 @@
   },
   "semantic": {
     "label": "Semantic - fixture preview",
-    "store": "seeded JSON (AgentCore optional)",
+    "store": "seeded JSON (not learned AgentCore preferences)",
     "source": "fixture",
     "items": [
       {

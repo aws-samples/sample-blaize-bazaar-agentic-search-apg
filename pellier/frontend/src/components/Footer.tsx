@@ -27,6 +27,7 @@
 import { Link } from 'react-router-dom'
 
 import { FOOTER } from '../copy'
+import { asset } from '../utils/assetPath'
 
 export default function Footer() {
   const year = new Date().getFullYear()
@@ -133,7 +134,7 @@ function CheckoutTrust() {
               aria-hidden="true"
               className="h-5 w-auto object-contain"
               height={20}
-              src={`/assets/icons/payment/${method.id}.svg`}
+              src={asset(`/assets/icons/payment/${method.id}.svg`)}
             />
             <span className="sr-only">{method.label}</span>
           </li>

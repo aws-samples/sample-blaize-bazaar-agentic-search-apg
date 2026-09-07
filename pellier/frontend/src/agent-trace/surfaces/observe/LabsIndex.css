@@ -24,6 +24,8 @@
   min-height: 0;
   flex: 1 1 auto;
   flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .labs-turns-heading {
@@ -56,12 +58,12 @@
    list, which is what gives the reference its editorial openness. */
 .labs-turns-list {
   display: flex;
+  flex-shrink: 0;
   min-height: 0;
   flex-direction: column;
   gap: 10px;
   margin: 0;
   padding: 10px;
-  overflow-y: auto;
   list-style: none;
   counter-reset: labs-turn;
   overscroll-behavior: contain;
@@ -206,6 +208,7 @@
 
 .labs-thread {
   display: grid;
+  flex-shrink: 0;
   gap: 12px;
   margin: 14px 12px 12px;
   padding: 15px 14px 14px;

@@ -43,7 +43,7 @@ const McpDetail: React.FC = () => {
         },
       ]}
       liveState={{
-        label: 'Current MCP Gateway state. Shows the optional managed Gateway path beside the app\'s default in-process tool calls.',
+        label: 'Reference deployment options. This page does not check whether a Gateway is provisioned or reachable.',
         values: [
           { label: 'Gateway', value: 'Optional' },
           { label: 'Default path', value: 'In-process' },

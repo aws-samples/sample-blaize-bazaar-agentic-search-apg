@@ -4,8 +4,8 @@
  * Two preset modes:
  *   - "to-pellier" — used on Pellier Labs surfaces. Reads "→ See this in
  *      Pellier" and links back to the storefront, optionally
- *      with an `?ask=` query that opens the chat drawer with a
- *      pre-filled prompt that exercises this concept.
+ *      with an `?ask=` query that prefills the storefront composer.
+ *      The shopper chooses a profile and sends the prompt explicitly.
  *   - "to-agent-trace" — used on Pellier surfaces. Reads "How this works
  *      →" and deep-links to Pellier Labs route that explains the
  *      concept (memory, tools, agents, etc).
@@ -23,8 +23,8 @@ export type CrossLinkDirection = 'to-pellier' | 'to-agent-trace'
 export interface SurfaceCrossLinkProps {
   direction: CrossLinkDirection
   /**
-   * For `to-pellier`: optional `?ask=` query that auto-fires the
-   * Pellier chat drawer with this prompt. For `to-agent-trace`: the
+   * For `to-pellier`: optional `?ask=` query that prefills the
+   * storefront composer. For `to-agent-trace`: the
    * Pellier Labs path to navigate to (e.g. "/pellier-labs/memory").
    */
   href?: string

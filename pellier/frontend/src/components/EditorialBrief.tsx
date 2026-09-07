@@ -9,6 +9,9 @@
  *      darker warm ground, doubling as the visual page-end signal.
  */
 
+import { Link } from 'react-router-dom'
+import { imageSrc } from '../utils/assetPath'
+
 const BRIEF_IMAGE = '/products/hero-fresh-2.png'
 
 export default function EditorialBrief() {
@@ -33,7 +36,7 @@ export default function EditorialBrief() {
               style={{ aspectRatio: '16 / 10' }}
             >
               <img
-                src={BRIEF_IMAGE}
+                src={imageSrc(BRIEF_IMAGE)}
                 alt="Pellier editorial still life"
                 className="w-full h-full object-cover"
                 onError={(e) => {
@@ -75,7 +78,7 @@ export default function EditorialBrief() {
               </div>
 
               {/* Headline */}
-              <h2
+              <h1
                 className="font-display italic text-espresso"
                 style={{
                   fontSize: 'clamp(28px, 3.5vw, 44px)',
@@ -84,10 +87,10 @@ export default function EditorialBrief() {
                   fontWeight: 400,
                 }}
               >
-                A Pellier surface.
+                A shopper request.
                 <br />
-                A proof surface.
-              </h2>
+                A builder's evidence.
+              </h1>
 
               {/* Brand mark */}
               <div
@@ -129,10 +132,25 @@ export default function EditorialBrief() {
                 }}
               >
                 Aurora PostgreSQL stores catalog vectors, relational context,
-                working-memory turns, and action receipts. Pellier Labs
-                distinguishes authored fixtures from live evidence so a
-                recommendation never claims more provenance than the current
-                session collected.
+                inventory, orders, and action receipts. Amazon Bedrock AgentCore
+                Memory owns session turns and learned preferences. Seeded profiles
+                and reference examples provide context; completed requests and
+                their receipts provide execution evidence.
+              </p>
+
+              <p className="font-sans text-[15px] leading-7 text-ink-soft max-w-[520px]">
+                In the 60-minute Builders' Session, you implement and verify one
+                inventory tool, compare four retrieval strategies, then grant the
+                tool to Stock Keeper and inspect its Aurora receipt. Follow the lab
+                guide for each proof gate. Use the{' '}
+                <Link to="/pellier-labs" className="text-accent-ink underline underline-offset-4">
+                  Live Workbench
+                </Link>{' '}
+                to inspect a conversation and{' '}
+                <Link to="/pellier-labs/references" className="text-accent-ink underline underline-offset-4">
+                  Optional Deep Dives
+                </Link>{' '}
+                for further reading.
               </p>
 
               {/* Stack */}
@@ -144,6 +162,7 @@ export default function EditorialBrief() {
                   'Aurora PostgreSQL',
                   'pgvector',
                   'Amazon Bedrock',
+                  'AgentCore Memory',
                   'Strands SDK',
                   'Claude',
                   'Cohere Embed v4',

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import PellierHero from './PellierHero'
 
 const switchPersona = vi.fn()
@@ -18,14 +19,6 @@ vi.mock('../contexts/UIContext', () => ({
   useUI: () => ({ openDrawerWithQuery }),
 }))
 
-vi.mock('../hooks/useVoiceSearch', () => ({
-  useVoiceSearch: () => ({
-    isListening: false,
-    startListening: vi.fn(),
-    stopListening: vi.fn(),
-  }),
-}))
-
 describe('PellierHero primary action', () => {
   beforeEach(() => {
     persona = null
@@ -34,7 +27,7 @@ describe('PellierHero primary action', () => {
   })
 
   it('keeps profile selection in the hero without a duplicate edit rail', () => {
-    render(<PellierHero />)
+    render(<MemoryRouter><PellierHero /></MemoryRouter>)
 
     expect(screen.getByTestId('hero-profile-marco')).toBeInTheDocument()
     expect(screen.getByTestId('hero-profile-anna')).toBeInTheDocument()
@@ -44,7 +37,7 @@ describe('PellierHero primary action', () => {
   })
 
   it('uses the existing persona transition from the hero', () => {
-    render(<PellierHero />)
+    render(<MemoryRouter><PellierHero /></MemoryRouter>)
 
     fireEvent.click(screen.getByTestId('hero-profile-anna'))
     expect(switchPersona).toHaveBeenCalledWith('anna')
@@ -52,7 +45,7 @@ describe('PellierHero primary action', () => {
 
   it('keeps Marco floor-check proof visible without changing its query', () => {
     persona = { id: 'marco', avatar_color: '#7a263a' }
-    render(<PellierHero />)
+    render(<MemoryRouter><PellierHero /></MemoryRouter>)
 
     const floorCheck = screen.getByRole('button', {
       name: 'Check Hadley stock in Brooklyn',

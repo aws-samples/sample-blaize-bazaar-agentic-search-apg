@@ -43,7 +43,7 @@ const StateDetail: React.FC = () => {
         },
       ]}
       liveState={{
-        label: 'Current routing context for the active session. Shows the intent, selected specialist path, and routing strategy.',
+        label: 'Reference dispatcher configuration. Inspect Workbench evidence for the actual intent and specialist selected for a request.',
         values: [
           { label: 'Owning path', value: '1' },
           { label: 'Routing', value: 'Dispatcher' },

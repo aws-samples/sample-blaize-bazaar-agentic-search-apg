@@ -25,7 +25,7 @@ import { useState } from 'react'
 
 import { STORYBOARD_TEASERS, type StoryboardTeaser as StoryboardTeaserCard } from '../copy'
 import { cssVar as c } from '../design/cssVars'
-import { imageSrc } from '../utils/assetPath'
+import { imageSrc, routePath } from '../utils/assetPath'
 
 // --- Design tokens (storefront.md) ---------------------------------------
 const FRAUNCES_STACK = 'Fraunces, Georgia, serif'
@@ -64,7 +64,7 @@ export default function StoryboardTeaser() {
           >
             From the Storyboard
           </p>
-          <h2
+          <h1
             id="storyboard-teaser-heading"
             style={{
               fontFamily: FRAUNCES_STACK,
@@ -77,7 +77,7 @@ export default function StoryboardTeaser() {
             }}
           >
             Field notes from a slower kind of shopping.
-          </h2>
+          </h1>
         </header>
 
         <div
@@ -209,7 +209,7 @@ function StoryboardCard({ card, index }: StoryboardCardProps) {
         </p>
         <a
           data-testid={`storyboard-card-link-${index}`}
-          href="#storyboard"
+          href={routePath(card.href)}
           style={{
             // Req 1.9.2 - terracotta link.
             color: c.accent,

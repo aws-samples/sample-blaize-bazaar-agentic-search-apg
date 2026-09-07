@@ -2,8 +2,8 @@ import { cssVar as c } from '../design/cssVars'
 /**
  * FieldNotes — short editorial essays for the Storyboard route.
  *
- * Four notes total: one for each returning persona (Marco, Anna,
- * Theo) and one editorial note written in the Pellier voice. Each
+ * Four notes total: catalog, declared profiles, execution evidence,
+ * and Theo's optional returns scenario. Each
  * note is a tight italic Fraunces dek + a prose body in Instrument Sans, 15px/
  * 1.7, matching Pellier Labs AssistantText register so the page reads
  * as "the storefront wrote this, not a marketing page."
@@ -19,6 +19,7 @@ const FRAUNCES_STACK = 'Fraunces, Georgia, serif'
 const MONO_STACK = 'JetBrains Mono, ui-monospace, monospace'
 
 interface Note {
+  id: string
   kicker: string
   title: string
   body: string[]
@@ -27,38 +28,42 @@ interface Note {
 
 const NOTES: readonly Note[] = [
   {
+    id: 'catalog',
     kicker: 'Field note · No. 01',
-    title: 'On asking for the piece, not the product.',
+    title: 'One catalog, different ways to find a piece.',
     body: [
-      'Pellier should answer "a linen piece that travels well" as confidently as it answers "medium oatmeal camp shirt, size M." Both are the same question dressed differently. The first is softer; the second assumes too much.',
-      'Pellier is built on that smaller, quieter assumption — that you know what you want, not what it\'s called.',
+      'Forty seeded products give every participant the same starting point: linen, leather, ceramics, gifts, and home objects. The storefront edit uses checked-in products and explicit profile tags; a live search retrieves from Aurora PostgreSQL.',
+      'The request “A housewarming gift under $100 that is in stock” holds the need steady while four retrieval strategies change how candidates are found, filtered, and ranked. Compare the returned products and hard constraints before deciding whether the extra model call earns its time and cost.',
     ],
     signature: '— The editors',
   },
   {
+    id: 'profiles',
     kicker: 'Field note · No. 02',
-    title: 'Marco, as a workshop profile.',
+    title: 'A profile starts with declared signals.',
     body: [
-      "Marco's declared seed favors natural fibers, warm neutrals, and pieces that travel well. His seeded orders make that history inspectable instead of implied.",
-      "The storefront ranks the Italian Linen Camp Shirt in Indigo from explicit catalog tags. A live turn can add working-memory evidence, but the profile seed is the starting point.",
+      "Marco starts with natural fibers and travel pieces, Anna with considered gifts and budgets, and Theo with ceramics and care. Their tag weights and seeded orders are authored workshop inputs, not preferences inferred from a conversation you have yet to run.",
+      'AgentCore Memory stores completed session turns and can extract learned preferences. Aurora owns catalog, inventory, orders, and action receipts. Inspect the memory source and session before treating a remembered detail as evidence.',
     ],
     signature: '— Workshop profile note',
   },
   {
+    id: 'evidence',
     kicker: 'Field note · No. 03',
-    title: 'Anna, as a workshop profile.',
+    title: 'How an answer earns its proof.',
     body: [
-      "Gifts are the hardest search queries a storefront will take. They're indirect by design: the shopper isn't the recipient, the recipient isn't in the room, and the moment the piece is chosen for matters more than the piece itself.",
-      "Anna's seed makes milestone occasions, explicit budgets, and ready-to-give pieces visible inputs. Participants can then compare how retrieval strategies handle those constraints.",
+      'In the Builders’ Session, you first implement floor_check and verify its Aurora result directly. Later, you grant that capability to Stock Keeper and ask Marco’s warehouse question again. The tool body and the agent’s authority are two separate control points.',
+      'An answer alone does not prove the invocation. Match the named tool, caller, arguments, time, and session to its durable Aurora receipt. The Live Workbench helps inspect a turn; reference scorecards and replay fixtures explain the design but do not prove your request ran.',
     ],
     signature: '— Workshop profile note',
   },
   {
+    id: 'optional-returns',
     kicker: 'Field note · No. 04',
     title: 'Theo, as a workshop profile.',
     body: [
       "Theo's seed favors ceramics, linen throws, stoneware, repair, and durable post-purchase handling.",
-      "His damaged-bowl scenario closes the loop with a real ownership check, return write, inventory effect, and action receipt in Aurora.",
+      "His damaged-bowl scenario is optional follow-up beyond the 60-minute build. On a live configured environment, it exercises an ownership check, return write, inventory effect, and action receipt in Aurora. A seeded story is not a completed return.",
     ],
     signature: '— Workshop profile note',
   },
@@ -136,11 +141,13 @@ export default function FieldNotes() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 64 }}>
           {NOTES.map((note, i) => (
             <article
+              id={note.id}
               key={note.title}
               data-testid={`field-note-${i}`}
               style={{
                 borderTop: `1px solid ${RULE_1}`,
                 paddingTop: 32,
+                scrollMarginTop: 100,
               }}
             >
               <p
@@ -222,8 +229,9 @@ export default function FieldNotes() {
               maxWidth: 420,
             }}
           >
-            More field notes land with each Edit. For now, this is the
-            Storyboard — a slower kind of shopping, in short essays.
+            Follow the lab guide for the required build. Return to these
+            stories when you want to connect the shopper's request to the
+            system that answers it.
           </p>
         </div>
       </div>

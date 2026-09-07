@@ -431,8 +431,16 @@ export default function PellierLabsWorkbench() {
   const currentTraceStepRef = useRef<HTMLLIElement | null>(null);
   const [traceLineHeight, setTraceLineHeight] = useState(0);
   const threadHistoryRef = useRef<ChatMessage[]>([]);
+  const runIdRef = useRef(0);
+  const retryContextRef = useRef<{
+    history: ChatMessage[];
+    onComplete?: (response: ChatResponse) => void;
+  }>({ history: [] });
 
   useEffect(() => {
+    runIdRef.current += 1;
+    startedAtRef.current = null;
+    retryContextRef.current = { history: [] };
     setActiveTurn(null);
     setActiveOperatorTurn(null);
     setActiveQuery(null);
@@ -450,6 +458,8 @@ export default function PellierLabsWorkbench() {
     setCopiedSqlId(null);
     setThreadProgress(null);
     threadHistoryRef.current = [];
+    // An old persona's stream must not populate a new persona's evidence.
+    return () => { runIdRef.current += 1; };
   }, [personaId]);
 
   useEffect(() => {
@@ -673,6 +683,11 @@ export default function PellierLabsWorkbench() {
   ) => {
     const request = curatedQuery.trim();
     if (!request || runStatus === 'running') return;
+    const runId = ++runIdRef.current;
+    retryContextRef.current = {
+      history: conversationHistory,
+      onComplete: onThreadTurnComplete,
+    };
 
     setActiveTurn(turnIndex);
     setActiveOperatorTurn(operatorTurnIndex);
@@ -695,7 +710,9 @@ export default function PellierLabsWorkbench() {
       const response: ChatResponse = await sendChatMessageStreaming(
         request,
         conversationHistory,
-        handleStreamEvent,
+        (event) => {
+          if (runIdRef.current === runId) handleStreamEvent(event);
+        },
         undefined,
         guardrailsEnabled,
         operatorTurnIndex === null && profileEnabled
@@ -704,6 +721,7 @@ export default function PellierLabsWorkbench() {
         orchestrationPattern,
         responseMode,
       );
+      if (runIdRef.current !== runId) return;
       if (response.response) {
         setAgentResponse((current) =>
           reconcileAgentResponse(current, response.response),
@@ -724,13 +742,16 @@ export default function PellierLabsWorkbench() {
       );
       setRunStatus('complete');
     } catch (error) {
+      if (runIdRef.current !== runId) return;
       setRunError(errorMessage(error));
       setRunStatus('error');
     } finally {
-      if (startedAtRef.current !== null) {
-        setElapsedMs(Date.now() - startedAtRef.current);
+      if (runIdRef.current === runId) {
+        if (startedAtRef.current !== null) {
+          setElapsedMs(Date.now() - startedAtRef.current);
+        }
+        startedAtRef.current = null;
       }
-      startedAtRef.current = null;
     }
   };
 
@@ -1287,6 +1308,8 @@ export default function PellierLabsWorkbench() {
                           activeQuery,
                           activeTurn,
                           activeOperatorTurn,
+                          retryContextRef.current.history,
+                          retryContextRef.current.onComplete,
                         );
                       }}
                     >

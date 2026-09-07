@@ -32,9 +32,9 @@ def _print_build_state_legend() -> None:
         file=sys.stderr,
     )
     print(
-        "For this lab, floor_check becomes 'shipped' after its direct "
-        "Aurora check works; Stock Keeper becomes 'shipped' only after "
-        "floor_check is added to its tool list.",
+        "Build state checks the implementation and grant, not database "
+        "results. Run tool-check to prove the direct Aurora contract; "
+        "Stock Keeper also needs floor_check in its tool list.",
         file=sys.stderr,
     )
 
@@ -302,8 +302,8 @@ def compare(args: argparse.Namespace) -> int:
                 "Reranking did not execute for: "
                 + ", ".join(str(name) for name in degraded)
                 + ". The rows shown are fusion order, not reranked order, so "
-                "this comparison is not evidence about reranking. Check "
-                "Bedrock access for the rerank model and run this again.",
+                "this comparison is not evidence about reranking. Use the "
+                "lab's recovery path and flag a facilitator to check model access.",
                 file=sys.stderr,
             )
         print("Comparison did not satisfy the Lab 2 evidence contract.", file=sys.stderr)
@@ -312,12 +312,11 @@ def compare(args: argparse.Namespace) -> int:
 
 
 def receipt(args: argparse.Namespace) -> int:
-    """Verify a floor_check receipt produced by *this* run.
+    """Verify a recent floor_check receipt, optionally scoped to a session.
 
-    An unfiltered "latest row" is not proof of your own work: a rehearsal,
-    a bootstrap dry run, or a neighbour's turn leaves rows in the same
-    table. The freshness window is the default guard; ``--session`` is the
-    exact one when you know the session id.
+    A rehearsal or neighbour's turn can fall inside the freshness window.
+    Participants must match the arguments and time to their turn;
+    ``--session`` also restricts the lookup to a known session id.
     """
     query = {
         "tool": "floor_check",
@@ -373,7 +372,8 @@ def receipt(args: argparse.Namespace) -> int:
         "This receipt is scoped to the last "
         f"{args.within_minutes} minutes"
         + (f" and session {args.session}" if args.session else "")
-        + ", so it cannot be satisfied by an earlier rehearsal row.",
+        + ". A recent row alone does not identify your turn; compare the "
+        "session and arguments, or use --session for an exact session filter.",
         file=sys.stderr,
     )
 
@@ -495,8 +495,8 @@ def parser() -> argparse.ArgumentParser:
         type=int,
         default=30,
         help=(
-            "Only accept a receipt created in the last N minutes, so an "
-            "earlier rehearsal row cannot satisfy the proof."
+            "Only accept a receipt created in the last N minutes. "
+            "Use --session to also scope it to your session."
         ),
     )
     receipt_parser.add_argument(

@@ -30,7 +30,7 @@ const ToolRegistryDetail: React.FC = () => {
       prose="The Aurora tool registry is the live workshop teaching surface for semantic discovery. Tool descriptions are embedded, searched with pgvector, and compared with the optional MCP Gateway view. Pellier's default path still calls in-process Strands tools unless Gateway is configured."
       seeInPellier={{
         href: '/?ask=Show+me+linen+pieces+like+the+Camp+Shirt',
-        label: 'See tool discovery fire on the storefront',
+        label: 'Try a catalog request on the storefront',
       }}
       cheatSheet={[
         {
@@ -47,7 +47,7 @@ const ToolRegistryDetail: React.FC = () => {
         },
       ]}
       liveState={{
-        label: 'Current tool registry state. Aurora ranks tool descriptions for the workshop discovery demo; optional Gateway publishes the callable surface over MCP.',
+        label: 'Authored starter inventory. Inspect the Tools surface for live build state; a discovery result does not add to a specialist’s tool grants.',
         values: [
           { label: 'Tools registered', value: '15' },
           { label: 'Shipped (baseline image)', value: '14' },
@@ -79,19 +79,20 @@ const ToolRegistryDetail: React.FC = () => {
             <ExpCard>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <SectionLabel label="Registration" />
-                <pre style={codeStyle}>{`# Register tool with embedding
-INSERT INTO tools (name, description, embedding)
-VALUES ($1, $2, $3);`}</pre>
+                <pre style={codeStyle}>{`-- Parameterized registration example
+INSERT INTO pellier.tools (tool_id, name, description, description_emb)
+VALUES ($1, $2, $3, $4::vector);`}</pre>
               </div>
             </ExpCard>
             <ExpCard>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <SectionLabel label="Discovery" />
-                <pre style={codeStyle}>{`# Discover by semantic similarity
+                <pre style={codeStyle}>{`-- Parameterized discovery example
 SELECT name,
-       1 - (embedding <=> $1) AS similarity
-FROM tools
-ORDER BY embedding <=> $1
+       1 - (description_emb <=> $1::vector) AS similarity
+FROM pellier.tools
+WHERE enabled
+ORDER BY description_emb <=> $1::vector
 LIMIT 5;`}</pre>
               </div>
             </ExpCard>

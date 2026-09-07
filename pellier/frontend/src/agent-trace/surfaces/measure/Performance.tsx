@@ -7,7 +7,7 @@
  * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   EditorialTitle,
   ExpCard,
@@ -684,30 +684,9 @@ const PgvectorTuning: React.FC<PgvectorTuningProps> = ({ tuning }) => {
 };
 
 /* -----------------------------------------------------------------------
- * Search Strategy Comparison — Anna's anchor capability surfaced honestly
- *
- * Four rows: vector only / hybrid (RRF) / hybrid + rerank / agentic.
- * The card has two states:
- *   1. Default — fixture numbers from performance.json. Card always
- *      renders with sensible defaults so the page never has a hole.
- *   2. Live — when the user types a query and clicks "Run on Aurora",
- *      we hit /api/agent-trace/search-strategies/compare which executes all
- *      four strategies against the catalog and returns measured numbers
- *      + the actual top-5 product names per strategy. The recall@5
- *      column stays the static fixture value (we'd need labeled data
- *      to compute it live) but the observed duration + products refresh, and the
- *      agentic row also surfaces extractedFilters chips so participants
- *      can see what Sonnet pulled out and which filter-degradation step
- *      the pipeline ended up using.
- *
- * The teaching beat: workshop participants can see the rerank lift in
- * dollars AND latency AND product mix differences. The agentic row
- * adds a fourth axis — filter respect. A "$100 milestone gift" query
- * is the canonical case: only the agentic strategy actually keeps
- * results under $100 because the structured extractor wrote
- * price_max_usd=100 into
- * a WHERE clause; the other three rank but never filter, so a $185
- * candle can still surface in the top-5.
+ * Search comparison: reference timing and cost until a participant runs the
+ * endpoint; then one intact response with its query and execution evidence.
+ * Recall is not measured by this endpoint and is not shown as a live score.
  * ----------------------------------------------------------------------- */
 
 /* -----------------------------------------------------------------------
@@ -807,6 +786,7 @@ const ExtractedFiltersStrip: React.FC<ExtractedFiltersStripProps> = ({
           <span style={chipStyle}>≤ ${filters.priceMaxUsd}</span>
         )}
         {filters.inStockOnly && <span style={chipStyle}>in stock</span>}
+        {filters.hardConstraintsEnforced === true && <span style={chipStyle}>Hard constraints enforced</span>}
         {!hasAnyFilter && (
           <span
             style={{
@@ -869,8 +849,7 @@ const ExtractedFiltersStrip: React.FC<ExtractedFiltersStripProps> = ({
               color: 'var(--at-ink-2)',
             }}
           >
-            – strict filter returned too few candidates; pipeline relaxed
-            gracefully
+            – category or tag filters relaxed to widen the candidate pool
           </span>
         )}
       </div>
@@ -882,442 +861,195 @@ interface SearchStrategyComparisonProps {
   strategies: PerformanceData['searchStrategies'];
 }
 
-const SearchStrategyComparison: React.FC<SearchStrategyComparisonProps> = ({
-  strategies,
-}) => {
-  // Pre-filled with Anna's canonical rerank anchor so participants press
-  // Run instead of typing — matches Pellier memory chip and the lab
-  // guide's "click, don't type" path. Editable for the optional turns.
-  const [query, setQuery] = useState('A milestone gift for a new homeowner');
-  const [liveStrategies, setLiveStrategies] =
-    useState<PerformanceData['searchStrategies'] | null>(null);
+type ComparisonStrategy = Omit<
+  PerformanceData['searchStrategies'][number],
+  'recallAt5' | 'modeledLatencyMs' | 'isShipped'
+> & { modeledLatencyMs?: number };
+
+interface ComparisonResult {
+  query: string;
+  strategies: ComparisonStrategy[];
+  sharedQueryEmbeddingObservedMs?: number;
+  costModel?: Record<string, unknown>;
+}
+
+const SearchStrategyComparison: React.FC<SearchStrategyComparisonProps> = ({ strategies }) => {
+  const [query, setQuery] = useState('A housewarming gift under $100 that is in stock');
+  const [result, setResult] = useState<ComparisonResult | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestRef = useRef<AbortController | null>(null);
 
-  const rendered = liveStrategies ?? strategies;
+  useEffect(() => () => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+  }, []);
 
   const handleRun = async () => {
-    const q = query.trim();
-    if (!q) return;
+    const submittedQuery = query.trim();
+    if (!submittedQuery || requestRef.current) return;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const timeout = window.setTimeout(() => controller.abort(), 75_000);
     setRunning(true);
     setError(null);
     try {
-      const r = await fetch(
-        `/api/agent-trace/search-strategies/compare?query=${encodeURIComponent(q)}`,
+      const response = await fetch(
+        `/api/agent-trace/search-strategies/compare?query=${encodeURIComponent(submittedQuery)}`,
+        { signal: controller.signal },
       );
-      if (!r.ok) {
-        throw new Error(`API error: ${r.status}`);
+      if (!response.ok) throw new Error(`Comparison request failed (HTTP ${response.status}).`);
+      const payload: ComparisonResult = await response.json();
+      const rows = payload.strategies;
+      if (!Array.isArray(rows) || rows.length !== 4 || strategies.some(
+        (expected) => rows.filter((row) => row.strategy === expected.strategy).length !== 1,
+      ) || rows.some((row) =>
+        !Number.isFinite(row.observedMs) || !Number.isFinite(row.modeledCostPerThousandUsd)
+        || !Array.isArray(row.products),
+      )) {
+        throw new Error('The response did not contain four complete strategy rows.');
       }
-      const j = await r.json();
-      // Backend returns { strategies: [...] } where each strategy has
-      // observedMs + modeledCostPerThousandUsd + products. We merge those onto the
-      // fixture's recallAt5 + isShipped so the card stays whole. The
-      // agentic strategy additionally carries extractedFilters surfacing
-      // what Sonnet pulled out and which filter-degradation step ran.
-      const merged: PerformanceData['searchStrategies'] = strategies.map((s) => {
-        const live = (j.strategies || []).find(
-          (l: { strategy: string }) => l.strategy === s.strategy,
-        );
-        if (!live) return s;
-        return {
-          ...s,
-          observedMs: live.observedMs,
-          modeledCostPerThousandUsd:
-            live.modeledCostPerThousandUsd ?? s.modeledCostPerThousandUsd,
-          products: live.products,
-          extractedFilters: live.extractedFilters,
-        };
-      });
-      setLiveStrategies(merged);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (requestRef.current !== controller) return;
+      // Keep the query and all evidence from the same response together.
+      // Reference scores must never fill gaps in a live measurement.
+      setResult({ ...payload, query: submittedQuery });
+    } catch (failure) {
+      if (requestRef.current !== controller) return;
+      setError(controller.signal.aborted
+        ? 'The comparison reached the 75-second limit. Use your saved response or a facilitator’s completed comparison; do not start another full wait.'
+        : `${failure instanceof Error ? failure.message : 'The comparison could not finish.'} Check readiness and retry once, or use the lab’s recovery path.`);
     } finally {
-      setRunning(false);
+      window.clearTimeout(timeout);
+      if (requestRef.current === controller) {
+        requestRef.current = null;
+        setRunning(false);
+      }
     }
   };
 
-  const headerStyle: React.CSSProperties = {
-    fontFamily: 'var(--at-mono)',
-    fontSize: '11px',
-    letterSpacing: '0.22em',
-    textTransform: 'uppercase',
-    color: 'var(--at-ink-2)',
-    fontWeight: 500,
-    padding: '8px 12px',
-    textAlign: 'left',
-    borderBottom: '1px solid var(--at-card-border)',
+  const downloadResult = () => {
+    if (!result) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'retrieval-comparison.json';
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
+  const rendered: ComparisonStrategy[] = result?.strategies ?? strategies;
+  const degraded = result?.strategies.filter(
+    (row) => row.strategy.includes('rerank') && row.rerankExecuted !== true,
+  ) ?? [];
   const cellStyle: React.CSSProperties = {
-    fontFamily: 'var(--at-mono)',
-    fontSize: '14px',
-    color: 'var(--at-ink-2)',
-    padding: '10px 12px',
-    letterSpacing: '0.02em',
+    padding: '12px', textAlign: 'left', verticalAlign: 'top',
+    borderBottom: '1px solid var(--at-rule-1)',
+  };
+  const buttonStyle: React.CSSProperties = {
+    minHeight: '44px', padding: '10px 16px', borderRadius: '6px',
+    border: '1px solid var(--at-ink-1)', background: 'var(--at-ink-1)',
+    color: 'var(--at-cream-1)', fontWeight: 600,
   };
 
   return (
-    <ExpCard>
-      <Eyebrow label="Search strategy comparison · Anna's anchor capability" />
-      <p
-        style={{
-          fontFamily: 'var(--at-sans)',
-          fontSize: '15px',
-          lineHeight: 1.5,
-          color: 'var(--at-ink-2)',
-          marginTop: '12px',
-          maxWidth: '720px',
-        }}
-      >
-        Vector finds meaning. Postgres FTS finds literals. Cohere Rerank reads
-        the union and picks. The agentic row goes one step further: Sonnet 4.6
-        splits the query into structured filters (categories, tags,
-        price ceiling, in-stock) and a residual taste phrase, then the
-        WHERE-clause filters run with{' '}
-        <code style={{ fontFamily: 'var(--at-mono)', fontSize: '13px' }}>
-          hnsw.iterative_scan = relaxed_order
-        </code>{' '}
-        so a strict filter doesn't silently drop recall. Each row is a real
-        choice – recall vs latency vs cost vs filter respect – and the
-        workshop teaches that the right answer depends on the query class,
-        not the database.
-      </p>
-
-      {/* Live-fetch query input — runs all four strategies through the
-          backend's /api/agent-trace/search-strategies/compare endpoint. */}
-      <div
-        style={{
-          marginTop: '16px',
-          display: 'flex',
-          gap: '8px',
-          alignItems: 'stretch',
-        }}
-      >
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !running) handleRun();
-          }}
-          placeholder="under $100 milestone gift for a homeowner"
-          aria-label="Query to run against all four search strategies"
-          style={{
-            flex: 1,
-            fontFamily: 'var(--at-mono)',
-            fontSize: '13px',
-            padding: '10px 12px',
-            border: '1px solid var(--at-card-border)',
-            borderRadius: '4px',
-            backgroundColor: 'var(--at-cream-1)',
-            color: 'var(--at-ink-1)',
-          }}
-        />
-        <button
-          type="button"
-          onClick={handleRun}
-          disabled={running || !query.trim()}
-          style={{
-            fontFamily: 'var(--at-mono)',
-            fontSize: '11px',
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            padding: '0 18px',
-            border: '1px solid var(--at-ink-1)',
-            borderRadius: '4px',
-            backgroundColor: 'var(--at-ink-1)',
-            color: 'var(--at-cream-1)',
-            cursor: running || !query.trim() ? 'not-allowed' : 'pointer',
-            opacity: running || !query.trim() ? 0.4 : 1,
-          }}
-        >
-          {running ? 'Running…' : 'Run on Aurora'}
-        </button>
-      </div>
-
-      {error && (
-        <p
-          style={{
-            fontFamily: 'var(--at-mono)',
-            fontSize: '12px',
-            color: 'var(--at-red-1)',
-            marginTop: '10px',
-          }}
-        >
-          {error}
+    <section id="retrieval-comparison" aria-labelledby="retrieval-comparison-title" style={{ scrollMarginTop: '100px', minWidth: 0 }}>
+      <ExpCard>
+        <h2 id="retrieval-comparison-title" style={{ fontFamily: 'var(--at-serif)', fontSize: '28px', color: 'var(--at-ink-1)' }}>
+          Compare retrieval strategies
+        </h2>
+        <p style={{ marginTop: '8px', maxWidth: '70ch', lineHeight: 1.6 }}>
+          Use Anna’s request to compare product order, hard constraints, time,
+          and modeled cost. The terminal and this view call the same comparison
+          endpoint. Opening this page does not run a comparison.
         </p>
-      )}
-
-      {liveStrategies && !error && (
-        <p
-          style={{
-            fontFamily: 'var(--at-mono)',
-            fontSize: '11px',
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--at-green-1)',
-            marginTop: '10px',
-          }}
-        >
-          Live · one Aurora observation for "{query}"
+        <form onSubmit={(event) => { event.preventDefault(); void handleRun(); }} style={{ marginTop: '20px' }}>
+          <label htmlFor="retrieval-comparison-query" style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>Shopper request</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+            <input
+              id="retrieval-comparison-query"
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              aria-label="Query to run against all four search strategies"
+              style={{ flex: '1 1 280px', minWidth: 0, width: '100%', padding: '12px', border: '1px solid var(--at-rule-2)', borderRadius: '6px', background: 'var(--at-cream-1)', color: 'var(--at-ink-1)' }}
+            />
+            <button type="submit" disabled={running || !query.trim()} style={{ ...buttonStyle, cursor: running ? 'wait' : 'pointer', opacity: running || !query.trim() ? 0.6 : 1 }}>
+              {running ? 'Comparing…' : 'Run on Aurora'}
+            </button>
+          </div>
+        </form>
+        <p role="status" aria-live="polite" style={{ marginTop: '12px', lineHeight: 1.6 }}>
+          {running && 'Running four strategies. Allow up to 75 seconds. '}
+          {result
+            ? `Showing the last completed response for “${result.query}”.`
+            : 'Reference only: fixture baseline and modeled p50 values. No products or extracted filters have been measured for this request.'}
         </p>
-      )}
-
-      <div style={{ marginTop: '16px', overflowX: 'auto' }}>
-        <table
-          style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            borderSpacing: 0,
-          }}
-        >
-          <thead>
-            <tr>
-              <th style={headerStyle}>Strategy</th>
-              <th style={{ ...headerStyle, textAlign: 'right' }}>Recall@5</th>
-              <th style={{ ...headerStyle, textAlign: 'right' }}>Latency</th>
-              <th style={{ ...headerStyle, textAlign: 'right' }}>Modeled $/1k</th>
-              <th style={{ ...headerStyle, textAlign: 'center' }}>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rendered.map((s) => {
-              const isShipped = s.isShipped;
-              const rowBg = isShipped
-                ? 'color-mix(in srgb, var(--at-green-1) 6%, transparent)'
-                : 'transparent';
-              return (
-                <React.Fragment key={s.strategy}>
-                  <tr style={{ backgroundColor: rowBg }}>
-                    <td
-                      style={{
-                        ...cellStyle,
-                        fontWeight: isShipped ? 600 : 400,
-                        color: isShipped ? 'var(--at-ink-1)' : cellStyle.color,
-                      }}
-                    >
-                      {s.strategy}
-                      {isShipped && (
-                        <span
-                          style={{
-                            marginLeft: '8px',
-                            fontFamily: 'var(--at-mono)',
-                            fontSize: '11px',
-                            letterSpacing: '0.18em',
-                            textTransform: 'uppercase',
-                            color: 'var(--at-green-1)',
-                            backgroundColor:
-                              'color-mix(in srgb, var(--at-green-1) 14%, transparent)',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Anna's path
-                        </span>
-                      )}
+        {error && <p role="alert" style={{ marginTop: '12px', color: 'var(--at-red-1)', lineHeight: 1.6 }}>{error}</p>}
+        {degraded.length > 0 && (
+          <p role="alert" style={{ marginTop: '12px', color: 'var(--at-red-1)', lineHeight: 1.6 }}>
+            Reranking is unconfirmed for {degraded.map((row) => row.strategy).join(' and ')}.
+            These rows do not prove rerank quality. Inspect their ordering and use the lab’s recovery path.
+          </p>
+        )}
+        <div role="region" aria-label="Retrieval strategy results" tabIndex={0} style={{ marginTop: '16px', overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', lineHeight: 1.5 }}>
+            <caption style={{ textAlign: 'left', padding: '0 12px 12px', fontWeight: 600 }}>
+              {result ? 'Observed results and modeled request cost' : 'Illustrative comparison · not a measurement from this environment'}
+            </caption>
+            <thead><tr>{['Strategy', 'Latency', 'Modeled USD / 1,000 queries', 'Ordering evidence'].map((label) => <th key={label} scope="col" style={cellStyle}>{label}</th>)}</tr></thead>
+            <tbody>
+              {rendered.map((row) => (
+                <React.Fragment key={row.strategy}>
+                  <tr>
+                    <th scope="row" style={{ ...cellStyle, minWidth: '150px' }}>{row.strategy}</th>
+                    <td style={{ ...cellStyle, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatMs(row.observedMs ?? row.modeledLatencyMs ?? 0)}<br />
+                      <small>{result ? 'observed once' : 'modeled p50'}</small>
                     </td>
-                    <td style={{ ...cellStyle, textAlign: 'right' }}>
-                      {(s.recallAt5 * 100).toFixed(0)}%
-                      <span
-                        style={{
-                          display: 'block',
-                          color: 'var(--at-ink-3)',
-                          fontSize: '10px',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        fixture baseline
-                      </span>
+                    <td style={{ ...cellStyle, fontVariantNumeric: 'tabular-nums' }}>
+                      ${row.modeledCostPerThousandUsd.toFixed(4)}
                     </td>
-                    <td style={{ ...cellStyle, textAlign: 'right' }}>
-                      {formatMs(s.observedMs ?? s.modeledLatencyMs)}
-                      <span
-                        style={{
-                          display: 'block',
-                          color: 'var(--at-ink-3)',
-                          fontSize: '10px',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {s.observedMs === undefined ? 'modeled p50' : 'observed once'}
-                      </span>
-                    </td>
-                    <td style={{ ...cellStyle, textAlign: 'right' }}>
-                      ${s.modeledCostPerThousandUsd.toFixed(2)}
-                    </td>
-                    <td style={{ ...cellStyle, textAlign: 'center' }}>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          backgroundColor: isShipped
-                            ? 'var(--at-green-1)'
-                            : 'var(--at-ink-5)',
-                        }}
-                      />
+                    <td style={cellStyle}>
+                      {!result ? 'Reference only' : row.strategy.includes('rerank')
+                        ? row.rerankExecuted === true ? 'Rerank executed' : 'Rerank not confirmed'
+                        : 'Retrieved order'}
+                      {row.productOrderSource && <div>{row.productOrderSource}</div>}
+                      {row.degradedReason && <div style={{ color: 'var(--at-red-1)' }}>{row.degradedReason}</div>}
                     </td>
                   </tr>
-                  {/* When live results are available, render the top-5
-                      product names under each strategy as a secondary
-                      row so the difference between strategies is
-                      visible, not just claimed. */}
-                  {s.products && s.products.length > 0 && (
-                    <tr style={{ backgroundColor: rowBg }}>
-                      <td colSpan={5} style={{ padding: '0 12px 12px' }}>
-                        <div
-                          style={{
-                            fontFamily: 'var(--at-mono)',
-                            fontSize: '12px',
-                            color: 'var(--at-ink-2)',
-                            lineHeight: 1.5,
-                          }}
-                        >
-                          <span
-                            style={{
-                              letterSpacing: '0.18em',
-                              textTransform: 'uppercase',
-                              fontSize: '10px',
-                              color: 'var(--at-ink-3)',
-                            }}
-                          >
-                            Top 5 ·
-                          </span>{' '}
-                          {s.products.map((p) => p.name).join(' · ')}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  {/* Agentic-only: surface the structured filters Sonnet
-                      extracted, the soft_signal the reranker scored
-                      against, and which filter-degradation step the
-                      pipeline ended up using. This is the receipt for
-                      "Sonnet → filter → vector → rerank". */}
-                  {s.extractedFilters && (
-                    <tr style={{ backgroundColor: rowBg }}>
-                      <td colSpan={5} style={{ padding: '0 12px 14px' }}>
-                        <ExtractedFiltersStrip filters={s.extractedFilters} />
-                      </td>
-                    </tr>
+                  {result && (
+                    <tr><td colSpan={4} style={cellStyle}>
+                      <strong>Top results: </strong>{row.products?.length ? row.products.map((product) => product.name).join(' · ') : 'No matching products returned.'}
+                      {row.costComponents && <p>Cost components: {row.costComponents.join(', ')}</p>}
+                      {row.extractedFilters && <ExtractedFiltersStrip filters={row.extractedFilters} />}
+                    </td></tr>
                   )}
                 </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Three different kinds of number share this table; say which is
-          which. Latency and products refresh from a live run; cost is a
-          published-rate model; recall@5 stays the checked-in fixture value
-          because scoring it needs labeled relevance judgments this session
-          does not run. */}
-      <p
-        style={{
-          fontFamily: 'var(--at-sans)',
-          fontSize: '12px',
-          lineHeight: 1.5,
-          color: 'var(--at-ink-3)',
-          marginTop: '10px',
-          maxWidth: '720px',
-        }}
-      >
-        Read the three columns differently. <strong>Latency</strong> is one
-        wall-clock observation per strategy after a live run, not a percentile.{' '}
-        <strong>Cost</strong> is modeled from published per-token rates, not
-        metered spend. <strong>Recall@5</strong> stays the checked-in fixture
-        baseline even after a live run: scoring relevance needs labeled
-        judgments, so treat that column as the shape of the tradeoff across
-        the seeded catalog rather than a score for the query you just ran.
-      </p>
-
-      {/* Why the agentic row is Anna's path — the framing the workshop
-          lands on after participants compare the four strategies. */}
-      <div
-        style={{
-          marginTop: '20px',
-          padding: '14px 16px',
-          backgroundColor: 'var(--at-cream-2)',
-          borderLeft: '3px solid var(--at-green-1)',
-          borderRadius: '4px',
-        }}
-      >
-        <Eyebrow label="Why agentic is Anna's path" variant="muted" />
-        <p
-          style={{
-            fontFamily: 'var(--at-sans)',
-            fontSize: '14px',
-            lineHeight: 1.55,
-            color: 'var(--at-ink-1)',
-            marginTop: '8px',
-          }}
-        >
-          The first three rows (vector-only, hybrid RRF, hybrid + rerank) rank, but they never filter.
-          A "$100 milestone gift" query running through hybrid+rerank can
-          still surface a $185 candle in the top-5 – the price ceiling is
-          a string the embedding never quite respects. The agentic row
-          turns "$100" into a real{' '}
-          <code style={{ fontFamily: 'var(--at-mono)', fontSize: '13px' }}>
-            price &lt;= 100
-          </code>{' '}
-          predicate, runs cosine over only the rows that pass, and lets
-          Cohere Rerank score against the residual taste phrase ("milestone
-          gift for a homeowner"). The chips above are the receipt – you
-          can see exactly what Sonnet extracted, which filter-degradation
-          step ran when the strict filter was too tight, and what soft
-          signal the reranker actually scored.
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p style={{ marginTop: '16px', lineHeight: 1.6, maxWidth: '70ch' }}>
+          A hard constraint determines which rows qualify; ranking orders the
+          qualifying rows. This implementation applies price and stock filters
+          in the agentic path. Other systems can apply explicit filters before
+          any retrieval strategy. There is no required winner.
         </p>
-      </div>
-
-      {/* Postgres FTS gotcha — kept as a teaching foil for the hybrid (RRF)
-          row. The agentic strategy bypasses this entire class of bug
-          because Sonnet owns the lexical decomposition, but participants
-          still need to know the failure mode if they ever deploy plain
-          FTS. */}
-      <div
-        style={{
-          marginTop: '12px',
-          padding: '14px 16px',
-          backgroundColor: 'var(--at-cream-2)',
-          borderLeft: '3px solid var(--at-red-1)',
-          borderRadius: '4px',
-        }}
-      >
-        <Eyebrow label="Why hybrid (RRF) is a teaching foil, not Anna's path" variant="muted" />
-        <p
-          style={{
-            fontFamily: 'var(--at-sans)',
-            fontSize: '14px',
-            lineHeight: 1.55,
-            color: 'var(--at-ink-1)',
-            marginTop: '8px',
-          }}
-        >
-          Both{' '}
-          <code style={{ fontFamily: 'var(--at-mono)', fontSize: '13px' }}>
-            plainto_tsquery
-          </code>{' '}
-          and{' '}
-          <code style={{ fontFamily: 'var(--at-mono)', fontSize: '13px' }}>
-            websearch_to_tsquery
-          </code>{' '}
-          AND-join plain text by default. A six-stem conversational query
-          ("thoughtful gift for someone who loves morning rituals")
-          matches zero products if no product's indexed text (name, brand,
-          category, color, tags, and description combined) contains all six
-          stems together – exactly the shape of query a Pellier shopper asks.
-          Pellier OR-joins content tokens via{' '}
-          <code style={{ fontFamily: 'var(--at-mono)', fontSize: '13px' }}>
-            HybridSearch._build_or_tsquery
-          </code>{' '}
-          to keep the row alive for comparison, but Anna's production
-          path is the agentic row (bottom of the table above): Sonnet owns
-          the structured decomposition, and FTS doesn't have to guess.
+        <p style={{ marginTop: '8px', lineHeight: 1.6, maxWidth: '70ch' }}>
+          Latency is one observation per strategy after the shared query embedding.
+          Cost models incremental requests and excludes provisioned Aurora compute.
+          This comparison does not calculate recall or establish a benchmark.
         </p>
-      </div>
-    </ExpCard>
+        {result && <>
+          <p style={{ marginTop: '12px' }}>Shared query embedding: {result.sharedQueryEmbeddingObservedMs === undefined ? 'not reported' : `${result.sharedQueryEmbeddingObservedMs} ms`}.</p>
+          <button type="button" onClick={downloadResult} style={{ ...buttonStyle, marginTop: '12px' }}>Save comparison JSON</button>
+          <details style={{ marginTop: '16px' }}>
+            <summary style={{ cursor: 'pointer', padding: '8px 0' }}>Inspect cost inputs and full response</summary>
+            <pre style={{ overflowX: 'auto', padding: '16px', background: 'var(--at-cream-2)', fontSize: '13px' }}>{JSON.stringify(result, null, 2)}</pre>
+          </details>
+        </>}
+      </ExpCard>
+    </section>
   );
 };
 
@@ -1510,7 +1242,7 @@ const MeasureControls: React.FC<MeasureControlsProps> = ({
         type="button"
         disabled
         aria-label="Run benchmark – coming soon"
-        title="Benchmark runner is wired in a later workshop step."
+        title="Benchmark execution is not part of this Builders’ Session."
         style={{
           fontFamily: 'var(--at-sans)',
           fontSize: '15px',
@@ -1703,6 +1435,15 @@ const Performance: React.FC = () => {
         ]}
       />
 
+      {!loading && data?.searchStrategies?.length ? (
+        <SearchStrategyComparison strategies={data.searchStrategies} />
+      ) : null}
+      <p style={{ margin: '24px 0 12px', color: 'var(--at-ink-2)', lineHeight: 1.6 }}>
+        The performance examples below use checked-in reference data. They are
+        not measurements from your workshop seat. Live probes identify their
+        own results separately.
+      </p>
+
       {loading && <LoadingState />}
 
       {error && <ErrorState message={error} onRetry={refetch} />}
@@ -1740,14 +1481,6 @@ const Performance: React.FC = () => {
               representation tradeoffs. */}
           {data.pgvectorTuning && data.pgvectorTuning.length > 0 && (
             <PgvectorTuning tuning={data.pgvectorTuning} />
-          )}
-
-          {/* Search strategy comparison — Anna's anchor capability.
-              Renders even when the fixture defaults are static; the
-              "Run on Aurora" textbox lets workshop participants drive
-              the live numbers. */}
-          {data.searchStrategies && data.searchStrategies.length > 0 && (
-            <SearchStrategyComparison strategies={data.searchStrategies} />
           )}
 
           {/* Storage usage bars */}

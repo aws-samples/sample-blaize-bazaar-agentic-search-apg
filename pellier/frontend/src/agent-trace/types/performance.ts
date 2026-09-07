@@ -63,6 +63,10 @@ export interface PerformanceData {
     observedMs?: number;     // one live endpoint observation, not a percentile
     modeledCostPerThousandUsd: number;
     isShipped: boolean;       // true for Anna's path (agentic)
+    rerankExecuted?: boolean;
+    productOrderSource?: string;
+    degradedReason?: string | null;
+    costComponents?: string[];
     products?: { name: string; productId: number }[]; // top-5 when live
     /**
      * Only populated for the agentic strategy when live. Surfaces what
@@ -77,6 +81,7 @@ export interface PerformanceData {
       inStockOnly: boolean;
       softSignal: string;
       filterUsed: 'strict' | 'drop_tags' | 'drop_cats' | 'drop_all';
+      hardConstraintsEnforced?: boolean;
     };
   }[];
   storageUsage: {

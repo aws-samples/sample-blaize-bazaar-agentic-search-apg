@@ -45,11 +45,11 @@ const SkillsDetail: React.FC = () => {
         },
       ]}
       liveState={{
-        label: 'Current skill activation state. The SkillRouter evaluates each turn and activates skills based on persona context.',
+        label: 'Reference skill configuration. Active overlays and the configured model are recorded in each completed turn’s evidence.',
         values: [
           { label: 'Skills available', value: '5' },
           { label: 'Router model', value: 'Claude Sonnet 4.6 (global.anthropic.claude-sonnet-4-6)' },
-          { label: 'Active', value: 'None' },
+          { label: 'Active this turn', value: 'Inspect Workbench' },
         ],
       }}
     >
@@ -98,9 +98,9 @@ const SkillsDetail: React.FC = () => {
               <SectionLabel label="The routing flow" />
               <h3 style={titleStyle}>Turn arrives, router decides.</h3>
               <p style={proseStyle}>
-                Every turn passes through the SkillRouter before reaching the specialist agents.
-                The router is a small classifier call (~120ms) that decides whether to inject a
-                skill into the agent's tool set for this turn.
+                Turns that need specialist work can pass through the SkillRouter.
+                Greetings and other deterministic fast paths skip it. The router selects
+                markdown guidance to inject into the specialist's prompt for this turn.
               </p>
               <pre style={codeStyle}>{concept.codeSnippet}</pre>
             </div>

@@ -36,7 +36,7 @@ const GroundingDetail: React.FC = () => {
       cheatSheet={[
         {
           numeral: 'i.',
-          text: 'Every product recommendation is verified against the catalog. If the product doesn\'t exist in Aurora, the agent doesn\'t recommend it.',
+          text: 'Ground recommendations in returned catalog rows. Verify product IDs, prices, and constraints in the tool result before accepting the model’s explanation.',
         },
         {
           numeral: 'ii.',
@@ -48,7 +48,7 @@ const GroundingDetail: React.FC = () => {
         },
       ]}
       liveState={{
-        label: 'Current grounding state. Shows the Aurora-backed sources the assistant uses to anchor responses in facts.',
+        label: 'Product count comes from the stats endpoint. Embedding dimensions and index type describe the reference schema; they are not a live index health check.',
         values: [
           { label: 'Products', value: productCount },
           { label: 'Embeddings', value: '1024d' },
@@ -80,12 +80,12 @@ const GroundingDetail: React.FC = () => {
             <SourceCard
               name="product_catalog"
               description="Products with names, brands, prices, descriptions, tags, quantities, and 1024-dim Cohere Embed v4 vectors."
-              query="SELECT product_id, name, brand, price, quantity FROM product_catalog WHERE product_id = $1;"
+              query={'SELECT "productId", name, brand, price, quantity FROM pellier.product_catalog WHERE "productId" = $1;'}
             />
             <SourceCard
               name="return_policies"
               description="Return rules and conditions per product category. The agent cites these when answering return questions."
-              query="SELECT policy_text FROM return_policies WHERE category = $1;"
+              query="SELECT return_window_days, conditions, refund_method FROM pellier.return_policies WHERE category_name = $1;"
             />
             <SourceCard
               name="description_tsv + embedding"
@@ -95,7 +95,7 @@ const GroundingDetail: React.FC = () => {
             <SourceCard
               name="tools (registry)"
               description="Aurora-backed teaching surface for tool discovery; optional Gateway can publish the same tool surface over MCP."
-              query="SELECT name, similarity FROM tools ORDER BY embedding <=> $1 LIMIT 5;"
+              query="SELECT name, 1 - (description_emb <=> $1::vector) AS similarity FROM pellier.tools WHERE enabled ORDER BY description_emb <=> $1::vector LIMIT 5;"
             />
           </div>
 

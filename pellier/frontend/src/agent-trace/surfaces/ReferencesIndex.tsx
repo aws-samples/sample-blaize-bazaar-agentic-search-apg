@@ -113,7 +113,7 @@ const REFERENCE_GROUPS: ReferenceGroup[] = [
     links: [
       {
         label: 'Performance',
-        description: 'Retrieval timing, index behavior, and benchmark controls.',
+        description: 'Four-strategy retrieval comparison, timing, and index behavior.',
         path: '/pellier-labs/performance',
         icon: Gauge,
       },
