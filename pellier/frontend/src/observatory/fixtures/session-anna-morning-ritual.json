@@ -1,7 +1,7 @@
 {
   "id": "anna-morning-ritual",
   "personaId": "anna",
-  "openingQuery": "A thoughtful gift for someone who loves morning rituals",
+  "openingQuery": "A housewarming gift for someone who loves slow morning rituals.",
   "elapsedMs": 5520,
   "agentCount": 2,
   "routingPattern": "Dispatcher",
@@ -11,7 +11,7 @@
   "chat": [
     {
       "role": "user",
-      "content": "A thoughtful gift for someone who loves morning rituals",
+      "content": "A housewarming gift for someone who loves slow morning rituals.",
       "timestamp": "2026-05-25T17:42:00Z"
     },
     {

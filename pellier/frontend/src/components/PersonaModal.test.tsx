@@ -38,10 +38,12 @@ const LIVE_PERSONAS = [
   },
 ]
 
+const switchPersona = vi.hoisted(() => vi.fn().mockResolvedValue(true))
+
 vi.mock('../contexts/PersonaContext', () => ({
   usePersona: () => ({
     persona: null,
-    switchPersona: vi.fn(),
+    switchPersona,
     signOut: vi.fn(),
     switching: false,
   }),
@@ -167,5 +169,20 @@ describe('PersonaModal', () => {
       expect(image).toHaveAttribute('height', '1800')
     }
     expect(screen.queryByText('v1.0')).not.toBeInTheDocument()
+  })
+})
+
+describe('PersonaModal switch recovery', () => {
+  it('stays open when the server cannot switch profiles, then closes on success', async () => {
+    stubPersonaFetch()
+    switchPersona.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(<PersonaModal open onClose={onClose} />)
+    const profile = await screen.findByTestId('persona-card-marco')
+    await user.click(profile)
+    expect(onClose).not.toHaveBeenCalled()
+    await user.click(profile)
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
   })
 })

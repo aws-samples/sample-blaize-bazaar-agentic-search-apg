@@ -13,7 +13,7 @@
   {
     "id": "marco-midpoint-checkpoint",
     "personaId": "marco",
-    "openingQuery": "Is the Hadley shirt at the Brooklyn warehouse, and can it still ship in time?",
+    "openingQuery": "How many Hadley Linen Shirts are available at the Brooklyn warehouse, and what ship window is recorded?",
     "elapsedMs": 1840,
     "agentCount": 1,
     "routingPattern": "Dispatcher",
@@ -35,7 +35,7 @@
   {
     "id": "anna-morning-ritual",
     "personaId": "anna",
-    "openingQuery": "A thoughtful gift for someone who loves morning rituals",
+    "openingQuery": "A housewarming gift for someone who loves slow morning rituals.",
     "elapsedMs": 5520,
     "agentCount": 2,
     "routingPattern": "Dispatcher",
@@ -46,7 +46,7 @@
   {
     "id": "anna-under-100",
     "personaId": "anna",
-    "openingQuery": "Keep the gift under $100 and show me the strongest two options.",
+    "openingQuery": "Keep it under $100 and in stock. Show me the strongest two options.",
     "elapsedMs": 4860,
     "agentCount": 2,
     "routingPattern": "Dispatcher",
@@ -57,7 +57,7 @@
   {
     "id": "anna-candle-pairing",
     "personaId": "anna",
-    "openingQuery": "Which one should I choose, and prove it stayed in budget and in stock?",
+    "openingQuery": "Which one should I choose? Compare the two options using their current prices and availability.",
     "elapsedMs": 5120,
     "agentCount": 2,
     "routingPattern": "Dispatcher",
@@ -101,7 +101,7 @@
   {
     "id": "theo-pour-over-pairing",
     "personaId": "theo",
-    "openingQuery": "What goes well with the pour-over set?",
+    "openingQuery": "What goes well with the pour-over set, keeping to the same materials and morning routine?",
     "elapsedMs": 4380,
     "agentCount": 2,
     "routingPattern": "Dispatcher",

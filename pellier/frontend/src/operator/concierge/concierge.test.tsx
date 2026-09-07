@@ -1110,3 +1110,15 @@ describe('proposed actions', () => {
     expect(document.body.textContent ?? '').not.toMatch(/\p{Extended_Pictographic}/u)
   })
 })
+
+
+it('uses the active ticket when a resolved ticket precedes it', () => {
+  const record = { ...RECORD, tickets: [
+    { ...RECORD.tickets[0], ticketId: 'RESOLVED', subject: 'Old issue', status: 'resolved' },
+    RECORD.tickets[0],
+  ] }
+  const context = buildTemplateContext(record as unknown as OperatorClientRecord)!
+  expect(context.ticketId).toBe('TKT-2026-3015')
+  expect(context.ticketSubject).toBe('Return received, refund disputed')
+  expect(context.openTicketCount).toBe(1)
+})

@@ -16,11 +16,8 @@ interface Props {
 /**
  * The recovery action on a Cognito-protected operator surface.
  *
- * It starts the Hosted UI flow directly. There used to be a dialog in between
- * that captured nothing and explained what the next click would do, so signing
- * in read as "click sign in, then click sign in again". Cognito owns password
- * entry, MFA, reset and the social providers, and this page already explains
- * why sign-in is required, so the dialog had no job of its own.
+ * It opens the dedicated Pellier sign-in page. Cognito verifies credentials;
+ * additional verification and federation use the hosted flow.
  * `redirectToSignIn` defaults its return path to the current URL, which brings
  * the participant back to the exact record they asked for.
  *

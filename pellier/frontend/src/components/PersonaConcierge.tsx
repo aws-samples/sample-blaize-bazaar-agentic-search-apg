@@ -21,20 +21,25 @@ export default function PersonaConcierge() {
   const { persona, switchPersona, switching, switchError } = usePersona()
   const { openModal } = useUI()
   const [profiles, setProfiles] = useState<PersonaListItem[]>([])
+  const [retryVersion, setRetryVersion] = useState(0)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (persona) return
+    let active = true
+    setError(null)
+    setLoading(true)
     void fetch('/api/observatory/personas')
       .then(async (response) => {
-        if (!response.ok) throw new Error(`Live personas unavailable: ${response.status}`)
+        if (!response.ok) throw new Error('We couldn’t load the profiles. Please try again.')
         return response.json() as Promise<PersonaListItem[]>
       })
-      .then((items) => setProfiles(items.filter((item) => item.id !== 'fresh')))
-      .catch((reason: unknown) =>
-        setError(reason instanceof Error ? reason.message : 'Live personas unavailable.'),
-      )
-  }, [persona])
+      .then((items) => { if (active) setProfiles(items.filter((item) => item.id !== 'fresh')) })
+      .catch(() => { if (active) setError('We couldn’t load the profiles. Please try again.') })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [persona, retryVersion])
 
   const selectProfile = async (profileId: string) => {
     await switchPersona(profileId)
@@ -54,7 +59,8 @@ export default function PersonaConcierge() {
         <p>{HERO_CONCIERGE.HELPER}</p>
       </div>
 
-      <ul className="pellier-concierge-profiles">
+      {loading ? <p className="pellier-profile-loading" role="status">Finding your profiles…</p> : null}
+      <ul className="pellier-concierge-profiles" aria-busy={loading || switching}>
         {profiles.map((profile) => {
           const portrait = getPersonaPortrait(profile.id)
           return (
@@ -97,9 +103,10 @@ export default function PersonaConcierge() {
         })}
       </ul>
       {error || switchError ? (
-        <p className="pellier-concierge-seed" role="alert">
-          {error ?? switchError}
-        </p>
+        <div className="pellier-recovery" role="alert">
+          <p>{error ?? switchError}</p>
+          {error ? <button type="button" className="pellier-retry" onClick={() => setRetryVersion(v => v + 1)}>Try again</button> : null}
+        </div>
       ) : null}
 
       <button

@@ -211,11 +211,10 @@ describe('surface boundaries', () => {
     expect(source).not.toContain("import('./components/ConciergeModal')")
   })
 
-  it('keeps the storefront drawer following the active multi-turn response', () => {
+  it('lets the storefront reader resume following the latest reply', () => {
     const source = readSource('src/components/ChatDrawer.tsx')
-    expect(source).not.toContain('nearBottom')
-    expect(source).toContain(
-      "messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })",
-    )
+    expect(source).toContain('followLatestRef')
+    expect(source).toContain('Latest reply')
+    expect(source).toContain('showLatest')
   })
 })

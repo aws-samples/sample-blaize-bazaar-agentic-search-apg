@@ -14,6 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { EditorialTitle, ExpCard, Eyebrow } from '../../components';
 import { useObservatoryData } from '../../hooks/useObservatoryData';
 import type { Session } from '../../types';
+import { StateBadge } from '../../../shared';
 import { usePersona } from '../../../contexts/PersonaContext';
 
 export const SESSION_PAGE_SIZE = 8;
@@ -101,6 +102,9 @@ const SessionCard: React.FC<SessionCardProps> = ({ session, onClick }) => (
         </span>
       </div>
 
+      <div><StateBadge tone={session.status === 'complete' ? 'ok' : session.status === 'failed' || session.status === 'denied-before-execution' ? 'attention' : 'neutral'}>
+        {session.status === 'complete' ? 'Completed' : session.status === 'failed' ? 'Failure recorded' : session.status === 'denied-before-execution' ? 'Denied before execution' : session.status === 'active' ? 'In progress' : 'Outcome not recorded'}
+      </StateBadge></div>
       {/* Opening query */}
       <p
         style={{
@@ -317,7 +321,7 @@ const SessionsList: React.FC = () => {
   // Forty-six recorded sessions do not fit a scan. A typed filter over the
   // opening query and id, plus a status chip, narrows without a round trip.
   const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'complete'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | Session['status']>('all');
   const { data, loading, error, refetch } = useObservatoryData<Session[]>({
     key: 'sessions',
   });
@@ -424,7 +428,7 @@ const SessionsList: React.FC = () => {
               color: 'var(--obs-ink-1)',
             }}
           />
-          {(['all', 'active', 'complete'] as const).map((value) => (
+          {(['all', 'active', 'complete', 'failed', 'unknown'] as const).map((value) => (
             <button
               key={value}
               type="button"

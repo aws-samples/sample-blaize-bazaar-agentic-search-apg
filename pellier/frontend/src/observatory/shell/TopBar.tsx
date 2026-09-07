@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { LibraryBig } from 'lucide-react';
+import { LibraryBig, ScanLine } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import PellierHomeLink from '../../components/PellierHomeLink';
 import { usePersona } from '../../contexts/PersonaContext';
@@ -16,16 +16,16 @@ import { NAV } from '../../copy';
 
 const OBSERVATORY_TABS = [
   {
-    label: 'Labs & Workbench',
+    label: 'Lab Collection',
     path: '/observatory',
     icon: LibraryBig,
   },
+  { label: 'Workbench', path: '/observatory/workbench', icon: ScanLine },
 ] as const;
 
 const TopBar: React.FC = () => {
   const { pathname } = useLocation();
   const { persona } = usePersona();
-  const isLabWorkspace = pathname.startsWith('/observatory');
 
   return (
     <header className="observatory-topbar" data-testid="observatory-topbar">
@@ -48,7 +48,9 @@ const TopBar: React.FC = () => {
 
       <nav className="observatory-tabs" aria-label="Pellier Observatory views">
         {OBSERVATORY_TABS.map((tab) => {
-          const isActive = isLabWorkspace;
+          const isActive = tab.path === '/observatory'
+            ? pathname === '/observatory' || pathname === '/observatory/' || pathname.startsWith('/observatory/labs')
+            : pathname.startsWith('/observatory/') && pathname !== '/observatory/' && !pathname.startsWith('/observatory/labs');
           const TabIcon = tab.icon;
           return (
             <Link

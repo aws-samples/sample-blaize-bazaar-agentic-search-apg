@@ -12,19 +12,19 @@ describe('workbench view persistence', () => {
     localStorage.clear();
   });
 
-  it('defaults to focus mode for a first visit', () => {
-    expect(readWorkbenchView()).toBe('focus');
-  });
-
-  it('persists the expert choice under the documented key', () => {
-    writeWorkbenchView('expert');
-    expect(localStorage.getItem(WORKBENCH_VIEW_KEY)).toBe('expert');
+  it('defaults to expert mode for a first visit', () => {
     expect(readWorkbenchView()).toBe('expert');
   });
 
-  it('falls back to focus when the stored value is not a view', () => {
-    localStorage.setItem(WORKBENCH_VIEW_KEY, 'dashboard');
+  it('preserves an explicit focus choice under the documented key', () => {
+    writeWorkbenchView('focus');
+    expect(localStorage.getItem(WORKBENCH_VIEW_KEY)).toBe('focus');
     expect(readWorkbenchView()).toBe('focus');
+  });
+
+  it('falls back to expert when the stored value is not a view', () => {
+    localStorage.setItem(WORKBENCH_VIEW_KEY, 'dashboard');
+    expect(readWorkbenchView()).toBe('expert');
   });
 
   it('steps through Run, Inspect evidence, Reconcile answer in that order', () => {

@@ -11,11 +11,12 @@
  * question it cannot answer is worse than no composer, so it is gated.
  */
 
-import React, { useEffect, useMemo, useRef } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, GitBranch } from 'lucide-react'
 
 import type { OperatorClientRecord } from '../../services/operator'
 
+import ServiceSource from '../components/ServiceSource'
 import ConciergeCapabilityState from './ConciergeCapabilityState'
 import ConciergeHumanCheckpoint from './ConciergeHumanCheckpoint'
 import ConciergePendingTurn from './ConciergePendingTurn'
@@ -122,31 +123,22 @@ const OperatorConcierge: React.FC<Props> = ({
     templateContext,
   ])
 
-  // The pane is a viewport-height scroller, so a thread with history opened at its
-  // OLDEST turn and the answer an operator just waited for sat below the fold.
-  //
-  // Align the newest turn's TOP, not the container's end. Scrolling fully to the
-  // bottom lands on that turn's evidence table, which is the tail of the answer
-  // rather than the answer. Instant rather than smooth: this is a position, not a
-  // transition, and animating it on every step event would be motion for its own sake.
   const body = useRef<HTMLDivElement | null>(null)
-  const growth = concierge.messages.length + concierge.liveSteps.length
-  useEffect(() => {
+  const following = useRef(true)
+  const [showLatest, setShowLatest] = useState(false)
+  const goToLatest = () => {
     const el = body.current
     if (!el) return
-    // The newest REQUEST, not the newest turn. A request and its answer are two
-    // sibling turns, so aligning the last one shows an answer with the question that
-    // produced it scrolled out of view.
-    const requests = el.querySelectorAll(
-      '.operator-concierge-turn:has(.operator-concierge-request)',
-    )
+    const requests = el.querySelectorAll('.operator-concierge-request')
     const newest = requests[requests.length - 1]
-    if (!newest) return
-    // Measured against the live boxes, so it holds regardless of which ancestor
-    // happens to be positioned.
-    el.scrollTop +=
-      newest.getBoundingClientRect().top - el.getBoundingClientRect().top
-  }, [growth, concierge.pendingRequest])
+    if (newest) el.scrollTop += newest.getBoundingClientRect().top - el.getBoundingClientRect().top
+    following.current = true
+    setShowLatest(false)
+  }
+  useEffect(() => {
+    if (following.current) goToLatest()
+    else setShowLatest(true)
+  }, [concierge.messages, concierge.pendingRequest, concierge.liveAnswer])
 
   return (
     <section
@@ -199,6 +191,7 @@ const OperatorConcierge: React.FC<Props> = ({
         </p>
       </header>
 
+      <div className="operator-concierge-service"><ServiceSource service="agentcore">Governed tool access and policy</ServiceSource></div>
       <ConciergeCapabilityState
         status={concierge.status}
         capabilities={concierge.capabilities}
@@ -214,6 +207,8 @@ const OperatorConcierge: React.FC<Props> = ({
           // something has actually scrolled past it.
           const el = event.currentTarget
           el.dataset.scrolled = el.scrollTop > 4 ? 'true' : 'false'
+          following.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100
+          if (following.current) setShowLatest(false)
         }}
       >
         {hasConversation || inFlight ? (
@@ -286,6 +281,15 @@ const OperatorConcierge: React.FC<Props> = ({
         )}
       </div>
 
+      {showLatest ? <button type="button" className="operator-concierge-latest" onClick={goToLatest}>Latest reply</button> : null}
+      {concierge.status === 'conversation_unavailable' || concierge.status === 'config_unavailable' ? (
+        <div className="operator-concierge-recovery" role="status">
+          <p>{concierge.error || (concierge.status === 'config_unavailable' ? 'The investigation service configuration could not be read.' : 'Saved conversation history could not be verified.')}</p>
+          <button type="button" onClick={() => void concierge.retryHistory()}>Retry history</button>
+          {concierge.config?.composerEnabled ? <button type="button" onClick={concierge.startNew}>Start a new conversation</button> : null}
+        </div>
+      ) : null}
+      {concierge.status === 'submitting' ? <div className="operator-concierge-recovery"><button type="button" onClick={concierge.stopReceiving}>Stop receiving</button><p>Stops updates here. The server may continue; refresh history before retrying.</p></div> : null}
       <ConciergeComposer
         loading={concierge.status === 'loading'}
         enabled={concierge.composerEnabled}

@@ -1181,3 +1181,12 @@
     transform: none;
   }
 }
+
+/* Explicit controls make the full suggested questions discoverable. */
+.pellier-suggestions-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pellier-suggestions-row .pellier-hero-pills { min-width: 0; flex: 1; scroll-snap-type: x proximity; padding-inline-end: 8px; mask-image: none; -webkit-mask-image: none; }
+.pellier-hero-pills > button { scroll-snap-align: start; max-width: 100%; min-height: 44px; }
+.pellier-suggestions-controls { display: flex; flex-shrink: 0; gap: 4px; margin-top: 8px; }
+.pellier-suggestions-controls button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--sand); border-radius: 50%; background: var(--cream); color: var(--ink); }
+.pellier-suggestions-controls button:disabled { opacity: 0.5; cursor: default; }
+.pellier-suggestions-controls button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

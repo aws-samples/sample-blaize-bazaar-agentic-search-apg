@@ -7,7 +7,7 @@
  */
 
 import React, { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   MEMBERSHIP,
   MEMBERSHIP_RUNGS,
@@ -18,6 +18,7 @@ import {
   OperatorApiError,
   type OperatorBook,
 } from '../../services/operator'
+import ServiceSource from '../components/ServiceSource'
 import ClientAvatar from '../components/ClientAvatar'
 import MembershipRung from '../components/MembershipRung'
 import OperatorSignInAction from '../components/OperatorSignInAction'
@@ -41,19 +42,35 @@ function money(value: number): string {
   })
 }
 
+const BOOK_VIEW_KEY = 'pellier-operator-book-view'
+function savedBookView(): { query?: string; rung?: Membership | null; scroll?: number } {
+  try {
+    const value = JSON.parse(sessionStorage.getItem(BOOK_VIEW_KEY) || '{}')
+    if (!value || typeof value !== 'object') return {}
+    return {
+      query: typeof value.query === 'string' ? value.query : '',
+      rung: MEMBERSHIP_RUNGS.includes(value.rung) ? value.rung : null,
+      scroll: Number.isFinite(value.scroll) ? value.scroll : 0,
+    }
+  } catch { return {} }
+}
+
 const ClientBook: React.FC = () => {
   const navigate = useNavigate()
   const [book, setBook] = useState<OperatorBook | null>(null)
   // Client-side: the whole book is already loaded, so filtering needs no
   // round trip. Null means "no filter", not "registered".
-  const [rungFilter, setRungFilter] = useState<Membership | null>(null)
+  const [rungFilter, setRungFilter] = useState<Membership | null>(() => { const rung = savedBookView().rung; return rung && MEMBERSHIP_RUNGS.includes(rung) ? rung : null })
   // Typed name filter. Fifteen clients fit on one screen; forty do not, and an
   // associate who knows the name should not have to scan the ladder for it.
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(() => savedBookView().query ?? '')
+  const [retryVersion, setRetryVersion] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
+    setError(null)
+    setBook(null)
     fetchClientBook()
       .then((data) => {
         if (active) setBook(data)
@@ -69,7 +86,16 @@ const ClientBook: React.FC = () => {
     return () => {
       active = false
     }
-  }, [])
+  }, [retryVersion])
+
+  const rememberPosition = () => {
+    try { sessionStorage.setItem(BOOK_VIEW_KEY, JSON.stringify({ query, rung: rungFilter, scroll: window.scrollY })) } catch { /* Storage can be disabled. */ }
+  }
+  useEffect(() => {
+    if (!book) return
+    const scroll = savedBookView().scroll
+    if (typeof scroll === 'number' && scroll > 0) window.scrollTo({ top: scroll, behavior: 'instant' })
+  }, [book])
 
   if (error) {
     const authenticationRequired =
@@ -115,8 +141,8 @@ const ClientBook: React.FC = () => {
             </>
           )
         }
-        reason={error}
-        action={authenticationRequired ? <OperatorSignInAction unlocks="read the client book" /> : undefined}
+        reason={unavailable ? undefined : error}
+        action={authenticationRequired ? <OperatorSignInAction unlocks="read the client book" /> : !operatorRequired ? <button type="button" className="operator-button operator-button-inline" onClick={() => setRetryVersion(v => v + 1)}>Try again</button> : undefined}
       />
     )
   }
@@ -188,13 +214,15 @@ const ClientBook: React.FC = () => {
           arriving here needs to know what they can do, not what the list is
           called. No kicker above the heading. */}
       <h1 className="operator-title">Every client the house knows</h1>
-      <p className="operator-lede">
-        Operator Concierge runs a separate investigation and resolution graph
-        over the same Aurora customer record the storefront reads. Open a client
-        to review standing, orders, and support history. The Concierge can then
-        prepare one exact resolution for Action Queue; a person confirms it
-        before policy and Aurora independently decide what may execute.
-      </p>
+      <p className="operator-lede">Open a client, investigate the evidence, and prepare a resolution for human review.</p>
+      <details className="operator-source-details">
+        <summary>How the desk works</summary>
+        <div className="operator-service-sources">
+          <ServiceSource service="aurora">Customer records, orders, inventory, and the audit ledger</ServiceSource>
+          <ServiceSource service="agentcore">Governed tools, identity, and policy evaluation</ServiceSource>
+        </div>
+        <p>Operator Concierge runs a separate investigation and resolution graph over the same Aurora records the storefront reads. A person confirms the exact terms before policy and Aurora independently decide what may execute.</p>
+      </details>
 
       {jessicaCase ? (
         <section
@@ -224,12 +252,13 @@ const ClientBook: React.FC = () => {
           <button
             type="button"
             className="operator-case-entry-action"
-            onClick={() =>
+            onClick={() => {
+              rememberPosition()
               navigate(
                 `/operator/clients/${jessicaCase.customerId}` +
                   '?guided=service-recovery#operator-concierge-title',
               )
-            }
+            }}
           >
             Review case
           </button>
@@ -343,13 +372,13 @@ const ClientBook: React.FC = () => {
               </div>
             )}
             {clients.map((client) => (
-          <button
+          <Link
             key={client.customerId}
-            type="button"
+            to={`/operator/clients/${client.customerId}`}
             className="operator-book-row"
             data-testid={`operator-client-${client.slug}`}
             style={{ '--op-row-index': entranceIndex() } as React.CSSProperties}
-            onClick={() => navigate(`/operator/clients/${client.customerId}`)}
+            onClick={rememberPosition}
           >
             <ClientAvatar
               customerId={client.customerId}
@@ -368,7 +397,7 @@ const ClientBook: React.FC = () => {
               <span className="operator-figure-label">Orders</span>
               {client.orderCount}
             </span>
-          </button>
+          </Link>
             ))}
           </React.Fragment>
         ))}

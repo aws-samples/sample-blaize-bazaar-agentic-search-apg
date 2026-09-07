@@ -2138,6 +2138,7 @@
 
 .operator-topbar-count {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   min-width: 0;
@@ -3094,7 +3095,7 @@
     display: grid;
     width: 100%;
     min-height: 44px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) auto;
     align-self: auto;
     gap: 0;
     margin-top: 8px;
@@ -5229,4 +5230,55 @@
   font-family: var(--mono);
   font-size: 11px;
   color: var(--op-muted);
+}
+
+/* Operator refinement: compact task navigation and explicit recovery states. */
+.operator-source-details { margin-block: 10px 20px; max-width: 72ch; color: var(--op-ink); font-family: var(--sans); font-size: 14px; }
+.operator-source-details summary,
+.operator-state-details summary { min-height: 44px; cursor: pointer; align-content: center; text-underline-offset: 4px; }
+.operator-source-details p { line-height: 1.6; margin-top: 12px; }
+.operator-service-sources { display: flex; flex-wrap: wrap; gap: 24px; margin-block: 14px; }
+.operator-service-source { display: inline-flex; align-items: center; gap: 10px; min-width: 0; font-family: var(--sans); font-size: 13px; line-height: 1.4; color: var(--op-ink); }
+.operator-service-source img { flex: 0 0 28px; object-fit: contain; }
+.operator-service-source > span { display: grid; gap: 2px; }
+.operator-service-source strong { font-weight: 600; }
+.operator-service-source > span > span { color: var(--op-ink-2); }
+.operator-concierge-service { padding: 12px 22px; border-bottom: 1px solid var(--op-rule); }
+.operator-record-context .operator-source-details { margin-block: 6px 0; }
+.operator-record-jumps { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: -8px; }
+.operator-record-jumps a,
+.operator-activity-nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; border-radius: 6px; font-family: var(--sans); font-size: 14px; font-weight: 500; color: var(--op-ink); text-decoration: none; transition: background-color 160ms ease-out; }
+.operator-record-jumps a:hover,
+.operator-activity-nav a:hover { background: var(--op-paper-2); }
+.operator-activity-nav { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
+.operator-workbench :is(.operator-card-title, .operator-concierge-title),
+.operator-review-record-layout .operator-card-title { font-family: var(--sans); font-size: 20px; font-weight: 600; line-height: 1.25; letter-spacing: -0.02em; }
+.operator-queue-toolbar,
+.operator-review-overview { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-block: 20px; font-family: var(--sans); font-size: 14px; }
+.operator-queue-toolbar p { color: var(--op-ink-2); }
+.operator-review-overview { grid-column: 1 / -1; padding-block: 10px; border-bottom: 1px solid var(--op-rule); }
+.operator-review-overview p { margin: 0; font-weight: 600; }
+.operator-review-overview a { display: inline-flex; align-items: center; min-height: 44px; }
+.operator-outcome-filter,
+.operator-concierge-state-toggle,
+.operator-handoff-transcript summary { min-height: 44px; }
+.operator-concierge-input { font-size: 16px; caret-color: var(--op-authority); }
+.operator-concierge-recovery { padding: 12px 22px; font-family: var(--sans); font-size: 14px; line-height: 1.5; background: var(--op-paper-2); }
+.operator-concierge-recovery p { margin: 0 0 8px; }
+.operator-concierge-recovery button,
+.operator-concierge-latest { min-height: 44px; padding: 8px 12px; border-radius: 6px; font: 500 14px var(--sans); color: var(--op-authority); text-decoration: underline; text-underline-offset: 4px; }
+.operator-concierge-latest { align-self: center; margin: 6px 16px; }
+.operator-review-state[data-outcome='unknown'] { color: var(--op-ink-2); }
+.operator-root :is(a, button, summary):focus-visible { outline: 2px solid var(--op-authority); outline-offset: 4px; }
+.operator-root [id] { scroll-margin-top: 100px; }
+@media (max-width: 760px) {
+  .operator-root [id] { scroll-margin-top: 128px; }
+  .operator-record-jumps { justify-content: space-between; border-bottom: 1px solid var(--op-rule); }
+  .operator-record-jumps a { flex: 1; justify-content: center; }
+  .operator-concierge-service, .operator-concierge-recovery { padding-inline: 16px; }
+  .operator-service-sources { flex-direction: column; gap: 16px; }
+  .operator-review-overview { align-items: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .operator-record-jumps a, .operator-activity-nav a { transition: none; }
 }

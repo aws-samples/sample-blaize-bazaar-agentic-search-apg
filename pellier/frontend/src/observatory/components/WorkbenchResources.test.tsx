@@ -32,40 +32,16 @@ describe('WorkbenchResources', () => {
       .toHaveAttribute('href', '/observatory/write-path');
   });
 
-  it('derives the masthead figures from the rows they count', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <WorkbenchResources />
-      </MemoryRouter>,
-    );
-
-    const figures = Array.from(
-      container.querySelectorAll('.workbench-resource-figure'),
-    ).map((node) => [
-      node.querySelector('.workbench-resource-figure-value')?.textContent,
-      node.querySelector('.workbench-resource-figure-label')?.textContent,
-    ]);
-
-    const rowLinks = container.querySelectorAll(
-      '.workbench-resource-view a',
-    ).length;
-    const questions = container.querySelectorAll(
-      '.workbench-resource-question',
-    ).length;
-    const namedSources = new Set(
-      Array.from(
-        container.querySelectorAll('.workbench-resource-source'),
-      ).map((node) => node.textContent),
-    ).size;
-
-    // A typed figure drifts away from the index it summarises. These are the
-    // counts, not a caption about them.
-    expect(figures).toEqual([
-      [String(rowLinks), 'Reference views'],
-      [String(questions), 'Participant questions'],
-      [String(namedSources), 'Named sources'],
-    ]);
-    expect(rowLinks).toBe(8);
+  it('keeps all eight destinations and their source details available', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<MemoryRouter><WorkbenchResources /></MemoryRouter>);
+    expect(container.querySelectorAll('.workbench-resource-view a')).toHaveLength(8);
+    expect(screen.getByText('8 reference views')).toBeVisible();
+    const sources = container.querySelector('.workbench-source-disclosure')!;
+    expect(sources).not.toHaveAttribute('open');
+    await user.click(sources.querySelector('summary')!);
+    expect(sources).toHaveAttribute('open');
+    expect(screen.getByText('governed_turn_receipts')).toBeVisible();
   });
 
   it('sets a queryable source in mono and a described source in prose', () => {
@@ -137,7 +113,7 @@ describe('WorkbenchResources', () => {
     expect(disclosure).toHaveAttribute('aria-expanded', 'false');
     expect(
       screen.queryByRole('heading', {
-        name: 'Telemetry from the running system',
+        name: 'Telemetry & system references',
       }),
     ).not.toBeInTheDocument();
 
@@ -146,7 +122,7 @@ describe('WorkbenchResources', () => {
     expect(disclosure).toHaveAttribute('aria-expanded', 'true');
     expect(
       screen.getByRole('heading', {
-        name: 'Telemetry from the running system',
+        name: 'Telemetry & system references',
       }),
     ).toBeVisible();
     expect(screen.getByText('What reached PostgreSQL?')).toBeVisible();

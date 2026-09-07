@@ -31,12 +31,14 @@ if str(BACKEND) not in sys.path:
 def test_marco_canonical_question_asks_about_fulfilment_timing() -> None:
     """The strengthened question is two halves answered by one tool call.
 
-    A Inventory Agent that treats "can it still ship in time" as unanswerable
-    would give a bounded non-answer to a question Aurora can answer.
+    Aurora provides warehouse quantity and dispatch timing. It does not
+    establish a delivery date without destination and carrier evidence.
     """
     prompt = (BACKEND / "agents" / "inventory_agent.py").read_text()
-    assert "and can " in prompt and "ship in time" in prompt
-    assert "check_inventory(product_query='Hadley shirt')" in prompt
+    assert "Brooklyn" in prompt and "what ship window is recorded?" in prompt
+    assert "check_inventory(product_query='Hadley Linen Shirt')" in prompt
+    assert "A dispatch window does not establish an arrival date" in prompt
+    assert "time-to-doorstep" not in prompt and "day arrival" not in prompt
 
 
 def test_marco_tool_reads_the_ship_window_from_aurora() -> None:

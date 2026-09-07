@@ -7,7 +7,7 @@
  * ``sign-out`` clears that scenario. The internal names remain for context
  * compatibility, while the visible copy keeps scenario and identity separate.
  *
- * Auto-dismisses after 2400ms (sign-in) / 1600ms (sign-out). Click
+ * Auto-dismisses after 1100ms (sign-in) / 800ms (sign-out). Click
  * anywhere on the overlay to dismiss early. Press Escape to dismiss
  * early too.
  *
@@ -17,12 +17,12 @@
  */
 import { useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, MotionConfig, useReducedMotion } from 'framer-motion'
 import { usePersona } from '../contexts/PersonaContext'
 import { getPersonaPhoto } from '../data/personaPhotos'
 
-const SIGN_IN_DURATION_MS = 2400
-const SIGN_OUT_DURATION_MS = 1600
+const SIGN_IN_DURATION_MS = 1100
+const SIGN_OUT_DURATION_MS = 800
 
 // Persona-specific editorial line shown under the selected scenario.
 // This overlay also appears during ordinary persona switching, so the copy
@@ -43,6 +43,7 @@ function welcomeTagFor(personaId: string): string {
 
 export default function PersonaTransitionOverlay() {
   const { lastTransition, clearTransition } = usePersona()
+  const reducedMotion = useReducedMotion()
   const photoUrl = lastTransition ? getPersonaPhoto(lastTransition.persona.id) : undefined
   const firstName = lastTransition?.persona.display_name.split(' ')[0] ?? ''
 
@@ -67,6 +68,7 @@ export default function PersonaTransitionOverlay() {
   }, [lastTransition, clearTransition])
 
   return createPortal(
+    <MotionConfig reducedMotion="user">
     <AnimatePresence>
       {lastTransition && (
         <motion.div
@@ -93,9 +95,9 @@ export default function PersonaTransitionOverlay() {
 
           <motion.div
             className="relative"
-            initial={{ opacity: 0, scale: 0.88, y: 24, filter: 'blur(10px)' }}
+            initial={reducedMotion ? false : { opacity: 0, scale: 0.88, y: 24, filter: 'blur(10px)' }}
             animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, scale: 0.96, y: -8, filter: 'blur(6px)' }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -8, filter: 'blur(6px)' }}
             transition={{ type: 'spring', stiffness: 210, damping: 26, mass: 0.86 }}
             style={{
               maxWidth: lastTransition.kind === 'sign-in' ? 440 : 380,
@@ -218,7 +220,8 @@ export default function PersonaTransitionOverlay() {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>,
+    </AnimatePresence>
+    </MotionConfig>,
     document.body,
   )
 }

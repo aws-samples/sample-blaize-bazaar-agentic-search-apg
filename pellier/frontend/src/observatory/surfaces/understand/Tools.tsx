@@ -1299,8 +1299,8 @@ const Tools: React.FC = () => {
           }
           try={
             <>
-              Ask Marco&rsquo;s Turn 3 in Pellier: &ldquo;Is the Hadley shirt
-              at the Brooklyn warehouse, and can it still ship in time?&rdquo; A
+              Ask Marco&rsquo;s Turn 3 in Pellier: &ldquo;How many Hadley Linen Shirts
+              are available at the Brooklyn warehouse, and what ship window is recorded?&rdquo; A
               stubbed tool answers with an error envelope instead of a BK-01
               quantity and ship window.
             </>

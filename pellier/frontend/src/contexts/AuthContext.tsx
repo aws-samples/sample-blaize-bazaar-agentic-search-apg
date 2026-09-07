@@ -26,6 +26,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { asset } from '../utils/assetPath'
 import type { Preferences } from '../services/types'
 
 interface AuthUser {
@@ -232,7 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(() => {
     const returnTo = `${window.location.pathname}${window.location.search}`
     window.location.assign(
-      `/api/auth/signin?provider=email&returnTo=${encodeURIComponent(returnTo)}`,
+      `${asset('/signin')}?returnTo=${encodeURIComponent(returnTo)}`,
     )
   }, [])
 

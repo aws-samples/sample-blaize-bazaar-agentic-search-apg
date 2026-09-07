@@ -12,7 +12,8 @@
  *   - Explore:      The floor (`/#shop`), Stories, About.
  *   - Storyboard:   Italic blurb + a real link to `/storyboard`.
  *   - Observatory:  Italic blurb + a real link to `/observatory`.
- *   - Disclaimer:   States that nothing is charged and the catalog is synthetic.
+ *   - Disclaimer:   States that nothing is charged, the catalog is synthetic,
+ *                   and AI-generated imagery is illustrative.
  *   - Legal strip:  Copyright, licence, team credit, source link. No Privacy/Terms/
  *                   Accessibility stubs — those were the same dead links the
  *                   earlier rewrite eliminated, and inventing them back would

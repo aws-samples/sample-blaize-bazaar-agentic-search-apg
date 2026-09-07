@@ -1,14 +1,14 @@
 """Tests for ``POST /api/observatory/resume`` — welcome-back turn.
 
 Validates:
-- 400 on anonymous / empty customer_id.
+- 401 without sign-in; 403 when the requested customer is not the caller.
 - 200 with three memory panels plus operational history in dashboard order
   (WORKING → SEMANTIC → EPISODIC → OPERATIONAL HISTORY) and a
   composed response text that mentions the customer's first name + most
   recent episode + a preference blurb when seed rows are present.
 - OPERATIONAL HISTORY reads the tool_audit aggregate.
-- DB failure does not 500 — every emitter swallows its read error and
-  emits an empty panel, so the turn still composes a response event.
+- A failed ownership lookup reports that the session could not be resumed.
+  It never invents a successful welcome or reads an unverified namespace.
 
 Uses a stub ``db_service`` installed via ``monkeypatch.setattr`` on the
 ``app`` module, since the route imports ``from app import db_service`` at
@@ -26,6 +26,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from routes.workshop import router as workshop_router
+from services.auth import get_current_user
 
 
 class _StubDB:
@@ -61,16 +62,15 @@ class _StubDB:
         self.fetch_one_calls.append((query, params))
         if self._raise:
             raise self._raise
-        # Working panel resolves the persona's latest session from
-        # tool_audit; identity read hits pellier.customers.
-        if "tool_audit" in query:
-            return {"session_id": "persona-marco-abc123"}
+        # No owned conversation yet; all memory panels must still appear.
+        if "governed_turn_receipts" in query:
+            return None
         if "customers" in query:
             return self._identity
         return None
 
 
-def _make_client(stub_db: _StubDB) -> TestClient:
+def _make_client(stub_db: _StubDB, *, signed_in: bool = True) -> TestClient:
     """Build a FastAPI app with the workshop router + a stubbed
     ``app.db_service`` attribute so the route's lazy import resolves."""
     import app as app_module
@@ -78,15 +78,26 @@ def _make_client(stub_db: _StubDB) -> TestClient:
     app_module.db_service = stub_db  # type: ignore[attr-defined]
     fast = FastAPI()
     fast.include_router(workshop_router)
+    fast.dependency_overrides[get_current_user] = lambda: (
+        {"sub": "verified-marco-sub", "username": "marco"} if signed_in else None
+    )
     return TestClient(fast)
 
 
 def test_resume_rejects_anonymous_customer() -> None:
     db = _StubDB()
-    client = _make_client(db)
-    # "anonymous" triggers the 400 in the handler body.
+    client = _make_client(db, signed_in=False)
     r = client.post("/api/observatory/resume", json={"customer_id": "anonymous"})
-    assert r.status_code == 400
+    assert r.status_code == 401
+    assert not db.fetch_one_calls and not db.fetch_all_calls
+
+
+def test_resume_rejects_another_customer_before_reading_memory() -> None:
+    db = _StubDB()
+    client = _make_client(db)
+    r = client.post("/api/observatory/resume", json={"customer_id": "CUST-THEO"})
+    assert r.status_code == 403
+    assert not db.fetch_one_calls and not db.fetch_all_calls
 
 
 def test_resume_emits_memory_and_operational_panels_in_order() -> None:
@@ -154,10 +165,8 @@ def test_resume_operational_history_is_not_customer_scoped() -> None:
     assert audit_calls[0][1] == (6,)
 
 
-def test_resume_db_failure_emits_empty_panels_and_graceful_response() -> None:
-    """DB failures inside the emitters are swallowed — each emits a panel
-    with zero rows rather than raising, so the turn still composes a
-    welcome-back response. The attendee sees four empty panels."""
+def test_resume_db_failure_reports_unavailable_without_claiming_a_recall() -> None:
+    """No namespace can be trusted when the ownership query fails."""
     db = _StubDB(raise_exc=RuntimeError("connection reset"))
     client = _make_client(db)
 
@@ -166,20 +175,11 @@ def test_resume_db_failure_emits_empty_panels_and_graceful_response() -> None:
     body = r.json()
 
     panels = [e for e in body["events"] if e["type"] == "panel"]
-    assert [p["tag"] for p in panels] == [
-        "MEMORY · WORKING",
-        "MEMORY · SEMANTIC",
-        "MEMORY · EPISODIC",
-        "OPERATIONAL · TOOL HISTORY",
-    ]
-    for p in panels:
-        assert p["rows"] == []
-
-    # Response still composed — no episode / prefs to quote, so the text
-    # falls back to a bare welcome line.
+    assert panels == []
+    assert not db.fetch_all_calls
     responses = [e for e in body["events"] if e["type"] == "response"]
     assert len(responses) == 1
-    assert "Welcome back" in responses[0]["text"]
+    assert "could not be resumed" in responses[0]["text"]
 
 
 def test_resume_session_id_roundtrips_when_supplied() -> None:

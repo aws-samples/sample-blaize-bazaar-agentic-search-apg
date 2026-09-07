@@ -21,21 +21,21 @@ const CANONICAL_PERSONAS = ['marco', 'anna', 'theo'] as const
 const EXPECTED_TURNS = {
   marco: [
     'What linen do you have for 10 days in Goa?',
-    'What would go with the Hadley shirt?',
-    'Is the Hadley shirt at the Brooklyn warehouse, and can it still ship in time?',
+    'What would go with the Hadley Linen Shirt?',
+    'How many Hadley Linen Shirts are available at the Brooklyn warehouse, and what ship window is recorded?',
     "What's the price range for linen shirts?",
     "Can you connect me with a real Pellier stylist? I want a person to help me pick what to wear to my brother's wedding – not product cards.",
   ],
   anna: [
-    'A thoughtful gift for someone who loves morning rituals',
-    'Keep the gift under $100 and show me the strongest two options.',
-    'Which one should I choose, and prove it stayed in budget and in stock?',
+    'A housewarming gift for someone who loves slow morning rituals.',
+    'Keep it under $100 and in stock. Show me the strongest two options.',
+    'Which one should I choose? Compare the two options using their current prices and availability.',
     'Wrap-ready gifts with no extra effort',
     'Can you connect me with a real stylist? My friend just lost her mother and I want a person to help me pick a sympathy gift, not just see product cards.',
   ],
   theo: [
     'Hand-thrown ceramics for a slower morning routine',
-    'What goes well with the pour-over set?',
+    'What goes well with the pour-over set, keeping to the same materials and morning routine?',
     'My Wabi-Sabi Bowl arrived chipped. Please help me return it.',
     'Without asking me to repeat the ritual or material, which pairing should I choose and why?',
     'The linen throw I bought 4 months ago developed a tear at the seam – I know the standard window closed but pieces like this should last. Can you handle this as an exception?',

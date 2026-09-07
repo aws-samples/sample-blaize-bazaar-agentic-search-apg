@@ -14,16 +14,14 @@
 
 import React, {
   createContext,
-  useCallback,
   useContext,
   useEffect,
-  useState,
 } from 'react'
 import { ClipboardCheck, LogOut, User, UsersRound } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import PellierHomeLink from '../../components/PellierHomeLink'
 import { useAuth } from '../../contexts/AuthContext'
-import { fetchReviewQueue, OperatorApiError } from '../../services/operator'
+import { ReviewQueueContext, useQueueResource, useReviewQueue } from '../hooks/useReviewQueue'
 import { redirectToSignIn } from '../../utils/auth'
 import '../styles/operator.css'
 
@@ -62,34 +60,11 @@ export function useOperatorQueueRefresh(): () => void {
  * failed read stays visibly distinct from an empty queue: the status names
  * the problem rather than using a symbol that could be mistaken for a control.
  */
-const PendingReviewLink: React.FC<{ refreshRevision: number }> = ({
-  refreshRevision,
-}) => {
-  const [pending, setPending] = useState<number | null>(null)
-  const [signInRequired, setSignInRequired] = useState(false)
-  const [unreachable, setUnreachable] = useState(false)
-
-  useEffect(() => {
-    let active = true
-    fetchReviewQueue()
-      .then((queue) => {
-        if (!active) return
-        setPending(queue.pendingCount)
-        setSignInRequired(false)
-        setUnreachable(false)
-      })
-      .catch((error: unknown) => {
-        if (!active) return
-        setPending(null)
-        const needsSignIn =
-          error instanceof OperatorApiError && error.needsOperatorSignIn
-        setSignInRequired(needsSignIn)
-        setUnreachable(!needsSignIn)
-      })
-    return () => {
-      active = false
-    }
-  }, [refreshRevision])
+const PendingReviewLink: React.FC = () => {
+  const { queue, error } = useReviewQueue()
+  const pending = queue?.pendingCount ?? null
+  const signInRequired = Boolean(error && ['authentication_required', 'invalid_credentials', 'operator_sign_in_required', 'operator_group_required'].includes(error))
+  const unreachable = Boolean(error && !signInRequired)
 
   return (
     <NavLink
@@ -202,7 +177,7 @@ function presentIdentity(value: string): string {
 
 const OperatorFrame: React.FC = () => {
   const { pathname } = useLocation()
-  const [queueRefreshRevision, setQueueRefreshRevision] = useState(0)
+  const resource = useQueueResource()
   useEffect(() => {
     const previous = document.title
     document.title = operatorTitleForPath(pathname)
@@ -210,12 +185,10 @@ const OperatorFrame: React.FC = () => {
       document.title = previous
     }
   }, [pathname])
-  const refreshQueue = useCallback(() => {
-    setQueueRefreshRevision((revision) => revision + 1)
-  }, [])
 
   return (
-    <OperatorQueueRefreshContext.Provider value={refreshQueue}>
+    <ReviewQueueContext.Provider value={resource}>
+    <OperatorQueueRefreshContext.Provider value={resource.refresh}>
       <div className="operator-root" data-testid="operator-root">
         <header className="operator-topbar" data-testid="operator-topbar">
           <div className="operator-topbar-inner">
@@ -240,7 +213,7 @@ const OperatorFrame: React.FC = () => {
                   <UsersRound className="operator-topbar-icon" aria-hidden />
                   <span className="operator-topbar-label">Clients</span>
                 </NavLink>
-                <PendingReviewLink refreshRevision={queueRefreshRevision} />
+                <PendingReviewLink />
               </nav>
               <OperatorAuthControl />
               <PellierHomeLink testId="operator-exit" />
@@ -252,6 +225,7 @@ const OperatorFrame: React.FC = () => {
         </main>
       </div>
     </OperatorQueueRefreshContext.Provider>
+    </ReviewQueueContext.Provider>
   )
 }
 

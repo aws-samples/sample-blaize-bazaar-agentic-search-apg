@@ -12,8 +12,8 @@
  * still needs a profile because the floor is ranked per persona, so the
  * search affordance appears with the profile rather than before it.
  */
-import { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, Send, Sparkles } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowRight, ChevronLeft, ChevronRight, Send, Sparkles } from 'lucide-react'
 import { usePersona } from '../contexts/PersonaContext'
 import { useUI } from '../contexts/UIContext'
 import { asset } from '../utils/assetPath'
@@ -88,6 +88,28 @@ export default function PellierHero({
   const { persona } = usePersona()
   const [searchValue, setSearchValue] = useState('')
   const [suggestions, setSuggestions] = useState<LiveScenario[]>([])
+  const suggestionsRef = useRef<HTMLDivElement>(null)
+  const [suggestionEdges, setSuggestionEdges] = useState({ before: false, after: false })
+  const updateSuggestionEdges = useCallback(() => {
+    const row = suggestionsRef.current
+    if (row) setSuggestionEdges({ before: row.scrollLeft > 4, after: row.scrollWidth - row.clientWidth - row.scrollLeft > 4 })
+  }, [])
+
+  useEffect(() => {
+    const row = suggestionsRef.current
+    if (!row) return
+    row.scrollLeft = 0
+    updateSuggestionEdges()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(updateSuggestionEdges)
+    observer.observe(row)
+    return () => observer.disconnect()
+  }, [suggestions, updateSuggestionEdges])
+
+  const scrollSuggestions = (direction: number) => {
+    const row = suggestionsRef.current
+    row?.scrollBy({ left: direction * row.clientWidth * 0.8, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
+  }
 
   const personaId = persona?.id ?? 'fresh'
   const hero = PERSONA_HEROES[
@@ -238,7 +260,10 @@ export default function PellierHero({
                 ) : null}
               </form>
 
+              <div className="pellier-suggestions-row">
               <div
+                ref={suggestionsRef}
+                onScroll={updateSuggestionEdges}
                 data-testid="pellier-hero-pills"
                 className="pellier-hero-pills mt-3 flex w-full gap-2 overflow-x-auto pb-1"
                 aria-label="Suggested queries"
@@ -260,6 +285,13 @@ export default function PellierHero({
                     {scenario.prompt}
                   </button>
                 ))}
+              </div>
+              {suggestionEdges.before || suggestionEdges.after ? (
+                <div className="pellier-suggestions-controls">
+                  <button type="button" aria-label="Previous suggestions" disabled={!suggestionEdges.before} onClick={() => scrollSuggestions(-1)}><ChevronLeft size={16} aria-hidden="true" /></button>
+                  <button type="button" aria-label="More suggestions" disabled={!suggestionEdges.after} onClick={() => scrollSuggestions(1)}><ChevronRight size={16} aria-hidden="true" /></button>
+                </div>
+              ) : null}
               </div>
 
               {/* Browsing stays available with a profile active, but as the

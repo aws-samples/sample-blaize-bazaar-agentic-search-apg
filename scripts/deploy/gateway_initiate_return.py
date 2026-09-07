@@ -14,6 +14,7 @@ import base64
 import hashlib
 import hmac
 import json
+import runpy
 import os
 import sys
 from pathlib import Path
@@ -314,8 +315,13 @@ def _record_receipt(
         "tool_audit_row_after_call": audit_id,
         "absence_verified": payload["outcome"] == "deny" and audit_id is None,
     }
+    run_helpers = runpy.run_path(str(_repo_root() / "pellier/backend/services/workshop_run.py"))
+    workshop_run_id = run_helpers["current_run_id"]()
+    if workshop_run_id and not run_helpers["is_valid_run_id"](workshop_run_id):
+        raise ValueError("Invalid workshop run id")
     with _db_connect() as conn:
         with conn.cursor() as cur:
+            cur.execute("SELECT set_config('pellier.run_id', %s, true)", (workshop_run_id or "",))
             cur.execute(
                 """
                 INSERT INTO pellier.governed_receipts

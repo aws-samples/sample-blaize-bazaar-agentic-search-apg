@@ -50,6 +50,7 @@ from services.sql_query_logger import init_query_logger, get_query_logger, Query
 from services.index_performance import get_index_performance_service
 from services.vector_search import VectorSearch
 from services.cache import init_cache, get_cache
+from routes.password_auth import router as password_auth_router
 from routes import (
     agent_router,
     observatory_router,
@@ -400,6 +401,7 @@ app.add_middleware(
 # Storefront auth routes (Task 3.3) — Cognito sign-in loop + session
 # cookie management. Mounted at /api/auth/* by the router's own prefix.
 app.include_router(auth_router)
+app.include_router(password_auth_router)
 
 # Storefront user routes (Task 3.4) — preference persistence via
 # AgentCore Memory. Mounted at /api/user/* by the router's own prefix.
@@ -1430,6 +1432,7 @@ async def chat_stream(request: ChatRequest, user=Depends(get_current_user)):
                     managed_session_id,
                     principal_sub=turn_identity.principal_sub,
                 )
+                managed_trace = {**managed_trace, "memory": memory_receipt}
                 actual_rail = str(managed_trace.get("rail") or "")
                 event = {
                     "type": "complete",
@@ -1592,7 +1595,14 @@ async def chat_stream(request: ChatRequest, user=Depends(get_current_user)):
                             }
                         terminal_evidence = await persist_terminal(
                             rail=rail_decision.rail,
-                            terminal_status="complete",
+                            terminal_status=(
+                                "failed" if isinstance(response, dict)
+                                and response.get("success") is False else "complete"
+                            ),
+                            terminal_error_code=(
+                                "workshop_build_required" if isinstance(execution, dict)
+                                and execution.get("build_required") else None
+                            ),
                             trace=trace,
                             assistant_response=(
                                 str(response.get("response") or "")

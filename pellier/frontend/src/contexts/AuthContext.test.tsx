@@ -162,7 +162,7 @@ describe('AuthContext hydration', () => {
     act(() => result.current.login())
 
     expect(assign).toHaveBeenCalledWith(
-      `/api/auth/signin?provider=email&returnTo=${encodeURIComponent(
+      `/signin?returnTo=${encodeURIComponent(
         '/operator/clients/CUST-JESSICA?view=request',
       )}`,
     )

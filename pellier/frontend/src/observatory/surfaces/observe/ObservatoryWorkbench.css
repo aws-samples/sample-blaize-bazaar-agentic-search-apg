@@ -58,9 +58,8 @@
   --pl-shadow: var(--obs-card-shadow);
 
   /* Three registers, one per job.
-     --pl-sans     interface: labels, controls, status, panel titles.
-     --pl-display  editorial: the shopper-facing answer, which is the only
-                   model-authored prose on this surface.
+     --pl-sans     interface: questions, answers, labels, controls, panel titles.
+     --pl-display  editorial display type.
      --pl-mono     system proof: SQL, identifiers, timings, receipts.
 
      --pl-display works on prose but NOT on headings. Two rules outrank any
@@ -1379,15 +1378,13 @@
   color: var(--pl-accent-deep);
 }
 
-/* The shopper reply is the primary object on this panel, and it is the one
-   piece of model-authored language on the surface. It gets the editorial
-   register; every system fact around it stays sans or mono, so a reader can
-   tell prose from proof by the typeface alone. */
+/* Questions and shopper answers share the same sans family. Paragraph
+   spacing and weight keep long replies readable beside the evidence. */
 .observatory-agent-response > p,
 .observatory-agent-prose {
   margin-top: 10px;
   color: var(--pl-ink);
-  font-family: var(--pl-display);
+  font-family: var(--pl-sans);
   font-size: 18px;
   font-style: normal;
   font-weight: 400;
@@ -1411,7 +1408,7 @@
 
 .observatory-agent-prose strong {
   color: var(--pl-ink);
-  font-family: var(--pl-display);
+  font-family: var(--pl-sans);
   font-weight: 600;
 }
 
@@ -2698,6 +2695,10 @@
 .observatory-workbench-grid[data-view='focus'] {
   grid-template-columns: minmax(0, 1fr);
 }
+.observatory-workbench-grid[data-view='focus']:has(> .observatory-input-panel:not([hidden])) {
+  height: auto;
+  min-height: 360px;
+}
 
 /* Focus mode marks the stepped-back panels with the `hidden` attribute, and
    this is the rule that makes the mark mean something.
@@ -2761,3 +2762,33 @@
   font-weight: 500;
   letter-spacing: 0;
 }
+
+/* Keep the complete lab names legible without changing the four-card navigation. */
+@media (max-width: 560px) {
+  .observatory-lab-rail-card { grid-template-columns: 40px minmax(0, 1fr); gap: 8px; padding: 10px 8px; }
+  .observatory-lab-rail-portrait { width: 40px; min-width: 40px; max-width: 40px; height: 52px; min-height: 52px; max-height: 52px; border-radius: 8px; }
+  .observatory-lab-rail-card strong { display: block; overflow: visible; font-size: 13px; line-height: 1.35; }
+  .observatory-lab-rail-card small { white-space: nowrap; }
+}
+.labs-turns-state { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 18px; }
+.labs-turns-state > span { flex: 1 1 220px; }
+.observatory-focus-steps button { min-height: 44px; transition: background-color 160ms ease-out, color 160ms ease-out, border-color 160ms ease-out; }
+@media (prefers-reduced-motion: no-preference) {
+  .observatory-workbench-grid[data-view='focus'] > [data-motion-panel]:not([hidden]) { animation: pellier-panel-arrive 180ms ease-out; }
+  @keyframes pellier-panel-arrive { from { opacity: 0.86; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+}
+
+@media (max-width: 560px) {
+  .observatory-workbench-intro-aside { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; }
+  .observatory-workbench-presence { flex-basis: 100%; }
+  .observatory-view-toggle { white-space: nowrap; min-height: 44px; }
+  .observatory-resume { flex: 1; min-width: 0; border-radius: 10px; }
+}
+
+.labs-evidence-guidance { margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--rule-1); color: var(--ink-soft); font-family: var(--sans); font-size: 14px; line-height: 1.6; }
+.labs-evidence-guidance summary { min-height: 44px; align-content: center; cursor: pointer; color: var(--ink); font-weight: 600; }
+.labs-evidence-guidance dl { display: grid; gap: 16px; margin-block: 16px; }
+.labs-evidence-guidance dt { font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+.labs-evidence-guidance dd { margin: 0; max-width: 72ch; }
+.labs-evidence-guidance dd p { margin-top: 6px; }
+.labs-benchmark-note { max-width: 72ch; padding-top: 12px; border-top: 1px solid var(--rule-1); }

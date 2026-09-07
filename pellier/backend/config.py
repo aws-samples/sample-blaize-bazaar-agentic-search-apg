@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # Database Configuration
     # ========================================
     DB_HOST: str
+    # The dev launcher preserves the remote host when opening an SSM tunnel.
+    # This identifies the data source; connections still use DB_HOST/DB_PORT.
+    DB_TUNNEL_REMOTE_HOST: Optional[str] = None
     DB_PORT: int = 5432
     DB_NAME: str
     DB_USER: str

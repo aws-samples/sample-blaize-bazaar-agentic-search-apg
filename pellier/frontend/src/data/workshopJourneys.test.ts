@@ -9,23 +9,23 @@ import {
 const EXPECTED = {
   marco: [
     'What linen do you have for 10 days in Goa?',
-    'What would go with the Hadley shirt?',
-    'Is the Hadley shirt at the Brooklyn warehouse, and can it still ship in time?',
+    'What would go with the Hadley Linen Shirt?',
+    'How many Hadley Linen Shirts are available at the Brooklyn warehouse, and what ship window is recorded?',
   ],
   anna: [
-    'A thoughtful gift for someone who loves morning rituals',
-    'Keep the gift under $100 and show me the strongest two options.',
-    'Which one should I choose, and prove it stayed in budget and in stock?',
+    'A housewarming gift for someone who loves slow morning rituals.',
+    'Keep it under $100 and in stock. Show me the strongest two options.',
+    'Which one should I choose? Compare the two options using their current prices and availability.',
   ],
   theo: [
     'Hand-thrown ceramics for a slower morning routine',
-    'What goes well with the pour-over set?',
+    'What goes well with the pour-over set, keeping to the same materials and morning routine?',
     'My Wabi-Sabi Bowl arrived chipped. Please help me return it.',
   ],
   jessica: [
     "Investigate Jessica's open service issue (TKT-2026-3015) and recommend the next fair step. Distinguish what the records establish from what a source reports.",
-    'Which customer, order, return, and identity records are authoritative for this decision?',
-    'Prepare the fairest next step for human review without executing it.',
+    'Which customer, order, return, and identity records are authoritative for this decision? Separate confirmed facts from notes and assumptions.',
+    'Prepare the fairest next step for human review without executing it. Name any missing facts the reviewer must resolve.',
   ],
 } as const
 
@@ -53,10 +53,10 @@ describe('four-lab workshop journey contract', () => {
     it('offers turn 2 after turn 1 and turn 3 after turn 2', () => {
       const marco = WORKSHOP_JOURNEYS.marco.prompts
       expect(nextJourneyPrompt(marco[0])).toBe(
-        'What would go with the Hadley shirt?',
+        'What would go with the Hadley Linen Shirt?',
       )
       expect(nextJourneyPrompt(marco[1])).toBe(
-        'Is the Hadley shirt at the Brooklyn warehouse, and can it still ship in time?',
+        'How many Hadley Linen Shirts are available at the Brooklyn warehouse, and what ship window is recorded?',
       )
     })
 
@@ -77,7 +77,7 @@ describe('four-lab workshop journey contract', () => {
     it('ignores whitespace and casing, since the chip text is echoed back', () => {
       expect(
         nextJourneyPrompt('  what linen do you   have for 10 days in Goa?  '),
-      ).toBe('What would go with the Hadley shirt?')
+      ).toBe('What would go with the Hadley Linen Shirt?')
     })
 
     // A fuzzy match would let an ordinary shopper question that merely

@@ -19,7 +19,7 @@ interface Props {
   submitting: boolean
   note: string
   error: string | null
-  onSubmit: (message: string) => Promise<void>
+  onSubmit: (message: string) => Promise<void | boolean>
 }
 
 const ConciergeComposer: React.FC<Props> = ({
@@ -35,14 +35,16 @@ const ConciergeComposer: React.FC<Props> = ({
   const send = useCallback(async () => {
     const text = value.trim()
     if (!text || submitting || !enabled) return
-    setValue('')
-    await onSubmit(text)
+    try {
+      const accepted = await onSubmit(text)
+      if (accepted !== false) setValue((current) => current.trim() === text ? '' : current)
+    } catch { /* Keep the draft available for recovery. */ }
   }, [enabled, onSubmit, submitting, value])
 
   const onKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // Enter submits, Shift+Enter is a newline.
-      if (event.key === 'Enter' && !event.shiftKey) {
+      if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
         event.preventDefault()
         void send()
       }
@@ -64,8 +66,7 @@ const ConciergeComposer: React.FC<Props> = ({
         className="operator-concierge-input"
         rows={2}
         value={value}
-        readOnly={!enabled}
-        disabled={submitting}
+        readOnly={!enabled && !submitting}
         placeholder={
           // Three states, not two. Claiming "not yet available" while the config read
           // is still in flight is the same unverified-vs-closed conflation this
@@ -84,7 +85,7 @@ const ConciergeComposer: React.FC<Props> = ({
       <div className="operator-concierge-composer-foot">
         <p className="operator-concierge-composer-note" id="concierge-composer-note">
           {error
-            ? 'The investigation did not complete. The request may already be saved; reopen this client before retrying.'
+            ? 'The request may already be saved. Use Retry history to check its outcome.'
             : submitting
               ? 'Working on the request…'
               : note}

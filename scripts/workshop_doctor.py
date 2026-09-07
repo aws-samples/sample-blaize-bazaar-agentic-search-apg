@@ -17,7 +17,7 @@ a symptom.
            run was informed by memory.
     Lab 4  The Cedar policy pair is present and the identity rule has been
            authored; Row-Level Security is enabled on the tables the proof
-           exercises; an execution receipt exists for this run.
+           exercises; the direct Gateway decision chain exists for this run.
 
 Every line prints PASS or FAIL with the reason, and the exit status is 1 on any
 FAIL. A database that cannot be reached is a FAIL with the connection error, not
@@ -99,11 +99,19 @@ SELECT gtr.turn_id
  LIMIT 1;
 """
 _MEMORY_FOR_RUN = """
-SELECT receipt_id
-  FROM pellier.retrieval_receipts
+SELECT turn_id
+  FROM pellier.governed_turn_receipts
  WHERE run_id = %(run)s
-   AND COALESCE(memory_record_ids_used, '[]'::jsonb) <> '[]'::jsonb
- ORDER BY receipt_id DESC
+   AND principal_verified
+   AND rail = 'gateway-mcp'
+   AND terminal_status = 'complete'
+   AND trace->'memory'->>'source' = 'agentcore-memory'
+   AND trace->'memory'->>'namespace_scope' = 'verified-principal'
+   AND trace->'memory'->>'read_status' = 'succeeded'
+   AND trace->'memory'->>'write_status' = 'succeeded'
+   AND trace->'memory'->'turns_loaded' >= '2'::jsonb
+   AND trace->'memory'->'turns_persisted' >= '2'::jsonb
+ ORDER BY created_at DESC
  LIMIT 1;
 """
 _RLS_TABLES = """
@@ -113,13 +121,7 @@ SELECT bool_and(c.relrowsecurity) AS enabled, count(*) AS n
  WHERE n.nspname = 'pellier'
    AND c.relname IN ('orders', 'returns');
 """
-_EXECUTION_FOR_RUN = """
-SELECT receipt_id
-  FROM pellier.execution_receipts
- WHERE run_id = %(run)s
- ORDER BY receipt_id DESC
- LIMIT 1;
-"""
+
 
 
 @dataclass(frozen=True)
@@ -179,7 +181,7 @@ def open_evidence(env_path: pathlib.Path) -> Evidence:
     if connect is None:
         return Evidence(reason="psycopg is not installed")
     try:
-        return Evidence(conn=connect(build_receipt.connection_dsn(cfg)))
+        return Evidence(conn=connect(build_receipt.connection_dsn(cfg) + "?connect_timeout=5"))
     except Exception as exc:  # noqa: BLE001 - the reason is the finding
         return Evidence(reason=f"{type(exc).__name__}: {str(exc)[:160]}")
 
@@ -264,7 +266,9 @@ def lab1_checks(evidence: Evidence, *, backend: pathlib.Path = BACKEND) -> List[
 # ---------------------------------------------------------------------------
 
 
-def lab2_checks(evidence: Evidence, run_id: Optional[str]) -> List[Check]:
+def lab2_checks(
+    evidence: Evidence, run_id: Optional[str], *, include_proof: bool = True,
+) -> List[Check]:
     name = "migration 046 columns present"
     if not evidence.available:
         columns = Check(name, False, evidence.reason or "database unavailable")
@@ -279,6 +283,8 @@ def lab2_checks(evidence: Evidence, run_id: Optional[str]) -> List[Check]:
             )
         except Exception as exc:  # noqa: BLE001
             columns = Check(name, False, f"{type(exc).__name__}: {str(exc)[:120]}")
+    if not include_proof:
+        return [columns]
     receipt = _row_for_run(
         evidence,
         name="retrieval receipt for this run",
@@ -392,11 +398,17 @@ def lab3_checks(
     run_env: pathlib.Path = DEFAULT_RUN_ENV,
     env_path: pathlib.Path = DEFAULT_ENV,
     environ: Optional[Mapping[str, str]] = None,
+    include_proof: bool = True,
 ) -> List[Check]:
     env = os.environ if environ is None else environ
-    return [
+    checks = [
         _managed_catalogues_agree(),
         _managed_rail_selected(run_env, env_path, env),
+    ]
+    if not include_proof:
+        return checks
+    return [
+        *checks,
         _row_for_run(
             evidence,
             name="managed-rail turn receipt for this run",
@@ -412,8 +424,8 @@ def lab3_checks(
             name="memory informed a turn in this run",
             sql=_MEMORY_FOR_RUN,
             run_id=run_id,
-            key="receipt_id",
-            hint="no retrieval receipt in this run used AgentCore Memory records; "
+            key="turn_id",
+            hint="no completed managed turn in this run recorded a successful Memory read and write; "
                  "run Theo's second turn in the same session",
         ),
     ]
@@ -460,22 +472,56 @@ def _rls_check(evidence: Evidence) -> Check:
     )
 
 
+def _governance_chain(evidence: Evidence, run_id: Optional[str]) -> Check:
+    """Check keyed policy/execution/data evidence without executing a review."""
+    name = "Jessica Gateway decision chain for this run"
+    if not run_id:
+        return Check(name, False, "no run id in effect; run scripts/workshop-start.sh first")
+    if not evidence.available:
+        return Check(name, False, evidence.reason or "database unavailable")
+    sql = build_receipt._scoped(build_receipt._LAB4, "lab4", True).strip().rstrip(";")
+    try:
+        bundle = evidence.one(
+            f"WITH decisions AS ({sql}) SELECT jsonb_agg(to_jsonb(decisions)) AS rows FROM decisions",
+            {"sub": None, "run": run_id},
+        ) or {}
+        rows = [
+            row for row in (bundle.get("rows") or [])
+            if (row.get("args") or {}).get("customer_id") == "CUST-JESSICA"
+        ]
+        for row in rows:
+            if row.get("decision") == "DENY":
+                row["absence"] = (
+                    evidence.one(build_receipt._DENY_ABSENCE, {"key": row["declared_key"]})
+                    if row.get("declared_key") else None
+                )
+        findings = build_receipt._lab4_findings(rows)
+        denied = {row["principal_label"].lower() for row in rows if row["decision"] == "DENY"}
+        passed = (
+            {"marco", "anna"} <= denied
+            and any(row["principal_label"].lower() == "jessica" and row["decision"] == "ALLOW" for row in rows)
+            and all(findings.get(key) == build_receipt.PROVED for key in (
+                "allow_executed", "durable_effect", "deny_did_not_execute",
+            ))
+        )
+        return Check(name, passed, "" if passed else
+                     "run Lab 4's direct Gateway Marco/Anna DENY and Jessica ALLOW/replay proof; "
+                     "the Operator journey ends at the pending human checkpoint")
+    except Exception as exc:
+        return Check(name, False, f"{type(exc).__name__}: {str(exc)[:120]}")
+
+
 def lab4_checks(
-    evidence: Evidence, run_id: Optional[str], *, repo: pathlib.Path = REPO
+    evidence: Evidence, run_id: Optional[str], *, repo: pathlib.Path = REPO,
+    include_proof: bool = True,
 ) -> List[Check]:
-    return [
+    checks = [
         *_cedar_checks(repo),
         _rls_check(evidence),
-        _row_for_run(
-            evidence,
-            name="execution receipt for this run",
-            sql=_EXECUTION_FOR_RUN,
-            run_id=run_id,
-            key="receipt_id",
-            hint="no pellier.execution_receipts row for this run; confirm Theo's review "
-                 "in Pellier Operator and execute it on the managed rail",
-        ),
     ]
+    if include_proof:
+        checks.append(_governance_chain(evidence, run_id))
+    return checks
 
 
 # ---------------------------------------------------------------------------
@@ -490,14 +536,15 @@ def run_lab(
     *,
     run_env: pathlib.Path = DEFAULT_RUN_ENV,
     env_path: pathlib.Path = DEFAULT_ENV,
+    phase: str = "proof",
 ) -> List[Check]:
     if lab == 1:
         return lab1_checks(evidence)
     if lab == 2:
-        return lab2_checks(evidence, run_id)
+        return lab2_checks(evidence, run_id, include_proof=phase == "proof")
     if lab == 3:
-        return lab3_checks(evidence, run_id, run_env=run_env, env_path=env_path)
-    return lab4_checks(evidence, run_id)
+        return lab3_checks(evidence, run_id, run_env=run_env, env_path=env_path, include_proof=phase == "proof")
+    return lab4_checks(evidence, run_id, include_proof=phase == "proof")
 
 
 def render(lab: int, run_id: Optional[str], persona: Optional[str], checks: List[Check]) -> str:
@@ -531,6 +578,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument(
         "--run-env", default=str(DEFAULT_RUN_ENV), help="service run.env the unit sources"
     )
+    parser.add_argument(
+        "--phase", choices=("prerequisites", "proof"), default="proof",
+        help="prerequisites checks authored code/config; proof also requires recorded outcomes",
+    )
     args = parser.parse_args(argv)
 
     run_id, persona = (args.run_id, None) if args.run_id else _current_run()
@@ -546,7 +597,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             run_id,
             run_env=pathlib.Path(args.run_env),
             env_path=env_path,
+            phase=args.phase,
         )
+    print(f"Phase: {args.phase}")
     print(render(args.lab, run_id, persona, checks))
     return 0 if all(check.passed for check in checks) else 1
 

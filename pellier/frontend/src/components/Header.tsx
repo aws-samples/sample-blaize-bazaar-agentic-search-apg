@@ -16,7 +16,7 @@
  * Copy comes from `copy.ts`. Design tokens from `design/tokens.ts` and
  * Tailwind extended config.
  */
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useCart } from '../contexts/CartContext'
@@ -102,27 +102,25 @@ interface NavLinkProps {
 }
 
 function NavLink({ item, label, current, onClick }: NavLinkProps) {
-  const isCurrent = current === item
+  const isCurrent = current === item || (current === 'home' && item === 'shop')
+  const shared = {
+    'data-nav-item': item,
+    'data-current': isCurrent ? 'true' : 'false',
+    'aria-current': isCurrent ? 'page' as const : undefined,
+    className: 'pellier-nav-link',
+  }
+  if (item === 'ask-pellier') {
+    return <button {...shared} type="button" onClick={() => onClick?.(item)}>{label}</button>
+  }
+  const to = item === 'stories' ? '/storyboard' : item === 'about' ? '/about' : '/#shop'
   return (
-    <button
-      type="button"
-      data-nav-item={item}
-      data-current={isCurrent ? 'true' : 'false'}
-      aria-current={isCurrent ? 'page' : undefined}
-      onClick={() => onClick?.(item)}
-      className={[
-        'inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-[14px] transition-colors duration-fade ease-out',
-        'hover:opacity-70 bg-transparent cursor-pointer',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-espresso focus-visible:ring-offset-2',
-        isCurrent ? 'text-espresso font-semibold' : 'text-ink-soft font-normal',
-      ].join(' ')}
-      style={{
-        fontFamily: 'var(--sans)',
-        padding: '6px 0',
-      }}
-    >
-      {label}
-    </button>
+    <Link {...shared} to={to} onClick={(event) => {
+      // Preserve open-in-new-tab and the browser's link menu.
+      if (onClick && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button === 0) {
+        event.preventDefault()
+        onClick(item)
+      }
+    }}>{label}</Link>
   )
 }
 
@@ -223,11 +221,13 @@ function SignedOutPersonaTrigger({
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-espresso focus-visible:ring-offset-2',
       ].join(' ')}
       style={{ padding: '7px 14px' }}
+      aria-label={SCENARIO.SELECT}
       aria-haspopup="dialog"
       aria-expanded={open}
     >
       <UserIcon className="w-4 h-4" aria-hidden />
-      <span style={{ fontFamily: 'var(--sans)' }}>{SCENARIO.SELECT}</span>
+      <span className="hidden whitespace-nowrap sm:inline" style={{ fontFamily: 'var(--sans)' }}>{SCENARIO.SELECT}</span>
+      <span className="hidden whitespace-nowrap min-[360px]:inline sm:hidden">Scenario</span>
     </button>
   )
 }
@@ -313,6 +313,8 @@ export default function Header({
   const { items: cartItems, setCartOpen } = useCart()
   const { openModal } = useUI()
   const { persona } = usePersona()
+  const headerRef = useRef<HTMLElement>(null)
+  const menuToggleRef = useRef<HTMLButtonElement>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [chooserOpen, setChooserOpen] = useState(false)
   const reduceMotion = Boolean(useReducedMotion())
@@ -347,14 +349,35 @@ export default function Header({
   useEffect(() => {
     if (!mobileMenuOpen) return
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMobileMenuOpen(false)
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false)
+        menuToggleRef.current?.focus()
+      }
     }
+    const handleOutside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !headerRef.current?.contains(event.target)) setMobileMenuOpen(false)
+    }
+    const handleFocusOut = (event: FocusEvent) => {
+      if (event.target instanceof Node && !headerRef.current?.contains(event.target)) setMobileMenuOpen(false)
+    }
+    const desktop = window.matchMedia('(min-width: 1024px)')
+    const closeOnDesktop = () => { if (desktop.matches) setMobileMenuOpen(false) }
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    document.addEventListener('pointerdown', handleOutside)
+    document.addEventListener('focusin', handleFocusOut)
+    desktop.addEventListener('change', closeOnDesktop)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('pointerdown', handleOutside)
+      document.removeEventListener('focusin', handleFocusOut)
+      desktop.removeEventListener('change', closeOnDesktop)
+    }
   }, [mobileMenuOpen])
+
 
   return (
     <header
+      ref={headerRef}
       role="banner"
       data-testid="sticky-header"
       className="sticky top-0 z-40 w-full border-b border-sand/50"
@@ -436,27 +459,24 @@ export default function Header({
               <ObservatoryLink />
             </div>
 
-            <IconButton
-              icon={
-                mobileMenuOpen ? (
-                  <X className="h-5 w-5" />
-                ) : (
-                  <Menu className="h-5 w-5" />
-                )
-              }
-              ariaLabel={
-                mobileMenuOpen ? 'Close navigation' : 'Open navigation'
-              }
-              onClick={() => setMobileMenuOpen((open) => !open)}
-              size="md"
-              className="lg:hidden"
-            />
+            <button
+              ref={menuToggleRef}
+              type="button"
+              aria-label={mobileMenuOpen ? 'Close navigation' : 'Open navigation'}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="pellier-mobile-navigation"
+              onClick={() => setMobileMenuOpen(open => !open)}
+              className="inline-flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full text-espresso hover:bg-cream-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 lg:hidden"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" aria-hidden /> : <Menu className="h-5 w-5" aria-hidden />}
+            </button>
           </div>
         </div>
 
         <AnimatePresence initial={false}>
           {mobileMenuOpen ? (
             <motion.div
+              id="pellier-mobile-navigation"
               data-testid="mobile-menu"
               className="
                 absolute left-0 right-0 top-full border-b border-sand

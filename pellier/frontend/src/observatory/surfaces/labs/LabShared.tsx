@@ -47,9 +47,11 @@ export function SourceBadge({
 export function LabStatusMark({
   status,
   loading = false,
+  discloseDetails = false,
 }: {
   status: LabStatus;
   loading?: boolean;
+  discloseDetails?: boolean;
 }) {
   const Icon = loading
     ? CircleDashed
@@ -59,21 +61,30 @@ export function LabStatusMark({
         ? CircleAlert
         : CircleDashed;
 
+  const metadata = (
+    <span className="lab-status-mark-meta">
+      <SourceBadge provenance={loading ? 'Unknown' : status.provenance} compact />
+      <span>{loading ? 'Current response pending' : status.source}</span>
+      <span>{loading ? 'Not observed' : status.freshness}</span>
+    </span>
+  );
+
   return (
     <div
       className="lab-status-mark"
       data-status={loading ? 'loading' : status.key}
-      role="status"
     >
-      <span className="lab-status-mark-main">
+      <span className="lab-status-mark-main" role="status">
         <Icon size={15} strokeWidth={1.8} aria-hidden="true" />
+        {discloseDetails ? <span>Environment:</span> : null}
         <strong>{loading ? 'Reading evidence' : status.label}</strong>
       </span>
-      <span className="lab-status-mark-meta">
-        <SourceBadge provenance={loading ? 'Unknown' : status.provenance} compact />
-        <span>{loading ? 'Current response pending' : status.source}</span>
-        <span>{loading ? 'Not observed' : status.freshness}</span>
-      </span>
+      {discloseDetails ? (
+        <details className="lab-evidence-disclosure">
+          <summary>Evidence details</summary>
+          {metadata}
+        </details>
+      ) : metadata}
     </div>
   );
 }

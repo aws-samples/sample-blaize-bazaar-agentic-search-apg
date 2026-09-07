@@ -77,7 +77,7 @@
     },
     {
       "role": "user",
-      "content": "What would go with the Hadley shirt?",
+      "content": "What would go with the Hadley Linen Shirt?",
       "timestamp": "2026-05-25T17:00:32Z"
     },
     {
@@ -186,7 +186,7 @@
     },
     {
       "role": "user",
-      "content": "Is the Hadley shirt at the Brooklyn warehouse, and can it still ship in time?",
+      "content": "How many Hadley Linen Shirts are available at the Brooklyn warehouse, and what ship window is recorded?",
       "timestamp": "2026-05-25T17:01:22Z"
     },
     {

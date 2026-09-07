@@ -323,9 +323,20 @@ def test_route_turn_context_carries_only_trusted_correlation_fields() -> None:
 def test_params_align_with_the_insert_placeholders() -> None:
     from services.retrieval_receipt import _INSERT_SQL
 
-    params = receipt_params(build_receipt(query="gift", plan=_plan()))
+    receipt = build_receipt(query="gift", plan=_plan())
+    receipt.latency_breakdown = {"total_ms": 37}
+    receipt.citation_snapshots = [{"entity_id": "1", "quote": "A linen piece"}]
+    receipt.citation_snapshot_hash = citation_snapshot_hash(receipt.citation_snapshots)
+    params = receipt_params(receipt)
 
     assert _INSERT_SQL.count("%s") == len(params)
+    # Derive destinations from the SQL, independently of the binding tuple.
+    # Equal placeholder counts alone cannot catch a hash bound to JSONB.
+    columns = [name.strip() for name in _INSERT_SQL.split("(", 1)[1].split(")", 1)[0].split(",")]
+    bound = dict(zip(columns, params, strict=True))
+    assert json.loads(bound["latency_breakdown"]) == {"total_ms": 37}
+    assert json.loads(bound["citation_snapshots"]) == receipt.citation_snapshots
+    assert bound["citation_snapshot_hash"] == receipt.citation_snapshot_hash
 
 
 def test_json_columns_are_serialized_strings() -> None:

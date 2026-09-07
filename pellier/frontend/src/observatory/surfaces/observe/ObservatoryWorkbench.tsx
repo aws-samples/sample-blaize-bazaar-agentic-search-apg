@@ -496,11 +496,7 @@ function LabsProductCard({
             alt={product.name}
             loading="lazy"
             decoding="async"
-            sizes={
-              role === 'best-match'
-                ? '(max-width: 560px) 112px, (max-width: 959px) 44vw, 220px'
-                : '(max-width: 560px) 90vw, (max-width: 959px) 44vw, 190px'
-            }
+            sizes="(max-width: 560px) 112px, (max-width: 959px) 44vw, 220px"
           />
         ) : (
           <span aria-hidden="true">
@@ -2467,7 +2463,7 @@ export default function ObservatoryWorkbench() {
                       </div>
                       <div
                         className="observatory-products"
-                        data-layout="pairings"
+                        data-layout="feature"
                       >
                         {supportingProducts.map((product, index) => (
                           <LabsProductCard

@@ -8,6 +8,7 @@
  */
 
 import React, { useState } from 'react';
+import { redirectToSignIn } from '../../../utils/auth';
 import { Link } from 'react-router-dom';
 import {
   EditorialTitle,
@@ -227,7 +228,7 @@ const LoadingState: React.FC = () => (
   </div>
 );
 
-const ErrorState: React.FC<{ message: string; onRetry: () => void }> = ({ message, onRetry }) => (
+const ErrorState: React.FC<{ message: string; onRetry: () => void; signIn?: boolean }> = ({ message, onRetry, signIn }) => (
   <div
     style={{
       display: 'flex',
@@ -277,7 +278,7 @@ const ErrorState: React.FC<{ message: string; onRetry: () => void }> = ({ messag
         cursor: 'pointer',
       }}
     >
-      Try again
+      {signIn ? 'Sign in to view memory' : 'Try again'}
     </button>
   </div>
 );
@@ -354,7 +355,7 @@ const MemoryDashboard: React.FC = () => {
   const [persona, setPersona] = useState<MemoryPersona>(initialPersona);
 
   // Memory is live-only. Disable the static fallback so an API failure is visible.
-  const { data, loading, error, refetch } = useObservatoryData<MemoryState>({
+  const { data, loading, error, errorStatus, refetch } = useObservatoryData<MemoryState>({
     key: `memory-${persona}`,
   });
 
@@ -384,7 +385,7 @@ const MemoryDashboard: React.FC = () => {
       />
 
       {loading && <LoadingState />}
-      {error && <ErrorState message={error} onRetry={refetch} />}
+      {error && <ErrorState message={error} signIn={errorStatus === 401} onRetry={errorStatus === 401 ? () => redirectToSignIn('email') : refetch} />}
       {!loading && !error && !hasData && <EmptyState />}
 
       {!loading && !error && hasData && data != null && (

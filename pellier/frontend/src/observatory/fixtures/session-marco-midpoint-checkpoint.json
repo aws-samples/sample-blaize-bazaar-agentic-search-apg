@@ -1,7 +1,7 @@
 {
   "id": "marco-midpoint-checkpoint",
   "personaId": "marco",
-  "openingQuery": "Is the Hadley shirt at the Brooklyn warehouse, and can it still ship in time?",
+  "openingQuery": "How many Hadley Linen Shirts are available at the Brooklyn warehouse, and what ship window is recorded?",
   "elapsedMs": 1840,
   "agentCount": 1,
   "routingPattern": "Dispatcher",
@@ -10,7 +10,7 @@
   "chat": [
     {
       "role": "user",
-      "content": "Is the Hadley shirt at the Brooklyn warehouse, and can it still ship in time?",
+      "content": "How many Hadley Linen Shirts are available at the Brooklyn warehouse, and what ship window is recorded?",
       "timestamp": "2026-05-25T17:24:00Z"
     },
     {

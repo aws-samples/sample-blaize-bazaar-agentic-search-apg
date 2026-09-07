@@ -407,5 +407,5 @@ def test_the_console_states_that_standing_is_not_authorization() -> None:
     record = " ".join(raw.split())
 
     assert "Standing is business context" in record
-    assert "AgentCore Policy still decides whether the action is permitted" in record
+    assert "For tools exposed through Gateway, AgentCore Policy decides whether the action is permitted" in record
     assert "Aurora still decides whether the data may be changed" in record

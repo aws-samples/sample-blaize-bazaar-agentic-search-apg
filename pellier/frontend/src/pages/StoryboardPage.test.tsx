@@ -110,16 +110,17 @@ describe('StoryboardPage - header current-page state (Req 1.13.4)', () => {
   it('renders the sticky header with Stories in the current-page ink state', () => {
     renderStoryboard()
 
-    const storiesNav = screen.getByRole('button', { name: 'Stories' })
+    const header = within(screen.getByTestId('sticky-header'))
+    const storiesNav = header.getByRole('link', { name: 'Stories' })
     expect(storiesNav).toHaveAttribute('data-current', 'true')
     expect(storiesNav).toHaveAttribute('aria-current', 'page')
 
     // Sanity: the other nav items are not highlighted.
-    expect(screen.getByRole('button', { name: 'Shop' })).toHaveAttribute(
+    expect(header.getByRole('link', { name: 'Shop' })).toHaveAttribute(
       'data-current',
       'false',
     )
-    expect(screen.getByRole('button', { name: 'About' })).toHaveAttribute(
+    expect(header.getByRole('link', { name: 'About' })).toHaveAttribute(
       'data-current',
       'false',
     )

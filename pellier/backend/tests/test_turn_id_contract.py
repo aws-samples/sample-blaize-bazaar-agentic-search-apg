@@ -123,6 +123,37 @@ def test_complete_still_carries_the_rail(live_client: TestClient) -> None:
     assert complete["response"]["railDecision"]["available"] is True
 
 
+@pytest.mark.parametrize("success, build_required, status, code", [
+    (True, False, "complete", None),
+    (False, False, "failed", None),
+    (False, True, "failed", "workshop_build_required"),
+])
+def test_transport_completion_records_the_actual_turn_outcome(
+    monkeypatch, success, build_required, status, code,
+):
+    persisted = []
+
+    class Service:
+        async def chat_stream(self, **kwargs):
+            yield {"type": "complete", "response": {
+                "response": "A bounded response", "success": success,
+                "agent_execution": {"build_required": build_required},
+            }}
+
+    async def persist(**kwargs):
+        persisted.append(kwargs)
+        return None
+
+    monkeypatch.setattr(app_module.settings, "USE_AGENTCORE_RUNTIME", False)
+    monkeypatch.setattr(app_module, "chat_service", Service())
+    monkeypatch.setattr(app_module, "_persist_terminal_turn_receipt", persist)
+    events = _post(TestClient(app_module.app))
+    assert _first(events, "complete")["response"]["success"] is success
+    assert len(persisted) == 1
+    assert persisted[0]["terminal_status"] == status
+    assert persisted[0]["terminal_error_code"] == code
+
+
 @pytest.mark.parametrize(
     ("verified_user", "requested_customer_id", "expected_customer_id"),
     [

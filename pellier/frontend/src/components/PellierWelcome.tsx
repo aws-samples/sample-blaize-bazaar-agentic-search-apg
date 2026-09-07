@@ -6,6 +6,7 @@
  * locally authored recommendation.
  */
 import { useEffect, useState } from 'react'
+import { ArrowRight } from 'lucide-react'
 import type { PersonaSnapshot } from '../contexts/PersonaContext'
 import type { PellierProduct } from '../services/types'
 import { imageSrc } from '../utils/assetPath'
@@ -56,6 +57,8 @@ export default function PellierWelcome({ onSend, persona }: PellierWelcomeProps)
   const [catalog, setCatalog] = useState<PellierProduct[]>([])
   const [scenarios, setScenarios] = useState<LiveScenario[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [revision, setRevision] = useState(0)
   const profileId = persona?.id ?? 'fresh'
   const tod = timeOfDay()
 
@@ -65,6 +68,7 @@ export default function PellierWelcome({ onSend, persona }: PellierWelcomeProps)
     setCatalog([])
     setScenarios([])
     setError(null)
+    setLoading(true)
 
     void Promise.all([
       fetch(`/api/products?persona=${encodeURIComponent(profileId)}`, {
@@ -77,7 +81,7 @@ export default function PellierWelcome({ onSend, persona }: PellierWelcomeProps)
     ])
       .then(async ([catalogResponse, scenarioResponse]) => {
         if (!catalogResponse.ok || !scenarioResponse.ok) {
-          throw new Error('Live concierge context is unavailable.')
+          throw new Error('Your edit is taking a little longer to arrive. Please try again, or ask Pellier below.')
         }
         return Promise.all([
           catalogResponse.json() as Promise<PellierProduct[]>,
@@ -88,21 +92,19 @@ export default function PellierWelcome({ onSend, persona }: PellierWelcomeProps)
         if (!active) return
         setCatalog(products)
         setScenarios(payload.scenarios ?? [])
+        setLoading(false)
       })
       .catch((reason: unknown) => {
         if (!active || (reason as { name?: string })?.name === 'AbortError') return
-        setError(
-          reason instanceof Error
-            ? reason.message
-            : 'Live concierge context is unavailable.',
-        )
+        setError('Your edit is taking a little longer to arrive. Please try again, or ask Pellier below.')
+        setLoading(false)
       })
 
     return () => {
       active = false
       controller.abort()
     }
-  }, [profileId])
+  }, [profileId, revision])
 
   const cover = catalog[0]
   const greeting = composeWelcomeGreeting(
@@ -131,7 +133,7 @@ export default function PellierWelcome({ onSend, persona }: PellierWelcomeProps)
         <div className="sf-cover-overlay">
           <div className="sf-cover-eyebrow">
             <span className="sf-cover-dot" />
-            {cover ? 'Live catalog' : 'Live catalog loading'}
+            {cover ? 'Your current edit' : error ? 'Edit unavailable' : loading ? 'Opening your edit' : 'Your edit'}
           </div>
         </div>
       </div>
@@ -147,21 +149,21 @@ export default function PellierWelcome({ onSend, persona }: PellierWelcomeProps)
           {error
             ? error
             : catalog.length
-              ? `${catalog.length} current pieces are available in this live edit.`
-              : 'Reading the current catalog and guided requests from Aurora…'}
+              ? `${catalog.length} pieces in your current edit. Tell me what you have in mind.`
+              : loading ? 'Opening your edit and a few ideas to get started…' : 'Tell me what you have in mind. We can find a place to start.'}
         </p>
+        {error ? <button type="button" className="pellier-retry" onClick={() => setRevision(value => value + 1)}>Try again</button> : null}
 
         {!error && primary.length > 0 ? (
           <section
             className="sf-section"
-            aria-label="Required three-turn journey"
+            aria-label="Ideas to begin your conversation"
           >
             <div className="sf-section-head">
               <span className="sf-eyebrow-sm sf-eyebrow-red">
                 <span className="sf-dot" />
-                Required three-turn journey
+                A few ideas to begin
               </span>
-              <span className="sf-count sf-count-hero">Live</span>
             </div>
             <div className="sf-actions-stack">
               {primary.map((scenario, index) => (
@@ -172,7 +174,7 @@ export default function PellierWelcome({ onSend, persona }: PellierWelcomeProps)
                   onClick={() => onSend(scenario.prompt)}
                 >
                   {scenario.prompt}
-                  <span className="sf-action-arrow">→</span>
+                  <ArrowRight className="sf-action-arrow" size={16} aria-hidden="true" />
                 </button>
               ))}
             </div>
@@ -182,7 +184,7 @@ export default function PellierWelcome({ onSend, persona }: PellierWelcomeProps)
         {more.length > 0 ? (
           <>
             <div className="sf-divider" />
-            <p className="sf-prompt">Explore beyond the required lab journey.</p>
+            <p className="sf-prompt">Something else in mind?</p>
             <section
               className="sf-postscript-list"
               aria-label="Explore further"

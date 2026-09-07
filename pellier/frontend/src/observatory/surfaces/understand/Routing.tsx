@@ -458,7 +458,7 @@ const INTENT_MAPPINGS: IntentMapping[] = [
       'at the brooklyn', 'at the austin', 'at the portland',
       'on the floor',
     ],
-    examples: ['Is the Hadley shirt at the Brooklyn warehouse, and can it still ship in time?'],
+    examples: ['How many Hadley Linen Shirts are available at the Brooklyn warehouse, and what ship window is recorded?'],
   },
   {
     intent: 'customer_support',
@@ -485,7 +485,7 @@ const INTENT_MAPPINGS: IntentMapping[] = [
     fileTokens: [
       "(any query that doesn't match the above falls through here)",
     ],
-    examples: ['What would go with the Hadley shirt?'],
+    examples: ['What would go with the Hadley Linen Shirt?'],
   },
 ];
 

@@ -71,7 +71,7 @@ const SkillsDetail: React.FC = () => {
               name="the-gift-table"
               trigger="Gifts, milestones, wrap-ready pieces, housewarmings, birthdays"
               description="Anna's giving register – price bands, pairing, tissue-and-ribbon presentation."
-              example='"A thoughtful gift for someone who loves morning rituals."'
+              example='"A housewarming gift for someone who loves slow morning rituals."'
             />
             <SkillCard
               name="the-makers-shelf"

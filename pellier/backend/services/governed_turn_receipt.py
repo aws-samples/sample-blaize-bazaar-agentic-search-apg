@@ -202,6 +202,16 @@ def _trace_metadata(trace: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         "traceId": trace.get("traceId"),
         "runtimeRequestId": trace.get("runtimeRequestId"),
         "sessionId": trace.get("sessionId"),
+        # Persist service outcomes, never conversation content. The Lab 3
+        # receipt must survive restart without relying on retrieval LTM IDs.
+        "memory": {
+            key: trace["memory"][key]
+            for key in (
+                "source", "turns_loaded", "turns_persisted", "namespace_scope",
+                "read_status", "write_status", "error_code",
+            )
+            if isinstance(trace.get("memory"), dict) and key in trace["memory"]
+        },
         "managedTrace": {
             key: managed.get(key)
             for key in (

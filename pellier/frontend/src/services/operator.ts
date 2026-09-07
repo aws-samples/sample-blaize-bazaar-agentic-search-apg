@@ -369,40 +369,35 @@ export class OperatorApiError extends Error {
 export const OPERATOR_REQUEST_TIMEOUT_MS = 8_000
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  let response: Response
   const controller = new AbortController()
   const timeout = globalThis.setTimeout(
     () => controller.abort(),
-    OPERATOR_REQUEST_TIMEOUT_MS,
+    init.method === 'POST' ? 120_000 : OPERATOR_REQUEST_TIMEOUT_MS,
   )
-
   try {
-    response = await fetch(path, {
+    const response = await fetch(path, {
       ...init,
       credentials: 'include',
       headers: { 'Content-Type': 'application/json', ...init.headers },
       signal: controller.signal,
     })
-  } catch {
+    if (!response.ok) {
+      let code = response.status === 401 || response.status === 403
+        ? 'operator_sign_in_required' : 'operator_unavailable'
+      try {
+        const body = (await response.json()) as { detail?: string }
+        if (body.detail) code = body.detail
+      } catch { /* Preserve the HTTP status when the response cannot be decoded. */ }
+      throw new OperatorApiError(code, response.status)
+    }
+    // The deadline includes the body, which can stall after headers arrive.
+    return await response.json() as T
+  } catch (error) {
+    if (error instanceof OperatorApiError) throw error
     throw new OperatorApiError('operator_unavailable', 503)
   } finally {
     globalThis.clearTimeout(timeout)
   }
-
-  if (!response.ok) {
-    let code =
-      response.status === 401 || response.status === 403
-        ? 'operator_sign_in_required'
-        : 'operator_unavailable'
-    try {
-      const body = (await response.json()) as { detail?: string }
-      if (body.detail) code = body.detail
-    } catch {
-      // Keep the status-derived code when the response is not JSON.
-    }
-    throw new OperatorApiError(code, response.status)
-  }
-  return response.json() as Promise<T>
 }
 
 export function fetchClientBook(): Promise<OperatorBook> {
@@ -486,7 +481,16 @@ export async function streamConciergeTurn(
   transportKey: string,
   onStep: (step: ConciergeInvestigationStep) => void,
   onAnswer: (answer: ConciergeStreamAnswer) => void,
+  signal?: AbortSignal,
 ): Promise<ConciergeTurn & Record<string, unknown>> {
+  const controller = new AbortController()
+  const cancel = () => controller.abort()
+  signal?.addEventListener('abort', cancel, { once: true })
+  if (signal?.aborted) cancel()
+  // Bound a cold managed turn without imposing the short read-API deadline.
+  const deadline = globalThis.setTimeout(cancel, 300_000)
+  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined
+  try {
   const response = await fetch(
     `/api/operator/clients/${encodeURIComponent(clientId)}` +
       `/concierge/sessions/${encodeURIComponent(sessionId)}/turns/stream`,
@@ -495,13 +499,14 @@ export async function streamConciergeTurn(
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, transportKey }),
+      signal: controller.signal,
     },
   )
   if (!response.ok || !response.body) {
     throw new OperatorApiError('operator_unavailable', response.status || 503)
   }
 
-  const reader = response.body.getReader()
+  reader = response.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
   let final: (ConciergeTurn & Record<string, unknown>) | null = null
@@ -533,6 +538,12 @@ export async function streamConciergeTurn(
 
   if (!final) throw new OperatorApiError('operator_unavailable', 500)
   return final
+  } finally {
+    globalThis.clearTimeout(deadline)
+    signal?.removeEventListener('abort', cancel)
+    try { await reader?.cancel?.() } catch { /* The connection may already be closed. */ }
+    reader?.releaseLock?.()
+  }
 }
 
 export function fetchReviewQueue(): Promise<OperatorReviewQueue> {

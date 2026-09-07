@@ -28,9 +28,10 @@ const PERSONA_MODAL_EASE: [number, number, number, number] = [
 ]
 
 export default function PersonaModal({ open, onClose }: PersonaModalProps) {
-  const { persona, switchPersona, signOut, switching } = usePersona()
+  const { persona, switchPersona, signOut, switching, switchError } = usePersona()
   const [personas, setPersonas] = useState<PersonaListItem[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [retryVersion, setRetryVersion] = useState(0)
   const [loading, setLoading] = useState(false)
   const reduceMotion = Boolean(useReducedMotion())
   const dialogRef = useRef<HTMLDivElement | null>(null)
@@ -46,7 +47,7 @@ export default function PersonaModal({ open, onClose }: PersonaModalProps) {
     setError(null)
     fetch('/api/observatory/personas')
       .then((r) => {
-        if (!r.ok) throw new Error(`Live personas unavailable: ${r.status}`)
+        if (!r.ok) throw new Error('We couldn’t load the profiles. Please try again.')
         return r.json()
       })
       .then((data) => {
@@ -58,12 +59,11 @@ export default function PersonaModal({ open, onClose }: PersonaModalProps) {
         setError(reason instanceof Error ? reason.message : 'Live personas unavailable.'),
       )
       .finally(() => setLoading(false))
-  }, [open, personas.length])
+  }, [open, personas.length, retryVersion])
 
   const handleSelect = useCallback(
     async (id: string) => {
-      await switchPersona(id)
-      onClose()
+      if (await switchPersona(id)) onClose()
     },
     [switchPersona, onClose],
   )
@@ -118,8 +118,8 @@ export default function PersonaModal({ open, onClose }: PersonaModalProps) {
                   {SCENARIO.CHOOSE_TITLE}
                 </h2>
                 <p className="pm-sub">
-                  Each profile carries its own history, preferences and
-                  memory.
+                  Explore each profile’s history and preferences. Account
+                  access uses a separate sign-in.
                 </p>
               </div>
               <button
@@ -142,10 +142,11 @@ export default function PersonaModal({ open, onClose }: PersonaModalProps) {
                   <p>Loading live client profiles</p>
                 </div>
               ) : null}
-              {error ? (
-                <p className="pm-error" role="alert">
-                  {error}
-                </p>
+              {error || switchError ? (
+                <div className="pellier-recovery" role="alert">
+                  <p>{error ?? switchError}</p>
+                  {error ? <button type="button" className="pellier-retry" onClick={() => setRetryVersion(v => v + 1)}>Try again</button> : null}
+                </div>
               ) : null}
               {personas.map((p) => {
                 const isActive = persona?.id === p.id
@@ -218,7 +219,7 @@ export default function PersonaModal({ open, onClose }: PersonaModalProps) {
                   data-testid="persona-sign-out"
                   className="pm-signout"
                 >
-                  Sign out
+                  Clear scenario
                 </button>
               </div>
             ) : null}

@@ -20,7 +20,10 @@ from typing import Any, List, Optional, Sequence, Tuple
 
 import pytest
 
-from services.database import DatabaseService, _configure_connection
+from services.database import (
+    AsyncConnection, DatabaseService, _check_connection, _configure_connection,
+    _instrument_connection, db_query_log_var,
+)
 
 
 def _run(coro: Any) -> Any:
@@ -79,6 +82,43 @@ class FakePool:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("autocommit", [False, True])
+@pytest.mark.parametrize("broken", [False, True])
+def test_checkout_probe_preserves_transactions_and_business_telemetry(
+    monkeypatch: pytest.MonkeyPatch, autocommit: bool, broken: bool,
+) -> None:
+    import psycopg
+
+    conn = FakeConnection()
+    conn.autocommit = autocommit
+
+    async def set_autocommit(value: bool) -> None:
+        conn.autocommit = value
+
+    async def probe(_sql: str) -> None:
+        assert conn.autocommit is True
+        if broken:
+            raise psycopg.OperationalError("closed tunnel")
+
+    conn.set_autocommit = set_autocommit
+    monkeypatch.setattr(conn._cursor, "execute", probe)
+    monkeypatch.setattr(AsyncConnection, "cursor", lambda connection: connection._cursor)
+    _instrument_connection(conn)
+    queries = []
+    token = db_query_log_var.set(queries)
+    try:
+        if broken:
+            with pytest.raises(psycopg.OperationalError, match="closed tunnel"):
+                _run(_check_connection(conn))
+        else:
+            _run(_check_connection(conn))
+        assert conn.autocommit is autocommit
+        assert queries == []
+        assert conn.commits == 0
+    finally:
+        db_query_log_var.reset(token)
 
 
 def test_pool_configure_sets_iterative_scan() -> None:

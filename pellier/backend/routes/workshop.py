@@ -50,7 +50,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from services.agent_context import AgentContext
-from services.auth import get_current_user
+from services.auth import authorize_customer_read, get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -214,7 +214,7 @@ class WorkshopQueryResponse(BaseModel):
 
 
 @router.post("/query")
-async def query(payload: WorkshopQueryRequest) -> StreamingResponse:
+async def query(payload: WorkshopQueryRequest, user=Depends(get_current_user)) -> StreamingResponse:
     """Run one workshop turn, streaming events via SSE as they're emitted.
 
     Each SSE message is ``data: <json>\\n\\n`` where json is the same
@@ -232,6 +232,8 @@ async def query(payload: WorkshopQueryRequest) -> StreamingResponse:
     """
     session_id = payload.session_id or f"ws-{uuid.uuid4().hex[:12]}"
     customer_id = payload.customer_id or "anonymous"
+    if customer_id != "anonymous":
+        authorize_customer_read(user, customer_id)
 
     async def event_stream() -> AsyncGenerator[str, None]:
         ctx = AgentContext(
@@ -475,7 +477,7 @@ async def _resolve_customer_identity(
 
 
 @router.post("/resume", response_model=WorkshopQueryResponse)
-async def resume(payload: WorkshopResumeRequest) -> WorkshopQueryResponse:
+async def resume(payload: WorkshopResumeRequest, user=Depends(get_current_user)) -> WorkshopQueryResponse:
     """Replay three memory views plus operational history and a response.
 
     Panel order mirrors the Memory dashboard so the
@@ -492,6 +494,7 @@ async def resume(payload: WorkshopResumeRequest) -> WorkshopQueryResponse:
     shown as evidence rather than narrated.
     """
     customer_id = payload.customer_id.strip()
+    principal_sub = authorize_customer_read(user, customer_id)
     if customer_id == "anonymous" or not customer_id:
         raise HTTPException(  # copy-allow: http-error-detail
             status_code=400,
@@ -539,11 +542,14 @@ async def resume(payload: WorkshopResumeRequest) -> WorkshopQueryResponse:
         except Exception:  # pragma: no cover - import guard
             persona = None
 
+        from services.agentcore_identity import AgentCoreIdentityService
+        namespace = await AgentCoreIdentityService.latest_shopper_namespace(db_service, principal_sub)
+
         # Three memory panels plus operational history, in dashboard order.
         await emit_memory_working_panel(
-            ctx, db_service=db_service, persona=persona
+            ctx, db_service=db_service, persona=persona, namespace=namespace
         )
-        semantic = await emit_memory_semantic_panel(ctx, db_service=db_service)
+        semantic = await emit_memory_semantic_panel(ctx, db_service=db_service, namespace=namespace)
         episodes = await emit_memory_episodic_panel(ctx, db_service=db_service)
         await emit_operational_history_panel(ctx, db_service=db_service)
         ctx.step_done(0)

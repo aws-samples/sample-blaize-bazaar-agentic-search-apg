@@ -47,7 +47,7 @@ ARC = {
         "warehouse_id": "BK-01",
         "warehouse_city": "Brooklyn, NY",
         "tool": "check_inventory",
-        "question": "Is the Hadley shirt at the Brooklyn warehouse, and can it still ship in time?",
+        "question": "How many Hadley Linen Shirts are available at the Brooklyn warehouse, and what ship window is recorded?",
     },
     "anna": {
         "persona_id": "anna",

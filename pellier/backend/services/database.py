@@ -175,6 +175,24 @@ def _instrument_connection(conn: AsyncConnection) -> None:
     conn.cursor = _wrapped_cursor  # type: ignore[assignment]
 
 
+async def _check_connection(conn: AsyncConnection) -> None:
+    """Reject stale sockets before handing a connection to a request.
+
+    Use the unwrapped cursor so a pool health probe never becomes a business
+    query in the Observatory. Autocommit avoids opening a transaction for the
+    empty protocol query; restore the caller's transaction mode even on error.
+    """
+    autocommit = conn.autocommit
+    if not autocommit:
+        await conn.set_autocommit(True)
+    try:
+        async with AsyncConnection.cursor(conn) as cur:
+            await cur.execute("")
+    finally:
+        if not autocommit:
+            await conn.set_autocommit(False)
+
+
 async def _configure_connection(conn: AsyncConnection) -> None:
     """Pool configure callback — runs on every new connection from the pool.
 
@@ -281,6 +299,7 @@ class DatabaseService:
                 timeout=settings.DB_POOL_TIMEOUT,
                 open=False,  # Open manually after configuration
                 configure=_configure_connection,
+                check=_check_connection,
                 kwargs={
                     "row_factory": dict_row,  # Return rows as dictionaries
                     "autocommit": False,  # Explicit transaction control

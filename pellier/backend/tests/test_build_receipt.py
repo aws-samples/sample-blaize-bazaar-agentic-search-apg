@@ -386,11 +386,11 @@ class TestRunScope:
         for sql, params in lab_queries:
             assert "%(run)s" in sql, sql
             assert params["run"] == RUN_ID
-        # Rows the Lambda writes through the Data API carry no run_id, so the
-        # governance query also admits rows created after the run started.
+        # Policy receipts are stamped by the CLI; timestamps cannot claim
+        # another participant's unattributed proof.
         lab4 = [sql for sql, _ in lab_queries if "governed_receipts gr" in sql][0]
-        assert "pellier.workshop_runs" in lab4
-        assert "gr.run_id IS NULL" in lab4
+        assert "gr.run_id = %(run)s" in lab4
+        assert "gr.run_id IS NULL" not in lab4
 
     def test_the_default_connector_is_the_public_one(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path

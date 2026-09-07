@@ -152,6 +152,7 @@ export function buildTemplateContext(
   }).returnEvidence
   const first = client.name.trim().split(/\s+/)[0] || client.name
   const newest = orders[0]
+  const currentTicket = tickets.find((ticket) => ticket.status === 'open' || ticket.status === 'pending')
   return {
     clientName: client.name,
     firstName: first,
@@ -160,8 +161,8 @@ export function buildTemplateContext(
       t.status === 'open' || t.status === 'pending',
     ).length,
     unconfirmedReturnAssertion: Boolean(evidence?.unconfirmedReturnAssertion),
-    ticketId: tickets[0]?.ticketId ?? '',
-    ticketSubject: tickets[0]?.subject ?? '',
+    ticketId: currentTicket?.ticketId ?? '',
+    ticketSubject: currentTicket?.subject ?? '',
     recentOrderId: newest?.orderId ?? null,
     recentProductName: newest?.productName ?? '',
   }

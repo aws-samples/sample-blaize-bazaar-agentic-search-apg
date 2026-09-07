@@ -165,44 +165,15 @@ async def emit_memory_episodic_panel(
 # ---------------------------------------------------------------------------
 
 
-# Resolve a persona's most-recent storefront session — the exact query the
-# standalone Working panel (observatory._load_live_working) uses, so
-# the resume turn surfaces the same "what we were just talking about" thread.
-_SELECT_LATEST_PERSONA_SESSION_SQL = (
-    "SELECT session_id "
-    "FROM pellier.tool_audit "
-    "WHERE session_id LIKE %s "
-    "ORDER BY audit_id DESC "
-    "LIMIT 1"
-)
-
-
 async def emit_memory_working_panel(
     ctx: AgentContext,
     *,
     db_service: Any,
     persona: str | None = None,
+    namespace: str | None = None,
     limit: int = 6,
 ) -> List[Dict[str, Any]]:
-    """Emit a ``MEMORY · WORKING`` panel — recent session turns, in order.
-
-    Working memory is AgentCore STM (short-term, session-scoped). The
-    session we read depends on the caller:
-
-    - With a ``persona`` (the resume "welcome back" turn), we resolve that
-      persona's latest *storefront* session from ``pellier.tool_audit`` and
-      read it back — the same path the standalone Observatory Working panel
-      takes, so "what we were just talking about" matches the dashboard.
-    - Without one, we fall back to this turn's own ``session_id``.
-
-    Either way the namespace is the anonymous ``anon-{session_id}`` the
-    storefront writes under, read through
-    ``AgentCoreMemory.get_session_history`` (live SDK on a provisioned box,
-    in-memory fallback otherwise).
-
-    Honest degrade: no turns yet → empty panel with a "make a turn first"
-    meta line, never a fabricated row.
-    """
+    """Read working memory only from the namespace authorized by the route."""
     t0 = time.time()
     title = "Session timeline · AgentCore STM"
 
@@ -220,34 +191,15 @@ async def emit_memory_working_panel(
         )
         return []
 
-    # Resolve which session's turns to show. Default to this turn's own
-    # session; upgrade to the persona's latest storefront session when we
-    # can find one (best-effort — a failed lookup just keeps the default).
     working_session_id = ctx.session_id
-    resolved_from = "this session"
-    if persona and db_service is not None:
-        try:
-            row = await db_service.fetch_one(
-                _SELECT_LATEST_PERSONA_SESSION_SQL, f"persona-{persona.lower()}-%"
-            )
-            sid = dict(row).get("session_id") if row else None
-            if sid:
-                working_session_id = sid
-                resolved_from = f"{persona}'s latest storefront session"
-        except Exception as exc:  # pragma: no cover - defensive DB path
-            logger.warning(
-                "emit_memory_working_panel session resolve failed for persona=%s: %s",
-                persona, exc,
-            )
-
+    resolved_from = "your latest authenticated session"
     turns: List[Dict[str, Any]] = []
     try:
-        from services.agentcore_identity import AgentCoreIdentityService
         from services.agentcore_memory import AgentCoreMemory
 
-        namespace = AgentCoreIdentityService.build_namespace(None, working_session_id)
-        memory = AgentCoreMemory()
-        turns = await memory.get_session_history(namespace)
+        if namespace:
+            memory = AgentCoreMemory()
+            turns = await memory.get_session_history(namespace)
     except Exception as exc:  # pragma: no cover - defensive SDK/store path
         logger.warning(
             "emit_memory_working_panel read failed for session=%s: %s",
@@ -261,7 +213,7 @@ async def emit_memory_working_panel(
     ]
     meta = (
         f'{len(rendered)} turn(s) from {resolved_from} · AgentCore-owned '
-        f'(STM, namespace anon-{working_session_id})'
+        f'(STM, namespace {namespace})'
         if rendered
         else f'no turns yet for {resolved_from} — make a storefront turn first '
         '· AgentCore-owned (STM)'
@@ -285,18 +237,9 @@ async def emit_memory_semantic_panel(
     ctx: AgentContext,
     *,
     db_service: Any,
+    namespace: str | None = None,
 ) -> List[str]:
-    """Emit a ``MEMORY · SEMANTIC`` panel — durable, extracted preferences.
-
-    Semantic memory is AgentCore long-term: prose preferences a
-    ``USER_PREFERENCE`` extraction strategy learns from conversation and
-    stores under ``/pellier/preferences/{customer_id}/``. We read it with
-    the dedicated ``get_semantic_memories`` method (NOT
-    ``get_user_preferences``, which serves storefront personalization).
-
-    Honest degrade: ``[]`` (SDK absent, extraction still settling, or
-    memory unprovisioned) → empty panel, never a fabricated preference.
-    """
+    """Read learned preferences from the authorized conversation's actor."""
     t0 = time.time()
     title = "Learned preferences · AgentCore (USER_PREFERENCE)"
 
@@ -318,8 +261,9 @@ async def emit_memory_semantic_panel(
     try:
         from services.agentcore_memory import AgentCoreMemory
 
-        memory = AgentCoreMemory()
-        preferences = await memory.get_semantic_memories(ctx.customer_id)
+        if namespace:
+            memory = AgentCoreMemory()
+            preferences = await memory.get_semantic_memories(namespace)
     except Exception as exc:  # pragma: no cover - defensive SDK path
         logger.warning(
             "emit_memory_semantic_panel read failed for customer=%s: %s",
@@ -334,6 +278,8 @@ async def emit_memory_semantic_panel(
         'AgentCore-owned (long-term, USER_PREFERENCE strategy)'
         if rendered
         else 'extraction not settled yet — no records · AgentCore-owned (long-term)'
+        if namespace
+        else 'no authenticated conversation recorded yet · AgentCore-owned (long-term)'
     )
 
     ctx.emit_panel(

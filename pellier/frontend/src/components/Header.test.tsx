@@ -143,9 +143,12 @@ describe('Header — nav items', () => {
     }
     renderHeader()
 
-    const navItems = screen.getAllByRole('button', {
-      name: /^(Shop|Stories|Ask Pellier|About)$/,
-    })
+    const navItems = [
+      screen.getByRole('link', { name: 'Shop' }),
+      screen.getByRole('link', { name: 'Stories' }),
+      screen.getByRole('button', { name: 'Ask Pellier' }),
+      screen.getByRole('link', { name: 'About' }),
+    ]
     expect(navItems).toHaveLength(4)
     expect(navItems.map((el) => el.textContent)).toEqual([
       'Shop',
@@ -179,11 +182,11 @@ describe('Header — nav items', () => {
 
   it('applies the current-page highlight to the matching nav item', () => {
     renderHeader(<Header current="shop" />)
-    const shop = screen.getByRole('button', { name: 'Shop' })
+    const shop = screen.getByRole('link', { name: 'Shop' })
     expect(shop).toHaveAttribute('data-current', 'true')
     expect(shop).toHaveAttribute('aria-current', 'page')
 
-    const stories = screen.getByRole('button', { name: 'Stories' })
+    const stories = screen.getByRole('link', { name: 'Stories' })
     expect(stories).toHaveAttribute('data-current', 'false')
   })
 

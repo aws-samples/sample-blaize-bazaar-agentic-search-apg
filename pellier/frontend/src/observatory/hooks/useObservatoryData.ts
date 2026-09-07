@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useOptionalAuth } from '../../contexts/AuthContext';
 
 export interface UseObservatoryDataOptions {
   key: string;
@@ -17,6 +18,7 @@ export interface UseObservatoryDataResult<T> {
   data: T | null;
   loading: boolean;
   error: string | null;
+  errorStatus?: number | null;
   refetch: () => void;
 }
 
@@ -49,23 +51,33 @@ export function useObservatoryData<T = unknown>(
   options: UseObservatoryDataOptions,
 ): UseObservatoryDataResult<T> {
   const { key, params } = options;
+  const principal = useOptionalAuth()?.user?.sub ?? '';
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
+  const [settledKey, setSettledKey] = useState<string | null>(null);
   const requestIdRef = useRef(0);
   const paramsKey = JSON.stringify(params ?? {});
+  const requestKey = JSON.stringify([key, paramsKey, principal]);
 
   const fetchData = useCallback(async () => {
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
+    setErrorStatus(null);
+    setData(null);
+    let status: number | null = null;
 
     try {
       const response = await fetch(buildApiUrl(key, params));
       if (!response.ok) {
-        throw new Error(
-          `Live data request failed: ${response.status} ${response.statusText}`,
-        );
+        status = response.status;
+        throw new Error(status === 401
+          ? 'Sign in to read your account’s evidence.'
+          : status === 403
+            ? 'This profile belongs to a different account. Choose the profile that matches your sign-in.'
+            : 'This evidence is temporarily unavailable. Please try again.');
       }
       const payload = await response.json();
       if (requestId === requestIdRef.current) {
@@ -74,6 +86,7 @@ export function useObservatoryData<T = unknown>(
     } catch (err) {
       if (requestId === requestIdRef.current) {
         setData(null);
+        setErrorStatus(status);
         setError(
           err instanceof Error ? err.message : 'Live data request failed',
         );
@@ -81,14 +94,22 @@ export function useObservatoryData<T = unknown>(
     } finally {
       if (requestId === requestIdRef.current) {
         setLoading(false);
+        setSettledKey(requestKey);
       }
     }
     // `paramsKey` supplies a stable dependency for object-shaped query params.
-  }, [key, paramsKey]);
+  }, [key, paramsKey, principal]);
 
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
 
-  return { data, loading, error, refetch: fetchData };
+  const current = settledKey === requestKey;
+  return {
+    data: current ? data : null,
+    loading: !current || loading,
+    error: current ? error : null,
+    errorStatus: current ? errorStatus : null,
+    refetch: fetchData,
+  };
 }

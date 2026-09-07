@@ -72,7 +72,7 @@ def test_a_price_ceiling_survives_into_the_next_turn() -> None:
     history = [
         {
             "role": "user",
-            "content": "Keep the gift under $100 and show me the strongest two options.",
+            "content": "Keep it under $100 and in stock. Show me the strongest two options.",
         },
         {
             "role": "assistant",
@@ -81,7 +81,7 @@ def test_a_price_ceiling_survives_into_the_next_turn() -> None:
     ]
     assert (
         _effective_price_limit(
-            "Which one should I choose, and prove it stayed in budget and in stock?",
+            "Which one should I choose? Compare the two options using their current prices and availability.",
             history,
         )
         == 100
@@ -141,7 +141,7 @@ def test_inventory_refresh_preserves_prior_card_media() -> None:
     ]
 
     _, products, rewritten = _reconcile_continuity_followup(
-        "Which one should I choose, and prove it stayed in budget and in stock?",
+        "Which one should I choose? Compare the two options using their current prices and availability.",
         (
             "Choose the Wabi-Sabi Bowl; both products are in stock. "
             "The Brass Incense Holder also remains within budget."
@@ -185,7 +185,7 @@ def test_an_over_budget_followup_is_replaced_with_an_eligible_prior_option() -> 
     history = [
         {
             "role": "user",
-            "content": "Keep the gift under $100 and show me the strongest two options.",
+            "content": "Keep it under $100 and in stock. Show me the strongest two options.",
         },
         {
             "role": "assistant",
@@ -207,7 +207,7 @@ def test_an_over_budget_followup_is_replaced_with_an_eligible_prior_option() -> 
         },
     ]
     text, products, rewritten = _reconcile_continuity_followup(
-        "Which one should I choose, and prove it stayed in budget and in stock?",
+        "Which one should I choose? Compare the two options using their current prices and availability.",
         "Choose the Ceramic Morning Vase.",
         [{"id": 42, "name": "Ceramic Morning Vase", "price": 103}],
         history,

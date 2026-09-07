@@ -95,6 +95,7 @@ export default function PellierPage() {
   const personaId = persona?.id ?? null
   const [products, setProducts] = useState<PellierProduct[]>([])
   const [catalogLoading, setCatalogLoading] = useState(true)
+  const [catalogRevision, setCatalogRevision] = useState(0)
   const [catalogError, setCatalogError] = useState<string | null>(null)
 
   // The home edit is an Aurora grouping created by migration 029. Do not
@@ -139,7 +140,7 @@ export default function PellierPage() {
       active = false
       controller.abort()
     }
-  }, [personaId])
+  }, [personaId, catalogRevision])
 
   const featuredProduct = products[0] ?? null
   const gridProducts = selectStorefrontGridProducts(products, personaId)
@@ -164,7 +165,7 @@ export default function PellierPage() {
     if (typeof window === 'undefined') return
     if (window.location.hash === '#shop') {
       requestAnimationFrame(() => {
-        document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })
+        document.getElementById('shop')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
       })
     }
   }, [])
@@ -175,11 +176,11 @@ export default function PellierPage() {
       return
     }
     if (item === 'home') {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
       return
     }
     if (item === 'shop') {
-      document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })
+      document.getElementById('shop')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
       return
     }
     if (item === 'ask-pellier') {
@@ -201,7 +202,7 @@ export default function PellierPage() {
     })
 
   const handleOpenCatalog = () => {
-    document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })
+    document.getElementById('shop')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
   }
 
   const closeClientPreview = () => {
@@ -251,12 +252,13 @@ export default function PellierPage() {
           {!catalogLoading && catalogError ? (
             <div className="mx-auto max-w-[760px] px-container-x py-24 text-center">
               <p className="font-sans text-[11px] font-semibold uppercase tracking-[0.16em] text-accent-ink">
-                Live catalog unavailable
+                Collection unavailable
               </p>
               <h2 className="mt-3 font-display text-espresso" style={{ fontSize: 'clamp(28px, 4vw, 44px)' }}>
-                The edit will return when Aurora does.
+                The collection is taking a moment.
               </h2>
-              <p className="mt-4 font-sans text-[14px] text-ink-soft">{catalogError}</p>
+              <p className="mt-4 font-sans text-[14px] text-ink-soft" role="alert">We couldn’t load the latest pieces. Please try again in a moment.</p>
+              <button type="button" className="pellier-retry mt-5" onClick={() => setCatalogRevision(v => v + 1)}>Reload collection</button>
             </div>
           ) : null}
 

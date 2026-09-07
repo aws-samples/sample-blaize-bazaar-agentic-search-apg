@@ -2,20 +2,21 @@
 
 <div align="center">
 
-_Agentic search on Aurora PostgreSQL · Bedrock AgentCore · Strands Agents · MCP_
+_A retail search workshop where every answer has evidence and every sensitive action has a boundary._
 
 <br/>
 
+[![Workshop: Level 400](https://img.shields.io/badge/Workshop-Level_400-7A263A?style=flat-square)](#workshop-path)
 [![Aurora PostgreSQL 18.3](https://img.shields.io/badge/Aurora_PostgreSQL-18.3_·_pgvector-2D72D9?style=flat-square&logo=postgresql&logoColor=white)](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.VectorDB.html)
 [![Bedrock AgentCore](https://img.shields.io/badge/Bedrock-AgentCore-FF9900?style=flat-square)](https://aws.amazon.com/bedrock/agentcore/)
 [![Strands Agents](https://img.shields.io/badge/Strands-Agents_SDK-232F3E?style=flat-square)](https://strandsagents.com)
 [![MCP](https://img.shields.io/badge/MCP-postgres--mcp--server-4A154B?style=flat-square)](https://github.com/awslabs/mcp/tree/main/src/postgres-mcp-server)
 [![Python 3.14](https://img.shields.io/badge/Python-3.14-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![React and TypeScript](https://img.shields.io/badge/React-TypeScript-3178C6?style=flat-square&logo=react&logoColor=white)](pellier/frontend/package.json)
 [![Governed quality](https://github.com/aws-samples/sample-pellier-agentic-search-apg/actions/workflows/quality.yml/badge.svg?branch=governed)](https://github.com/aws-samples/sample-pellier-agentic-search-apg/actions/workflows/quality.yml?query=branch%3Agoverned)
-[![E2E](https://github.com/aws-samples/sample-pellier-agentic-search-apg/actions/workflows/e2e.yml/badge.svg?branch=governed)](https://github.com/aws-samples/sample-pellier-agentic-search-apg/actions/workflows/e2e.yml?query=branch%3Agoverned)
+[![Deployment E2E](https://github.com/aws-samples/sample-pellier-agentic-search-apg/actions/workflows/e2e.yml/badge.svg?branch=governed)](https://github.com/aws-samples/sample-pellier-agentic-search-apg/actions/workflows/e2e.yml?query=branch%3Agoverned)
 
-[![License: MIT](https://img.shields.io/github/license/aws-samples/sample-pellier-agentic-search-apg?style=flat-square&color=00b300&label=License)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/aws-samples/sample-pellier-agentic-search-apg?style=flat-square&color=yellow)](https://github.com/aws-samples/sample-pellier-agentic-search-apg/stargazers)
+[![License: MIT](https://img.shields.io/badge/License-MIT-54644D?style=flat-square)](LICENSE)
 
 </div>
 
@@ -24,21 +25,37 @@ _Agentic search on Aurora PostgreSQL · Bedrock AgentCore · Strands Agents · M
 
 **Contents:** [Workshop abstract](#workshop-abstract) · [Who this is for](#who-this-is-for) · [What this is](#what-this-is) · [Closed loop](#shopper-to-operator-closed-loop) · [Governance model](#governance-model) · [Personas](#personas-reshape-everything) · [Quick start](#quick-start-local-dev) · [Workshop path](#workshop-path) · [Architecture](#architecture) · [Quality gates](#quality-gates) · [Repository layout](#repository-layout) · [Resources](#resources)
 
-**Team teaching map:** [WORKSHOP.md](WORKSHOP.md) connects the four participant labs
-to the guest, Marco, Anna, Theo, and Jessica golden journeys and their proof
-boundaries.
+Start with the [four-lab teaching map](WORKSHOP.md). It connects each person,
+question, and build to the evidence you should inspect. The **`governed` branch**
+is the two-hour workshop; `main` serves the shorter builders session.
+
+The quality badge reports GitHub's branch checks. Deployment E2E is a separate,
+manually triggered check against a real Workshop Studio environment. Neither
+badge reports the health of your local preview.
 
 ---
 
 ## Workshop abstract
 
-Build a governed agentic AI search application with Amazon Aurora PostgreSQL and Amazon Bedrock AgentCore. Explore a retail shopping scenario where a Strands SDK dispatcher routes shoppers to specialist agents and a bounded Strands graph coordinates operator investigation and resolution planning. Aurora powers hybrid search with PostgreSQL full-text search for lexical retrieval, pgvector for semantic retrieval, and Cohere Rerank for relevance ranking, while managing inventory, orders, customer records, durable human checkpoints, and queryable JSONB evidence. AgentCore Runtime hosts the managed dispatcher and is the deployment target for the operator graph; Memory preserves context, Gateway exposes tools, Policy applies Cedar authorization before sensitive actions, Aurora Row-Level Security scopes what each shopper's agent can read, and OpenTelemetry traces connect the managed path. Leave with reusable patterns for auditable, policy-aware agentic search applications.
+Build a retail assistant that finds relevant products, checks live stock, and
+knows when a person must review an action. A Strands dispatcher sends each
+shopper question to a specialist. Aurora PostgreSQL combines full-text search,
+pgvector, and Cohere Rerank, and stores the inventory, orders, customer records,
+and JSONB audit ledger behind each answer.
+
+Use AgentCore Runtime to run agents, Memory to preserve conversation context,
+Gateway to expose tools, and Policy to authorize published tool calls with
+Cedar. Follow a proposed action through human review, database enforcement,
+and recorded evidence. Leave with patterns you can reuse and a clear way to
+prove what each layer did. Bring your laptop to participate.
 
 ---
 
 ## Who this is for
 
-This is a **400-level (expert)** workshop application. "Level 400" is the AWS depth scale — 100 is introductory, 400 is the deepest expert tier. That refers to the **concepts on screen** (agentic orchestration, pgvector retrieval, AgentCore, MCP), not the amount of code you write.
+This is a **Level 400 (expert)** workshop. The code edits are small; the reasoning
+is deep. You will compare retrieval quality, trace identity across services,
+test authorization boundaries, and prove whether an action reached the database.
 
 **You will be comfortable here if you:**
 - Read Python and SQL (you don't need to write much of either)
@@ -65,7 +82,9 @@ show PostgreSQL refusing another shopper's rows. `scripts/build_receipt.py`
 grades all eight regions above, so `receipt` is the fastest check on which ones
 are still starters.
 
-> **If it feels deep, that's by design — the depth is there to learn from, not to rebuild.** Each lab asks for one small build, and every one has a documented recovery path. Everything else is there to explore at your own pace.
+Each lab has two small builds and a documented recovery path. Predict what
+should happen, run the request, and check the evidence. A convincing answer
+alone does not prove retrieval quality, authorization, or a completed write.
 
 ---
 
@@ -82,6 +101,16 @@ The application has three connected surfaces:
 - **Pellier** (`/`) – the customer-facing storefront. Editorial photography, AI search, persona-aware recommendations, and a conversational drawer.
 - **Pellier Operator** (`/operator`) – the authenticated client desk. A two-agent Strands graph separates case investigation from resolution planning; durable reviews, human decisions, and governed execution stay outside the graph invocation.
 - **Pellier Observatory** (`/observatory`) – the live inspection surface. It exposes both production orchestration paths and reconstructs the shopper handoff, pending review, graph artifact, human decision, and execution evidence from their owning records.
+
+Both Operator sign-in buttons lead to one dedicated **Pellier sign-in page**
+(`/signin`). The signed-out Operator welcome remains the entry point; it does
+not contain a second password form. After sign-in, the app returns you to the
+client or review you opened.
+
+The Observatory workbench opens in **Expert** view by default. The Lab Collection
+links the four labs to their build, evidence, and challenge. Guided questions
+include a prediction to make and a result to inspect; they are prompts to run,
+not prerecorded proof.
 
 The surfaces share design tokens and a typed agent vocabulary, so an attendee
 crossing between them sees the same system rather than three unrelated demos.
@@ -246,13 +275,20 @@ the sequence.
 
 ## Personas reshape everything
 
-Sign in as one of the three returning customers and the entire storefront – hero photograph, suggestion pills, featured product, weekend edit copy, curated grid (10 exclusive products per persona, zero overlap), editorial cards, chat greeting – reshapes immediately.
+Choose Marco, Anna, or Theo to change the storefront's photograph, suggestions,
+featured piece, curated products, and concierge greeting. **Choosing a scenario
+does not sign you in as that customer.** Account reads and actions require the
+matching verified Cognito identity.
 
 | Persona  | Profile                          | Signature piece              |
 | -------- | -------------------------------- | ---------------------------- |
 | *Marco*  | Natural fibers, travel, linen    | Italian Linen Camp Shirt     |
 | *Anna*   | Gifts, milestones, candles       | Beeswax Taper Candles        |
 | *Theo*   | Slow craft, ceramics, ritual     | Stoneware Pour-Over Set      |
+
+Jessica is the Lab 4 service-recovery case in Operator. She is not a fourth
+storefront scenario. A separate account in the `pellier-operators` Cognito group
+opens the staff desk.
 
 The **signed-out state** is the editorial baseline – a nine-piece grid anchored by the Nocturne Leather Weekender, no prior context, no profile embedding. It is the hero state, not a fourth persona.
 
@@ -276,20 +312,38 @@ retrieval-engineering work belongs in the separate Mosaic Builder Session.
 
 ## Quick start (local dev)
 
+Start from the repository root with Python 3.14, Node.js 20 or newer, `psql`,
+and AWS credentials for the workshop account. A private Aurora connection also
+needs AWS CLI, the Session Manager plugin, `jq`, and `lsof`.
+
 The production flow is a single FastAPI process on `:8000` serving both the built React SPA and the API. For interactive frontend work, `npm run dev` starts an isolated Pellier API on `:8003`, waits for it to become healthy, then starts Vite on `:5173` with a same-origin API proxy. When the configured Aurora cluster is private and its security group names a Pellier SSM tunnel, the launcher opens that approved tunnel and reads its database credentials from the configured Secrets Manager ARN. This keeps Aurora private and prevents another local workshop using `:8000` from being mistaken for Pellier.
 
+The local launcher reconnects the Aurora tunnel when a Session Manager session
+ends, including after inactivity. It retries with a delay of 5–60 seconds and
+keeps the same local database port. AWS credentials must remain valid; failures
+and retry delays appear in the development log.
+The backend checks pooled connections before use, replacing stale sockets before
+handing them to a query.
+The launcher reads the database secret at startup. If the Aurora password rotates
+while it is running, stop and restart `npm run dev` to load the current secret.
+
 ```bash
-# 1. Aurora + Bedrock credentials
+# 1. Install dependencies in the local environments
+(cd pellier/backend && python3 -m venv .venv && \
+  ./.venv/bin/python -m pip install --require-hashes -r requirements.lock)
+(cd pellier/frontend && npm ci)
+
+# 2. Aurora + Bedrock credentials
 cp pellier/backend/.env.example pellier/backend/.env
 # edit DB_HOST, DB_USER, DB_PASSWORD, AWS_REGION, BEDROCK_*
 set -a; source pellier/backend/.env; set +a
 
-# 2. Apply schema + seed expanded catalog + required workshop tables (one-time)
+# 3. Apply schema + seed catalog + required workshop tables (one-time)
 PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" \
   -U "$DB_USER" -d "$DB_NAME" \
   -v ON_ERROR_STOP=1 \
   -f scripts/migrations/001_schema.sql
-python3 scripts/seed_pellier_catalog.py --from-cache
+pellier/backend/.venv/bin/python scripts/seed_pellier_catalog.py --from-cache
 for migration in \
   002_workshop_telemetry.sql \
   003_persona_seed.sql \
@@ -338,7 +392,8 @@ for migration in \
   046_retrieval_citation_snapshots.sql \
   047_evidence_immutability.sql \
   048_policy_decisions.sql \
-  049_workshop_runs.sql
+  049_workshop_runs.sql \
+  050_refine_guided_questions.sql
 do
   PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" \
     -U "$DB_USER" -d "$DB_NAME" \
@@ -346,12 +401,8 @@ do
     -f "scripts/migrations/$migration"
 done
 
-# 3. HMR development stack
-cd pellier/backend
-python3 -m venv .venv
-./.venv/bin/python -m pip install --require-hashes -r requirements.lock
+# 4. HMR development stack
 cd pellier/frontend
-npm ci
 npm run dev        # API on :8003, Vite on :5173
 ```
 
@@ -368,6 +419,32 @@ cd ../backend
 With the production build, open <http://localhost:8000>,
 <http://localhost:8000/operator>, or <http://localhost:8000/observatory>.
 With `npm run dev`, use the same paths on <http://127.0.0.1:5173>.
+
+To keep this preview separate from another frontend, run from `pellier/frontend`:
+
+```bash
+npm run dev -- --host 127.0.0.1 --port 5175 --strictPort
+```
+
+Then open <http://127.0.0.1:5175>. Vite forwards `/api` to the isolated backend
+on port 8003.
+
+### Sign-in setup
+
+Configure the backend's `COGNITO_POOL_ID`, `COGNITO_CLIENT_ID`, and
+`COGNITO_DOMAIN`. The dedicated page uses Cognito's `USER_PASSWORD_AUTH` flow;
+the app client must enable `ALLOW_USER_PASSWORD_AUTH`. Password recovery stays
+with Cognito. Accounts that need another challenge can continue through the
+hosted sign-in flow.
+
+For the port-5175 preview, set `APP_BASE_URL=http://127.0.0.1:5175` and
+`OAUTH_REDIRECT_URI=http://127.0.0.1:5175/api/auth/callback`. Register that callback
+and the corresponding sign-out URL on the Cognito app client. Use HTTPS for
+deployed sites; authentication uses Secure, HttpOnly cookies.
+
+Use the account supplied by your facilitator. Operator access requires membership
+in `pellier-operators`; a successful customer sign-in does not grant staff access.
+Passwords and access tokens do not belong in the README or committed files.
 
 ### Local PostgreSQL journey rehearsal
 
@@ -454,7 +531,7 @@ and every one of them is scoped to a single run.
 | Command | Script | What it does |
 |---|---|---|
 | `workshop-start [persona]` | `scripts/workshop-start.sh` | Mints one run id, records it in `pellier.workshop_runs`, exports `PELLIER_RUN_ID` to the service, and restarts. Idempotent: a second call reuses the existing id. |
-| `doctor --lab N` | `scripts/workshop_doctor.py` | Checks that lab's prerequisites and prints PASS or FAIL per check with the reason. Exits 1 on any failure. |
+| `doctor --lab N --phase prerequisites` / `--phase proof` | `scripts/workshop_doctor.py` | Separates source/config prerequisites from recorded outcomes. Proof is the default; every failed check names the gap. |
 | `lab3-start` | `scripts/lab3-start.sh` | Verifies Gateway and Runtime, validates the provisioning receipt, switches the storefront to the managed rail, restarts, and proves one authenticated turn reported `gateway-mcp`. Refuses if either resource is missing. |
 | `receipt` | `scripts/build_receipt.py` | Assembles the portable evidence receipt for the run. `--strict` exits 1 unless every lab's contract is proved **and** the evidence was scoped to that run, so an unapplied migration 049 fails rather than grading someone else's rows; the default reports honestly and exits 0. |
 
@@ -466,8 +543,9 @@ Migration 049 gives every evidence table a `run_id` column defaulted from the
 `pellier.run_id` session setting, which `services/database.py` binds on each
 pooled connection from `services/workshop_run.py`. No writer names the column,
 so one participant's evidence is separable from a seeded incident or a previous
-run without changing a single INSERT. Rows written outside that pool carry no
-run id, and the receipt reports them as unattributed rather than as absent.
+run without changing a single INSERT. The Gateway CLI helper binds the same run setting before writing its policy receipt.
+Other rows written outside the pool remain unattributed unless their writer binds a run;
+recent timestamps alone cannot satisfy a run-scoped proof.
 
 ### Boundary with Mosaic
 
@@ -726,6 +804,12 @@ Studio deployment. It runs the storefront, operator, Observatory, persona,
 streaming, reset, and Cognito checks against that real URL; it does not start
 a simulated local data plane or claim to validate Aurora and AgentCore without
 them.
+
+Before calling a workshop deployment ready, also run the documented reset-cycle
+check and the run-scoped `doctor` / `receipt` proofs. Unit tests and a working UI
+do not establish a current Runtime build, durable Memory, a Cedar ALLOW/DENY
+pair, or Aurora's refusal of an unauthorized write. Keep those results separate
+from local code quality checks.
 
 ---
 

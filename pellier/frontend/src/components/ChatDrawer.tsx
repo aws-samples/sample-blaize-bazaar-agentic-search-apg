@@ -24,6 +24,8 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import {
   ArrowUp,
+  ArrowDown,
+  ChevronDown,
   LoaderCircle,
   MessageCircle,
   Trash2,
@@ -33,6 +35,7 @@ import { useUI } from '../contexts/UIContext'
 import { useLayout } from '../contexts/LayoutContext'
 import { useCart } from '../contexts/CartContext'
 import { usePersona } from '../contexts/PersonaContext'
+import { useOptionalAuth } from '../contexts/AuthContext'
 import {
   useAgentChat,
   type AgentChatMessage,
@@ -73,12 +76,18 @@ export default function ChatDrawer() {
   const { guardrailsEnabled } = useLayout()
   const { addToCart } = useCart()
   const { persona } = usePersona()
+  const auth = useOptionalAuth()
 
   const isOpen = activeModal === 'drawer'
   const reducedMotion = useReducedMotion()
   const [isMac, setIsMac] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const followLatestRef = useRef(true)
+  const previousTurnCount = useRef(0)
+  const [showLatest, setShowLatest] = useState(false)
 
   useEffect(() => {
     setIsMac(detectMac())
@@ -132,16 +141,18 @@ export default function ChatDrawer() {
     sessionId: currentSessionId,
   })
 
-  // Clear the conversation when the persona changes so the new
-  // persona's welcome screen and LTM context take effect immediately.
+  // Conversation, draft, and reading position belong to the current persona.
   const prevPersonaId = useRef(persona?.id ?? null)
   useEffect(() => {
     const currentId = persona?.id ?? null
     if (prevPersonaId.current !== currentId) {
       prevPersonaId.current = currentId
       clearChat(initialMessages)
+      setInputValue('')
+      followLatestRef.current = true
+      setShowLatest(false)
     }
-  }, [persona?.id, clearChat, initialMessages])
+  }, [persona?.id, clearChat, initialMessages, setInputValue])
 
   // Turn count (user messages only)
   const turnCount = messages.filter(m => m.role === 'user').length
@@ -187,19 +198,46 @@ export default function ChatDrawer() {
     }
   }, [isOpen, consumePendingQuery, sendMessage])
 
-  // Auto-scroll
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  // Follow the reply until the shopper scrolls back. A new question resumes
+  // following; streamed chunks never pull someone away from earlier text.
+  const scrollToLatest = useCallback((smooth = false) => {
+    const body = bodyRef.current
+    if (!body) return
+    followLatestRef.current = true
+    setShowLatest(false)
+    body.scrollTo({ top: body.scrollHeight, behavior: smooth && !reducedMotion ? 'smooth' : 'instant' })
+  }, [reducedMotion])
+
+  useLayoutEffect(() => {
+    if (!isOpen) return
+    if (turnCount !== previousTurnCount.current) followLatestRef.current = true
+    previousTurnCount.current = turnCount
+    if (followLatestRef.current && turnCount > 0) scrollToLatest()
+  }, [messages, isOpen, turnCount, scrollToLatest])
+
   useEffect(() => {
     if (!isOpen) return
-    // This drawer is an active concierge conversation. A long streamed answer
-    // can move the end marker more than 120px in one render, so a "near bottom"
-    // check made turn 02/03 appear stuck on turn 01. Follow every active update;
-    // once streaming stops, the shopper can still scroll back through history.
-    const t = setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
-    }, 50)
-    return () => clearTimeout(t)
-  }, [messages, isOpen])
+    const content = contentRef.current
+    if (!content || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      if (followLatestRef.current && turnCount > 0) scrollToLatest()
+    })
+    observer.observe(content)
+    return () => observer.disconnect()
+  }, [isOpen, turnCount, scrollToLatest])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const previousOverflow = document.body.style.overflow
+    const root = document.getElementById('root')
+    const previousInert = root?.inert ?? false
+    document.body.style.overflow = 'hidden'
+    if (root) root.inert = true
+    return () => {
+      document.body.style.overflow = previousOverflow
+      if (root) root.inert = previousInert
+    }
+  }, [isOpen])
 
   // Focus trap: Tab/Shift+Tab cycle within drawer
   const drawerRef = useRef<HTMLDivElement>(null)
@@ -209,9 +247,9 @@ export default function ChatDrawer() {
     if (!el) return
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return
-      const focusable = el.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      )
+      const focusable = Array.from(el.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex]:not([tabindex="-1"])'
+      )).filter(node => node.getClientRects().length > 0)
       if (focusable.length === 0) return
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
@@ -229,7 +267,7 @@ export default function ChatDrawer() {
 
   const handleKeyPress = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+      if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !isLoading) {
         e.preventDefault()
         sendMessage()
       }
@@ -245,7 +283,7 @@ export default function ChatDrawer() {
     if (!input) return
     input.style.height = 'auto'
     input.style.height = `${Math.min(input.scrollHeight, 104)}px`
-  }, [inputValue])
+  }, [inputValue, isOpen])
 
   if (!persona) return null
 
@@ -286,7 +324,6 @@ export default function ChatDrawer() {
             {/* Header */}
             <div className="cd-head">
               <div className="cd-head-stack">
-                <div className="cd-head-eyebrow">Concierge</div>
                 <h3 className="cd-head-title">
                   Ask <em>Pellier.</em>
                 </h3>
@@ -310,9 +347,7 @@ export default function ChatDrawer() {
                       <span className="cd-meta-sep">·</span>
                     </>
                   )}
-                  <span>
-                    turn {String(turnCount).padStart(2, '0')}
-                  </span>
+                  <span>Your shopping concierge</span>
                 </div>
               </div>
               <button
@@ -326,10 +361,23 @@ export default function ChatDrawer() {
             </div>
 
             {/* Three facts, three sources: scenario, verified identity, rail. */}
-            <StatusLines messages={messages} />
+            <details className="cd-session-details">
+              <summary>Scenario &amp; account details <ChevronDown size={14} aria-hidden="true" /></summary>
+              <StatusLines messages={messages} />
+              {!auth?.isAuthenticated ? (
+                <button type="button" className="cd-session-signin" onClick={() => openModal('auth')}>Sign in for account requests</button>
+              ) : null}
+            </details>
 
             {/* Body */}
-            <div className="cd-body">
+            <div className="cd-body" ref={bodyRef} onScroll={() => {
+              const body = bodyRef.current
+              if (!body) return
+              const atBottom = body.scrollHeight - body.scrollTop - body.clientHeight < 80
+              followLatestRef.current = atBottom
+              setShowLatest(!atBottom)
+            }}>
+              <div className="cd-messages" ref={contentRef}>
               {!hasUserMessages && (
                 <PellierWelcome
                   persona={persona}
@@ -350,11 +398,16 @@ export default function ChatDrawer() {
                   persona={persona}
                 />
               )}
-              <div ref={messagesEndRef} />
+              </div>
             </div>
 
             {/* Footer */}
             <div className="cd-foot">
+              {hasUserMessages && showLatest ? (
+                <button className="cd-latest" type="button" onClick={() => scrollToLatest(true)}>
+                  <ArrowDown size={14} aria-hidden="true" /> Latest reply
+                </button>
+              ) : null}
               <div className="cd-input-row">
                 <textarea
                   ref={inputRef}
@@ -369,7 +422,7 @@ export default function ChatDrawer() {
                       ? 'Continue the conversation…'
                       : "Tell Pellier what you're looking for…"
                   }
-                  disabled={isLoading}
+                  aria-describedby="cd-composer-hint"
                 />
                 <button
                   type="button"
@@ -388,10 +441,10 @@ export default function ChatDrawer() {
                 </button>
               </div>
               <div className="cd-foot-meta">
-                <span>
-                  {`Esc to close · ${keycap} to focus`}
+                <span id="cd-composer-hint">
+                  {isLoading ? 'Pellier is responding. You can draft your next question.' : 'Enter to send · Shift+Enter for a new line'}
                 </span>
-                <span>Conversation persists this session</span>
+                <span className="cd-keyboard-hint">Esc to close</span>
               </div>
             </div>
           </motion.div>

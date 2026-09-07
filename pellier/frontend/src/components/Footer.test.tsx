@@ -13,8 +13,8 @@
  *   - Checkout trust glyphs are generic: no payment-network wordmark may
  *     appear, because Pellier never charges anything and the marks are
  *     third-party trademarks.
- *   - The disclaimer states plainly that nothing is charged and the catalog is
- *     synthetic.
+ *   - The disclaimer states plainly that nothing is charged, the catalog is
+ *     synthetic, and AI-generated imagery is illustrative.
  *   - The legal strip carries the real licence. The repository is MIT and its
  *     NOTICE says explicitly "NOT MIT-0", so a footer claiming MIT-0 would
  *     misstate the terms of reuse.
@@ -180,10 +180,13 @@ describe('Footer — masthead and demo payment strip', () => {
 })
 
 describe('Footer — disclaimer and licence', () => {
-  it('states that nothing is charged and the catalog is synthetic', () => {
+  it('states that nothing is charged, the catalog is synthetic, and imagery is illustrative', () => {
     renderFooter()
     expect(screen.getByTestId('footer-disclaimer')).toHaveTextContent(
       FOOTER.DISCLAIMER,
+    )
+    expect(screen.getByTestId('footer-disclaimer')).toHaveTextContent(
+      'AI-generated imagery is for illustrative purposes only.',
     )
   })
 

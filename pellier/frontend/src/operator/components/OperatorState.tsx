@@ -82,7 +82,7 @@ const OperatorState: React.FC<OperatorStateProps> = ({
         eyebrow={eyebrow}
         headline={headline}
         body={body}
-        reason={reason}
+        reason={reason ? <details className="operator-state-details"><summary>Technical details</summary><code>{reason}</code></details> : undefined}
         action={action}
         level={level}
       />

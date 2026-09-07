@@ -1,19 +1,20 @@
 import { ArrowRight } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { readLabProgress, resumeHref } from '../../../shared/labProgress';
 import { imageSrc } from '../../../utils/assetPath';
 import WorkbenchResources from '../../components/WorkbenchResources';
 import { LAB_EXERCISES } from '../../labs/labCatalog';
 import { statusForExercise } from '../../labs/evidence';
 import { useLabEvidence } from '../../labs/useLabEvidence';
-import {
-  EvidenceLoadNotice,
-  LabStatusMark,
-} from './LabShared';
+import { EvidenceLoadNotice, LabStatusMark } from './LabShared';
 import './Labs.css';
 
 export default function LabsCatalog() {
   const { data, error, loading, reload } = useLabEvidence();
+  const [resumePoint] = useState(readLabProgress);
+  const resumeLab = LAB_EXERCISES.find((exercise) => exercise.id === resumePoint?.lab);
 
   return (
     <div className="labs-catalog" data-testid="labs-catalog">
@@ -24,91 +25,46 @@ export default function LabsCatalog() {
             Four labs, one live workbench: build the boundary, measure its
             behavior, prove the exact evidence, and explain the tradeoff.
           </p>
-          <Link to="/observatory/workbench?lab=grounded-inventory">
-            Enter labs and workbench
+          <Link to={resumePoint ? resumeHref(resumePoint) : '/observatory/workbench?lab=grounded-inventory'}>
+            {resumeLab ? `Resume Lab ${Number(resumeLab.number)}` : 'Start Lab 1'}
             <ArrowRight size={16} strokeWidth={1.8} aria-hidden="true" />
           </Link>
-        </div>
-        <div className="labs-catalog-contact-sheet" aria-label="Four lab themes">
-          {LAB_EXERCISES.map((exercise, index) => (
-            <figure key={exercise.id}>
-              <img
-                src={imageSrc(exercise.image)}
-                width={exercise.imageWidth}
-                height={exercise.imageHeight}
-                alt=""
-                aria-hidden="true"
-                loading={index < 2 ? 'eager' : 'lazy'}
-                decoding="async"
-              />
-              <figcaption>
-                <span>
-                  {exercise.anchorName} · Lab {Number(exercise.number)}
-                </span>
-                <strong>{exercise.shortTitle}</strong>
-              </figcaption>
-            </figure>
-          ))}
         </div>
       </header>
 
       <section className="labs-catalog-body" aria-labelledby="labs-catalog-heading">
         <div className="labs-catalog-intro">
           <div>
-            <h2 id="labs-catalog-heading" className="font-display">
-              Four evidence-first labs
-            </h2>
-            <p>
-              Each card carries its lab context into the same workbench. Card
-              states summarize current environment evidence; they do not claim
-              participant completion.
-            </p>
+            <h2 id="labs-catalog-heading" className="font-display">Four evidence-first labs</h2>
+            <p>Follow Labs 1–4 in order, or return to your current lab. Environment status describes the setup and evidence, not participant completion.</p>
           </div>
-          <span>{LAB_EXERCISES.length} labs</span>
         </div>
-
         {error ? <EvidenceLoadNotice error={error} onRetry={reload} /> : null}
-
-        <div className="labs-catalog-grid">
+        <div className="labs-catalog-contact-sheet">
           {LAB_EXERCISES.map((exercise, index) => {
-            const status = statusForExercise(exercise, data);
+            const to = `/observatory/workbench?lab=${exercise.id}`;
             return (
-              <Link
-                key={exercise.id}
-                to={`/observatory/workbench?lab=${exercise.id}`}
-                className="labs-catalog-card"
-                data-lab={exercise.number}
-                aria-label={`Lab ${Number(exercise.number)}: ${exercise.title}. ${loading ? 'Reading evidence' : status.label}`}
-              >
-                <div className="labs-catalog-card-media">
-                  <img
-                    src={imageSrc(exercise.image)}
-                    width={exercise.imageWidth}
-                    height={exercise.imageHeight}
-                    alt=""
-                    aria-hidden="true"
-                    loading={index === 0 ? 'eager' : 'lazy'}
-                    decoding="async"
-                  />
-                </div>
+              <article className="labs-catalog-card" data-lab={exercise.number} key={exercise.id} aria-labelledby={`collection-${exercise.id}`}>
+                <Link to={to} tabIndex={-1} aria-hidden="true" className="labs-catalog-portrait-link">
+                  <figure>
+                    <img src={imageSrc(exercise.image)} width={exercise.imageWidth} height={exercise.imageHeight} alt="" loading={index < 2 ? 'eager' : 'lazy'} decoding="async" />
+                    <figcaption><span>{exercise.anchorName} · Lab {Number(exercise.number)}</span></figcaption>
+                  </figure>
+                </Link>
                 <div className="labs-catalog-card-copy">
-                  <span className="labs-catalog-card-number">
-                    {exercise.anchorName} · Lab {Number(exercise.number)}
-                  </span>
-                  <h3>{exercise.title}</h3>
+                  <h3 id={`collection-${exercise.id}`}><Link to={to}>{exercise.title}</Link></h3>
                   <p>{exercise.summary}</p>
-                  <LabStatusMark status={status} loading={loading} />
-                  <span className="labs-catalog-card-open">
-                    Open in workbench
-                    <ArrowRight size={16} strokeWidth={1.8} aria-hidden="true" />
-                  </span>
+                  <LabStatusMark status={statusForExercise(exercise, data)} loading={loading} discloseDetails />
+                  <Link className="labs-catalog-card-open" to={to} aria-label={`Open Lab ${Number(exercise.number)} in workbench`}>
+                    Open Lab {Number(exercise.number)} <ArrowRight size={16} strokeWidth={1.8} aria-hidden="true" />
+                  </Link>
                 </div>
-              </Link>
+              </article>
             );
           })}
         </div>
       </section>
-      <WorkbenchResources />
+      <WorkbenchResources collapsible defaultExpanded={false} />
     </div>
   );
 }

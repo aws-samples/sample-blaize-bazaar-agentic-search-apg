@@ -17,6 +17,7 @@ import {
 } from '../../services/operator'
 import { imageSrc } from '../../utils/assetPath'
 import ResponsiveImage from '../../components/ResponsiveImage'
+import ServiceSource from '../components/ServiceSource'
 import ClientAvatar from '../components/ClientAvatar'
 import OperatorConcierge from '../concierge/OperatorConcierge'
 import MembershipRung from '../components/MembershipRung'
@@ -58,7 +59,7 @@ function shortDate(iso: string | null): string {
       })
 }
 
-const ClientRecord: React.FC = () => {
+const ClientRecordPage: React.FC = () => {
   const { customerId = '' } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
@@ -68,9 +69,11 @@ const ClientRecord: React.FC = () => {
       'service-recovery',
   )
   const [record, setRecord] = useState<OperatorClientRecord | null>(null)
+  const [retryVersion, setRetryVersion] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
+    setError(null)
     let active = true
     fetchClientRecord(customerId)
       .then((data) => {
@@ -90,7 +93,7 @@ const ClientRecord: React.FC = () => {
     }
   }, [customerId])
 
-  useEffect(load, [load])
+  useEffect(load, [load, retryVersion])
 
   useEffect(() => {
     if (!guidedServiceRecovery || !location.search) return
@@ -152,7 +155,7 @@ const ClientRecord: React.FC = () => {
           )
         }
         reason={error}
-        action={authenticationRequired ? <OperatorSignInAction unlocks="open this client record" /> : undefined}
+        action={authenticationRequired ? <OperatorSignInAction unlocks="open this client record" /> : !operatorRequired ? <button type="button" className="operator-button operator-button-inline" onClick={() => setRetryVersion(v => v + 1)}>Try again</button> : undefined}
       />
     )
   }
@@ -201,7 +204,12 @@ const ClientRecord: React.FC = () => {
         </span>
         <span className="operator-crumb-id">{client.customerId}</span>
       </nav>
-      <div className="operator-workbench-record">
+      <nav className="operator-record-jumps" aria-label="Client record sections">
+        <a href="#operator-client-record">Record</a>
+        <a href="#operator-concierge-title">Concierge</a>
+        <a href="#operator-client-activity">Activity</a>
+      </nav>
+      <div className="operator-workbench-record" id="operator-client-record">
 
       {/* An editorial band, not a row of fields: portrait, name in the display
           face, rung, and the one link back to the shop. The governance note
@@ -264,20 +272,10 @@ const ClientRecord: React.FC = () => {
       </header>
 
       <div className="operator-record-context">
-        <p className="operator-hint">
-          {MEMBERSHIP[client.membership].label} &middot;{' '}
-          {MEMBERSHIP[client.membership].descriptor}. Earns{' '}
-          {MEMBERSHIP[client.membership].earns.toLowerCase()}.
-        </p>
-        {/* Said plainly on the surface where an operator is about to act:
-            standing shapes what the house offers, and decides nothing about
-            whether this action is permitted. */}
-        <p className="operator-hint">
-          Standing is business context. It may qualify this client for an
-          expedited replacement or a larger courtesy allowance, but AgentCore
-          Policy still decides whether the action is permitted and Aurora still
-          decides whether the data may be changed.
-        </p>
+        <ServiceSource service="aurora">Client record and transaction history</ServiceSource>
+        <details className="operator-source-details"><summary>Standing and authority</summary>
+          <p>{MEMBERSHIP[client.membership].earns}. Standing is business context. For tools exposed through Gateway, AgentCore Policy decides whether the action is permitted. Aurora still decides whether the data may be changed.</p>
+        </details>
       </div>
 
       {currentRequest ? (
@@ -406,11 +404,12 @@ const ClientRecord: React.FC = () => {
         </div>
       </div>
 
-      <div className="operator-record">
+      <div className="operator-record" id="operator-client-activity">
+        <nav className="operator-activity-nav" aria-label="Client activity"><a href="#operator-orders">Orders</a><a href="#operator-tickets">Support</a><a href="#operator-credits">Credits</a></nav>
         <div>
           <section
             className="operator-card operator-orders"
-            data-testid="operator-orders"
+            data-testid="operator-orders" id="operator-orders"
           >
             <h2 className="operator-card-title">
               Order history <span>{orders.length}</span>
@@ -467,7 +466,7 @@ const ClientRecord: React.FC = () => {
             )}
           </section>
 
-          <section className="operator-card" data-testid="operator-tickets">
+          <section className="operator-card" data-testid="operator-tickets" id="operator-tickets">
             <h2 className="operator-card-title">
               Support history <span>{tickets.length}</span>
             </h2>
@@ -517,7 +516,7 @@ const ClientRecord: React.FC = () => {
             )}
           </section>
 
-          <section className="operator-card" data-testid="operator-credits">
+          <section className="operator-card" data-testid="operator-credits" id="operator-credits">
             <h2 className="operator-card-title">
               Store credits
               {client.creditBalanceCents ? (
@@ -598,6 +597,11 @@ const OrderThumb: React.FC<{ src: string; name: string }> = ({ src, name }) => {
       onError={() => setFailed(true)}
     />
   )
+}
+
+const ClientRecord: React.FC = () => {
+  const { customerId } = useParams()
+  return <ClientRecordPage key={customerId} />
 }
 
 export default ClientRecord

@@ -1,32 +1,13 @@
-"""Tests for the Observatory MEMORY · WORKING panel live overlay
-(``routes.observatory._load_live_working``).
+"""The Memory dashboard reads only the namespace authorized by its route.
 
-The Working panel is persona-scoped and carries no session id. It must
-surface the SAME turns ``GET /api/agent/session/{id}`` returns for the
-persona's latest storefront session, so the Observatory panel and that API
-agree. Before the fix the overlay scanned the in-memory ``_SESSION_STORE``
-for a ``user-{customer_id}-session-`` prefix — a namespace the anonymous
-storefront never writes (it writes ``anon-{session_id}``) and a store the
-SDK path never populates on a provisioned box — so the panel stayed empty
-after the participant made real turns.
-
-These tests pin the corrected contract:
-  * resolve the persona's latest session from ``pellier.tool_audit``
-    (``persona-{persona}-{uuid}``), scoped to the persona;
-  * rebuild the anonymous namespace ``anon-{session_id}``;
-  * read it back via ``AgentCoreMemory.get_session_history`` (same path
-    the section-3 API uses);
-  * degrade to ``[]`` on no session, empty history, or DB error — never a
-    fabricated record and never static memory data.
-
-Uses a stub ``app.db_service`` and a patched ``get_session_history`` so
-the suite runs offline without Aurora or AgentCore.
+Authenticated conversation namespaces must match the event writer. An absent
+namespace must never fall back to a persona seed or anonymous conversation.
 """
 
 from __future__ import annotations
 
 import asyncio
-from typing import Any, List, Optional
+from typing import Any
 
 import pytest
 
@@ -37,38 +18,20 @@ def _run(coro: Any) -> Any:
     return asyncio.run(coro)
 
 
-class _StubDB:
-    """Minimal ``fetch_one`` stub. ``row`` is returned verbatim; when
-    ``raise_exc`` is set, ``fetch_one`` raises it to exercise the
-    defensive-return path."""
-
-    def __init__(
-        self,
-        row: Optional[dict] = None,
-        raise_exc: Optional[Exception] = None,
-    ) -> None:
-        self.row = row
-        self.raise_exc = raise_exc
-        self.calls: list[tuple] = []
-
-    async def fetch_one(self, query: str, *params: Any) -> Optional[dict]:
-        self.calls.append((query, params))
-        if self.raise_exc is not None:
-            raise self.raise_exc
-        return self.row
-
-
 @pytest.fixture
 def patch_memory(monkeypatch):
     """Patch ``AgentCoreMemory.get_session_history`` to return canned
     turns and capture the namespace it was asked for."""
     captured: dict = {}
 
-    def _install(turns: List[dict]):
+    def _install(turns: list[dict], *, error: Exception | None = None):
         from services.agentcore_memory import AgentCoreMemory
 
         async def _fake_history(self, session_ns: str):
             captured["namespace"] = session_ns
+            captured["strict"] = self._strict
+            if error is not None:
+                raise error
             return turns
 
         monkeypatch.setattr(AgentCoreMemory, "get_session_history", _fake_history)
@@ -77,84 +40,53 @@ def patch_memory(monkeypatch):
     return _install
 
 
-def test_working_overlay_resolves_session_and_reads_anon_namespace(
-    monkeypatch, patch_memory
+def test_working_overlay_reads_the_authorized_writer_namespace(
+    patch_memory,
 ) -> None:
-    """Happy path: a Marco session in tool_audit is resolved, the
-    anonymous namespace is rebuilt, and the history turns surface as
-    working-panel items."""
-    db = _StubDB(row={"session_id": "persona-marco-abc123"})
-    monkeypatch.setattr(ao, "db_service", db, raising=False)
-    # ao does ``from app import db_service`` inside the function, so the
-    # patch target is the ``app`` module global.
-    import app
-
-    monkeypatch.setattr(app, "db_service", db, raising=False)
-
+    """The route's authorized namespace is passed unchanged to Memory."""
     captured = patch_memory([
         {"role": "user", "content": "What linen do you have for 10 days in Goa?"},
         {"role": "assistant", "content": "Here are four linen pieces."},
     ])
 
-    items = _run(ao._load_live_working("marco"))
+    items = _run(ao._load_live_working("marco", namespace="user-sub-marco-session-persona-marco-abc123"))
 
     assert items is not None
     assert len(items) == 2
     assert items[0]["substrate"] == "working"
     assert items[0]["content"].startswith("What linen")
-    # Read the SAME anonymous namespace the storefront wrote under.
-    assert captured["namespace"] == "anon-persona-marco-abc123"
-    # The DB lookup is persona-scoped, not a bare "latest row".
-    _query, params = db.calls[0]
-    assert params == ("persona-marco-%",)
+    assert captured["namespace"] == "user-sub-marco-session-persona-marco-abc123"
+    assert captured["strict"] is True
 
 
-def test_working_overlay_returns_empty_when_no_session(
-    monkeypatch, patch_memory
+def test_working_overlay_does_not_read_without_authorized_namespace(
+    patch_memory,
 ) -> None:
-    """No tool_audit row for the persona → empty live panel."""
-    db = _StubDB(row=None)
-    import app
-
-    monkeypatch.setattr(app, "db_service", db, raising=False)
-    patch_memory([{"role": "user", "content": "unused"}])
+    captured = patch_memory([{"role": "user", "content": "private conversation"}])
 
     assert _run(ao._load_live_working("marco")) == []
+    assert captured == {}
 
 
 def test_working_overlay_returns_empty_when_history_empty(
-    monkeypatch, patch_memory
+    patch_memory,
 ) -> None:
-    """Session resolved but history reads back empty → empty live panel."""
-    db = _StubDB(row={"session_id": "persona-marco-abc123"})
-    import app
+    captured = patch_memory([])
 
-    monkeypatch.setattr(app, "db_service", db, raising=False)
-    patch_memory([])
-
-    assert _run(ao._load_live_working("marco")) == []
+    assert _run(ao._load_live_working("marco", namespace="user-sub-marco-session-abc")) == []
+    assert captured["namespace"] == "user-sub-marco-session-abc"
 
 
-def test_working_overlay_returns_empty_on_db_error(
-    monkeypatch, patch_memory
+def test_working_overlay_propagates_memory_unavailability(
+    patch_memory,
 ) -> None:
-    """A DB failure is swallowed into [] — the panel is a teaching
-    overlay and must not 500 the memory route."""
-    db = _StubDB(raise_exc=RuntimeError("aurora unreachable"))
-    import app
-
-    monkeypatch.setattr(app, "db_service", db, raising=False)
-    patch_memory([{"role": "user", "content": "unused"}])
-
-    assert _run(ao._load_live_working("marco")) == []
+    """An unavailable service must not appear to be an empty conversation."""
+    patch_memory([], error=RuntimeError("memory unavailable"))
+    with pytest.raises(RuntimeError, match="memory unavailable"):
+        _run(ao._load_live_working("marco", namespace="user-sub-marco-session-abc"))
 
 
-def test_working_overlay_returns_empty_for_unknown_persona(monkeypatch) -> None:
-    """An unknown persona never touches the DB."""
-    db = _StubDB(row={"session_id": "persona-x-1"})
-    import app
-
-    monkeypatch.setattr(app, "db_service", db, raising=False)
-
+def test_working_overlay_returns_empty_for_unknown_persona(patch_memory) -> None:
+    captured = patch_memory([{"role": "user", "content": "private conversation"}])
     assert _run(ao._load_live_working("nobody")) == []
-    assert db.calls == []
+    assert captured == {}

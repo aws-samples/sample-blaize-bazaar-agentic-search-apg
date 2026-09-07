@@ -197,7 +197,7 @@ describe('chat service auth transport', () => {
     }
     const turn2User = {
       role: 'user' as const,
-      content: 'What goes well with the pour-over set?',
+      content: 'What goes well with the pour-over set, keeping to the same materials and morning routine?',
       timestamp: new Date(),
     }
     const turn2Assistant = {

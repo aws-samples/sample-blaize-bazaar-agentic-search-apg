@@ -1,7 +1,7 @@
 /**
  * utils/auth.ts — auth utility surface.
  *
- * Browser-side helpers for the Cognito Hosted UI + AgentCore Identity flow
+ * Browser-side helpers for Pellier sign-in and Cognito sessions
  * and a thin re-export of the `useAuth()` React hook from AuthContext.
  *
  * Validates Requirement 2.6.5 and matches the signatures in design.md
@@ -9,14 +9,12 @@
  * routes live at `/api/auth/*` (spec tasks 3.3 and 3.4):
  *
  *   redirectToSignIn(provider, opts?)
- *     Full-page navigate to `/api/auth/signin?provider=<p>&returnTo=<...>`.
- *     The server 302s onward to Cognito Hosted UI with the right IdP hint.
+ *     Email opens Pellier’s dedicated `/signin` page. Federated providers
+ *     continue through the server-owned Cognito authorization-code flow.
  *
  *   openSignInChooser(opts?)
- *     SPA-route to `/signin?returnTo=<...>`, which mounts <AuthModal/>
- *     (Task 5.2). ALL three provider buttons are visible so a user who
- *     originally signed in with Google is not silently forced into
- *     email/password during a re-auth.
+ *     Open `/signin?returnTo=<...>`, which mounts <SignInPage/>.
+ *     The page offers password entry and a link to configured providers.
  *
  *   redirectToLogout()
  *     POST /api/auth/logout (server clears httpOnly cookies and revokes
@@ -34,6 +32,7 @@
  */
 
 // === REFERENCE: START ===
+import { asset } from './assetPath'
 import { useAuth as useAuthFromContext } from '../contexts/AuthContext'
 
 export type SignInProvider = 'google' | 'apple' | 'email'
@@ -56,9 +55,8 @@ function resolveReturnTo(opts?: SignInOptions): string {
 }
 
 /**
- * `redirectToSignIn` — kick the full-page OAuth2 code flow for a specific
- * IdP. The server handles state generation, CSRF, PKCE (if configured),
- * and the Cognito 302.
+ * Open Pellier password sign-in, or start the server-owned authorization-code
+ * flow for a federated provider. Both preserve the requested return path.
  */
 export function redirectToSignIn(
   provider: SignInProvider,
@@ -66,25 +64,20 @@ export function redirectToSignIn(
 ): void {
   if (typeof window === 'undefined') return
   const returnTo = resolveReturnTo(opts)
-  const url =
-    `/api/auth/signin?provider=${encodeURIComponent(provider)}` +
-    `&returnTo=${encodeURIComponent(returnTo)}`
+  const url = provider === 'email'
+    ? `${asset('/signin')}?returnTo=${encodeURIComponent(returnTo)}`
+    : `/api/auth/signin?provider=${encodeURIComponent(provider)}&returnTo=${encodeURIComponent(returnTo)}`
   window.location.assign(url)
 }
 
 /**
- * `openSignInChooser` — SPA-route to `/signin?returnTo=...`. The
- * `/signin` route mounts `<AuthModal/>` (Task 5.2) over the previous page
- * and shows all three providers without preselection.
- *
- * This is the safe fallback after a failed silent refresh (Req 4.2.5).
- * We deliberately do NOT pick a provider here — the user does, preserving
- * whichever IdP they originally chose.
+ * Open the dedicated sign-in page after a failed silent refresh (Req 4.2.5).
+ * It offers password entry and access to configured federated providers.
  */
 export function openSignInChooser(opts?: SignInOptions): void {
   if (typeof window === 'undefined') return
   const returnTo = resolveReturnTo(opts)
-  const url = `/signin?returnTo=${encodeURIComponent(returnTo)}`
+  const url = `${asset('/signin')}?returnTo=${encodeURIComponent(returnTo)}`
   window.location.assign(url)
 }
 

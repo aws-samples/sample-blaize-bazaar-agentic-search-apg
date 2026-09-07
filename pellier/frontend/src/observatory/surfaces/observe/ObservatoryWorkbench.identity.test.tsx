@@ -31,6 +31,7 @@ vi.mock('../../../contexts/PersonaContext', () => ({
 }));
 
 import ObservatoryWorkbench from './ObservatoryWorkbench';
+import { WORKBENCH_VIEW_KEY } from './workbenchView';
 
 /**
  * Renders past this many times and the surface is not settling. Mount plus
@@ -89,6 +90,8 @@ describe('Observatory workbench persona identity', () => {
   beforeEach(() => {
     renders = 0;
     localStorage.clear();
+    // These cases exercise Focus navigation; Expert remains the product default.
+    localStorage.setItem(WORKBENCH_VIEW_KEY, 'focus');
     mocks.usePersona.mockReset();
     mocks.usePersona.mockImplementation(unstableMarco);
     mocks.sendChatMessageStreaming.mockReset();

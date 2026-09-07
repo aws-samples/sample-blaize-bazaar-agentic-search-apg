@@ -1,7 +1,7 @@
 {
   "id": "anna-under-100",
   "personaId": "anna",
-  "openingQuery": "Keep the gift under $100 and show me the strongest two options.",
+  "openingQuery": "Keep it under $100 and in stock. Show me the strongest two options.",
   "elapsedMs": 4860,
   "agentCount": 2,
   "routingPattern": "Dispatcher",
@@ -11,7 +11,7 @@
   "chat": [
     {
       "role": "user",
-      "content": "Keep the gift under $100 and show me the strongest two options.",
+      "content": "Keep it under $100 and in stock. Show me the strongest two options.",
       "timestamp": "2026-05-25T17:44:00Z"
     },
     {

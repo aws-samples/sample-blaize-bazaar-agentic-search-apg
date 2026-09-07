@@ -22,10 +22,9 @@
  * via `closeModal()`, and the global Escape handler in UIProvider provides
  * a safety net.
  *
- * When opened from the chooser route (`/signin?returnTo=...` - handled by
- * `openSignInChooser` in utils/auth.ts) ALL three providers are visible
- * and none is preselected, so a user who originally signed in with Google
- * is never silently forced into email/password during a re-auth.
+ * The Storefront can open this provider chooser through UIContext.
+ * The separate `/signin` route renders the dedicated Pellier password page,
+ * with a link to the configured hosted sign-in methods.
  */
 
 import { useEffect } from 'react'

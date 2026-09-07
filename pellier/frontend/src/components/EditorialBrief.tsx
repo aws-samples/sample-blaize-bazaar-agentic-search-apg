@@ -79,7 +79,7 @@ export default function EditorialBrief() {
                 </span>
               </div>
 
-              <h2
+              <h1
                 className="font-display pellier-page-title italic text-espresso"
                 style={{
                   fontSize: 'clamp(28px, 3.5vw, 44px)',
@@ -94,7 +94,7 @@ export default function EditorialBrief() {
                     {line}
                   </Fragment>
                 ))}
-              </h2>
+              </h1>
             </div>
 
             <div className="lg:col-start-2 lg:row-start-2 flex flex-col gap-6">

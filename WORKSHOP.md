@@ -43,10 +43,10 @@ architecture demonstration:
 
 | Lab anchor | Three-turn script |
 |---|---|
-| **Marco · Lab 1** | "What linen do you have for 10 days in Goa?"<br>"What would go with the Hadley shirt?"<br>"Is the Hadley shirt at the Brooklyn warehouse, and can it still ship in time?" |
-| **Anna · Lab 2** | "A thoughtful gift for someone who loves morning rituals"<br>"Keep the gift under $100 and show me the strongest two options."<br>"Which one should I choose, and prove it stayed in budget and in stock?" |
-| **Theo · Lab 3** | "Hand-thrown ceramics for a slower morning routine"<br>"What goes well with the pour-over set?"<br>"My Wabi-Sabi Bowl arrived chipped. Please help me return it." |
-| **Jessica · Lab 4 Operator close** | "Investigate Jessica's open service issue (TKT-2026-3015) and recommend the next fair step. Distinguish what the records establish from what a source reports."<br>"Which customer, order, return, and identity records are authoritative for this decision?"<br>"Prepare the fairest next step for human review without executing it." |
+| **Marco · Lab 1** | "What linen do you have for 10 days in Goa?"<br>"What would go with the Hadley Linen Shirt?"<br>"How many Hadley Linen Shirts are available at the Brooklyn warehouse, and what ship window is recorded?" |
+| **Anna · Lab 2** | "A housewarming gift for someone who loves slow morning rituals."<br>"Keep it under $100 and in stock. Show me the strongest two options."<br>"Which one should I choose? Compare the two options using their current prices and availability." |
+| **Theo · Lab 3** | "Hand-thrown ceramics for a slower morning routine"<br>"What goes well with the pour-over set, keeping to the same materials and morning routine?"<br>"My Wabi-Sabi Bowl arrived chipped. Please help me return it." |
+| **Jessica · Lab 4 Operator close** | "Investigate Jessica's open service issue (TKT-2026-3015) and recommend the next fair step. Distinguish what the records establish from what a source reports."<br>"Which customer, order, return, and identity records are authoritative for this decision? Separate confirmed facts from notes and assumptions."<br>"Prepare the fairest next step for human review without executing it. Name any missing facts the reviewer must resolve." |
 
 For each Storefront script, the requests carry 0, then 2, then 4 prior
 dialogue messages. Theo's third turn closes the managed thread with a
@@ -203,9 +203,9 @@ Investigator** before **Resolution Planner**. It produces an
 investigation and a proposed plan. It does not approve a review, authorize a
 write, or mutate business data.
 
-What the desk looks like now (updated 2026-09-03): the sign-in control is the
-same round pill as the Storefront's, so the two surfaces read as one product;
-it opens the Cognito sign-in, not the persona chooser. Each browser tab is titled by the desk view (Clients, Action
+What the desk looks like now (updated 2026-09-07): the sign-in control is the
+same round pill as the Storefront's. It opens Pellier's dedicated `/signin`
+page, which verifies credentials with Cognito and returns to the requested record. Each browser tab is titled by the desk view (Clients, Action
 Queue, Client, Review). Action Queue rows carry an outcome glyph and word,
 pending, declined, approved, refused or executed, so a policy refusal and a
 carried-out write never look alike in the list, and the queue can be filtered
@@ -215,6 +215,15 @@ proposed action's parameters, above the decision buttons. Every signed-out
 desk view, including the Action Queue and a single review, carries its own
 Sign in button, and a decision that fails for a reason other than changed
 parameters or an expired sign-in reads as a sentence, not a raw error code.
+
+The dedicated sign-in page uses Cognito `USER_PASSWORD_AUTH`; the app client must
+allow `ALLOW_USER_PASSWORD_AUTH`. Passwords pass transiently through the server;
+verified tokens use the existing Secure, HTTP-only session cookies. Deploy behind
+HTTPS (the local browser preview uses loopback). Recovery uses Cognito's registered
+recovery contact. Additional verification and federated providers continue through
+the hosted flow, whose callback and logout URLs must include the preview origin.
+Changing a workshop persona never grants Operator access: the authenticated user
+still needs the configured Operator group.
 
 Jessica is not a fourth Storefront persona. She is a real Cognito customer
 principal and the required Lab 4 business subject, while the separate
@@ -226,7 +235,7 @@ is the positive control. The required Operator close then runs three turns:
    from what the support source reports.
 2. Identify which customer, order, return, and identity records are
    authoritative for the decision.
-3. Prepare the fairest next step for human review without executing it.
+3. Prepare the fairest next step for human review without executing it. Name any missing facts the reviewer must resolve.
 
 The staff investigation is a separate request and fact from the direct Gateway
 proof. It stops at the human checkpoint; no approval or mutation is implied.
@@ -398,8 +407,10 @@ records it in `pellier.workshop_runs`, and puts it in front of the service, so
 every evidence row the next two hours produce carries that id. That is what
 lets `receipt` and `doctor` answer questions about *their* run rather than
 about whatever the cluster saw most recently. If a lab will not start, the
-first move is `doctor --lab N`, which names the unmet prerequisite instead of
-leaving the participant to guess from a symptom.
+first move is `doctor --lab N --phase prerequisites`, which names the unmet
+source or configuration requirement. After the lab journey, `--phase proof`
+checks the durable outcomes. Lab 4 checks the direct Gateway chain; the
+Operator investigation stops at the pending human checkpoint.
 
 #### Lab 1 - Marco grounds a warehouse answer
 
@@ -539,6 +550,13 @@ different keys. End the session and working memory stops growing, while semantic
 are still there tomorrow on a new device. That is why they cannot be collapsed behind one
 retention setting.
 
+Pellier's shopper wrapper uses the full authenticated conversation namespace as
+both actor and session: `user-{sub}-session-{sid}`. Working and semantic readers
+must use that same identity; customer onboarding seeds are not conversation-derived
+preferences. A new conversation gets a new actor in this workshop. Sharing learned
+preferences across conversations requires a deliberate stable-actor design and
+migration, with tests that preserve anonymous and cross-principal isolation.
+
 Lab 3 proves this hands-on, and the workshop appendix carries the full reference with a
 symptom-to-substrate table. The reason to be pedantic is operational: each substrate
 fails differently, so conflating them produces the wrong fix. A forgotten sentence is a
@@ -664,3 +682,15 @@ constraint, and recorded the evidence."
 The run-of-show is still being polished. This brief is the shared map for the
 team: customer experience first, a meaningful build moment in each lab,
 evidence over assertion, and governance that holds at more than one layer.
+
+
+## Facilitator extensions: predict, inspect, vary
+
+Offer one optional variation per lab after the required proof. The workbench exposes the same prediction and evidence checklist next to each journey. Keep Anna’s canonical benchmark and relevance labels fixed when comparing retrieval metrics. Natural conversation prompts are a separate exercise.
+
+- **Marco:** Compare “Hadley Linen Shirt” with “A lightweight linen button-up for humid afternoons.” Inspect lexical contribution, semantic candidates, and rank changes. Similar intent does not require identical ordering.
+- **Anna:** Keep the same recipient in mind, but make the budget under $70. Verify that the new ceiling replaces the previous one while recipient context persists. Inspect the exact boundary predicate; the workshop benchmark uses an inclusive price ceiling.
+- **Theo:** I prefer matte glazes and compact pieces for my breakfast tray. Verify the new preference in a Memory event using the guide’s independent process. Then ask “Which pairing suits my routine?” without repeating it. Distinguish prompt history, Aurora history, and managed Memory; actors are scoped to this conversation.
+- **Jessica:** Have we handled something similar before? Show the outcome and explain what must be checked again. Use prior-resolution recall as context. Previous receipts grant no current authority; an empty result is valid. Resolve conflicting support notes against the authoritative ledger.
+
+For an advanced extension, use the existing controlled identity proof to repeat the same protected request with an authorized and mismatched principal. Compare policy, tool execution, durable effect, and RLS independently. Do not use a selected persona as authentication. Ask participants to paraphrase a required prompt and check routing and constraints outside the scripted wording. For Jessica, reconcile a conflicting source note against the authoritative ledger before proposing any remedy.

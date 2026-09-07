@@ -1,7 +1,7 @@
 {
   "id": "anna-candle-pairing",
   "personaId": "anna",
-  "openingQuery": "Which one should I choose, and prove it stayed in budget and in stock?",
+  "openingQuery": "Which one should I choose? Compare the two options using their current prices and availability.",
   "elapsedMs": 5120,
   "agentCount": 2,
   "routingPattern": "Dispatcher",
@@ -11,7 +11,7 @@
   "chat": [
     {
       "role": "user",
-      "content": "Which one should I choose, and prove it stayed in budget and in stock?",
+      "content": "Which one should I choose? Compare the two options using their current prices and availability.",
       "timestamp": "2026-05-25T17:46:00Z"
     },
     {

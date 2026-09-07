@@ -246,6 +246,13 @@ class TestLab1:
 
 
 class TestLab2:
+    def test_prerequisites_do_not_require_a_completed_run(self) -> None:
+        evidence = FakeEvidence({"information_schema": {"n": 2}})
+        checks = doctor.run_lab(2, evidence, None, phase="prerequisites")
+        assert len(checks) == 1
+        assert checks[0].name == "migration 046 columns present"
+        assert checks[0].passed is True
+
     def test_no_run_id_names_the_start_script(self) -> None:
         evidence = FakeEvidence({"information_schema": {"n": 2}})
         checks = _by_name(doctor.lab2_checks(evidence, None))
@@ -516,13 +523,31 @@ class TestLab4:
         check = _by_name(doctor.lab4_checks(partial, RUN_ID))[rls_name]
         assert check.passed is False
 
-    def test_execution_receipt_for_the_run(self) -> None:
+    def test_operator_execution_is_not_a_lab_four_requirement(self) -> None:
         evidence = FakeEvidence({"execution_receipts": {"receipt_id": 3}})
         checks = _by_name(doctor.lab4_checks(evidence, RUN_ID))
-        check = checks["execution receipt for this run"]
-        assert check.passed is True
-        query = [q for q in evidence.queries if "execution_receipts" in q[0]][0]
-        assert query[1] == {"run": RUN_ID}
+        check = checks["Jessica Gateway decision chain for this run"]
+        assert check.passed is False
+        assert "pending human checkpoint" in check.detail
+        assert all("execution_receipts" not in sql for sql, _ in evidence.queries)
+
+    def test_keyed_gateway_evidence_satisfies_lab_four(self) -> None:
+        rows = [
+            {"principal_label": name, "decision": "DENY", "args": {"customer_id": "CUST-JESSICA"},
+             "declared_key": f"deny-{name}", "audit_id": None, "policy_name": "ownership"}
+            for name in ("marco", "anna")
+        ]
+        rows.append({"principal_label": "jessica", "decision": "ALLOW",
+                     "args": {"customer_id": "CUST-JESSICA"}, "audit_id": 5,
+                     "completed_at": "2026-09-06", "idempotency_key": "allow-jessica", "policy_name": "ownership"})
+        evidence = FakeEvidence({
+            "WITH decisions": {"rows": rows},
+            "AS execution_rows": {"execution_rows": 0, "write_rows": 0, "completed_writes": 0, "ledger_rows": 0},
+        })
+        assert doctor._governance_chain(evidence, RUN_ID).passed
+        rows[0]["declared_key"] = ""
+        assert not doctor._governance_chain(evidence, RUN_ID).passed
+
 
 
 class TestEvidenceLifecycle:

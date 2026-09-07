@@ -62,12 +62,17 @@ async def _call(gateway_url: str, token: str, tool: str, args: Dict[str, Any]) -
                 catalog = await session.list_tools()
                 names = sorted(t.name for t in catalog.tools)
                 result = await session.call_tool(tool, args)
+                serialized = _jsonable(result)
+                outcome = "allow"
+                if serialized.get("isError"):
+                    message = " ".join(str(item.get("text", "")) for item in serialized.get("content", []))
+                    outcome = "policy_denied" if _is_authorization_denial(RuntimeError(message)) else "error"
                 return {
-                    "outcome": "allow",
+                    "outcome": outcome,
                     "tool": tool,
                     "arguments": args,
                     "gatewayCatalog": names,
-                    "result": _jsonable(result),
+                    "result": serialized,
                 }
 
 
@@ -76,11 +81,13 @@ def main() -> int:
     parser.add_argument("--tool", required=True)
     parser.add_argument("--args", default="{}", help="JSON object of tool arguments")
     parser.add_argument("--gateway-url", default="")
+    parser.add_argument("--user", default="", help="Mint a token for this workshop Cognito user")
+    parser.add_argument("--expect", choices=("allow", "policy_denied"), help="Fail unless this exact outcome occurs")
     args = parser.parse_args()
 
     _load_env()
     gateway_url = args.gateway_url or _require("AGENTCORE_GATEWAY_URL")
-    token = _token_from_cognito()
+    token = _token_from_cognito(args.user)
     tool_args = json.loads(args.args)
 
     try:
@@ -96,7 +103,8 @@ def main() -> int:
         }
 
     print(json.dumps(payload, indent=2, default=str))
-    return 0 if payload["outcome"] in ("allow", "policy_denied") else 1
+    expected = {args.expect} if args.expect else {"allow", "policy_denied"}
+    return 0 if payload["outcome"] in expected else 1
 
 
 if __name__ == "__main__":

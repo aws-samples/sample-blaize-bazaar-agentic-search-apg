@@ -63,7 +63,7 @@ interface RouterResult {
 }
 
 const EXAMPLES: { label: string; query: string }[] = [
-  { label: "Marco's Turn 2", query: 'What would go with the Hadley shirt?' },
+  { label: "Marco's Turn 2", query: 'What would go with the Hadley Linen Shirt?' },
   { label: "Anna's gift query", query: 'wrap-ready gifts with no extra effort' },
   { label: "Theo's pairing query", query: 'what goes well with the pour-over set?' },
   { label: 'Care path', query: 'The bowl arrived damaged. What now?' },

@@ -107,6 +107,25 @@ def classify_intent(query: str) -> str:
         return "recommendation"
 
     is_product_seeking = bool(PRODUCT_SEEKING_PATTERNS.search(query))
+    # Availability is often a search constraint: Anna is choosing a gift,
+    # not asking for a warehouse count. Preserve explicit inventory operations.
+    selecting_products = (
+        is_product_seeking
+        or bool(PAIRING_PATTERN.search(query))
+        or bool(words & {"gift", "gifts", "housewarming", "options", "shortlist"})
+        or any(phrase in q for phrase in SEARCH_KEYWORDS if " " in phrase)
+    )
+    inventory_operation = bool(
+        words & {"inventory", "warehouse", "warehouses", "restock", "brooklyn", "austin", "portland"}
+        or re.search(r"\b(how many|how much|low stock|running low|sold out|out of stock)\b", q)
+    )
+    if (
+        selecting_products
+        and words & {"stock", "available", "availability"}
+        and not inventory_operation
+        and not words & SUPPORT_KEYWORDS
+    ):
+        return "search"
     if not is_product_seeking:
         for phrase in PRICING_KEYWORDS:
             if " " in phrase and phrase in q:

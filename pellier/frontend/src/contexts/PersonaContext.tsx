@@ -74,7 +74,7 @@ interface PersonaContextType {
   /** The active persona, or null if none selected. */
   persona: PersonaSnapshot | null
   /** Switch to a new persona. Generates a new session, clears chat. */
-  switchPersona: (personaId: string) => Promise<void>
+  switchPersona: (personaId: string) => Promise<boolean>
   /**
    * Clear the active shopper identity without rendering a sign-out
    * celebration. Operator client previews use this so client context can never
@@ -228,13 +228,11 @@ export function PersonaProvider({ children }: { children: ReactNode }) {
         kind: 'sign-in',
         persona: data.persona,
       })
+      return true
     } catch (err) {
       console.error('Persona switch failed:', err)
-      setSwitchError(
-        err instanceof Error
-          ? err.message
-          : 'The live persona service is unavailable.',
-      )
+      setSwitchError('We couldn’t open that profile. Your current selection is unchanged. Please try again.')
+      return false
     } finally {
       setSwitching(false)
     }

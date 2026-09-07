@@ -111,12 +111,12 @@ describe('PersonaTransitionOverlay', () => {
     expect(screen.getByText(/SCENARIO CLEARED/i)).toBeInTheDocument()
   })
 
-  it('auto-dismisses after 2400ms on sign-in', () => {
+  it('auto-dismisses after 1100ms on sign-in', () => {
     mockTransition = { id: 3, kind: 'sign-in', persona: marco() }
     render(<PersonaTransitionOverlay />)
     expect(clearTransition).not.toHaveBeenCalled()
     act(() => {
-      vi.advanceTimersByTime(2399)
+      vi.advanceTimersByTime(1099)
     })
     expect(clearTransition).not.toHaveBeenCalled()
     act(() => {
@@ -125,11 +125,11 @@ describe('PersonaTransitionOverlay', () => {
     expect(clearTransition).toHaveBeenCalledTimes(1)
   })
 
-  it('auto-dismisses after 1600ms on sign-out (shorter than sign-in)', () => {
+  it('auto-dismisses after 800ms on sign-out (shorter than sign-in)', () => {
     mockTransition = { id: 4, kind: 'sign-out', persona: marco() }
     render(<PersonaTransitionOverlay />)
     act(() => {
-      vi.advanceTimersByTime(1599)
+      vi.advanceTimersByTime(799)
     })
     expect(clearTransition).not.toHaveBeenCalled()
     act(() => {

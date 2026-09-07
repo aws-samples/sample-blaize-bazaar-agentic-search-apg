@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -35,15 +36,14 @@ describe('LabsCatalog', () => {
     expect(
       screen
         .getAllByRole('link')
-        .filter((link) => link.classList.contains('labs-catalog-card')),
+        .filter((link) => link.classList.contains('labs-catalog-card-open')),
     ).toHaveLength(4);
-    expect(screen.getByText('4 labs')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Start Lab 1' })).toHaveAttribute('href', '/observatory/workbench?lab=grounded-inventory');
     expect(screen.queryByText(/workshop complete/i)).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', {
-        name: 'Telemetry from the running system',
-      }),
-    ).toBeInTheDocument();
+    const disclosure = screen.getByRole('button', { name: 'Explore reference views' });
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(disclosure);
+    expect(screen.getByRole('heading', { name: 'Telemetry & system references' })).toBeVisible();
     expect(screen.getByText('What reached PostgreSQL?')).toBeInTheDocument();
 
     expect(

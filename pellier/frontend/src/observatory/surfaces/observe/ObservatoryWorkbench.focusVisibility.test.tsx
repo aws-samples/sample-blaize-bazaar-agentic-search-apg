@@ -36,6 +36,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MemoryRouter } from 'react-router-dom';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { WORKBENCH_VIEW_KEY } from './workbenchView';
 
 const mocks = vi.hoisted(() => ({
   sendChatMessageStreaming: vi.fn(),
@@ -173,6 +174,7 @@ function displayUnderShippedCss(
 describe('Observatory workbench focus mode really hides the other panels', () => {
   beforeEach(() => {
     localStorage.clear();
+    localStorage.setItem(WORKBENCH_VIEW_KEY, 'focus');
     mocks.sendChatMessageStreaming.mockReset();
     mocks.sendChatMessageStreaming.mockResolvedValue({
       response: 'A grounded answer.',

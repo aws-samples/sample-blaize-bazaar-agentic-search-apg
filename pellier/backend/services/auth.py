@@ -73,6 +73,18 @@ async def get_current_user(request: Request) -> Optional[Dict[str, Any]]:
 OPERATOR_GROUP = "pellier-operators"
 
 
+def authorize_customer_read(user: Optional[Dict[str, Any]], customer_id: str) -> str:
+    """Authorize customer content from a verified caller, never a persona picker."""
+    from services.turn_identity import customer_id_for_verified_username
+
+    subject = str((user or {}).get("sub") or "").strip()
+    if not subject:
+        raise HTTPException(status_code=401, detail="authentication_required")
+    if customer_id_for_verified_username(user.get("username")) != customer_id:
+        raise HTTPException(status_code=403, detail="customer_scope_required")
+    return subject
+
+
 async def require_operator(request: Request) -> Dict[str, Any]:
     """FastAPI dependency: require a verified operator identity.
 

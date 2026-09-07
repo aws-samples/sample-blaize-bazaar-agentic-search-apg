@@ -336,13 +336,20 @@ SELECT gtr.turn_id, gtr.rail, gtr.terminal_status, gtr.created_at,
 
 # Lab 3 -- memory actually informed a turn, rather than merely being configured.
 _LAB3_MEMORY = """
-SELECT receipt_id, turn_id,
-       jsonb_array_length(COALESCE(memory_record_ids_used, '[]'::jsonb)) AS records
-  FROM pellier.retrieval_receipts
+SELECT turn_id, trace->'memory' AS memory
+  FROM pellier.governed_turn_receipts
  WHERE (%(sub)s::text IS NULL OR principal_sub = %(sub)s)
-   AND COALESCE(memory_record_ids_used, '[]'::jsonb) <> '[]'::jsonb
+   AND principal_verified
+   AND rail = 'gateway-mcp'
+   AND terminal_status = 'complete'
+   AND trace->'memory'->>'source' = 'agentcore-memory'
+   AND trace->'memory'->>'namespace_scope' = 'verified-principal'
+   AND trace->'memory'->>'read_status' = 'succeeded'
+   AND trace->'memory'->>'write_status' = 'succeeded'
+   AND trace->'memory'->'turns_loaded' >= '2'::jsonb
+   AND trace->'memory'->'turns_persisted' >= '2'::jsonb
    {run_scope}
- ORDER BY receipt_id DESC
+ ORDER BY created_at DESC
  LIMIT 1;
 """
 
@@ -355,7 +362,7 @@ SELECT receipt_id, turn_id,
 # tables an execution would have written, which `_DENY_ABSENCE` does per key.
 # `declared_key` is what makes that search possible.
 _LAB4 = """
-SELECT gr.receipt_id, gr.decision, gr.policy_name, gr.policy_engine_id,
+SELECT gr.receipt_id, gr.decision, gr.principal_label, gr.args, gr.policy_name, gr.policy_engine_id,
        gr.verified_subject, gr.identity_source, gr.audit_id, gr.created_at,
        COALESCE(ta.args->>'idempotency_key', gr.args->>'idempotency_key')
            AS declared_key,
@@ -367,6 +374,8 @@ SELECT gr.receipt_id, gr.decision, gr.policy_name, gr.policy_engine_id,
               ta.args->>'idempotency_key', gr.args->>'idempotency_key')
  WHERE (%(sub)s::text IS NULL OR gr.principal_id = %(sub)s)
    AND gr.caller = 'gateway'
+   AND gr.identity_source = 'cognito'
+   AND NULLIF(gr.verified_subject, '') IS NOT NULL
    {run_scope}
  ORDER BY gr.receipt_id DESC
  LIMIT 8;
@@ -393,20 +402,15 @@ SELECT
       WHERE idempotency_key = %(key)s)                                AS ledger_rows;
 """
 
-# The run clause per query. governed_receipts rows written by the Gateway
-# helper through its own connection carry no run_id, so that query also admits
-# unattributed rows created after the run started; every other table is written
-# through the application pool and is scoped by run_id alone.
+# Every application and CLI receipt is explicitly scoped to the participant run.
+# Unattributed historical rows cannot prove this run, even if timestamps overlap.
 _RUN_CLAUSES = {
     "principals": "AND run_id = %(run)s",
     "lab1": "AND ta.run_id = %(run)s",
     "lab2": "AND run_id = %(run)s",
     "lab3": "AND gtr.run_id = %(run)s",
     "lab3_memory": "AND run_id = %(run)s",
-    "lab4": (
-        "AND (gr.run_id = %(run)s OR (gr.run_id IS NULL AND gr.created_at >= ("
-        "SELECT wr.started_at FROM pellier.workshop_runs wr WHERE wr.run_id = %(run)s)))"
-    ),
+    "lab4": "AND gr.run_id = %(run)s",
 }
 
 
@@ -604,6 +608,11 @@ def _classify_deny_absence(deny: List[Dict[str, Any]]) -> Dict[str, Any]:
                     **traces,
                 },
             }
+    if len(checked) != len(deny):
+        return {
+            "state": UNCHECKED,
+            "detail": {"reason": "not every denied attempt has a keyed absence search"},
+        }
     first = checked[0]
     return {
         "state": PROVED,

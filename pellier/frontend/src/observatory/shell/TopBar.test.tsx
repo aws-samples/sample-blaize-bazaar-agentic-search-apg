@@ -18,6 +18,18 @@ function LocationProbe() {
 }
 
 describe('Pellier Observatory TopBar', () => {
+  it.each([
+    ['/observatory/', 'Lab Collection'],
+    ['/observatory/labs/grounded-inventory', 'Lab Collection'],
+    ['/observatory/workbench', 'Workbench'],
+    ['/observatory/proof-board', 'Workbench'],
+  ])('marks exactly one destination current at %s', (route, label) => {
+    render(<MemoryRouter initialEntries={[route]}><TopBar /></MemoryRouter>)
+    const current = screen.getAllByRole('link', { current: 'page' })
+    expect(current).toHaveLength(1)
+    expect(current[0]).toHaveAccessibleName(label)
+  })
+
   it('makes the Storefront the only top-bar exit', () => {
     render(
       <MemoryRouter initialEntries={['/observatory/proof-board']}>
@@ -47,14 +59,14 @@ describe('Pellier Observatory TopBar', () => {
     )
 
     expect(
-      screen.getByRole('link', { name: 'Labs & Workbench' }),
+      screen.getByRole('link', { name: 'Workbench' }),
     ).toHaveAttribute('aria-current', 'page')
     expect(
       screen.queryByRole('link', { name: 'Proof & References' }),
     ).not.toBeInTheDocument()
   })
 
-  it('offers one first-level Labs and Workbench view', () => {
+  it('distinguishes the collection from the workbench', () => {
     render(
       <MemoryRouter initialEntries={['/observatory']}>
         <TopBar />
@@ -68,8 +80,9 @@ describe('Pellier Observatory TopBar', () => {
     )
     expect(screen.queryByRole('button', { name: /Pellier Observatory view/i })).not.toBeInTheDocument()
     expect(
-      screen.getByRole('link', { name: 'Labs & Workbench' }),
+      screen.getByRole('link', { name: 'Lab Collection' }),
     ).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Workbench' })).not.toHaveAttribute('aria-current');
     expect(
       screen.queryByRole('link', { name: 'Proof & References' }),
     ).not.toBeInTheDocument()
@@ -85,7 +98,7 @@ describe('Pellier Observatory TopBar', () => {
     )
 
     expect(
-      screen.getByRole('link', { name: 'Labs & Workbench' }),
+      screen.getByRole('link', { name: 'Workbench' }),
     ).toHaveAttribute('aria-current', 'page')
   })
 

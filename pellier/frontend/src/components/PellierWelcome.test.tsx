@@ -49,7 +49,7 @@ describe('composeWelcomeGreeting', () => {
     } as never} />)
 
     const required = await screen.findByRole('region', {
-      name: 'Required three-turn journey',
+      name: 'Ideas to begin your conversation',
     })
     expect(required.querySelectorAll('button')).toHaveLength(3)
     expect(screen.getByRole('region', { name: 'Explore further' })

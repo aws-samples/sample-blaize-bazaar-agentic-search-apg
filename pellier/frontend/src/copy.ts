@@ -652,7 +652,7 @@ export const FOOTER = {
   /** Stated outright rather than implied, because a storefront that looks
    * this finished invites the assumption that it transacts. */
   DISCLAIMER:
-    "Nothing here charges a card. Products, prices, reviews, and availability are synthetic data built for this workshop.",
+    "Nothing here charges a card. Products, prices, reviews, and availability are synthetic data built for this workshop. AI-generated imagery is for illustrative purposes only.",
   BOTTOM_STRIP: {
     COPYRIGHT: "\u00a9 Pellier",
     /** Retail assurances, moved out of the hero capabilities strip so that

@@ -180,6 +180,7 @@ def _client(stub_db: _ProofDB) -> TestClient:
     fast.include_router(observatory_router)
     fast.dependency_overrides[observatory.get_current_user] = lambda: {
         "sub": "CUST-MARCO",
+        "username": "marco",
         "access_token": "jwt",
     }
 
@@ -529,7 +530,7 @@ def test_build_state_does_not_promote_scaffolded_inventory_agent_from_tool(
 
 
 def test_memory_semantic_empty_is_marked_settling(monkeypatch) -> None:
-    async def _empty(_persona: str) -> list:
+    async def _empty(_persona: str, *, namespace=None) -> list:
         return []
 
     async def _episodic(_persona: str) -> list:

@@ -153,7 +153,7 @@ describe('Pellier Observatory live agent workbench', () => {
       screen.queryByRole('button', { name: 'Run agent' }),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-    expect(screen.queryByText(/recorded/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^recorded$/i)).not.toBeInTheDocument();
 
     // Three required turns and two explicitly optional extensions, straight
     // from the shared storefront source.
@@ -220,7 +220,7 @@ describe('Pellier Observatory live agent workbench', () => {
     ).toHaveAttribute('aria-expanded', 'false');
     expect(
       screen.queryByRole('heading', {
-        name: 'Telemetry from the running system',
+        name: 'Telemetry & system references',
       }),
     ).not.toBeInTheDocument();
   });

@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import ResponsiveImage from '../../../components/ResponsiveImage';
 import {
   WORKSHOP_TURN_STAGES,
+  WORKSHOP_EVIDENCE_GUIDANCE,
   type WorkshopJourney,
 } from '../../../data/workshopJourneys';
 
@@ -55,6 +56,7 @@ export default function ObservatoryCuratedTurns({
 }: ObservatoryCuratedTurnsProps) {
   const [scenarios, setScenarios] = useState<LiveScenario[]>([]);
   const [loading, setLoading] = useState(true);
+  const [retryVersion, setRetryVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -85,7 +87,7 @@ export default function ObservatoryCuratedTurns({
     )
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error(`Live scenario request failed: ${response.status}`);
+          throw new Error('Guided requests are temporarily unavailable. You can reload them here.');
         }
         return response.json() as Promise<{ scenarios?: LiveScenario[] }>;
       })
@@ -107,7 +109,9 @@ export default function ObservatoryCuratedTurns({
     return () => {
       cancelled = true;
     };
-  }, [journey]);
+  }, [journey, retryVersion]);
+
+  const guidance = WORKSHOP_EVIDENCE_GUIDANCE[journey.anchorId];
 
   const requiredScenarios = scenarios.filter((scenario) =>
     scenario.journeyRole
@@ -245,7 +249,8 @@ export default function ObservatoryCuratedTurns({
       {error ? (
         <div className="labs-turns-state" role="alert">
           <AlertCircle size={16} aria-hidden="true" />
-          {error}
+          <span>{error}</span>
+          <button type="button" className="pellier-retry" onClick={() => setRetryVersion(v => v + 1)}>Reload requests</button>
         </div>
       ) : null}
       {!loading && !error && !ready && anchorError ? (
@@ -280,6 +285,16 @@ export default function ObservatoryCuratedTurns({
           </ol>
         </section>
       ) : null}
+
+      <details className="labs-evidence-guidance">
+        <summary>Prediction, proof &amp; optional challenge</summary>
+        <dl>
+          <div><dt>Predict before running</dt><dd>{guidance.prediction}</dd></div>
+          <div><dt>Inspect the evidence</dt><dd>{guidance.evidence}</dd></div>
+          <div><dt>Change one thing</dt><dd>{guidance.challenge}<p>{guidance.inspect}</p></dd></div>
+        </dl>
+        {journey.anchorId === 'anna' ? <p className="labs-benchmark-note">The natural conversation and the retrieval benchmark serve different purposes. Compare metrics using the fixed benchmark query: “A housewarming gift under $100 that is currently in stock.” Keep its labels unchanged.</p> : null}
+      </details>
 
       {!loading && !error && exploreScenarios.length > 0 ? (
         <section className="labs-turns-group" aria-label="Explore further">

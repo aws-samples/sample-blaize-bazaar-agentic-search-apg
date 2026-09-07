@@ -104,3 +104,57 @@ describe('useOperatorConcierge client isolation', () => {
     expect(result.current.messages[0]?.content).toBe('New client')
   })
 })
+
+
+it('requires explicit recovery when latest history is unavailable', async () => {
+  mocks.fetchCapabilities.mockResolvedValue({ governedActionsAvailable: false })
+  mocks.fetchConciergeConfig.mockResolvedValue({ composerEnabled: true })
+  mocks.fetchLatestConciergeSession.mockRejectedValue(new Error('503'))
+  const { result } = renderHook(() => useOperatorConcierge('CUST-JESSICA'))
+  await waitFor(() => expect(result.current.status).toBe('conversation_unavailable'))
+  expect(result.current.composerEnabled).toBe(false)
+  expect(mocks.createConciergeSession).not.toHaveBeenCalled()
+  mocks.fetchLatestConciergeSession.mockResolvedValue(null)
+  await act(async () => { await result.current.retryHistory() })
+  expect(result.current.composerEnabled).toBe(true)
+  expect(result.current.sessionId).toBeNull()
+})
+
+it('keeps a streamed answer if reloading its durable conversation fails', async () => {
+  mocks.fetchCapabilities.mockResolvedValue({ governedActionsAvailable: false })
+  mocks.fetchConciergeConfig.mockResolvedValue({ composerEnabled: true })
+  mocks.fetchLatestConciergeSession.mockResolvedValue(null)
+  mocks.createConciergeSession.mockResolvedValue({ sessionId: 'session-1' })
+  mocks.fetchConciergeSession.mockRejectedValue(new Error('503'))
+  mocks.streamConciergeTurn.mockImplementation(async (_client, _session, _message, _key, _step, answer) => {
+    answer({ summary: 'The records establish ownership.' })
+  })
+  const { result } = renderHook(() => useOperatorConcierge('CUST-JESSICA'))
+  await waitFor(() => expect(result.current.composerEnabled).toBe(true))
+  await act(async () => { expect(await result.current.submit('Investigate this case')).toBe(false) })
+  expect(result.current.liveAnswer).toEqual({ summary: 'The records establish ownership.' })
+  expect(result.current.pendingRequest).toBe('Investigate this case')
+  expect(result.current.composerEnabled).toBe(false)
+})
+
+it.each(['different-client', 'incomplete'])('requires recovery for a %s conversation after a streamed answer', async (condition) => {
+  mocks.fetchCapabilities.mockResolvedValue({ governedActionsAvailable: false })
+  mocks.fetchConciergeConfig.mockResolvedValue({ composerEnabled: true })
+  mocks.fetchLatestConciergeSession.mockResolvedValue(null)
+  mocks.createConciergeSession.mockResolvedValue({ sessionId: 'session-1' })
+  mocks.fetchConciergeSession.mockResolvedValue({
+    sessionId: 'session-1',
+    customerId: condition === 'different-client' ? 'CUST-OTHER' : 'CUST-JESSICA',
+    messages: [{ content: 'Unreconciled conversation', turnState: condition === 'incomplete' ? 'incomplete' : 'complete' }],
+  })
+  mocks.streamConciergeTurn.mockImplementation(async (_client, _session, _message, _key, _step, answer) => {
+    answer({ summary: 'The records establish ownership.' })
+  })
+  const { result } = renderHook(() => useOperatorConcierge('CUST-JESSICA'))
+  await waitFor(() => expect(result.current.composerEnabled).toBe(true))
+  await act(async () => { expect(await result.current.submit('Investigate this case')).toBe(false) })
+  expect(result.current.liveAnswer?.summary).toBe('The records establish ownership.')
+  expect(result.current.messages).toEqual([])
+  expect(result.current.status).toBe('conversation_unavailable')
+  expect(result.current.composerEnabled).toBe(false)
+})

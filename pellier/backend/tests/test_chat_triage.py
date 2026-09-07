@@ -107,9 +107,9 @@ class TestIntentPairing:
     @pytest.mark.parametrize(
         "query",
         [
-            "What would go with the Hadley shirt?",
+            "What would go with the Hadley Linen Shirt?",
             "What pairs with the Ecru overshirt?",
-            "What goes well with the pour-over set?",
+            "What goes well with the pour-over set, keeping to the same materials and morning routine?",
         ],
     )
     def test_pairing_turns_route_to_search_for_get_related_products(self, query: str) -> None:
@@ -121,9 +121,24 @@ class TestIntentInventory:
         "query",
         [
             "Is the Hadley shirt in Brooklyn?",
+            "How many Hadley Linen Shirts are available at the Brooklyn warehouse, and what ship window is recorded?",
             "Do you have the linen overshirt in Austin?",
             "Can the camp shirt ship from Portland?",
         ],
     )
     def test_city_stock_questions_route_to_inventory(self, query: str) -> None:
         assert classify_intent(query) == "inventory"
+
+
+@pytest.mark.parametrize("query, expected", [
+    ("A housewarming gift under $100 that is currently in stock.", "search"),
+    ("Keep it under $100 and in stock. Show me the strongest two options.", "search"),
+    ("Which one should I choose? Compare the two options using their current prices and availability.", "search"),
+    ("Find me a linen shirt that is in stock", "search"),
+    ("Do you have any available candles for a gift?", "search"),
+    ("Is the Hadley Linen Shirt in stock?", "inventory"),
+    ("Show me how many candles are available in Brooklyn", "inventory"),
+    ("Show me low stock inventory", "inventory"),
+])
+def test_availability_constraints_do_not_override_product_selection(query, expected):
+    assert classify_intent(query) == expected

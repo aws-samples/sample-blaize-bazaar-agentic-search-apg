@@ -1,7 +1,7 @@
 {
   "id": "theo-pour-over-pairing",
   "personaId": "theo",
-  "openingQuery": "What goes well with the pour-over set?",
+  "openingQuery": "What goes well with the pour-over set, keeping to the same materials and morning routine?",
   "elapsedMs": 4380,
   "agentCount": 2,
   "routingPattern": "Dispatcher",
@@ -10,7 +10,7 @@
   "chat": [
     {
       "role": "user",
-      "content": "What goes well with the pour-over set?",
+      "content": "What goes well with the pour-over set, keeping to the same materials and morning routine?",
       "timestamp": "2026-05-25T18:13:00Z"
     },
     {

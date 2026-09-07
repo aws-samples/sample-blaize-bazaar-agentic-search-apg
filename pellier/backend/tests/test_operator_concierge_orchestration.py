@@ -62,6 +62,24 @@ def test_local_postgres_is_not_presented_as_aurora(
     assert ORCH.database_source_label() == "PostgreSQL"
 
 
+@pytest.mark.parametrize("remote, expected", [
+    ("dat4xx.cluster-abc123.us-east-1.rds.amazonaws.com", "Aurora PostgreSQL"),
+    ("postgres.example.com", "PostgreSQL"),
+])
+def test_tunnel_labels_the_remote_database_without_changing_its_connection(
+    monkeypatch: pytest.MonkeyPatch, remote: str, expected: str,
+) -> None:
+    from config import settings
+
+    monkeypatch.setattr(settings, "DB_HOST", "127.0.0.1")
+    monkeypatch.setattr(settings, "DB_TUNNEL_REMOTE_HOST", remote)
+    assert ORCH.database_source_label() == expected
+    assert settings.DB_HOST == "127.0.0.1"
+    # A direct remote connection is not identified by stale tunnel metadata.
+    monkeypatch.setattr(settings, "DB_HOST", "postgres.example.com")
+    assert ORCH.database_source_label() == "PostgreSQL"
+
+
 # ---------------------------------------------------------------------------
 # The model may not contribute structured facts
 # ---------------------------------------------------------------------------
@@ -433,7 +451,7 @@ def test_the_request_text_decides_the_workflow() -> None:
         "Write a note about the delay.": ORCH.WORKFLOW_DRAFT_NOTE,
         "Which customer, order, return, and identity records are authoritative "
         "for this decision?": ORCH.WORKFLOW_INVESTIGATE,
-        "Prepare the fairest next step for human review without executing it.":
+        "Prepare the fairest next step for human review without executing it. Name any missing facts the reviewer must resolve.":
             ORCH.WORKFLOW_INVESTIGATE,
     }
     for request, expected in cases.items():
@@ -456,7 +474,7 @@ def test_the_guided_human_review_turn_does_not_prepare_an_action() -> None:
     from services import operator_proposals
 
     request = (
-        "Prepare the fairest next step for human review without executing it."
+        "Prepare the fairest next step for human review without executing it. Name any missing facts the reviewer must resolve."
     )
     assert ORCH.classify_workflow(request) == ORCH.WORKFLOW_INVESTIGATE
     assert operator_proposals.classify_action_intent(request) is None

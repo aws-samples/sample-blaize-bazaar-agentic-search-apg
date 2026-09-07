@@ -126,20 +126,22 @@ const DECISION_ERROR_COPY: Record<string, string> = {
     'This prepared action no longer exists. Return to the Action Queue for the current list.',
   review_already_open:
     'Another operator already has this action open. Reload to see its current state.',
+  review_already_decided:
+    'This action already has a decision. Refresh the record to read it.',
   operator_unavailable:
-    'The governed service could not be reached, so nothing was recorded. Try again in a moment.',
+    'The service response was unavailable. The request may have been recorded; refresh the record before continuing.',
   temporarily_unavailable:
-    'The governed service could not be reached, so nothing was recorded. Try again in a moment.',
+    'The service response was unavailable. Refresh the record to establish the outcome.',
   governed_action_unavailable:
     'The governed action is not available right now, so nothing was recorded.',
 }
 
 /** Plain-language decision failure; the raw code stays visible for the receipt. */
 function describeDecisionError(code: string): string {
-  return DECISION_ERROR_COPY[code] ?? `The decision could not be recorded (${code}). Nothing was written. Reload and try again.`
+  return DECISION_ERROR_COPY[code] ?? `The outcome could not be verified (${code}). Refresh the record before continuing.`
 }
 
-const ReviewRecord: React.FC = () => {
+const ReviewRecordPage: React.FC = () => {
   const { reviewId } = useParams<{ reviewId: string }>()
   const { user } = useAuth()
   const refreshQueue = useOperatorQueueRefresh()
@@ -152,27 +154,57 @@ const ReviewRecord: React.FC = () => {
   // makes the answer immediate for the operator who just pressed the button.
   const [execution, setExecution] = useState<OperatorExecutionResult | null>(null)
   const [executing, setExecuting] = useState(false)
+  const [refreshNeeded, setRefreshNeeded] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshNote, setRefreshNote] = useState<string | null>(null)
 
   const numericId = Number(reviewId)
 
   const load = useCallback(() => {
+    let active = true
     if (!Number.isFinite(numericId)) {
       setError('review_not_found')
       return
     }
     fetchReview(numericId)
-      .then(setDetail)
+      .then((value) => {
+        if (!active) return
+        if (value.review.reviewId !== numericId) throw new Error('review_mismatch')
+        setDetail(value)
+        setError(null)
+      })
       .catch((err: unknown) => {
+        if (!active) return
         setError(
           err instanceof OperatorApiError ? err.code : 'operator_unavailable',
         )
       })
+    return () => { active = false }
   }, [numericId])
 
   useEffect(load, [load])
 
+  const reconcile = async (committed = false) => {
+    setRefreshing(true)
+    try {
+      const fresh = await fetchReview(numericId)
+      if (fresh.review.reviewId !== numericId) throw new Error('review_mismatch')
+      setDetail(fresh)
+      setRefreshNeeded(false)
+      setRefreshNote(null)
+      setDecisionError(null)
+    } catch {
+      setRefreshNeeded(true)
+      setRefreshNote(committed
+        ? 'The response was recorded successfully. The latest record could not be loaded; refresh to continue.'
+        : 'The latest record could not be loaded. Refresh to establish the outcome before continuing.')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   const execute = async () => {
-    if (!detail) return
+    if (!detail || executing || deciding || refreshNeeded) return
     setExecuting(true)
     setDecisionError(null)
     try {
@@ -186,9 +218,9 @@ const ReviewRecord: React.FC = () => {
       // Re-read both projections from their owners. The detail fetch hydrates
       // the durable receipt; the shell fetch owns the queue count.
       refreshQueue()
-      const fresh = await fetchReview(detail.review.reviewId)
-      setDetail(fresh)
+      await reconcile(true)
     } catch (err: unknown) {
+      setRefreshNeeded(true)
       setDecisionError(
         err instanceof OperatorApiError ? err.code : 'operator_unavailable',
       )
@@ -198,26 +230,27 @@ const ReviewRecord: React.FC = () => {
   }
 
   const decide = async (kind: 'confirm' | 'decline') => {
-    if (!detail) return
+    if (!detail || deciding || executing || refreshNeeded) return
     setDeciding(true)
     setDecisionError(null)
     try {
-      if (kind === 'confirm') {
+      const decision = kind === 'confirm'
         // The fingerprint of the parameters shown above is echoed back. If any
         // material value moved since this page loaded, the server refuses rather
         // than applying the confirmation to different terms.
-        await confirmReview(detail.review.reviewId, detail.review.actionHash)
-      } else {
-        await declineReview(detail.review.reviewId)
-      }
+        ? await confirmReview(detail.review.reviewId, detail.review.actionHash)
+        : await declineReview(detail.review.reviewId)
+      setDetail({ ...detail, review: { ...detail.review, ...decision,
+        status: kind === 'confirm' ? 'approved' : 'rejected',
+      } })
       // The decision endpoint has committed at this point. Invalidate the
       // queue even if the following detail read is temporarily unavailable.
       refreshQueue()
       // Re-read rather than patching local state: the decision's authoritative
       // shape, including the assurance axes, comes from the server.
-      const fresh = await fetchReview(detail.review.reviewId)
-      setDetail(fresh)
+      await reconcile(true)
     } catch (err: unknown) {
+      setRefreshNeeded(true)
       setDecisionError(
         err instanceof OperatorApiError ? err.code : 'operator_unavailable',
       )
@@ -312,8 +345,9 @@ const ReviewRecord: React.FC = () => {
     : executing
       ? ('executing' as const)
       : undefined
-  const completed = Boolean(attempted) && axes.evidence === 'RECEIPTED'
-  const blocked = Boolean(attempted) && !completed
+  const completed = Boolean(attempted) && axes.aurora === 'PERMITTED' && axes.evidence === 'RECEIPTED'
+  const blocked = Boolean(attempted) && (axes.policy === 'DENY' || axes.aurora === 'DENIED')
+  const unresolved = !completed && !blocked && Boolean(attempted || review.executionTurnId)
   const actionState = deciding
     ? 'recording'
     : executing
@@ -322,7 +356,7 @@ const ReviewRecord: React.FC = () => {
         ? 'completed'
         : blocked
           ? 'blocked'
-          : review.humanState
+          : unresolved ? 'unknown' : review.humanState
   const actionStateLabel = deciding
     ? 'Recording decision'
     : executing
@@ -331,6 +365,8 @@ const ReviewRecord: React.FC = () => {
         ? 'Completed'
         : blocked
           ? 'Not applied'
+          : unresolved
+            ? 'Outcome unverified'
           : pending
             ? 'Decision required'
             : review.humanState === 'confirmed'
@@ -360,6 +396,10 @@ const ReviewRecord: React.FC = () => {
         <span aria-hidden="true">/</span>
         <span>{client.name}</span>
       </nav>
+      <div className="operator-review-overview">
+        <p>{actionTitle(review.action, review.parameters)} · {actionStateLabel}</p>
+        <a href="#operator-review-decision" className="operator-back">Review decision</a>
+      </div>
 
       {/* Origin, stated once and early. The issue is joined rather than interpolated
           because it is genuinely optional — a review prepared from an operator request
@@ -565,6 +605,7 @@ const ReviewRecord: React.FC = () => {
       {/* HUMAN DECISION */}
       <section
         className="operator-card operator-review-decision-card"
+        id="operator-review-decision"
         data-testid="operator-review-decision"
       >
         <h2 className="operator-card-title">Your decision</h2>
@@ -605,7 +646,7 @@ const ReviewRecord: React.FC = () => {
                 type="button"
                 className="operator-button operator-button-inline"
                 onClick={() => decide('confirm')}
-                disabled={deciding}
+                disabled={deciding || refreshNeeded || refreshing}
                 data-testid="operator-review-confirm"
               >
                 {deciding ? 'Recording…' : 'Confirm this action'}
@@ -614,7 +655,7 @@ const ReviewRecord: React.FC = () => {
                 type="button"
                 className="operator-button operator-button-inline operator-button-quiet"
                 onClick={() => decide('decline')}
-                disabled={deciding}
+                disabled={deciding || refreshNeeded || refreshing}
                 data-testid="operator-review-decline"
               >
                 Decline
@@ -673,14 +714,14 @@ const ReviewRecord: React.FC = () => {
                 </dl>
               </details>
             ) : null}
-            {review.humanState === 'confirmed' && !attempted ? (
+            {review.humanState === 'confirmed' && !attempted && !review.executionTurnId ? (
               <>
                 <div className="operator-review-actions">
                   <button
                     type="button"
                     className="operator-button operator-button-inline"
                     onClick={execute}
-                    disabled={executing}
+                    disabled={executing || refreshNeeded || refreshing}
                     data-testid="operator-review-execute"
                   >
                     {executing ? 'Executing…' : 'Execute this action'}
@@ -717,7 +758,7 @@ const ReviewRecord: React.FC = () => {
                     <strong>
                       {axes.evidence === 'RECEIPTED'
                         ? 'Action completed.'
-                        : 'Action not applied.'}
+                        : blocked ? 'Action not applied.' : 'Outcome unverified.'}
                     </strong>{' '}
                     Executed on the{' '}
                     {attempted.rail === 'gateway-mcp'
@@ -732,6 +773,9 @@ const ReviewRecord: React.FC = () => {
             ) : null}
           </>
         )}
+        {unresolved && !attempted ? <p role="status">Execution was requested. A durable outcome is not yet available; refresh the record to check it.</p> : null}
+        {refreshNote ? <p role="status">{refreshNote}</p> : null}
+        {refreshNeeded || unresolved ? <button type="button" className="operator-button operator-button-inline" disabled={refreshing} onClick={() => void reconcile()}>{refreshing ? 'Refreshing…' : 'Refresh record'}</button> : null}
         {decisionError ? (
           <p
             className="operator-receipt-key"
@@ -831,6 +875,11 @@ const ReviewRecord: React.FC = () => {
       ) : null}
     </div>
   )
+}
+
+const ReviewRecord: React.FC = () => {
+  const { reviewId } = useParams()
+  return <ReviewRecordPage key={reviewId} />
 }
 
 export default ReviewRecord

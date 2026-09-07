@@ -38,7 +38,8 @@ describe('useObservatoryData', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.data).toBeNull();
-    expect(result.current.error).toContain('503');
+    expect(result.current.error).toBe('This evidence is temporarily unavailable. Please try again.');
+    expect(result.current.errorStatus).toBe(503);
   });
 });
 

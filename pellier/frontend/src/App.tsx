@@ -26,6 +26,8 @@ import ComparisonHost from './components/ComparisonHost'
 import SignInPage from './components/SignInPage'
 import { routerBasename } from './utils/assetPath'
 import './styles/premium-heading-styles.css'
+import RouteExperience from './shared/RouteExperience'
+import './styles/navigation-polish.css'
 
 const PellierPage = lazy(() => import('./pages/PellierPage'))
 const ObservatoryFrame = lazy(() => import('./observatory/shell/ObservatoryFrame'))
@@ -234,6 +236,7 @@ export function AppRoutes() {
          *   *           -> redirect to /
         */}
         <Route path="/" element={<PellierPage />} />
+        <Route path="/signin" element={<SignInPage />} />
         <Route path="/product/:productId" element={<ProductDetailPage />} />
         {/* Legacy surface paths. `/observatory/*` is deliberately absent: it
             would shadow the real surface below and redirect to itself. */}
@@ -345,6 +348,7 @@ function App() {
             <CartPanelSlot />
             <ToastSlot />
               <BrowserRouter basename={routerBasename()}>
+                <RouteExperience />
                 <ModalRouteGuard />
                 <ShopperChatSlot />
               <ComparisonHost />

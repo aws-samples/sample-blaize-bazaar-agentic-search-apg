@@ -53,6 +53,41 @@ discover_tunnel_target() {
   awk 'NF { print $NF; exit }' <<<"${descriptions}"
 }
 
+# Session Manager can close an idle or interrupted session while the API and
+# Vite remain alive. Keep their existing database endpoint available by opening
+# a replacement session; the database pool reconnects through the same port.
+maintain_tunnel() (
+  local session_pid="" retry_delay=5 tunnel_started tunnel_status
+  stop_session() {
+    if [[ -n "${session_pid}" ]]; then
+      # The CLI owns a session-manager-plugin child. Stop that child before its
+      # parent so closing this launcher cannot leave its local port occupied.
+      pkill -TERM -P "${session_pid}" 2>/dev/null || true
+      kill "${session_pid}" 2>/dev/null || true
+      wait "${session_pid}" 2>/dev/null || true
+    fi
+  }
+  trap stop_session EXIT
+  trap 'exit 0' INT TERM
+
+  while true; do
+    tunnel_started="${SECONDS}"
+    aws ssm start-session \
+      --region "${AWS_REGION}" \
+      --target "${TUNNEL_TARGET}" \
+      --document-name AWS-StartPortForwardingSessionToRemoteHost \
+      --parameters "${tunnel_parameters}" &
+    session_pid="$!"
+    if wait "${session_pid}"; then tunnel_status=0; else tunnel_status=$?; fi
+    session_pid=""
+    if (( SECONDS - tunnel_started >= 60 )); then retry_delay=5; fi
+    echo "Pellier Aurora tunnel ended (exit ${tunnel_status}); reconnecting in ${retry_delay}s." >&2
+    sleep "${retry_delay}"
+    if (( retry_delay < 60 )); then retry_delay=$((retry_delay * 2)); fi
+    if (( retry_delay > 60 )); then retry_delay=60; fi
+  done
+)
+
 cleanup() {
   if [[ -n "${BACKEND_PID}" ]] && kill -0 "${BACKEND_PID}" 2>/dev/null; then
     kill "${BACKEND_PID}" 2>/dev/null || true
@@ -99,11 +134,7 @@ if [[ -n "${TUNNEL_TARGET}" ]]; then
     printf '{"host":["%s"],"portNumber":["%s"],"localPortNumber":["%s"]}' \
       "${REMOTE_DB_HOST}" "${REMOTE_DB_PORT}" "${TUNNEL_LOCAL_PORT}"
   )"
-  aws ssm start-session \
-    --region "${AWS_REGION}" \
-    --target "${TUNNEL_TARGET}" \
-    --document-name AWS-StartPortForwardingSessionToRemoteHost \
-    --parameters "${tunnel_parameters}" &
+  maintain_tunnel &
   TUNNEL_PID="$!"
 
   for _ in {1..15}; do
@@ -131,6 +162,7 @@ if [[ -n "${TUNNEL_TARGET}" ]]; then
       --output text
   )"
   export DB_HOST="127.0.0.1"
+  export DB_TUNNEL_REMOTE_HOST="${REMOTE_DB_HOST}"
   export DB_PORT="${TUNNEL_LOCAL_PORT}"
   export DB_USER="$(jq -r '.username' <<<"${secret_json}")"
   export DB_PASSWORD="$(jq -r '.password' <<<"${secret_json}")"

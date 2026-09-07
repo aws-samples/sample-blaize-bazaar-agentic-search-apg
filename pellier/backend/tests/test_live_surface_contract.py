@@ -117,11 +117,11 @@ def test_anna_required_journey_distinguishes_retrieval_from_the_build_checkpoint
     reset = (ROOT / "scripts" / "reset-governed-workshop.sh").read_text()
 
     retrieval_turn = (
-        "('anna', 2, 'Keep the gift under $100 and show me the strongest two options.', "
+        "('anna', 2, 'Keep it under $100 and in stock. Show me the strongest two options.', "
         "'required', 'exercise', '28')"
     )
     proof_turn = (
-        "('anna', 3, 'Which one should I choose, and prove it stayed in budget and in stock?', "
+        "('anna', 3, 'Which one should I choose? Compare the two options using their current prices and availability.', "
         "'required', 'prove', NULL)"
     )
     assert retrieval_turn in seed

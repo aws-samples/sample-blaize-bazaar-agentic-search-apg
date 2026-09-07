@@ -29,6 +29,7 @@ vi.mock('../../../contexts/PersonaContext', () => ({
 }));
 
 import ObservatoryWorkbench from './ObservatoryWorkbench';
+import { WORKBENCH_VIEW_KEY } from './workbenchView';
 import {
   LAB_PROGRESS_KEY,
   readLabProgress,
@@ -46,6 +47,8 @@ function renderAt(entry: string) {
 describe('Observatory workbench resume', () => {
   beforeEach(() => {
     localStorage.clear();
+    // These cases exercise Focus navigation; Expert remains the product default.
+    localStorage.setItem(WORKBENCH_VIEW_KEY, 'focus');
     vi.stubGlobal(
       'fetch',
       vi.fn(async () =>

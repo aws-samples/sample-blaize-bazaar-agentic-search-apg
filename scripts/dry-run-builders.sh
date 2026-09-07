@@ -227,7 +227,7 @@ fi
 # --- 3. Marco Turn 4 via the dispatcher path --------------------------------
 echo "[3/6] Marco Turn 4 — POST /api/chat/stream"
 SESSION="dryrun-$(date +%s)"
-turn4='{"message":"Is the Hadley shirt at the Brooklyn warehouse, and can it still ship in time?","session_id":"'"$SESSION"'","customer_id":"CUST-MARCO"}'
+turn4='{"message":"How many Hadley Linen Shirts are available at the Brooklyn warehouse, and what ship window is recorded?","session_id":"'"$SESSION"'","customer_id":"CUST-MARCO"}'
 reply="$(curl -fsN --max-time 60 -X POST "${BASE}/api/chat/stream" \
   -H 'Content-Type: application/json' -d "$turn4" 2>/dev/null || true)"
 if echo "$reply" | grep -qiE 'brooklyn|BK-01' \

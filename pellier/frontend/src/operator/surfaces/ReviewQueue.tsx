@@ -11,15 +11,13 @@
  * they belong behind the proof link on the action itself.
  */
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { ArrowUpRight, CircleCheck, CircleDashed, CircleMinus, Clock3, ShieldX } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
-  fetchReviewQueue,
-  OperatorApiError,
   type OperatorReview,
-  type OperatorReviewQueue,
 } from '../../services/operator'
+import { useReviewQueue } from '../hooks/useReviewQueue'
 import ClientAvatar from '../components/ClientAvatar'
 import OperatorSignInAction from '../components/OperatorSignInAction'
 import OperatorState from '../components/OperatorState'
@@ -94,17 +92,16 @@ export type ReviewOutcomeKind =
   | 'approved'
   | 'refused'
   | 'executed'
+  | 'unknown'
 
 export function outcomeKind(review: OperatorReview): ReviewOutcomeKind {
   if (review.humanState === 'confirmation_required') return 'pending'
   if (review.humanState === 'declined') return 'declined'
-  if (!review.execution) return 'approved'
-  const { policy, aurora } = review.assurance
-  if (policy === 'DENY' || policy === 'WOULD_DENY' || aurora === 'DENIED') {
-    return 'refused'
-  }
-  if (aurora === 'PERMITTED') return 'executed'
-  return 'approved'
+  if (!review.execution) return review.executionTurnId ? 'unknown' : 'approved'
+  const { policy, aurora, evidence } = review.assurance
+  if (aurora === 'PERMITTED' && evidence === 'RECEIPTED') return 'executed'
+  if (policy === 'DENY' || aurora === 'DENIED') return 'refused'
+  return 'unknown'
 }
 
 export function outcomeLine(review: OperatorReview): string {
@@ -117,12 +114,19 @@ export function outcomeLine(review: OperatorReview): string {
   }
   // Confirmed. What happened next depends on whether it was carried out at all.
   if (!review.execution) {
-    return `${action} approved, not yet carried out`
+    return review.executionTurnId ? `${action} requested; outcome not yet recorded` : `${action} approved, not yet carried out`
   }
-  const { policy, aurora } = review.assurance
+  const { policy, aurora, evidence } = review.assurance
+  if (aurora === 'PERMITTED' && evidence === 'RECEIPTED') {
+    return policy === 'WOULD_DENY' ? `${action} carried out; policy warning observed with enforcement off` : `${action} carried out`
+  }
+  if (aurora === 'DENIED') {
+    return policy === 'ALLOW' ? `${action} permitted, then refused by Aurora`
+      : `${action} refused by Aurora${policy === 'WOULD_DENY' ? '; policy warning observed with enforcement off' : ''}`
+  }
   if (policy === 'DENY') return `${action} refused by AgentCore Policy`
   if (policy === 'WOULD_DENY') {
-    return `${action} would have been refused; enforcement was off`
+    return `${action} attempted; policy warning observed with enforcement off`
   }
   if (policy === 'EVALUATION_INCOMPLETE') {
     return `${action} attempted; the policy decision could not be read`
@@ -130,8 +134,6 @@ export function outcomeLine(review: OperatorReview): string {
   if (policy === 'POLICY_INFERRED') {
     return `${action} attempted; policy text was matched, not evaluated`
   }
-  if (aurora === 'DENIED') return `${action} permitted, then refused by Aurora`
-  if (aurora === 'PERMITTED') return `${action} carried out`
   return `${action} attempted; the outcome was not recorded`
 }
 
@@ -199,31 +201,14 @@ const OUTCOME_FILTERS: ReadonlyArray<{ id: ReviewOutcomeKind; label: string }> =
   { id: 'executed', label: 'Carried out' },
   { id: 'approved', label: 'Approved, not run' },
   { id: 'declined', label: 'Declined' },
+  { id: 'unknown', label: 'Outcome unverified' },
 ]
 
 const ReviewQueue: React.FC = () => {
-  const [queue, setQueue] = useState<OperatorReviewQueue | null>(null)
+  const { queue, error, refreshing, updatedAt, refresh } = useReviewQueue()
   const [outcomeFilter, setOutcomeFilter] = useState<ReviewOutcomeKind | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let active = true
-    fetchReviewQueue()
-      .then((data) => {
-        if (active) setQueue(data)
-      })
-      .catch((err: unknown) => {
-        if (!active) return
-        setError(
-          err instanceof OperatorApiError ? err.code : 'operator_unavailable',
-        )
-      })
-    return () => {
-      active = false
-    }
-  }, [])
-
-  if (error) {
+  if (error && !queue) {
     const authenticationRequired =
       error === 'authentication_required' || error === 'invalid_credentials'
     const operatorRequired = error === 'operator_group_required'
@@ -267,8 +252,8 @@ const ReviewQueue: React.FC = () => {
             </>
           )
         }
-        reason={error}
-        action={authenticationRequired ? <OperatorSignInAction unlocks="open the action queue" /> : undefined}
+        reason={unavailable ? undefined : error}
+        action={authenticationRequired ? <OperatorSignInAction unlocks="open the action queue" /> : !operatorRequired ? <button type="button" className="operator-button operator-button-inline" onClick={() => void refresh()}>Try again</button> : undefined}
       />
     )
   }
@@ -289,7 +274,7 @@ const ReviewQueue: React.FC = () => {
       acc[filter.id] = queue.reviews.filter((r) => outcomeKind(r) === filter.id).length
       return acc
     },
-    { pending: 0, declined: 0, approved: 0, refused: 0, executed: 0 },
+    { pending: 0, declined: 0, approved: 0, refused: 0, executed: 0, unknown: 0 },
   )
   const scoped = outcomeFilter
     ? queue.reviews.filter((r) => outcomeKind(r) === outcomeFilter)
@@ -309,6 +294,10 @@ const ReviewQueue: React.FC = () => {
         authorization and execution remain separate.
       </p>
 
+      <div className="operator-queue-toolbar">
+        <p role="status">{error ? 'Refresh unavailable. Showing the last successful read.' : updatedAt ? `Updated ${updatedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : 'Reading queue…'}</p>
+        <button type="button" className="operator-button operator-button-inline" onClick={() => void refresh()} disabled={refreshing}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
+      </div>
       <div
         className="operator-outcome-filters"
         role="group"
@@ -337,13 +326,13 @@ const ReviewQueue: React.FC = () => {
       <dl className="operator-queue-summary" aria-label="Action queue summary">
         <div>
           <dt>Needs decision</dt>
-          <dd data-tone={pending.length > 0 ? 'authority' : 'quiet'}>
-            {pending.length}
+          <dd data-tone={counts.pending > 0 ? 'authority' : 'quiet'}>
+            {counts.pending}
           </dd>
         </div>
         <div>
           <dt>Decided</dt>
-          <dd>{decided.length}</dd>
+          <dd>{queue.reviews.length - counts.pending}</dd>
         </div>
         <div>
           <dt>Current boundary</dt>
@@ -356,7 +345,9 @@ const ReviewQueue: React.FC = () => {
           Copy states the mechanism instead of instructing the reader, and stays
           clear of the "all caught up" register - there is nothing to be caught
           up on, and a celebration over an empty queue reads as filler. */}
-      {pending.length === 0 ? (
+      {outcomeFilter && scoped.length === 0 ? (
+        <OperatorState data-testid="operator-reviews-filter-empty" eyebrow="Filtered actions" headline="No actions match this filter" body={`${counts.pending} action${counts.pending === 1 ? '' : 's'} in the full queue need a decision.`} action={<button type="button" className="operator-button operator-button-inline" onClick={() => setOutcomeFilter(null)}>Show all actions</button>} />
+      ) : !outcomeFilter && counts.pending === 0 ? (
         <OperatorState
           level={1}
           data-testid="operator-reviews-empty"

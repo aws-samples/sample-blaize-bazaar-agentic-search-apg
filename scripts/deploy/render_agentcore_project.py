@@ -202,15 +202,21 @@ def baseline_policies(action_token: str = INITIATE_RETURN_ACTION) -> list[dict[s
     """
     gateway_type = "resource is AgentCore::Gateway"
 
-    # Derived from the one publication contract, so a tool added to the catalogue cannot
-    # silently acquire a permit and a deferred tool cannot acquire one at all.
+    # Publication is not authorization. Intersect the catalogue with reviewed
+    # actions so redeploying a newly published tool cannot silently permit it.
     published = workshop_target_tools()
-    NO_BASELINE_PERMIT = {"initiate_return", "restock_inventory"}
+    reviewed_tools = {
+        "search_products", "search_products_hybrid", "browse_category",
+        "check_inventory", "get_low_stock", "get_price_analysis",
+        "compare_products", "get_customer_preferences", "get_audit_trail",
+        "get_trending_products", "get_return_policy", "get_related_products",
+        "escalate_to_human",
+    }
     allowed: list[str] = [
         f"{target}___{tool}"
         for target, tools in published.items()
         for tool in tools
-        if tool not in NO_BASELINE_PERMIT
+        if tool in reviewed_tools
     ]
     if not allowed:
         raise SystemExit(
@@ -287,6 +293,27 @@ def baseline_policies(action_token: str = INITIATE_RETURN_ACTION) -> list[dict[s
             "enforcementMode": "ACTIVE",
         },
     ]
+    # Lab 3 publishes this sensitive read. Install ownership enforcement in
+    # the same deployment that grants its permit, including direct MCP calls
+    # which never pass through the Runtime's argument binding.
+    if "get_ticket_history" in published.get(EXPERIENCE_TARGET, []):
+        scope = _customer_scope_forbid_statement(
+            f"{EXPERIENCE_TARGET}___get_ticket_history"
+        )
+        policies.append({
+            "name": "get_ticket_history_permit_owner",
+            "description": "Permit ticket history only for its verified owner",
+            "statement": scope.replace("forbid (", "permit (", 1).replace("unless {", "when {", 1),
+            "validationMode": "FAIL_ON_ANY_FINDINGS",
+            "enforcementMode": "ACTIVE",
+        })
+        policies.append({
+            "name": "get_ticket_history_identity_scope",
+            "description": "Forbid ticket reads unless the JWT username owns the requested customer",
+            "statement": scope,
+            "validationMode": "FAIL_ON_ANY_FINDINGS",
+            "enforcementMode": "ACTIVE",
+        })
     return policies
 
 

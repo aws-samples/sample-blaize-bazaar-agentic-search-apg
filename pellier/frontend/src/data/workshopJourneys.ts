@@ -31,8 +31,8 @@ export const WORKSHOP_JOURNEYS: Record<WorkshopAnchorId, WorkshopJourney> = {
     surface: 'storefront',
     prompts: [
       'What linen do you have for 10 days in Goa?',
-      'What would go with the Hadley shirt?',
-      'Is the Hadley shirt at the Brooklyn warehouse, and can it still ship in time?',
+      'What would go with the Hadley Linen Shirt?',
+      'How many Hadley Linen Shirts are available at the Brooklyn warehouse, and what ship window is recorded?',
     ],
   },
   anna: {
@@ -42,9 +42,9 @@ export const WORKSHOP_JOURNEYS: Record<WorkshopAnchorId, WorkshopJourney> = {
     labId: 'retrieval-acceptance',
     surface: 'storefront',
     prompts: [
-      'A thoughtful gift for someone who loves morning rituals',
-      'Keep the gift under $100 and show me the strongest two options.',
-      'Which one should I choose, and prove it stayed in budget and in stock?',
+      'A housewarming gift for someone who loves slow morning rituals.',
+      'Keep it under $100 and in stock. Show me the strongest two options.',
+      'Which one should I choose? Compare the two options using their current prices and availability.',
     ],
   },
   theo: {
@@ -55,7 +55,7 @@ export const WORKSHOP_JOURNEYS: Record<WorkshopAnchorId, WorkshopJourney> = {
     surface: 'storefront',
     prompts: [
       'Hand-thrown ceramics for a slower morning routine',
-      'What goes well with the pour-over set?',
+      'What goes well with the pour-over set, keeping to the same materials and morning routine?',
       'My Wabi-Sabi Bowl arrived chipped. Please help me return it.',
     ],
   },
@@ -67,8 +67,8 @@ export const WORKSHOP_JOURNEYS: Record<WorkshopAnchorId, WorkshopJourney> = {
     surface: 'operator',
     prompts: [
       "Investigate Jessica's open service issue (TKT-2026-3015) and recommend the next fair step. Distinguish what the records establish from what a source reports.",
-      'Which customer, order, return, and identity records are authoritative for this decision?',
-      'Prepare the fairest next step for human review without executing it.',
+      'Which customer, order, return, and identity records are authoritative for this decision? Separate confirmed facts from notes and assumptions.',
+      'Prepare the fairest next step for human review without executing it. Name any missing facts the reviewer must resolve.',
     ],
   },
 }
@@ -120,3 +120,31 @@ export function journeyForLab(
 ): WorkshopJourney | undefined {
   return labId ? JOURNEY_BY_LAB.get(labId as WorkshopLabId) : undefined
 }
+
+/** Predictions and evidence checks are learning guidance, never claims about a run. */
+export const WORKSHOP_EVIDENCE_GUIDANCE = {
+  "marco": {
+    "prediction": "A named item and warehouse should produce a scoped inventory read with quantity and a recorded ship window.",
+    "evidence": "Inspect the resolved product, Brooklyn warehouse, quantity, ship window, tool arguments, and execution receipt. A dispatch window does not prove a delivery date.",
+    "challenge": "Compare “Hadley Linen Shirt” with “A lightweight linen button-up for humid afternoons.”",
+    "inspect": "Inspect lexical contribution, semantic candidates, and rank changes. Similar intent does not require identical ordering."
+  },
+  "anna": {
+    "prediction": "Price and stock constraints should determine eligibility before relevance ranking.",
+    "evidence": "Inspect the PostgreSQL eligibility predicate, lexical and vector ranks, RRF contribution, rerank order, candidate coverage, quality metrics, and latency for the same measured query.",
+    "challenge": "Keep the same recipient in mind, but make the budget under $70.",
+    "inspect": "Verify that the new ceiling replaces the previous one while recipient context persists. Inspect the exact boundary predicate; the workshop benchmark uses an inclusive price ceiling."
+  },
+  "theo": {
+    "prediction": "The managed agent should preserve the conversation and prepare a human checkpoint without executing the return.",
+    "evidence": "Check verified caller and scope, Runtime build fingerprint, published Gateway contract, an independent AgentCore Memory read, and the durable prepared review. Preparation is not a business write.",
+    "challenge": "I prefer matte glazes and compact pieces for my breakfast tray.",
+    "inspect": "Verify the new preference in a Memory event using the guide’s independent process. Then ask “Which pairing suits my routine?” without repeating it. Distinguish prompt history, Aurora history, and managed Memory; actors are scoped to this conversation."
+  },
+  "jessica": {
+    "prediction": "Reported context should remain distinct from authoritative records, and human confirmation should remain separate from authorization and execution.",
+    "evidence": "Inspect the principal/customer pairing, policy decision, correlated tool execution or absence, durable effect, replay behavior, independent RLS result, and pending human review.",
+    "challenge": "Have we handled something similar before? Show the outcome and explain what must be checked again.",
+    "inspect": "Use prior-resolution recall as context. Previous receipts grant no current authority; an empty result is valid. Resolve conflicting support notes against the authoritative ledger."
+  }
+} as const

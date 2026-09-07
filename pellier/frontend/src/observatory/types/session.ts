@@ -20,7 +20,7 @@ export interface Session {
   agentCount: number;
   routingPattern: string;
   timestamp: string;
-  status: 'complete' | 'active';
+  status: 'complete' | 'active' | 'failed' | 'denied-before-execution' | 'unknown';
 }
 
 export interface SessionDetail extends Session {

@@ -2,9 +2,6 @@ import { useEffect, useId, useState } from 'react';
 import { ArrowUpRight, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { DataTable, SectionEyebrow } from '../../shared';
-import type { DataTableColumn } from '../../shared';
-
 import './WorkbenchResources.css';
 
 interface ResourceLink {
@@ -116,8 +113,7 @@ const GITHUB_REPOSITORY_URL =
    `governed_receipts (Cedar)`. "measured on Aurora at run time" and "golden
    journeys" describe a source in words and take the prose register, because
    mono on these surfaces means code or measurement and never a technical
-   costume. The legend below the index states that contract so the two
-   registers read as information rather than inconsistency. */
+   costume. */
 const IDENTIFIER_TOKEN = /^[a-z][a-z0-9_]*(?: \([A-Za-z][A-Za-z ]*\))?$/;
 
 function sourceTokens(source: string): string[] {
@@ -127,82 +123,19 @@ function sourceTokens(source: string): string[] {
     .filter(Boolean);
 }
 
-/** Every named source across the index, deduplicated. Derived, never typed:
- *  the masthead figure cannot drift away from the rows it counts. */
-const NAMED_SOURCE_COUNT = new Set(
-  RESOURCE_QUESTIONS.flatMap((group) =>
-    group.links.flatMap((link) => sourceTokens(link.source)),
-  ),
-).size;
+const VIEW_COUNT = RESOURCE_QUESTIONS.reduce((total, group) => total + group.links.length, 0);
 
-const VIEW_COUNT = RESOURCE_QUESTIONS.reduce(
-  (total, group) => total + group.links.length,
-  0,
-);
-
-interface MastheadFigure {
-  value: number;
-  label: string;
+function ResourceSources({ source }: { source: string }) {
+  return (
+    <span className="workbench-resource-sources">
+      {sourceTokens(source).map((token) => (
+        <span key={token} className="workbench-resource-source" data-register={IDENTIFIER_TOKEN.test(token) ? 'identifier' : 'prose'}>
+          {IDENTIFIER_TOKEN.test(token) ? <code>{token}</code> : token}
+        </span>
+      ))}
+    </span>
+  );
 }
-
-const MASTHEAD_FIGURES: readonly MastheadFigure[] = [
-  { value: VIEW_COUNT, label: 'Reference views' },
-  { value: RESOURCE_QUESTIONS.length, label: 'Participant questions' },
-  { value: NAMED_SOURCE_COUNT, label: 'Named sources' },
-];
-
-/* The three columns this index has always had, expressed against the shared
-   table register: the view is the row's own name, its description is prose,
-   and the source it reads is an identifier. Widths are explicit and the table
-   is fixed-layout, so all four question tables share one column geometry and
-   the index reads as a single ledger rather than four differently ruled ones.
-
-   The row is the target. The link stays in the View cell -- one anchor, real
-   href, keyboard reachable -- and a stretched pseudo-element carries the hit
-   area across the row. The mono tokens sit above that overlay so an
-   identifier can still be selected and pasted; prose sits below it and is
-   part of the target. */
-const RESOURCE_COLUMNS: DataTableColumn<ResourceLink>[] = [
-  {
-    key: 'view',
-    header: 'View',
-    rowHeader: true,
-    width: '20%',
-    render: (item) => (
-      <span className="workbench-resource-view">
-        <Link to={item.path}>{item.label}</Link>
-        <code>{item.path.replace('/observatory', '')}</code>
-      </span>
-    ),
-  },
-  {
-    key: 'shows',
-    header: 'What it shows',
-    width: '42%',
-    render: (item) => (
-      <span className="workbench-resource-shows">{item.description}</span>
-    ),
-  },
-  {
-    key: 'source',
-    header: 'Reads from',
-    align: 'code',
-    width: '38%',
-    render: (item) => (
-      <span className="workbench-resource-sources">
-        {sourceTokens(item.source).map((token) => (
-          <span
-            key={token}
-            className="workbench-resource-source"
-            data-register={IDENTIFIER_TOKEN.test(token) ? 'identifier' : 'prose'}
-          >
-            {IDENTIFIER_TOKEN.test(token) ? <code>{token}</code> : token}
-          </span>
-        ))}
-      </span>
-    ),
-  },
-];
 
 interface WorkbenchResourcesProps {
   compact?: boolean;
@@ -253,41 +186,14 @@ export default function WorkbenchResources({
     >
       <header className="workbench-resources-heading">
         <div className="workbench-resources-title">
-          <SectionEyebrow>Reference views</SectionEyebrow>
-          <h2 id="workbench-resources-title" className="font-display">
-            Telemetry from the running system
-          </h2>
+          <h2 id="workbench-resources-title">Telemetry &amp; system references</h2>
+          <p>Follow a question into the evidence. Each view names its sources.</p>
         </div>
-        <div className="workbench-resources-masthead">
-          <div className="workbench-resources-figures">
-            {MASTHEAD_FIGURES.map((figure) => (
-              <div key={figure.label} className="workbench-resource-figure">
-                <span className="workbench-resource-figure-value">
-                  {figure.value}
-                </span>
-                <span className="workbench-resource-figure-label">
-                  {figure.label}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="workbench-resources-canonical">
-            <p>
-              Every view below reads the same Aurora tables and managed-service
-              responses the agents just used. Nothing here is required to finish
-              a lab: <code>psql</code> and the AgentCore CLI are the canonical
-              proof, and these views only make the same rows easier to
-              correlate.
-            </p>
-            <a
-              href={GITHUB_REPOSITORY_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Workshop source
-              <ArrowUpRight size={14} strokeWidth={1.8} aria-hidden="true" />
-            </a>
-          </div>
+        <div className="workbench-resources-canonical">
+          <span>{VIEW_COUNT} reference views</span>
+          <a href={GITHUB_REPOSITORY_URL} target="_blank" rel="noopener noreferrer">
+            Workshop source <ArrowUpRight size={14} strokeWidth={1.8} aria-hidden="true" />
+          </a>
         </div>
       </header>
 
@@ -302,23 +208,25 @@ export default function WorkbenchResources({
               <h3>{group.question}</h3>
               <p>{group.answer}</p>
             </div>
-            <DataTable
-              className="workbench-resource-table"
-              columns={RESOURCE_COLUMNS}
-              rows={group.links}
-              rowKey={(item) => item.path}
-            />
+            <ul className="workbench-resource-links">
+              {group.links.map((resource) => (
+                <li key={resource.path}>
+                  <div className="workbench-resource-view">
+                    <Link to={resource.path}>{resource.label}<ArrowUpRight size={16} aria-hidden="true" /></Link>
+                  </div>
+                  <p className="workbench-resource-shows">{resource.description}</p>
+                  <details className="workbench-source-disclosure">
+                    <summary>View sources</summary>
+                    <ResourceSources source={resource.source} />
+                  </details>
+                </li>
+              ))}
+            </ul>
           </section>
         ))}
       </div>
 
-      <p className="workbench-resources-legend">
-        <span>
-          <code>mono</code> names a table, service or artefact you can query
-          directly.
-        </span>
-        <span>Prose names a source that has no single identifier.</span>
-      </p>
+      <p className="workbench-resources-legend">These views are optional. Use <code>psql</code> and the AgentCore CLI for canonical lab proof.</p>
     </div>
   );
 

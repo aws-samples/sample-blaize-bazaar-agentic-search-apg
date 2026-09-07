@@ -5,7 +5,7 @@
  * works: run a turn, inspect the evidence it emitted, reconcile the answer
  * against that evidence. `expert` restores the three-panel grid. The choice
  * is a per-browser convenience, so localStorage is the right home for it;
- * an unreadable or absent value always resolves to focus.
+ * an unreadable or absent value always resolves to expert.
  */
 
 export type WorkbenchView = 'focus' | 'expert';
@@ -39,13 +39,13 @@ function isWorkbenchView(value: unknown): value is WorkbenchView {
   return value === 'focus' || value === 'expert';
 }
 
-/** The stored view, or `focus` when nothing valid is stored. */
+/** The stored view, or `expert` when nothing valid is stored. */
 export function readWorkbenchView(): WorkbenchView {
   try {
     const stored = localStorage.getItem(WORKBENCH_VIEW_KEY);
-    return isWorkbenchView(stored) ? stored : 'focus';
+    return isWorkbenchView(stored) ? stored : 'expert';
   } catch {
-    return 'focus';
+    return 'expert';
   }
 }
 

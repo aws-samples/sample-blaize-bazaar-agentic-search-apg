@@ -76,6 +76,7 @@ function activePanel(): string | null {
 describe('Observatory workbench focus mode', () => {
   beforeEach(() => {
     localStorage.clear();
+    localStorage.setItem(WORKBENCH_VIEW_KEY, 'focus');
     mocks.sendChatMessageStreaming.mockReset();
     mocks.sendChatMessageStreaming.mockResolvedValue({
       response: 'A grounded answer.',
@@ -85,7 +86,7 @@ describe('Observatory workbench focus mode', () => {
     vi.stubGlobal('fetch', vi.fn(async () => scenariosResponse()));
   });
 
-  it('opens in focus mode on the Run step with the other panels stepped back', async () => {
+  it('opens a saved focus view on the Run step with the other panels stepped back', async () => {
     renderWorkbench();
 
     expect(grid()).toHaveAttribute('data-view', 'focus');

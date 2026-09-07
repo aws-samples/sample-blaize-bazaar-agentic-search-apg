@@ -10,6 +10,7 @@
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
+  act,
   render as renderBase,
   screen,
   fireEvent,
@@ -17,9 +18,9 @@ import {
   within,
 } from '@testing-library/react'
 import type { ReactElement } from 'react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom'
 import { UIProvider } from '../contexts/UIContext'
-import ReviewQueue, { relativeTime, outcomeLine } from './surfaces/ReviewQueue'
+import ReviewQueue, { relativeTime, outcomeLine, outcomeKind } from './surfaces/ReviewQueue'
 import ReviewRecord, { issueLine } from './surfaces/ReviewRecord'
 import ActionAssurance from './components/ActionAssurance'
 import OperatorFrame from './shell/OperatorFrame'
@@ -363,7 +364,7 @@ describe('OperatorFrame review link', () => {
     expect(authMock.login).not.toHaveBeenCalled()
     expect(assign).toHaveBeenCalledTimes(1)
     const target = String(assign.mock.calls[0][0])
-    expect(target).toContain('/api/auth/signin?provider=email')
+    expect(target).toContain('/signin?returnTo=')
     // The return path brings the participant back to what they asked for.
     expect(target).toContain('returnTo=')
 
@@ -1585,7 +1586,7 @@ describe('outcomeLine', () => {
         humanState: 'confirmed', execution: RECEIPT,
         assurance: AXES('WOULD_DENY', 'PERMITTED'),
       })),
-    ).toBe('Return would have been refused; enforcement was off')
+    ).toBe('Return carried out; policy warning observed with enforcement off')
   })
 
   it('admits when an attempt produced no recorded outcome', () => {
@@ -1633,5 +1634,78 @@ describe('the empty review queue', () => {
     renderQueue()
     await screen.findByTestId('operator-reviews-empty')
     expect(screen.queryByTestId('operator-review-decided-head')).toBeNull()
+  })
+})
+
+
+describe('review state reconciliation', () => {
+  it('retains a committed confirmation when its follow-up read fails', async () => {
+    let posted = false
+    mockFetch((_url, init) => {
+      if (init?.method === 'POST') {
+        posted = true
+        return { body: { reviewId: 12, status: 'approved', humanState: 'confirmed', decidedBy: 'operator-1', decidedAt: null,
+          assurance: { ...PENDING_REVIEW.assurance, human: 'CONFIRMED' } } }
+      }
+      return posted ? { status: 503, body: { detail: 'operator_unavailable' } } : { body: REVIEW_DETAIL }
+    })
+    renderRecord()
+    fireEvent.click(await screen.findByTestId('operator-review-confirm'))
+    expect(await screen.findByText(/response was recorded successfully/i)).toBeInTheDocument()
+    expect(screen.queryByTestId('operator-review-confirm')).not.toBeInTheDocument()
+    expect(screen.getByTestId('operator-review-execute')).toBeDisabled()
+    expect(screen.getByTestId('operator-review-decision')).not.toHaveTextContent(/nothing was recorded/i)
+  })
+
+  it('gates a timed-out decision until a persisted read reconciles it', async () => {
+    mockFetch((_url, init) => {
+      if (init?.method === 'POST') throw new TypeError('connection lost')
+      return { body: REVIEW_DETAIL }
+    })
+    renderRecord()
+    fireEvent.click(await screen.findByTestId('operator-review-confirm'))
+    await screen.findByTestId('operator-review-decision-error')
+    expect(screen.getByTestId('operator-review-confirm')).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh record' }))
+    await waitFor(() => expect(screen.getByTestId('operator-review-confirm')).toBeEnabled())
+  })
+
+  it('discards an obsolete review response after route navigation', async () => {
+    let finish!: (value: MockFetchResult) => void
+    const old = new Promise<MockFetchResult>((resolve) => { finish = resolve })
+    mockFetch((url) => url.endsWith('/13') ? old : { body: {
+      ...REVIEW_DETAIL, review: { ...PENDING_REVIEW, reviewId: 14 }, client: { ...REVIEW_DETAIL.client, name: 'Current client' },
+    } })
+    render(<MemoryRouter initialEntries={['/operator/reviews/13']}>
+      <Link to="/operator/reviews/14">Next review</Link>
+      <Routes><Route path="/operator/reviews/:reviewId" element={<ReviewRecord />} /></Routes>
+    </MemoryRouter>)
+    expect(screen.queryByTestId('operator-review-confirm')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('Next review'))
+    await screen.findByRole('heading', { name: 'Current client' })
+    await act(async () => { finish({ body: { ...REVIEW_DETAIL, review: { ...PENDING_REVIEW, reviewId: 13 } } }); await old })
+    expect(screen.getByRole('heading', { name: 'Current client' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Theo' })).not.toBeInTheDocument()
+  })
+
+  it('keeps the global pending total when a filter has no matches', async () => {
+    mockFetch(() => ({ body: { reviews: [PENDING_REVIEW], total: 1, pendingCount: 1 } }))
+    renderQueue()
+    await screen.findByTestId('operator-review-12')
+    fireEvent.click(screen.getByTestId('operator-outcome-filter-declined'))
+    expect(screen.getByTestId('operator-reviews-filter-empty')).toHaveTextContent('1 action in the full queue')
+    expect(screen.queryByText('No actions waiting')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Show all actions' }))
+    expect(screen.getByTestId('operator-review-12')).toBeInTheDocument()
+  })
+
+  it.each([
+    ['WOULD_DENY', 'PERMITTED', 'RECEIPTED', 'executed'],
+    ['WOULD_DENY', 'NOT_EVALUATED', 'PENDING', 'unknown'],
+    ['ALLOW', 'DENIED', 'NO_EXECUTION', 'refused'],
+    ['DENY', 'NOT_REACHED', 'NO_EXECUTION', 'refused'],
+    ['ALLOW', 'PERMITTED', 'PENDING', 'unknown'],
+  ])('classifies %s / %s / %s from independent evidence', (policy, aurora, evidence, outcome) => {
+    expect(outcomeKind({ ...PENDING_REVIEW, humanState: 'confirmed', execution: { receiptId: 1 }, assurance: { human: 'CONFIRMED', policy, aurora, evidence } } as never)).toBe(outcome)
   })
 })

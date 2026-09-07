@@ -49,7 +49,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 # `Path(__file__)` became a path-parameter declaration.
 from fastapi import Path as PathParam
 from pydantic import BaseModel, Field
-from services.auth import get_current_user, require_operator
+from services.auth import authorize_customer_read, get_current_user, require_operator
 from services.observatory_copy import OBSERVATORY_COPY
 
 logger = logging.getLogger(__name__)
@@ -1247,9 +1247,24 @@ async def _collect_proof_board(
 # ---------------------------------------------------------------------------
 
 
+def _audit_result_status(result: Any) -> str:
+    """An audit proves invocation; only an explicit outcome proves success."""
+    if not isinstance(result, dict):
+        return "unavailable"
+    status = str(result.get("status") or "").lower()
+    if result.get("error") or result.get("success") is False or status in {"failed", "error"}:
+        return "failed"
+    if status in {"denied", "forbidden", "denied-before-execution"}:
+        return "denied"
+    if result.get("success") is True or status in {"succeeded", "success", "complete", "completed"}:
+        return "succeeded"
+    return "unavailable"
+
+
 @router.get("/sessions")
 async def list_sessions(
     persona: Optional[str] = Query(default=None, description="Filter by persona ID"),
+    user: Optional[dict[str, Any]] = Depends(get_current_user),
 ):
     """Return sessions evidenced by the live Aurora tool ledger."""
     db = await _live_db()
@@ -1280,7 +1295,16 @@ async def list_sessions(
                     ELSE 'Storefront Dispatcher'
                 END AS "routingPattern",
                 max(ta.created_at) AS timestamp,
-                'complete' AS status
+                CASE WHEN bool_or(
+                    ta.result->>'success' = 'false'
+                    OR NULLIF(ta.result->>'error', '') IS NOT NULL
+                    OR ta.result->>'status' IN ('failed', 'error', 'denied')
+                ) THEN 'failed'
+                ELSE COALESCE((
+                    SELECT terminal_status FROM pellier.governed_turn_receipts terminal
+                     WHERE terminal.session_id = ta.session_id
+                     ORDER BY terminal.created_at DESC, terminal.turn_id DESC LIMIT 1
+                ), 'unknown') END AS status
               FROM pellier.tool_audit ta
               LEFT JOIN pellier.shopper_sessions ss ON ss.session_id = ta.session_id
              -- Both placeholders carry an explicit ::text cast. An uncast
@@ -1291,12 +1315,39 @@ async def list_sessions(
              -- 503 for every unfiltered request. Keep literal placeholder
              -- tokens out of these comments: psycopg counts them.
              WHERE (%s::text IS NULL OR ss.persona_id = %s::text)
+               AND (
+                   (%s::text IS NULL AND NOT EXISTS (
+                       SELECT 1 FROM pellier.governed_turn_receipts claim
+                        WHERE claim.session_id = ta.session_id
+                          AND COALESCE(claim.principal_sub, '') <> ''
+                   ) AND NOT EXISTS (
+                       SELECT 1 FROM pellier.governed_receipts claim
+                        WHERE claim.session_id = ta.session_id
+                   ))
+                   OR (%s::text IS NOT NULL AND EXISTS (
+                       SELECT 1 FROM pellier.governed_turn_receipts own
+                        WHERE own.session_id = ta.session_id AND own.principal_sub = %s
+                   ) AND NOT EXISTS (
+                       SELECT 1 FROM pellier.governed_turn_receipts foreign_turn
+                        WHERE foreign_turn.session_id = ta.session_id
+                          AND foreign_turn.principal_sub IS DISTINCT FROM %s
+                   ) AND NOT EXISTS (
+                       SELECT 1 FROM pellier.governed_receipts foreign_decision
+                        WHERE foreign_decision.session_id = ta.session_id
+                          AND foreign_decision.principal_id IS DISTINCT FROM %s
+                   ))
+               )
              GROUP BY ta.session_id, ss.persona_id
              ORDER BY max(ta.created_at) DESC
              LIMIT 100
             """,
             persona,
             persona,
+            (user or {}).get("sub"),
+            (user or {}).get("sub"),
+            (user or {}).get("sub"),
+            (user or {}).get("sub"),
+            (user or {}).get("sub"),
         )
         return [dict(row) for row in rows]
     except Exception as exc:
@@ -1341,7 +1392,16 @@ async def get_session(
                     ELSE 'Storefront Dispatcher'
                 END AS "routingPattern",
                 max(ta.created_at) AS timestamp,
-                'complete' AS status
+                CASE WHEN bool_or(
+                    ta.result->>'success' = 'false'
+                    OR NULLIF(ta.result->>'error', '') IS NOT NULL
+                    OR ta.result->>'status' IN ('failed', 'error', 'denied')
+                ) THEN 'failed'
+                ELSE COALESCE((
+                    SELECT terminal_status FROM pellier.governed_turn_receipts terminal
+                     WHERE terminal.session_id = ta.session_id
+                     ORDER BY terminal.created_at DESC, terminal.turn_id DESC LIMIT 1
+                ), 'unknown') END AS status
               FROM pellier.tool_audit ta
               LEFT JOIN pellier.shopper_sessions ss ON ss.session_id = ta.session_id
              WHERE ta.session_id = %s
@@ -1410,6 +1470,16 @@ async def get_session(
                     status_code=404,
                     detail=OBSERVATORY_COPY["SESSION_EVIDENCE_NOT_FOUND"],
                 )
+        foreign_decision = await db.fetch_one(
+            """
+            SELECT 1 FROM pellier.governed_receipts
+             WHERE session_id = %s AND principal_id IS DISTINCT FROM %s
+             LIMIT 1
+            """,
+            session_id, principal_sub or None,
+        )
+        if foreign_decision:
+            raise HTTPException(status_code=404, detail=OBSERVATORY_COPY["SESSION_EVIDENCE_NOT_FOUND"])
         messages = [
             {
                 "role": row["role"],
@@ -1493,7 +1563,7 @@ async def get_session(
                     "category": "managed" if row["caller"] == "gateway" else "owned",
                     "title": row["tool"],
                     "description": f"{row['caller']} invocation recorded in Aurora.",
-                    "status": "succeeded",
+                    "status": _audit_result_status(row.get("result")),
                     "durationMs": int(row.get("latency_ms") or 0),
                     "agent": row["caller"],
                     # Input and output together: the replay shows the exact
@@ -1799,6 +1869,7 @@ _PERSONA_TO_CUSTOMER_ID = {
     "anna": "CUST-ANNA",
     "theo": "CUST-THEO",
     "fresh": "CUST-FRESH",
+    "jessica": "CUST-JESSICA",
 }
 
 
@@ -1967,112 +2038,41 @@ async def _load_live_operational_history() -> list:
         return []
 
 
-async def _load_live_working(persona: str) -> list:
-    """Read the persona's most recent storefront working-memory turns.
-
-    This panel is persona-scoped and carries no session id, so we
-    resolve the persona's latest Pellier session the same way the
-    lab's section-3 readback does: every allowed tool call stamps its
-    ``session_id`` in ``pellier.tool_audit`` (shaped
-    ``persona-{persona}-{uuid}``), so we take the most recent one for
-    this persona, rebuild the anonymous namespace the storefront wrote
-    under (``anon-{session_id}``), and read it back through
-    ``AgentCoreMemory.get_session_history`` — which transparently serves
-    the live AgentCore SDK on a provisioned box or the process-local
-    live session buffer used for offline local development. This is the
-    SAME data ``GET
-    /api/agent/session/{id}`` returns, so the panel and that API agree.
-
-    Returns ``[]`` when the persona has no storefront session yet or the
-    read comes back empty. No fixture data is used.
-    """
-    if persona.lower() not in _PERSONA_TO_CUSTOMER_ID:
+async def _load_live_working(persona: str, *, namespace: Optional[str] = None) -> list:
+    """Read the exact authenticated namespace selected by the route."""
+    if not namespace:
         return []
     try:
-        from app import db_service
-        if db_service is None:
-            return []
-        # Scope to this persona so a different persona's later tool call
-        # (e.g. Anna carrying over) can't shadow Marco's session — the
-        # same guard the section-3 psql query uses.
-        row = await db_service.fetch_one(
-            """
-            SELECT session_id
-              FROM pellier.tool_audit
-             WHERE session_id LIKE %s
-             ORDER BY audit_id DESC
-             LIMIT 1
-            """,
-            f"persona-{persona.lower()}-%",
-        )
-        if not row:
-            return []
-        session_id = dict(row).get("session_id")
-        if not session_id:
-            return []
-
-        from services.agentcore_identity import AgentCoreIdentityService
         from services.agentcore_memory import AgentCoreMemory
-
-        # Storefront turns are anonymous, so they live under
-        # anon-{session_id} — the exact namespace an unauthenticated
-        # GET /api/agent/session/{id} reads.
-        namespace = AgentCoreIdentityService.build_namespace(None, session_id)
-        memory = AgentCoreMemory()
-        turns = await memory.get_session_history(namespace)
+        turns = await AgentCoreMemory(strict=True).get_session_history(namespace)
     except Exception as exc:
         logger.warning("Live working read failed for %s: %s", persona, exc)
-        return []
-    if not turns:
-        return []
-    items = []
-    for i, t in enumerate(turns[-6:]):
-        items.append({
+        raise
+    return [
+        {
             "id": f"wk-live-{i}",
-            "content": str(t.get("content", ""))[:160],
+            "content": str(turn.get("content", ""))[:160],
             "substrate": "working",
-            "timestamp": t.get("timestamp"),
-        })
-    return items
+            "timestamp": turn.get("timestamp"),
+        }
+        for i, turn in enumerate(turns[-6:])
+    ]
 
 
-async def _load_live_semantic(persona: str) -> list:
-    """Read durable, *extracted* preferences from AgentCore Memory.
+async def _load_live_semantic(persona: str, *, namespace: Optional[str] = None) -> list:
+    """Read extraction under the same actor as the shopper event writer.
 
-    These are the semantic records a ``USER_PREFERENCE`` extraction
-    strategy learns from conversation and writes under
-    ``/pellier/preferences/{customer_id}/`` — learned prose, not the
-    typed onboarding ``Preferences`` blob. We read them with the
-    dedicated ``get_semantic_memories`` method (NOT
-    ``get_user_preferences``, which serves storefront personalization).
-
-    Returns one item per extracted preference string, or [] when the
-    strategy has not produced records yet (SDK absent, extraction still
-    settling, or memory unprovisioned). No fixture data is used.
+    Shopper actors are isolated per authenticated session. Customer onboarding
+    seeds are a different namespace and cannot stand in for learned memory.
     """
-    customer_id = _PERSONA_TO_CUSTOMER_ID.get(persona.lower())
-    if not customer_id:
+    if not namespace:
         return []
-    try:
-        from services.agentcore_memory import AgentCoreMemory
-        memory = AgentCoreMemory()
-        preferences = await memory.get_semantic_memories(customer_id)
-    except Exception as exc:
-        logger.warning("Live semantic read failed for %s: %s", persona, exc)
-        return []
-    if not preferences:
-        return []
-    items = []
-    for idx, pref in enumerate(preferences):
-        text = str(pref).strip()
-        if not text:
-            continue
-        items.append({
-            "id": f"sem-live-{idx}",
-            "content": text[:200],
-            "substrate": "semantic",
-        })
-    return items
+    from services.agentcore_memory import AgentCoreMemory
+    preferences = await AgentCoreMemory(strict=True).get_semantic_memories(namespace)
+    return [
+        {"id": f"sem-live-{i}", "content": str(pref).strip()[:200], "substrate": "semantic"}
+        for i, pref in enumerate(preferences) if str(pref).strip()
+    ]
 
 
 def _live_substrate(
@@ -2093,43 +2093,27 @@ def _live_substrate(
 
 
 @router.get("/memory/{persona}")
-async def get_memory(persona: str):
-    """Return four memory types plus operational history for a persona.
+async def get_memory(
+    persona: str,
+    user: Optional[dict[str, Any]] = Depends(get_current_user),
+):
+    """Read the verified customer's memory; persona selection grants no access."""
+    customer_id = _PERSONA_TO_CUSTOMER_ID.get(persona.lower(), "")
+    principal_sub = authorize_customer_read(user, customer_id)
+    from services.agentcore_identity import AgentCoreIdentityService
 
-    Each source is explicit:
-      working    — AgentCore Memory session turns for the persona's
-                   latest storefront session (resolved from
-                   pellier.tool_audit, read back under anon-{sid} via
-                   the same path as GET /api/agent/session/{id}); live
-                   when that session has turns.
-      semantic   — AgentCore Memory long-term records under
-                   /pellier/preferences/{customer_id}/, extracted by a
-                   USER_PREFERENCE strategy; live when the strategy has
-                   produced records.
-      episodic   — pellier.customer_episodic_seed rows; live when the
-                   DB is reachable and the persona has rows.
-      procedural — checked-in runtime skills plus canonical MCP tool
-                   schemas; these are instructions and contracts.
-      operational— pellier.tool_audit aggregate (calls + average
-                   latency per tool). This is evidence of execution,
-                   not memory.
-
-    Read-only.
-    """
     try:
-        # Real semantic namespace = the USER_PREFERENCE strategy's
-        # custom template resolved for this persona's customer_id
-        # (e.g. /pellier/preferences/CUST-MARCO/). Falls back to the
-        # raw persona for unknown personas so the store string is never
-        # blank.
-        _sem_customer_id = _PERSONA_TO_CUSTOMER_ID.get(persona.lower(), persona)
-        _sem_store = f"/pellier/preferences/{_sem_customer_id}/"
-
+        db = await _live_db()
+        namespace = await AgentCoreIdentityService.latest_shopper_namespace(db, principal_sub)
+        _sem_store = (
+            f"/pellier/preferences/{namespace}/" if namespace
+            else "No authenticated conversation recorded yet"
+        )
         data = {
             "persona": persona,
             "working": _live_substrate(
                 "Working - AgentCore Memory",
-                f"anon-persona-{persona}-{{sid}}",
+                namespace or "No authenticated conversation recorded yet",
                 "No live session turns found yet. Create a Pellier turn for this persona, then reload.",
             ),
             "semantic": _live_substrate(
@@ -2159,11 +2143,11 @@ async def get_memory(persona: str):
             ),
         }
 
-        data["working"]["items"] = await _load_live_working(persona)
+        data["working"]["items"] = await _load_live_working(persona, namespace=namespace)
         if data["working"]["items"]:
             data["working"].pop("caveat", None)
 
-        data["semantic"]["items"] = await _load_live_semantic(persona)
+        data["semantic"]["items"] = await _load_live_semantic(persona, namespace=namespace)
         if data["semantic"]["items"]:
             data["semantic"]["source"] = "live"
             data["semantic"].pop("caveat", None)
