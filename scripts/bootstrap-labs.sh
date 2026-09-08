@@ -420,7 +420,7 @@ fi
 # or a dead chat turn mid-session. Cohere Embed v4 is hard-required because
 # every shopper query is embedded live before the pgvector search (the cache
 # only covers the catalog corpus). The same preflight also resolves the
-# independent Claude Code CLI model for Lab 1.
+# independent Claude Code CLI model for Lab 2.
 log "Preflight: checking Bedrock model access (${AWS_REGION})..."
 if [ -f "$REPO_PATH/scripts/check_model_access.py" ]; then
     if sudo -u "$CODE_EDITOR_USER" bash -c "
@@ -1001,10 +1001,9 @@ log "✅ Status marker created"
 # STEP 16: WORKSHOP FORMAT — Pre-apply everything participants don't build
 # ============================================================================
 #
-# Exercise 1 wires the floor_check tool body in services/agent_tools.py.
-# The later agent step grants that tool to Stock Keeper and observes the live
-# Strands call. Both gaps are installed and verified below before provisioning
-# may report success.
+# Lab 2 wires the floor_check tool body in services/agent_tools.py,
+# grants it to Stock Keeper, and observes the live Strands call. Both gaps are
+# installed and verified below before provisioning may report success.
 #
 # This block copies finished reference files from solutions/ into
 # their runtime locations under pellier/backend/ and pellier/frontend/.

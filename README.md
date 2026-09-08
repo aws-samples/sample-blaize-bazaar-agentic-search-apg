@@ -73,13 +73,16 @@ Use the guide in `build-agentic-ai-powered-search-with-amazon-aurora-and-amazon-
 Your Workshop Studio environment is already provisioned. Open `CodeEditorURL`
 and `PellierURL` from Event outputs, then follow the guide's readiness check.
 
-| Room clock | Participant outcome |
-|---|---|
-| 0–15 | Opening framing, two working tabs, verified starter state |
-| 15–30 | Implement the marked `floor_check` body and verify its Aurora output |
-| 30–45 | Compare four retrieval strategies and defend one decision |
-| 45–55 | Grant the tool to Stock Keeper, replay Marco's request, inspect the audit receipt |
-| 55–60 | Explain the control boundaries and save your edits and evidence |
+| Room clock | Guide section | Participant outcome |
+|---|---|---|
+| 0–10 | Facilitator framing | Understand the PostgreSQL and agent request paths |
+| 10–15 | Set Up Your Environment | Open both tabs and verify the starter gaps |
+| 15–30 | Lab 1: From pgvector to Agentic Retrieval | Run a pgvector SQL query, compare four retrieval paths, inspect filters, and explain your choice |
+| 30–55 | Lab 2: Extend Your Agent with a PostgreSQL Tool | Build and test `floor_check`, grant it to Stock Keeper, then inspect Marco’s answer and audit receipt |
+| 55–60 | Wrap-Up | Explain the design and save your edits and evidence |
+
+The guide's **Explore PostgreSQL and Agent Architecture** reference provides
+commands, recovery steps, and further reading after the required path.
 
 The deployed starter has two intentional gaps: the tool body and its agent
 grant. This `main` checkout is the reference application; provisioning installs

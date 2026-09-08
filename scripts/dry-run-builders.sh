@@ -3,15 +3,14 @@
 # dry-run-builders.sh — end-to-end simulation of the participant path
 # =============================================================================
 # Run this before a 100-person room to catch breakage the health gate can't:
-# it exercises both required exercises plus the required agent wiring step.
+# it exercises retrieval Lab 1 and the complete agent extension in Lab 2.
 #
-#   1. Preconditions  — health gate must be READY
-#   2. Exercise 1    — wire and directly verify floor_check while ungranted
-#   3. Observe       — grant to Stock Keeper and assert the Strands path
-#   4. Exercise 2    — run the exact four-strategy retrieval request
-#   5. Action receipt — query the floor_check evidence row
-#   6. SQL claims     — Beeswax 40/30/30 split (pin run-of-show number) +
-#                       pg_trgm index presence/plan (migration 008 claim)
+#   1. Preconditions — health gate and both starter gaps
+#   2. Lab 1         — pgvector SQL, then the four-path retrieval comparison
+#   3. Lab 2 tool    — wire and directly verify floor_check while ungranted
+#   4. Lab 2 agent   — grant to Stock Keeper and assert the Strands path
+#   5. Lab 2 receipt — query the matching floor_check evidence row
+#   6. SQL claims    — Beeswax warehouse split and pg_trgm index/plan
 #
 # This applies the floor_check solution and agent grant temporarily and creates
 # the same floor_check audit evidence as a participant. It backs both edited
@@ -86,7 +85,7 @@ fi
 
 # Prove the installed CLI can invoke the pinned global Sonnet 4.6 profile with
 # the participant instance role. This catches package, shell, model-access, and
-# IAM drift before participants reach the recommended Lab 1 path.
+# IAM drift before participants reach the recommended Lab 2 path.
 #
 # Model selection is left to ANTHROPIC_MODEL on purpose. Passing `--model sonnet`
 # here would override the pin with the CLI's floating alias, which a current CLI
@@ -116,10 +115,65 @@ else
   exit 1
 fi
 
-# --- 2. Exercise 1: apply and directly verify the tool ----------------------
+# --- 2. Lab 1: PostgreSQL similarity and retrieval comparison --------------
+echo "[2/6] Lab 1 - pgvector similarity in PostgreSQL"
+similarity_sql="$(cat <<'SQL'
+WITH reference AS (
+  SELECT embedding
+  FROM pellier.product_catalog
+  WHERE "productId" = '4'
+)
+SELECT name, price, quantity,
+       embedding <=> (SELECT embedding FROM reference) AS cosine_distance
+FROM pellier.product_catalog
+WHERE embedding IS NOT NULL
+  AND "productId" <> '4'
+  AND NOT (tags ? 'archive')
+ORDER BY embedding <=> (SELECT embedding FROM reference)
+LIMIT 5;
+SQL
+)"
+if similarity_rows="$(_psql "$similarity_sql")" \
+    && [[ "$(printf '%s\n' "$similarity_rows" | wc -l | tr -d ' ')" == "5" ]] \
+    && ! printf '%s\n' "$similarity_rows" | grep -q '|$'; then
+  pass "pgvector SQL returned five neighbors with cosine distances"
+else
+  fail "pgvector SQL did not return five numeric distances; check seed product 4 and embeddings"
+fi
+
+echo "[2/6] Lab 1 - GET /api/agent-trace/search-strategies/compare"
+QUERY='A housewarming gift under $100 that is in stock'
+retrieval=""
+if uv run "${REPO}/scripts/builders_lab.py" --base-url "$BASE" compare \
+    --query "$QUERY" --output /tmp/retrieval-comparison.json \
+    >/tmp/dryrun-retrieval.log 2>/tmp/dryrun-retrieval.err; then
+  retrieval="$(cat /tmp/retrieval-comparison.json)"
+  if printf '%s' "$retrieval" | jq -e '
+      (.strategies | length) == 4
+      and all(.strategies[];
+        (.observedMs | type) == "number"
+        and (.modeledCostPerThousandUsd | type) == "number"
+        and (.products | type) == "array")
+      and (.strategies[-1].extractedFilters | type) == "object"
+      and .strategies[-1].extractedFilters.priceMaxUsd == 100
+      and .strategies[-1].extractedFilters.inStockOnly == true
+      and (.costModel.pricingReviewedOn | type) == "string"
+      and (.costModel.components.rerank.formula | type) == "string"
+      and (.measurementAssumptions.latency | contains("not a percentile"))
+    ' >/dev/null 2>&1; then
+    pass "Four retrieval rows returned with observed latency and modeled cost"
+  else
+    fail "Retrieval comparison response contract is incomplete"
+    info "First 300 chars: ${retrieval:0:300}"
+  fi
+else
+  fail "Lab 1 comparison failed - see /tmp/dryrun-retrieval.err"
+fi
+
+# --- 3. Lab 2: apply and directly verify the tool ----------------------
 # Fill ONLY the floor_check body between the START/END markers in the live
 # agent_tools.py — exactly what the checked-in participant recovery does.
-echo "[2/6] Exercise 1 - wire and directly verify floor_check"
+echo "[3/6] Lab 2 - wire and directly verify floor_check"
 if [[ ! -f "$BODY" ]]; then
   fail "Reference body file missing: $BODY"; exit 1
 fi
@@ -146,11 +200,11 @@ if uv run "${REPO}/scripts/builders_lab.py" \
     >/tmp/dryrun-tool-wired-state.json; then
   pass "Intermediate state is tool shipped / agent ungranted"
 else
-  fail "Exercise 1 did not preserve the independent agent gap"; exit 1
+  fail "Lab 2 tool check did not preserve the independent agent gap"; exit 1
 fi
 
-# --- 3. Grant the tool and observe the Strands path -------------------------
-echo "[3/6] Trace Agent Actions - grant floor_check and invoke Stock Keeper"
+# --- 4. Grant the tool and observe the Strands path -------------------------
+echo "[4/6] Lab 2 agent grant - grant floor_check and invoke Stock Keeper"
 if ! cp "$STOCK_KEEPER" "${STOCK_KEEPER}.dryrun.bak"; then
   fail "Could not back up stock_keeper.py - refusing to edit the agent grant"; exit 1
 fi
@@ -188,36 +242,6 @@ else
 fi
 if echo "$reply" | grep -qi 'floor_check is in stub state'; then
   fail "Stub envelope still present — solution did not take effect"
-fi
-
-# --- 4. Exercise 2 retrieval comparison ------------------------------------
-echo "[4/6] Exercise 2 - GET /api/agent-trace/search-strategies/compare"
-QUERY='A housewarming gift under $100 that is in stock'
-retrieval=""
-if retrieval="$(curl --fail --silent --show-error --max-time 75 \
-    --get --data-urlencode "query=${QUERY}" \
-    "${BASE}/api/agent-trace/search-strategies/compare" 2>/tmp/dryrun-retrieval.err)"; then
-  printf '%s\n' "$retrieval" > /tmp/retrieval-comparison.json
-  if printf '%s' "$retrieval" | jq -e '
-      (.strategies | length) == 4
-      and all(.strategies[];
-        (.observedMs | type) == "number"
-        and (.modeledCostPerThousandUsd | type) == "number"
-        and (.products | type) == "array")
-      and (.strategies[-1].extractedFilters | type) == "object"
-      and .strategies[-1].extractedFilters.priceMaxUsd == 100
-      and .strategies[-1].extractedFilters.inStockOnly == true
-      and (.costModel.pricingReviewedOn | type) == "string"
-      and (.costModel.components.rerank.formula | type) == "string"
-      and (.measurementAssumptions.latency | contains("not a percentile"))
-    ' >/dev/null 2>&1; then
-    pass "Four retrieval rows returned with observed latency and modeled cost"
-  else
-    fail "Retrieval comparison response contract is incomplete"
-    info "First 300 chars: ${retrieval:0:300}"
-  fi
-else
-  fail "Exercise 2 comparison failed - see /tmp/dryrun-retrieval.err"
 fi
 
 # --- 5. Required durable action receipt ------------------------------------

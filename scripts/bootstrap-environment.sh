@@ -146,14 +146,14 @@ if [ "$_node20_ok" = true ]; then
     fi
 
     if command -v npm >/dev/null 2>&1; then
-        # Claude Code CLI (global), for the recommended build lane in Lab 1.
+        # Claude Code CLI (global), for the recommended build lane in Lab 2.
         # It runs entirely against Bedrock via the box's instance
         # role (CLAUDE_CODE_USE_BEDROCK=1 + ANTHROPIC_MODEL are exported in the
         # participant .bashrc by bootstrap-labs), so there is NO per-participant
         # login — the same ambient-credential model the rest of the lab uses.
         # Pin the event-rehearsed release. Updating this version is a deliberate
         # release action followed by a provisioned-environment rehearsal.
-        log "Installing Claude Code CLI ${CLAUDE_CODE_VERSION} globally for Lab 1..."
+        log "Installing Claude Code CLI ${CLAUDE_CODE_VERSION} globally for Lab 2..."
         if npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" >/dev/null 2>&1; then
             # Same /usr/bin symlink defense as tsc above: the CLI runs as the
             # PARTICIPANT user, whose PATH may not include npm's global prefix.

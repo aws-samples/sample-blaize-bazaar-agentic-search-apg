@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.12"
 # ///
-"""Participant-facing client for the two exercises and agent wiring step."""
+"""Participant-facing client for retrieval Lab 1 and agent-extension Lab 2."""
 
 from __future__ import annotations
 
@@ -306,7 +306,7 @@ def compare(args: argparse.Namespace) -> int:
                 "lab's recovery path and flag a facilitator to check model access.",
                 file=sys.stderr,
             )
-        print("Comparison did not satisfy the Lab 2 evidence contract.", file=sys.stderr)
+        print("Comparison did not satisfy the Lab 1 evidence contract.", file=sys.stderr)
         return 1
     return 0
 

@@ -139,9 +139,10 @@ export default function EditorialBrief() {
               </p>
 
               <p className="font-sans text-[15px] leading-7 text-ink-soft max-w-[520px]">
-                In the 60-minute Builders' Session, you implement and verify one
-                inventory tool, compare four retrieval strategies, then grant the
-                tool to Stock Keeper and inspect its Aurora receipt. Follow the lab
+                In the 60-minute Builders' Session, you run pgvector similarity
+                search, compare four retrieval paths, and inspect extracted
+                filters. Then you build and test an inventory tool, grant it to
+                Stock Keeper, and inspect the answer and its Aurora receipt. Follow the lab
                 guide for each proof gate. Use the{' '}
                 <Link to="/pellier-labs" className="text-accent-ink underline underline-offset-4">
                   Live Workbench

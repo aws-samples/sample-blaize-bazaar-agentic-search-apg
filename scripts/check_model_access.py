@@ -107,7 +107,7 @@ MODELS = [
         },
     },
     {
-        # The surface the storefront and the Lab 2 comparison actually use:
+        # The surface the storefront and the Lab 1 comparison actually use:
         # services/rerank.py -> bedrock-runtime.invoke_model (IAM:
         # `bedrock:InvokeModel`). Probing the exact API the application calls
         # is the point — a preflight that green-lights a different action is

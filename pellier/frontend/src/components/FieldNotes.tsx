@@ -52,7 +52,7 @@ const NOTES: readonly Note[] = [
     kicker: 'Field note · No. 03',
     title: 'How an answer earns its proof.',
     body: [
-      'In the Builders’ Session, you first implement floor_check and verify its Aurora result directly. Later, you grant that capability to Stock Keeper and ask Marco’s warehouse question again. The tool body and the agent’s authority are two separate control points.',
+      'In the Builders’ Session, you first run pgvector similarity search and compare retrieval paths. Then you implement floor_check, verify its Aurora result, and grant it to Stock Keeper. Marco’s warehouse question connects the tool call to a grounded answer and its audit record.',
       'An answer alone does not prove the invocation. Match the named tool, caller, arguments, time, and session to its durable Aurora receipt. The Live Workbench helps inspect a turn; reference scorecards and replay fixtures explain the design but do not prove your request ran.',
     ],
     signature: '— Workshop profile note',

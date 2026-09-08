@@ -99,7 +99,7 @@ else
   ok=false
 fi
 
-# 5. Claude Code CLI used by the recommended Lab 1 path
+# 5. Claude Code CLI used by the recommended Lab 2 path
 claude_version="$(claude --version 2>/dev/null || true)"
 if [[ -n "$claude_version" ]]; then
   pass "Claude Code CLI installed (${claude_version})"
