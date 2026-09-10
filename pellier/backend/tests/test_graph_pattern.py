@@ -137,18 +137,6 @@ def test_trace_attributes_assignment_forwards_to_specialists():
     assert adapter._graph.trace_attributes == attrs
 
 
-def test_session_manager_assignment_forwards_to_specialists():
-    """session_manager assignment reaches every specialist so STM
-    persists whichever specialist ran."""
-    adapter, _router, specialists, _g = _patched_adapter()
-
-    sm = MagicMock(name="session_manager")
-    adapter.session_manager = sm
-
-    for spec in specialists.values():
-        assert spec.session_manager is sm
-
-
 def test_add_hook_registers_on_every_specialist():
     """Tool lifecycle hooks need to fire regardless of which specialist
     the router picks, so ``add_hook`` is forwarded to all of them."""

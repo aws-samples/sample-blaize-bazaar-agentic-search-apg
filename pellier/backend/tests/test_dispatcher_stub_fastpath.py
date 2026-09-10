@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from services import agentcore_memory
 from services import chat as chat_module
 from services.chat import EnhancedChatService
 from skills import SkillRouter
@@ -18,12 +17,6 @@ async def test_inventory_stub_returns_before_skill_router_or_specialist(
     def unexpected_call(*_args, **_kwargs):
         raise AssertionError("exercise-state dispatcher invoked Bedrock-backed work")
 
-    memory_setup_calls = []
-
-    def record_memory_setup(*args, **kwargs):
-        memory_setup_calls.append((args, kwargs))
-        return None
-
     monkeypatch.setattr(SkillRouter, "route", unexpected_call)
     monkeypatch.setattr(
         chat_module,
@@ -31,11 +24,6 @@ async def test_inventory_stub_returns_before_skill_router_or_specialist(
         unexpected_call,
     )
     monkeypatch.setattr(settings, "AGENTCORE_MEMORY_ID", "memory-test")
-    monkeypatch.setattr(
-        agentcore_memory,
-        "create_agentcore_session_manager",
-        record_memory_setup,
-    )
 
     service = EnhancedChatService(db_service=object())
     events = [
@@ -52,7 +40,6 @@ async def test_inventory_stub_returns_before_skill_router_or_specialist(
         )
     ]
 
-    assert memory_setup_calls == []
     assert not any(event["type"] == "skill_routing" for event in events)
     assert not any(
         event.get("source") == "Amazon Bedrock"

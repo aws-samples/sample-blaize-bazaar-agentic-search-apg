@@ -41,10 +41,9 @@ unset it falls back to a process-local ``dict`` so
 end-to-end offline — the same fail-soft pattern used by the runtime
 bridge in ``agentcore_runtime.py``.
 
-The legacy helper functions ``create_agentcore_session_manager``,
-``get_user_memories``, and ``search_episodic_memories`` are retained
-outside the reference class because ``app.py`` and ``services/chat.py``
-import them directly for older memory demo endpoints.
+The legacy helper functions ``get_user_memories`` and
+``search_episodic_memories`` are retained outside the reference class
+because ``app.py`` imports them directly for older memory demo endpoints.
 """
 from __future__ import annotations
 
@@ -768,59 +767,10 @@ class AgentCoreMemory:
 # ---------------------------------------------------------------------------
 #
 # These are support helpers outside the ``AgentCoreMemory`` class.
-# ``app.py`` and ``services/chat.py`` import them directly for the older
-# AgentCore Memory demo endpoints (``/api/user/memories``, episodic
-# memory panel). They stay out of the reference block so
-# ``AgentCoreMemory`` can evolve without breaking that demo surface.
-
-
-def create_agentcore_session_manager(
-    session_id: str,
-    user_id: str = "anonymous",
-):
-    """Create a Strands-integrated AgentCore Memory session manager.
-
-    Returns ``None`` when the SDK or ``AGENTCORE_MEMORY_ID`` is not
-    configured so call sites can treat it as optional.
-    """
-    if not settings.AGENTCORE_MEMORY_ID:
-        logger.info("AGENTCORE_MEMORY_ID not set — memory disabled")
-        return None
-
-    try:
-        import boto3
-        from bedrock_agentcore.memory.integrations.strands.config import AgentCoreMemoryConfig
-        from bedrock_agentcore.memory.integrations.strands.session_manager import (
-            AgentCoreMemorySessionManager,
-        )
-        region = settings.aws_region_resolved
-
-        config = AgentCoreMemoryConfig(
-            memory_id=settings.AGENTCORE_MEMORY_ID,
-            session_id=session_id,
-            actor_id=user_id,
-            batch_size=5,
-        )
-
-        session_manager = AgentCoreMemorySessionManager(
-            config,
-            region_name=region,
-            boto_session=boto3.Session(region_name=region),
-        )
-
-        logger.info(
-            "✅ AgentCore Memory session created (memory_id=%s, user=%s)",
-            settings.AGENTCORE_MEMORY_ID,
-            user_id,
-        )
-        return session_manager
-
-    except ImportError:
-        logger.warning("bedrock-agentcore package not installed — pip install bedrock-agentcore")
-        return None
-    except Exception as e:
-        logger.warning("AgentCore Memory setup failed: %s", e)
-        return None
+# ``app.py`` imports them directly for the older AgentCore Memory demo
+# endpoints (``/api/user/memories``, episodic memory panel). They stay out
+# of the reference block so ``AgentCoreMemory`` can evolve without breaking
+# that demo surface.
 
 
 def get_user_memories(user_id: str) -> List[Dict[str, Any]]:

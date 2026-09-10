@@ -687,30 +687,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _safe_register_hooks(session_manager, agent) -> None:
-    """Register session manager hooks on an agent, handling the API
-    mismatch between ``bedrock-agentcore`` (calls ``add_callback``)
-    and ``strands-agents`` 1.36+ (uses ``add_hook``).
-
-    Falls back gracefully — STM still works via the ``session_manager``
-    property even if hook registration fails; the hooks are an
-    optimization for batch flushing, not a hard requirement.
-    """
-    try:
-        session_manager.register_hooks(agent)
-    except AttributeError as exc:
-        # bedrock-agentcore calls registry.add_callback() but Strands
-        # 1.36+ renamed it to add_hook(). The session_manager property
-        # is sufficient for basic STM — hooks are for batch flush.
-        logger.debug(
-            "session_manager.register_hooks failed (API mismatch): %s — "
-            "STM still works via session_manager property",
-            exc,
-        )
-    except Exception as exc:
-        logger.warning("session_manager.register_hooks failed: %s", exc)
-
-
 def _extract_tool_result_text(raw: Any) -> str:
     """Extract the tool's text payload from a Strands AfterToolCall result.
 
@@ -1032,41 +1008,6 @@ class EnhancedChatService:
             # Import orchestrator
             from agents.orchestrator import create_orchestrator, create_guarded_orchestrator
 
-            # Create session manager if session_id provided
-            session_manager = None
-            if session_id:
-                # ``settings`` is imported function-locally in this class's
-                # other methods (e.g. chat_stream); mirror that here so the
-                # non-streaming path doesn't NameError on the first session.
-                from config import settings
-                # Keep the Strands integration on the exact same isolated
-                # namespace as the STM writer and read-back route. Giving
-                # the manager a shared principal actor plus a raw session id
-                # created a second record shape that Observatory could not
-                # replay reliably.
-                if user and settings.AGENTCORE_MEMORY_ID:
-                    from services.agentcore_memory import create_agentcore_session_manager
-                    from services.agentcore_identity import AgentCoreIdentityService
-                    principal_sub = user.get("sub") if isinstance(user, dict) else None
-                    memory_namespace = AgentCoreIdentityService.build_namespace(
-                        principal_sub,
-                        session_id,
-                    )
-                    session_manager = create_agentcore_session_manager(
-                        session_id=memory_namespace,
-                        user_id=memory_namespace,
-                    )
-                    if session_manager:
-                        logger.info(
-                            "🧠 AgentCore Memory session created for namespace=%s",
-                            memory_namespace,
-                        )
-
-                # No fallback — AgentCore Memory is the only session manager.
-                # If AGENTCORE_MEMORY_ID is not set, the agent runs without session memory.
-                if not session_manager:
-                    logger.info(f"ℹ️ No session manager — agent runs stateless (set AGENTCORE_MEMORY_ID to enable)")
-
             # Create orchestrator — use guarded variant when guardrails enabled
             logger.info(f"🎯 Creating agent orchestrator (guardrails={'ON' if guardrails_enabled else 'OFF'})...")
             if guardrails_enabled:
@@ -1100,11 +1041,6 @@ class EnhancedChatService:
             
             logger.info(f"🔍 Orchestrator created with OTEL tracing")
             
-            # Add session manager if provided
-            if session_manager:
-                orchestrator.session_manager = session_manager
-                _safe_register_hooks(session_manager, orchestrator)
-
             # Two-phase Aurora tool_audit hooks. This path is reachable via
             # POST /api/chat and the Observatory /api/observatory/query
             # panel — neither may execute a tool off-ledger. Same shared
@@ -2010,7 +1946,6 @@ CURRENT REQUEST: {message}"""
         # Session setup can read or create remote AgentCore Memory records.
         # Defer it until after deterministic exercise-state detection below:
         # an unbuilt specialist has no agent turn whose context needs loading.
-        session_manager = None
 
         # Agent construction — Pattern I (Agents-as-Tools) builds the
         # orchestrator here. Pattern III (Dispatcher) defers construction
@@ -2088,9 +2023,6 @@ CURRENT REQUEST: {message}"""
 
         if orchestrator is not None:
             orchestrator.trace_attributes = trace_attributes
-            if session_manager:
-                orchestrator.session_manager = session_manager
-                _safe_register_hooks(session_manager, orchestrator)
 
         # Build conversation context
         conversation_context = ""
@@ -2259,51 +2191,6 @@ CURRENT REQUEST: {message}"""
         logger.info(f"🎯 Intent: {intent} → {intent_hint}")
         from services.response_mode import build_intent_signal
         yield build_intent_signal(intent, response_mode)
-
-        if session_id:
-            from config import settings
-
-            if user and settings.AGENTCORE_MEMORY_ID:
-                try:
-                    from services.agentcore_memory import (
-                        create_agentcore_session_manager,
-                    )
-
-                    # The Strands manager uses an actor/session pair, while
-                    # the shopper STM writer and Observatory reader use one
-                    # immutable namespace for both. Keep those paths
-                    # identical so a fresh persona session cannot retrieve
-                    # another session's working history.
-                    from services.agentcore_identity import AgentCoreIdentityService
-
-                    memory_namespace = AgentCoreIdentityService.build_namespace(
-                        turn_identity.principal_sub,
-                        session_id,
-                    )
-                    session_manager = create_agentcore_session_manager(
-                        session_id=memory_namespace,
-                        user_id=memory_namespace,
-                    )
-                    if session_manager:
-                        logger.info(
-                            "🧠 AgentCore Memory (stream) for namespace=%s",
-                            memory_namespace,
-                        )
-                except Exception as e:
-                    logger.warning("AgentCore Memory setup failed: %s", e)
-
-            if not session_manager:
-                logger.info(
-                    "ℹ️ No session manager for streaming — agent runs stateless"
-                )
-
-        # Agents-as-Tools constructs its orchestrator before persona and intent
-        # context are loaded. Attach the deferred session manager here; graph
-        # and dispatcher specialists are constructed later and keep their
-        # existing attachment points.
-        if orchestrator is not None and session_manager:
-            orchestrator.session_manager = session_manager
-            _safe_register_hooks(session_manager, orchestrator)
 
         # --- Skill router ---------------------------------------------------
         # One LLM call to Sonnet 4.6 decides which skills to inject into the
@@ -2589,7 +2476,7 @@ CURRENT REQUEST: {message}"""
         # factories inside the adapter pick them up at construction
         # time. The adapter looks like an ``Agent`` to the pipeline:
         # callable, exposes ``callback_handler`` / ``add_hook`` /
-        # ``trace_attributes`` / ``session_manager``. A real
+        # ``trace_attributes``. A real
         # Strands ``Graph`` with a Sonnet router + 5 specialist nodes
         # runs under the hood.
         if pattern == "graph":
@@ -2597,13 +2484,6 @@ CURRENT REQUEST: {message}"""
                 from agents.graph_pattern import build_graph_orchestrator
                 orchestrator = build_graph_orchestrator()
                 orchestrator.trace_attributes = trace_attributes
-                if session_manager:
-                    orchestrator.session_manager = session_manager
-                    # GraphAdapter forwards session_manager to its
-                    # specialists via __setattr__; the wrapper call
-                    # below registers hooks on each specialist.
-                    for specialist in orchestrator._specialists.values():
-                        _safe_register_hooks(session_manager, specialist)
                 _attach_streaming_and_hooks(orchestrator)
                 logger.info("🔀 Graph | router + 5 specialists via GraphBuilder")
             except Exception as exc:
@@ -2648,9 +2528,6 @@ CURRENT REQUEST: {message}"""
                 allow_handoff,
             )
             orchestrator.trace_attributes = trace_attributes
-            if session_manager:
-                orchestrator.session_manager = session_manager
-                _safe_register_hooks(session_manager, orchestrator)
             _attach_streaming_and_hooks(orchestrator)
             specialist_name = self._tool_to_agent_name(intent_hint)
             logger.info(

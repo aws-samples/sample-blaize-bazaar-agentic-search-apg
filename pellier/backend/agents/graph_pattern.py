@@ -97,7 +97,6 @@ class _UnavailableSpecialistNode:
         self.response = response
         self.callback_handler: Optional[Callable[..., Any]] = None
         self.trace_attributes: Dict[str, Any] = {}
-        self.session_manager: Any = None
 
     def add_hook(self, _hook: Callable[..., Any]) -> None:
         return None
@@ -153,9 +152,8 @@ class GraphAgentAdapter:
     * ``add_hook(callback)`` — tool lifecycle hooks. Forwarded to every
       specialist so ``_tool_start`` / ``_tool_done`` SSE events fire for
       whichever specialist ended up running.
-    * ``trace_attributes`` + ``session_manager`` — applied to every
-      specialist so OTEL spans and session persistence match the rest
-      of the pipeline.
+    * ``trace_attributes`` — applied to every specialist so OTEL spans
+      match the rest of the pipeline.
     """
 
     def __init__(self) -> None:
@@ -190,12 +188,11 @@ class GraphAgentAdapter:
             "support": build_support_agent(),
         }
 
-        # Expose trace_attributes / session_manager as plain dicts —
-        # the pipeline assigns to these directly. Assignment is captured
-        # in __setattr__ and forwarded to each specialist so every
-        # execution path inherits the same trace and session wiring.
+        # Expose trace_attributes as a plain dict — the pipeline assigns
+        # to it directly. Assignment is captured in __setattr__ and
+        # forwarded to each specialist so every execution path inherits
+        # the same trace wiring.
         self.trace_attributes: Dict[str, Any] = {}
-        self.session_manager: Any = None
 
         # Route picked during the most recent __call__, exposed for
         # telemetry panels that want to label which specialist ran.
@@ -224,7 +221,7 @@ class GraphAgentAdapter:
         specialists = self.__dict__.get("_specialists")
         if not specialists:
             return
-        if name in ("callback_handler", "trace_attributes", "session_manager"):
+        if name in ("callback_handler", "trace_attributes"):
             for agent in specialists.values():
                 try:
                     setattr(agent, name, value)
