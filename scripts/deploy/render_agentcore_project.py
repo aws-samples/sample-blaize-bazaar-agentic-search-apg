@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from gateway_tool_schemas import (
+    OWNER_SCOPED_GATEWAY_TOOLS,
     TOOL_SCHEMAS,
     WORKSHOP_DEFERRED_TOOLS,
     schema_for,
@@ -259,7 +260,7 @@ def baseline_policies(
             "enforcementMode": "ACTIVE",
         },
     ]
-    for tool in ("get_customer_preferences", "get_audit_trail", "get_ticket_history"):
+    for tool in sorted(OWNER_SCOPED_GATEWAY_TOOLS):
         target = next(
             (name for name, tools in published.items() if tool in tools), None
         )

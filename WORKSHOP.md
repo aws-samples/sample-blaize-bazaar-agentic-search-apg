@@ -425,6 +425,14 @@ staff-only**: the operator desk executes an approved credit through the Gateway
 with the operator's own token, its only permit requires the staff scope claim,
 and no shopper-facing specialist may bind it.
 
+A third count is the one that surprises people, so say it before someone finds
+it: **published is not visible**. Gateway evaluates Cedar on tool discovery, so
+an MCP listing returns only the tools that caller could be permitted to invoke.
+Measured live on 2026-09-10: a shopper token saw 14 of 15, missing
+`issue_credit`; a staff token with no customer mapping saw 13, gaining
+`issue_credit` and losing the two owner-scoped reads. The published catalogue
+is one number, and what a given token can discover is another.
+
 Two other Strands orchestration patterns ship in the repository, agents-as-tools
 and a `GraphBuilder` graph, as reference implementations. They are not on the
 participant path and should not be counted as workflows the room runs.
@@ -435,10 +443,14 @@ Every lab follows the same five-beat rhythm, and the beats are named on the
 page so nobody has to infer where they are:
 
 **Predict** what the system will do, and say it out loud before running
-anything. **Change** exactly one bounded thing. **Run** the named person's
+anything. Thirty seconds, not a discussion. **Change** exactly one bounded
+thing; each lab is two bounded edits and no more. **Run** the named person's
 scenario. **Prove** the result from a durable row, not from the answer text.
-**Explain** which layer supplied the fact, so the pattern travels off this
-box.
+**Explain** in one sentence which layer supplied the fact, so the pattern
+travels off this box.
+
+Predict and Explain are deliberately short. A table lead who lets either run
+long is spending Prove's minutes, and Prove is the beat that cannot be cut.
 
 Predict is not a warm-up. A participant who has committed to an expected
 outcome learns something from being wrong; one who runs first and reads the

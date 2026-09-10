@@ -35,7 +35,12 @@ DEPLOY_DIR = Path(__file__).resolve().parent / "deploy"
 if str(DEPLOY_DIR) not in sys.path:
     sys.path.insert(0, str(DEPLOY_DIR))
 
-from gateway_tool_schemas import TOOL_SCHEMAS, schema_for  # noqa: E402
+from gateway_tool_schemas import (  # noqa: E402
+    STAFF_ONLY_GATEWAY_TOOLS,
+    TOOL_SCHEMAS,
+    discoverable_tools_for_claims,
+    schema_for,
+)
 from render_agentcore_project import (  # noqa: E402
     DEPLOYMENT_SUFFIX,
     AGENTCORE_CLI,
@@ -1107,12 +1112,38 @@ def _verify_agentcore_control_plane_audit(
     )
 
 
+def _unverified_token_claims(access_token: str) -> dict[str, Any]:
+    """Read a token's payload without verifying it.
+
+    The Gateway verifies this token; here it is only being asked what claims it
+    carries, so the expected discovery set can be shaped like the policy that
+    filters it. Nothing security-relevant is decided from this.
+    """
+    try:
+        payload = access_token.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        return json.loads(base64.urlsafe_b64decode(payload).decode("utf-8"))
+    except Exception:  # pragma: no cover - a malformed token fails the call below
+        return {}
+
+
 def _discover_live_gateway_tools(
     *,
     deploy_dir: Path,
     gateway_url: str,
     access_token: str,
 ) -> dict[str, Any]:
+    """Assert the Gateway publishes what this caller is allowed to discover.
+
+    Gateway evaluates Cedar on MCP discovery, so the listing is per identity, not
+    per deployment. Comparing it against the whole published catalogue reported a
+    working staff-only boundary as a failed deploy (live, 2026-09-10): a shopper
+    token cannot see `issue_credit` and never will.
+
+    A shopper's listing therefore carries a second assertion worth more than the
+    count: the staff-only tool is absent, proved against the live Gateway rather
+    than against the policy text that is supposed to cause it.
+    """
     deploy_path = str(deploy_dir)
     if deploy_path not in sys.path:
         sys.path.insert(0, deploy_path)
@@ -1121,20 +1152,45 @@ def _discover_live_gateway_tools(
     tools = discover_gateway_tools(gateway_url, access_token)
     full_names = sorted(str(tool.name) for tool in tools)
     canonical_names = {name.rsplit("__", 1)[-1] for name in full_names}
-    expected = {
+
+    claims = _unverified_token_claims(access_token)
+    has_staff_scope = bool(str(claims.get("custom:staff_scope") or "").strip())
+    has_customer_claim = bool(str(claims.get("custom:customer_id") or "").strip())
+    expected = set(
+        discoverable_tools_for_claims(
+            has_staff_scope=has_staff_scope,
+            has_customer_claim=has_customer_claim,
+        )
+    )
+    published = {
         tool["name"]
         for surface in TOOL_SCHEMAS
         for tool in schema_for(surface, workshop=True)
     }
     if len(tools) != len(expected) or canonical_names != expected:
         raise RuntimeError(
-            "Live Gateway discovery mismatch: "
-            f"expected {sorted(expected)}, observed {sorted(canonical_names)}"
+            "Live Gateway discovery mismatch for a caller with "
+            f"staff_scope={has_staff_scope} customer_claim={has_customer_claim}: "
+            f"expected {sorted(expected)}, observed {sorted(canonical_names)} "
+            f"(published catalogue is {sorted(published)})"
+        )
+    leaked = sorted(canonical_names & STAFF_ONLY_GATEWAY_TOOLS) if not has_staff_scope else []
+    if leaked:
+        raise RuntimeError(
+            f"Staff-only tools are discoverable by a non-staff token: {leaked}"
         )
     return {
         "count": len(tools),
         "canonical_names": sorted(canonical_names),
         "prefixed_names": full_names,
+        "published_count": len(published),
+        "caller_claims": {
+            "staff_scope": has_staff_scope,
+            "customer_id": has_customer_claim,
+        },
+        "staff_only_hidden_from_caller": sorted(
+            STAFF_ONLY_GATEWAY_TOOLS - canonical_names
+        ),
     }
 
 

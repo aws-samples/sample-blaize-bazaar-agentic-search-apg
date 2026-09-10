@@ -380,13 +380,48 @@ for _target in TOOL_SCHEMAS.values():
 #
 # `get_ticket_history` is a customer-scoped read the support specialist needs
 # for Theo's return. Lab 3b binds its `customer_id` to the authenticated
-# caller, so the read cannot cross customers. `issue_credit` stays deferred:
-# it moves money and belongs to the operator review desk, not to any
+# caller, so the read cannot cross customers. `restock_inventory` stays
+# deferred: it moves stock and belongs to the operator desk, not to any
 # shopper-facing specialist.
 WORKSHOP_DEFERRED_TOOLS: frozenset[str] = frozenset({
     "restock_inventory",
 })
 # === WORKSHOP · Gateway catalogue · published tools: END ===
+
+
+# Publication is not visibility. AgentCore Gateway evaluates Cedar on MCP tool
+# discovery, so `list_tools` returns the subset the calling token could actually be
+# permitted to invoke, never the whole published catalogue. Live on 2026-09-10: a
+# shopper token saw 14 of 15 published tools (no `issue_credit`), and a staff token
+# with no customer mapping saw 13 (it gained `issue_credit` and lost the two
+# owner-scoped reads).
+#
+# These two sets name why a tool can be missing from one caller's listing. They are
+# claim shapes, not a second catalogue: every name here is published.
+STAFF_ONLY_GATEWAY_TOOLS: frozenset[str] = frozenset({"issue_credit"})
+OWNER_SCOPED_GATEWAY_TOOLS: frozenset[str] = frozenset({
+    "get_customer_preferences",
+    "get_audit_trail",
+    "get_ticket_history",
+})
+
+
+def discoverable_tools_for_claims(
+    *, has_staff_scope: bool, has_customer_claim: bool
+) -> frozenset[str]:
+    """Return the published tools a token carrying these claims can discover.
+
+    A permit whose condition this token could satisfy keeps its tool visible; a
+    permit that names a claim the token does not carry removes it. Comparing a
+    live listing against the full published set instead of this one reports a
+    working policy boundary as a deployment failure.
+    """
+    visible = set(workshop_published_tools())
+    if not has_staff_scope:
+        visible -= STAFF_ONLY_GATEWAY_TOOLS
+    if not has_customer_claim:
+        visible -= OWNER_SCOPED_GATEWAY_TOOLS
+    return frozenset(visible)
 
 
 def canonical_tool_names() -> frozenset[str]:
