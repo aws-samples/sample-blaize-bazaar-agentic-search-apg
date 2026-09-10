@@ -2338,19 +2338,37 @@ def _micro_eval_best_pool(variants: List[Dict[str, Any]]) -> Optional[int]:
 
 
 def _micro_eval_generalizes(
-    tuning: List[Dict[str, Any]], held_out: List[Dict[str, Any]]
+    tuning: List[Dict[str, Any]], held_out_cases: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """Whether the pool size that wins on the tuning labels also wins held out.
 
     A knob chosen on the labels a participant authored is a hypothesis; the
-    held-out labels are the test. ``agree`` is the only verdict offered, and it
-    is a comparison of two winners, not a claim that either set is large.
+    held-out labelled cases are the test. Each pool's held-out score is the mean
+    precision, MRR and coverage over those cases. ``agree`` is the only verdict
+    offered: a comparison of two winners, not a claim that either set is large.
     """
     tuning_best = _micro_eval_best_pool(tuning)
-    held_out_best = _micro_eval_best_pool(held_out)
+    pooled: Dict[int, Dict[str, List[float]]] = {}
+    for case in held_out_cases:
+        for variant in case.get("variants", []):
+            bucket = pooled.setdefault(
+                int(variant["pool_k"]),
+                {"context_precision": [], "mrr": [], "candidate_coverage": []},
+            )
+            for key in bucket:
+                bucket[key].append(float(variant.get(key) or 0.0))
+    held_out_means = [
+        {
+            "pool_k": pool_k,
+            **{key: (sum(values) / len(values) if values else 0.0) for key, values in metrics.items()},
+        }
+        for pool_k, metrics in pooled.items()
+    ]
+    held_out_best = _micro_eval_best_pool(held_out_means)
     return {
         "tuning_best_pool_k": tuning_best,
         "held_out_best_pool_k": held_out_best,
+        "held_out_means": sorted(held_out_means, key=lambda m: -m["pool_k"]),
         "agree": tuning_best is not None and tuning_best == held_out_best,
     }
 
@@ -2402,8 +2420,11 @@ async def micro_eval_search_strategies(
         CANONICAL_ANNA_QUERY,
         CANONICAL_HELD_OUT_GOLDEN_IDS,
         CANONICAL_HELD_OUT_QUERY,
+        HELD_OUT_CASES,
+        HELD_OUT_KIND_LABELS,
         execute_search_plan,
         micro_eval_variant,
+        score_held_out_case,
     )
     from services.rerank import get_rerank_service
     from services.search_plan import build_plan
@@ -2490,45 +2511,50 @@ async def micro_eval_search_strategies(
         variant["rerank_cache"] = dict(rerank_cache_state)
         variants.append(variant)
 
-    # The held-out check: the same knob, scored on labels the participant did
-    # not author, for a query the tuning labels never described. One pass per
-    # pool size; latency was already sampled above and would only repeat.
-    held_out_query = CANONICAL_HELD_OUT_QUERY
-    held_out_embedding = await asyncio.to_thread(
-        embedding_service.embed_query, held_out_query
-    )
-    held_out_extracted = await asyncio.to_thread(extractor.extract, held_out_query)
-    held_out_plan = build_plan(held_out_query, held_out_extracted, top_k=limit)
-    held_out_variants: List[Dict[str, Any]] = []
-    for pool_size in pool_sizes:
-        scored, first_ms = await _pass_for(
-            held_out_query, held_out_plan, held_out_embedding, pool_size
-        )
-        held_out_variants.append(
-            micro_eval_variant(
-                scored,
-                latencies_ms=[first_ms],
-                golden_ids=CANONICAL_HELD_OUT_GOLDEN_IDS,
-                limit=limit,
-            )
-        )
+    # The held-out checks: the same knob on requests the participant's labels
+    # never described. One pass per pool size and case; latency was already
+    # sampled above and would only repeat.
+    held_out_cases: List[Dict[str, Any]] = []
+    for case in HELD_OUT_CASES:
+        case_query = str(case["query"])
+        case_embedding = await asyncio.to_thread(embedding_service.embed_query, case_query)
+        case_extracted = await asyncio.to_thread(extractor.extract, case_query)
+        case_plan = build_plan(case_query, case_extracted, top_k=limit)
+        results: List[Dict[str, Any]] = []
+        for pool_size in pool_sizes:
+            scored, _ms = await _pass_for(case_query, case_plan, case_embedding, pool_size)
+            results.append(score_held_out_case(case, scored, limit=limit))
+        held_out_cases.append({
+            "id": case["id"],
+            "kind": case["kind"],
+            "query": case_query,
+            "rule": case.get("rule", ""),
+            "golden_set_size": len(case.get("golden_ids") or ()),
+            "variants": results,
+        })
+    slice_case = next(c for c in held_out_cases if c["id"] == "slice")
 
     return {
         "query": q,
         "limit": limit,
         "repetitions": passes,
-        # Every quality metric below is a ratio against the labeled set. When
-        # Lab 2b has not been built it is empty, and coverage, precision and
-        # MRR are all 0.0 for want of a denominator rather than because
+        # The frozen labels are the reference judgments. Coverage divides by the
+        # label count, precision by the returned count, and MRR is a rank. When
+        # Lab 2b has not been built the label set is empty, so coverage,
+        # precision and MRR read 0.0 for want of labels rather than because
         # retrieval failed. The surface needs to be able to tell those apart.
         "golden_set_size": len(CANONICAL_ANNA_GOLDEN_IDS),
         "variants": variants,
         "held_out": {
-            "query": held_out_query,
+            "query": CANONICAL_HELD_OUT_QUERY,
             "golden_set_size": len(CANONICAL_HELD_OUT_GOLDEN_IDS),
-            "variants": held_out_variants,
+            "variants": slice_case["variants"],
         },
-        "generalizes": _micro_eval_generalizes(variants, held_out_variants),
+        "held_out_cases": held_out_cases,
+        "generalizes": _micro_eval_generalizes(
+            variants,
+            [c for c in held_out_cases if c["kind"] == HELD_OUT_KIND_LABELS],
+        ),
     }
 
 

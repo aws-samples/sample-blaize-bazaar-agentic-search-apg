@@ -133,6 +133,7 @@ def test_micro_eval_envelope_matches_the_frontend_contract(stub_services: _Reran
         # The same knob scored on provided labels for a second query, and the
         # verdict on whether the tuning winner holds there.
         "held_out",
+        "held_out_cases",
         "generalizes",
     }
     assert body["golden_set_size"] == len(retrieval_module.CANONICAL_ANNA_GOLDEN_IDS)
@@ -227,7 +228,7 @@ def test_repetitions_default_to_three_bedrock_rerank_calls_per_variant(
     body = asyncio.run(app_module.micro_eval_search_strategies(pool_k=[20]))
 
     assert body["repetitions"] == 3
-    assert stub_services.calls == 3 + 1  # one held-out pass per pool size
+    assert stub_services.calls == 3 + 5  # one held-out pass per pool size per case (5 cases)
     assert len(body["variants"]) == 1
 
 
@@ -239,7 +240,7 @@ def test_repetitions_is_a_caller_parameter_reported_as_the_count_actually_run(
     )
 
     assert body["repetitions"] == 1
-    assert stub_services.calls == 1 + 1  # one held-out pass per pool size
+    assert stub_services.calls == 1 + 5  # one held-out pass per pool size per case (5 cases)
     # One observation still yields both percentiles, and they agree.
     variant = _variant(body, 20)
     assert variant["latency_ms_p95"] == variant["latency_ms_p50"]
@@ -253,7 +254,7 @@ def test_repetitions_above_the_ceiling_are_clamped_to_five(
     )
 
     assert body["repetitions"] == retrieval_module.MICRO_EVAL_REPETITIONS_MAX == 5
-    assert stub_services.calls == 5 + 1  # one held-out pass per pool size
+    assert stub_services.calls == 5 + 5  # one held-out pass per pool size per case (5 cases)
 
 
 def test_deterministic_metrics_are_scored_once_and_do_not_drift_with_repetitions(
@@ -291,7 +292,7 @@ def test_two_pool_sizes_that_clamp_to_the_same_pool_run_as_one_variant(
     )
 
     assert [variant["pool_k"] for variant in body["variants"]] == [3]
-    assert stub_services.calls == 1 + 1  # one held-out pass per pool size
+    assert stub_services.calls == 1 + 5  # one held-out pass per pool size per case (5 cases)
 
 
 def test_a_pool_size_over_the_reranker_cap_is_reported_at_the_resolved_size(
@@ -363,7 +364,7 @@ def test_four_distinct_pool_sizes_are_the_most_one_request_may_compare(
 
     assert retrieval_module.MICRO_EVAL_POOL_SIZES_MAX == 4
     assert [variant["pool_k"] for variant in body["variants"]] == [3, 4, 5, 6]
-    assert stub_services.calls == 20 + 4  # one held-out pass per pool size
+    assert stub_services.calls == 20 + 20  # one held-out pass per pool size per case (4 pools x 5 cases)
 
 
 def test_more_distinct_pool_sizes_than_the_ceiling_are_refused_by_name(
@@ -394,7 +395,7 @@ def test_requests_that_clamp_onto_each_other_count_once_against_the_ceiling(
     )
 
     assert [variant["pool_k"] for variant in body["variants"]] == [3, 4, 5, 6]
-    assert stub_services.calls == 4 + 4  # one held-out pass per pool size
+    assert stub_services.calls == 4 + 20  # one held-out pass per pool size per case (4 pools x 5 cases)
 
 
 def test_micro_eval_scores_the_same_knob_on_the_held_out_labels(
@@ -410,32 +411,96 @@ def test_micro_eval_scores_the_same_knob_on_the_held_out_labels(
         assert 0.0 <= variant["context_precision"] <= 1.0
         assert 0.0 <= variant["candidate_coverage"] <= 1.0
     verdict = body["generalizes"]
-    assert set(verdict) == {"tuning_best_pool_k", "held_out_best_pool_k", "agree"}
+    assert set(verdict) == {"tuning_best_pool_k", "held_out_best_pool_k", "held_out_means", "agree"}
     assert verdict["agree"] == (verdict["tuning_best_pool_k"] == verdict["held_out_best_pool_k"])
+    cases = body["held_out_cases"]
+    assert [c["id"] for c in cases] == ["slice", "exclusion", "tight_budget", "unavailable", "no_result"]
+    for case in cases:
+        assert [v["pool_k"] for v in case["variants"]] == [v["pool_k"] for v in body["variants"]]
+        assert all("passed" in v for v in case["variants"])
+    labelled = [c for c in cases if c["kind"] == "labels"]
+    assert all(c["golden_set_size"] > 0 for c in labelled)
+    unavailable = next(c for c in cases if c["id"] == "unavailable")
+    assert all("leaked" in v for v in unavailable["variants"])
 
 
-def test_the_held_out_labels_are_provided_and_disjoint_from_the_tuning_set() -> None:
-    """The check set must not be the tuning set with a different name."""
+def _reference_tuning_ids() -> set[str]:
+    """The labels Lab 2b arrives at, read from the reference solution.
+
+    The starter ships the tuning set empty, so a disjointness check against the
+    live constant is vacuous; the solution's ids are what the held-out slice
+    must not repeat.
+    """
+    import re
+
+    source = (
+        Path(__file__).resolve().parents[3]
+        / "solutions" / "the-quiet-search" / "eval" / "planned_hybrid_retrieval_solution.py"
+    ).read_text()
+    match = re.search(r"CANONICAL_ANNA_GOLDEN_IDS[^=]*=\s*\(([^)]*)\)", source)
+    assert match, "the reference solution pins no golden ids"
+    return set(re.findall(r'"(\d+)"', match.group(1)))
+
+
+def test_the_held_out_slice_is_provided_and_disjoint_from_the_reference_labels() -> None:
+    """The product slice must not be the tuning set with a different name."""
     held_out = retrieval_module.CANONICAL_HELD_OUT_GOLDEN_IDS
-    assert held_out, "the held-out set ships labelled; it is not a participant build"
+    assert held_out, "the held-out slice ships labelled; it is not a participant build"
     assert all(pid.isdigit() for pid in held_out)
-    assert not set(held_out) & set(retrieval_module.CANONICAL_ANNA_GOLDEN_IDS)
+    reference = _reference_tuning_ids()
+    assert reference, "the reference solution's tuning set is empty"
+    assert not set(held_out) & reference
     assert retrieval_module.CANONICAL_HELD_OUT_QUERY != retrieval_module.CANONICAL_ANNA_QUERY
 
 
-def test_the_held_out_definition_matches_the_pinned_ids_on_a_live_catalog() -> None:
-    """The pinned ids are the rows the documented definition selects, on the real catalog."""
+def test_the_held_out_query_cases_cover_the_four_agreed_failure_modes() -> None:
+    cases = {c["id"]: c for c in retrieval_module.HELD_OUT_CASES}
+    assert set(cases) == {"slice", "exclusion", "tight_budget", "unavailable", "no_result"}
+    reference = _reference_tuning_ids()
+    exclusion = set(cases["exclusion"]["golden_ids"])
+    assert exclusion < reference, "the exclusion case is the tuning set minus the excluded piece"
+    assert "21" not in exclusion, "the candle must be excluded"
+    assert set(cases["tight_budget"]["golden_ids"]) == {"23", "30"}
+    assert cases["unavailable"]["must_not_return"] == ("43",), "the sold-out vest"
+    assert cases["no_result"]["kind"] == "no_result"
+    for case in cases.values():
+        assert case["query"] != retrieval_module.CANONICAL_ANNA_QUERY
+
+
+_HELD_OUT_DEFINITIONS = {
+    "slice": """SELECT "productId" FROM pellier.product_catalog
+                 WHERE category = 'Beauty' AND quantity > 0
+                   AND tags @> '["gift"]'::jsonb AND NOT (tags ? 'archive')
+                 ORDER BY "productId"::int""",
+    "exclusion": """SELECT "productId" FROM pellier.product_catalog
+                     WHERE category = 'Home Decor' AND price <= 100 AND quantity > 0
+                       AND tags @> '["gift","home"]'::jsonb AND NOT (tags ? 'candle')
+                       AND NOT (tags ? 'archive')
+                     ORDER BY "productId"::int""",
+    "tight_budget": """SELECT "productId" FROM pellier.product_catalog
+                        WHERE price <= 40 AND quantity > 0
+                          AND tags @> '["gift"]'::jsonb AND NOT (tags ? 'archive')
+                        ORDER BY "productId"::int""",
+    "no_result": """SELECT "productId" FROM pellier.product_catalog
+                     WHERE price <= 30 AND quantity > 0
+                       AND tags @> '["cashmere"]'::jsonb AND NOT (tags ? 'archive')
+                     ORDER BY "productId"::int""",
+}
+
+
+def test_the_held_out_definitions_match_the_pinned_ids_on_a_live_catalog() -> None:
+    """The pinned ids are the rows each documented rule selects, on the real catalog."""
     dsn = os.environ.get("PELLIER_LIVE_POSTGRES_URL") or os.environ.get("PELLIER_TEST_DSN")
     if not dsn:
-        pytest.skip("set PELLIER_LIVE_POSTGRES_URL to check the held-out definition live")
+        pytest.skip("set PELLIER_LIVE_POSTGRES_URL to check the held-out definitions live")
     psycopg = pytest.importorskip("psycopg")
+    cases = {c["id"]: c for c in retrieval_module.HELD_OUT_CASES}
     with psycopg.connect(dsn) as conn:
-        rows = conn.execute(
-            """
-            SELECT "productId" FROM pellier.product_catalog
-             WHERE category = 'Beauty' AND quantity > 0
-               AND tags @> '["gift"]'::jsonb AND NOT (tags ? 'archive')
-             ORDER BY "productId"::int
-            """
-        ).fetchall()
-    assert tuple(str(r[0]) for r in rows) == retrieval_module.CANONICAL_HELD_OUT_GOLDEN_IDS
+        for case_id, sql in _HELD_OUT_DEFINITIONS.items():
+            rows = tuple(str(r[0]) for r in conn.execute(sql).fetchall())
+            expected = tuple(cases[case_id].get("golden_ids") or ())
+            assert rows == expected, f"{case_id}: catalog selects {rows}, pinned {expected}"
+        sold_out = conn.execute(
+            "SELECT quantity FROM pellier.product_catalog WHERE \"productId\" = '43'"
+        ).fetchone()
+        assert sold_out and int(sold_out[0]) == 0, "the unavailable case needs the vest sold out"

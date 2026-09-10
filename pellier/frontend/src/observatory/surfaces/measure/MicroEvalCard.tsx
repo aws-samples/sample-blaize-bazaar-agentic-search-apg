@@ -438,6 +438,64 @@ const MicroEvalCard: React.FC = () => {
               </tbody>
             </table>
           </div>
+          {result.held_out_cases && result.held_out_cases.length > 0 ? (
+            <div style={{ overflowX: 'auto', marginTop: '10px' }}>
+              <table
+                aria-label="Held-out query cases"
+                data-testid="micro-eval-held-out-cases"
+                style={{ width: '100%', borderCollapse: 'collapse' }}
+              >
+                <thead>
+                  <tr>
+                    <th scope="col" style={{ ...headerStyle, textAlign: 'left' }}>
+                      Held-out case
+                    </th>
+                    {[...result.held_out_cases[0].variants]
+                      .sort((a, b) => b.pool_k - a.pool_k)
+                      .map((variant) => (
+                        <th key={variant.pool_k} scope="col" style={headerStyle}>
+                          {`pool_k ${variant.pool_k}`}
+                        </th>
+                      ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {result.held_out_cases.map((heldOutCase) => (
+                    <tr key={heldOutCase.id}>
+                      <th
+                        scope="row"
+                        style={{
+                          ...cellStyle,
+                          textAlign: 'left',
+                          fontFamily: 'var(--obs-sans)',
+                          fontWeight: 500,
+                          whiteSpace: 'normal',
+                        }}
+                      >
+                        {heldOutCase.query}
+                        <span
+                          style={{ display: 'block', fontSize: '11px', color: 'var(--obs-ink-3)' }}
+                        >
+                          {heldOutCase.rule}
+                        </span>
+                      </th>
+                      {[...heldOutCase.variants]
+                        .sort((a, b) => b.pool_k - a.pool_k)
+                        .map((variant) => (
+                          <td key={variant.pool_k} style={cellStyle}>
+                            {heldOutCase.kind === 'labels'
+                              ? `precision ${formatValue(variant.context_precision, 'ratio')}`
+                              : variant.passed
+                                ? 'pass'
+                                : `fail (${variant.returned ?? 0} returned)`}
+                          </td>
+                        ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
           {result.generalizes ? (
             <p
               data-testid="micro-eval-generalizes"

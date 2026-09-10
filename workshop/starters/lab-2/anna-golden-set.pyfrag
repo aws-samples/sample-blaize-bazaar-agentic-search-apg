@@ -11,9 +11,11 @@
 #
 # With an empty set every one of those is 0.0 and the comparison is unreadable.
 #
-# Label the relevant rows for CANONICAL_ANNA_QUERY. The definition is a
-# query, not a taste test: the in-stock Home Decor pieces tagged both `gift`
-# and `home` at or under $100. Derive them in the Code Editor, do not guess:
+# Label the relevant rows for CANONICAL_ANNA_QUERY. Relevance needs a stated
+# rule, and this is the rule: the in-stock Home Decor pieces tagged both
+# `gift` and `home` at or under $100. Price and stock are eligibility, which
+# SQL already enforces; the two tags are the judgment. Derive the rows in the
+# Code Editor, do not guess:
 #
 #   psql -X -P pager=off -c "
 #     SELECT \"productId\", name, price

@@ -445,12 +445,15 @@ Operator investigation stops at the pending human checkpoint.
   cannot enforce.
 - **Change (2a).** Restore the deliberately incomplete hybrid-ranking
   calculation.
-- **Change (2b).** Label the rows that count as relevant for that request. The
-  micro-eval divides by this set, so with it empty coverage, precision and MRR
-  all read 0.0 for want of a denominator, and the surface says so rather than
-  showing bare zeros. The definition is a query, not a taste test: the in-stock
-  Home Decor pieces tagged both `gift` and `home` at or under $100. Derive them
-  in the Code Editor rather than guessing; the exercise carries the psql.
+- **Change (2b).** Label the rows that count as relevant for that request.
+  The frozen labels are the reference judgments: coverage divides by the label
+  count, precision by the returned count, and MRR is a rank. With no labels
+  all three read 0.0 for want of labels, and the surface says so rather than
+  showing bare zeros. Relevance needs a stated rule, and this is the rule: the
+  in-stock Home Decor pieces tagged both `gift` and `home` at or under $100.
+  Price and stock are eligibility, which SQL already enforces; the tags are
+  the judgment. Derive the rows in the Code Editor; the exercise carries the
+  psql.
 - **Run.** Replay Anna's gift thread in the storefront, then compare the four
   retrieval paths on that one fixed request. Comparing four strategies is only
   meaningful when all four answer the same question, which is why the wording is
@@ -458,7 +461,12 @@ Operator investigation stops at the pending human checkpoint.
 - **Prove.** Read the retrieval receipt: vector ranks, lexical ranks, and their
   fusion all populated, and every returned product inside the price and stock
   constraints. The receipt line is `02.hybrid_receipt`. Then read the rerank
-  pool micro-eval, which now has a denominator: pool 20 and pool 3 separate.
+  pool micro-eval, which now has labels: pool 20 and pool 3 separate. Freeze
+  the labels, choose a pool, and check the choice on the provided held-out
+  cases: a Beauty slice with its own labels, an exclusion, a tight budget, a
+  sold-out piece that must not come back, and a request with no valid result.
+  Write one sentence on which pool you would ship; "more evidence needed" is
+  a valid answer.
 - **Explain.** Retrieval quality is a measured tradeoff, and every metric is a
   ratio against a labeling somebody chose. Relevance can rank results;
   PostgreSQL enforces eligibility. A reranker cannot recover a candidate that

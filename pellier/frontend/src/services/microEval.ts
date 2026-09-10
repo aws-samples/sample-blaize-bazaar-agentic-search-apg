@@ -69,6 +69,25 @@ export interface MicroEvalVariant {
   rerank_cache?: MicroEvalRerankCache
 }
 
+export interface MicroEvalHeldOutCaseVariant {
+  pool_k: number
+  passed: boolean
+  context_precision?: number
+  candidate_coverage?: number
+  mrr?: number
+  returned?: number
+  leaked?: string[]
+}
+
+export interface MicroEvalHeldOutCase {
+  id: string
+  kind: 'labels' | 'must_not_return' | 'no_result'
+  query: string
+  rule: string
+  golden_set_size: number
+  variants: MicroEvalHeldOutCaseVariant[]
+}
+
 export interface MicroEvalResult {
   query: string
   limit: number
@@ -92,10 +111,13 @@ export interface MicroEvalResult {
     golden_set_size: number
     variants: MicroEvalVariant[]
   }
+  /** Four query cases the tuning labels never described, plus the slice, one pass per pool. */
+  held_out_cases?: MicroEvalHeldOutCase[]
   /** Whether the pool that wins on the tuning labels also wins held out. */
   generalizes?: {
     tuning_best_pool_k: number | null
     held_out_best_pool_k: number | null
+    held_out_means?: Array<{ pool_k: number; context_precision: number; mrr: number; candidate_coverage: number }>
     agree: boolean
   }
 }
