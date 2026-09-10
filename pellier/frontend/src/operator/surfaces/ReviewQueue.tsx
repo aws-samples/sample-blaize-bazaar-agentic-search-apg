@@ -12,7 +12,7 @@
  */
 
 import React, { useState } from 'react'
-import { ArrowUpRight, CircleCheck, CircleDashed, CircleMinus, Clock3, ShieldX } from 'lucide-react'
+import { ArrowUpRight, CircleCheck, CircleDashed, CircleMinus, Clock3, ShieldAlert, ShieldX } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   type OperatorReview,
@@ -78,6 +78,8 @@ const OutcomeGlyph: React.FC<{ kind: ReviewOutcomeKind }> = ({ kind }) => {
       ? CircleCheck
       : kind === 'refused'
         ? ShieldX
+        : kind === 'unavailable'
+          ? ShieldAlert
         : kind === 'declined'
           ? CircleMinus
           : kind === 'approved'
@@ -91,8 +93,20 @@ export type ReviewOutcomeKind =
   | 'declined'
   | 'approved'
   | 'refused'
+  | 'unavailable'
   | 'executed'
   | 'unknown'
+
+/**
+ * The service refused to submit an ungoverned write. The rail is `refused` and
+ * the axes say the policy engine was never consulted and Aurora never reached.
+ * Nothing ran, which is a different fact from "the outcome was not recorded".
+ */
+function railRefused(review: OperatorReview): boolean {
+  if (review.execution?.rail === 'refused') return true
+  const { policy, aurora } = review.assurance
+  return policy === 'EVALUATION_INCOMPLETE' && aurora === 'NOT_REACHED'
+}
 
 export function outcomeKind(review: OperatorReview): ReviewOutcomeKind {
   if (review.humanState === 'confirmation_required') return 'pending'
@@ -101,6 +115,7 @@ export function outcomeKind(review: OperatorReview): ReviewOutcomeKind {
   const { policy, aurora, evidence } = review.assurance
   if (aurora === 'PERMITTED' && evidence === 'RECEIPTED') return 'executed'
   if (policy === 'DENY' || aurora === 'DENIED') return 'refused'
+  if (railRefused(review)) return 'unavailable'
   return 'unknown'
 }
 
@@ -125,6 +140,9 @@ export function outcomeLine(review: OperatorReview): string {
       : `${action} refused by Aurora${policy === 'WOULD_DENY' ? '; policy warning observed with enforcement off' : ''}`
   }
   if (policy === 'DENY') return `${action} refused by AgentCore Policy`
+  if (railRefused(review)) {
+    return `${action} not submitted; the governed rail was unavailable`
+  }
   if (policy === 'WOULD_DENY') {
     return `${action} attempted; policy warning observed with enforcement off`
   }
@@ -198,6 +216,7 @@ const ReviewCard: React.FC<{ review: OperatorReview }> = ({ review }) => {
 const OUTCOME_FILTERS: ReadonlyArray<{ id: ReviewOutcomeKind; label: string }> = [
   { id: 'pending', label: 'Needs decision' },
   { id: 'refused', label: 'Refused' },
+  { id: 'unavailable', label: 'Not submitted' },
   { id: 'executed', label: 'Carried out' },
   { id: 'approved', label: 'Approved, not run' },
   { id: 'declined', label: 'Declined' },
@@ -274,7 +293,7 @@ const ReviewQueue: React.FC = () => {
       acc[filter.id] = queue.reviews.filter((r) => outcomeKind(r) === filter.id).length
       return acc
     },
-    { pending: 0, declined: 0, approved: 0, refused: 0, executed: 0, unknown: 0 },
+    { pending: 0, declined: 0, approved: 0, refused: 0, unavailable: 0, executed: 0, unknown: 0 },
   )
   const scoped = outcomeFilter
     ? queue.reviews.filter((r) => outcomeKind(r) === outcomeFilter)

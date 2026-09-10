@@ -38,3 +38,28 @@ describe('Operator API client', () => {
     await rejected
   })
 })
+
+describe('Operator API refusals', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('reads a governed refusal object instead of stringifying it', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 409,
+        json: async () => ({
+          detail: { error: 'governed_rail_unavailable', missing: ['AGENTCORE_GATEWAY_URL', 7] },
+        }),
+      })),
+    )
+
+    await expect(fetchClientRecord('CUST-JESSICA')).rejects.toMatchObject({
+      code: 'governed_rail_unavailable',
+      status: 409,
+      missing: ['AGENTCORE_GATEWAY_URL'],
+    })
+  })
+})

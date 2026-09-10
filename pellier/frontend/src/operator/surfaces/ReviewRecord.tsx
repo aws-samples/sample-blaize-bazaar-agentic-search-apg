@@ -134,11 +134,14 @@ const DECISION_ERROR_COPY: Record<string, string> = {
     'The service response was unavailable. Refresh the record to establish the outcome.',
   governed_action_unavailable:
     'The governed action is not available right now, so nothing was recorded.',
+  governed_rail_unavailable:
+    'The governed rail is not available, so this action was not submitted and nothing ran. Restore the managed deployment before trying again.',
 }
 
 /** Plain-language decision failure; the raw code stays visible for the receipt. */
-function describeDecisionError(code: string): string {
-  return DECISION_ERROR_COPY[code] ?? `The outcome could not be verified (${code}). Refresh the record before continuing.`
+function describeDecisionError(code: string, missing: readonly string[] = []): string {
+  const base = DECISION_ERROR_COPY[code] ?? `The outcome could not be verified (${code}). Refresh the record before continuing.`
+  return missing.length ? `${base} Missing: ${missing.join(', ')}.` : base
 }
 
 const ReviewRecordPage: React.FC = () => {
@@ -149,6 +152,7 @@ const ReviewRecordPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [deciding, setDeciding] = useState(false)
   const [decisionError, setDecisionError] = useState<string | null>(null)
+  const [decisionErrorMissing, setDecisionErrorMissing] = useState<readonly string[]>([])
   // THIS session's execution response. The durable record lives on the server in
   // `review.execution`, so a reload no longer loses the verdicts: this state only
   // makes the answer immediate for the operator who just pressed the button.
@@ -224,6 +228,7 @@ const ReviewRecordPage: React.FC = () => {
       setDecisionError(
         err instanceof OperatorApiError ? err.code : 'operator_unavailable',
       )
+      setDecisionErrorMissing(err instanceof OperatorApiError ? err.missing : [])
     } finally {
       setExecuting(false)
     }
@@ -347,7 +352,11 @@ const ReviewRecordPage: React.FC = () => {
       : undefined
   const completed = Boolean(attempted) && axes.aurora === 'PERMITTED' && axes.evidence === 'RECEIPTED'
   const blocked = Boolean(attempted) && (axes.policy === 'DENY' || axes.aurora === 'DENIED')
-  const unresolved = !completed && !blocked && Boolean(attempted || review.executionTurnId)
+  // The rail has three values. `refused` means the service declined to submit
+  // an ungoverned write: nothing ran, so this is neither an outcome to verify
+  // nor a policy denial, and it must not read as either.
+  const refused = Boolean(attempted) && attempted?.rail === 'refused'
+  const unresolved = !completed && !blocked && !refused && Boolean(attempted || review.executionTurnId)
   const actionState = deciding
     ? 'recording'
     : executing
@@ -356,7 +365,9 @@ const ReviewRecordPage: React.FC = () => {
         ? 'completed'
         : blocked
           ? 'blocked'
-          : unresolved ? 'unknown' : review.humanState
+          : refused
+            ? 'refused'
+            : unresolved ? 'unknown' : review.humanState
   const actionStateLabel = deciding
     ? 'Recording decision'
     : executing
@@ -365,6 +376,8 @@ const ReviewRecordPage: React.FC = () => {
         ? 'Completed'
         : blocked
           ? 'Not applied'
+          : refused
+            ? 'Not submitted'
           : unresolved
             ? 'Outcome unverified'
           : pending
@@ -744,7 +757,14 @@ const ReviewRecordPage: React.FC = () => {
                     was irrelevant, because nothing reached the database to be scoped.
                     Submitted is the honest verb for the attempt; executed is reserved
                     for the calls that entered the tool. */}
-                {axes.policy === 'DENY' ? (
+                {attempted.rail === 'refused' ? (
+                  <>
+                    <strong>Action not submitted.</strong>{' '}
+                    The governed rail was unavailable, so the request never left
+                    this service. Nothing ran, and there is no execution receipt
+                    to read.
+                  </>
+                ) : axes.policy === 'DENY' ? (
                   <>
                     <strong>Action blocked.</strong>{' '}
                     Submitted on the{' '}
@@ -781,7 +801,7 @@ const ReviewRecordPage: React.FC = () => {
             className="operator-receipt-key"
             data-testid="operator-review-decision-error"
           >
-            {describeDecisionError(decisionError)}
+            {describeDecisionError(decisionError, decisionErrorMissing)}
           </p>
         ) : null}
       </section>

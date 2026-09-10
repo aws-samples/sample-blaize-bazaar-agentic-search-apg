@@ -2342,6 +2342,10 @@
   color: var(--op-blocked, var(--dl-err));
 }
 
+.operator-review-state[data-outcome='unavailable'] {
+  color: var(--op-caution, var(--dl-warn));
+}
+
 .operator-review-state[data-outcome='approved'] {
   color: var(--op-caution, var(--dl-warn));
 }
@@ -2470,6 +2474,10 @@
 
 .operator-review-head-state[data-state='blocked'] {
   color: var(--op-err);
+}
+
+.operator-review-head-state[data-state='refused'] {
+  color: var(--op-caution, var(--dl-warn));
 }
 
 .operator-review-standing {

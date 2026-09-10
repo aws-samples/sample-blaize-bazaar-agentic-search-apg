@@ -354,6 +354,8 @@ export class OperatorApiError extends Error {
   constructor(
     public readonly code: string,
     public readonly status: number,
+    /** What the service said was missing, when it refused rather than failed. */
+    public readonly missing: readonly string[] = [],
   ) {
     super(code)
     this.name = 'OperatorApiError'
@@ -384,11 +386,23 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     if (!response.ok) {
       let code = response.status === 401 || response.status === 403
         ? 'operator_sign_in_required' : 'operator_unavailable'
+      let missing: string[] = []
       try {
-        const body = (await response.json()) as { detail?: string }
-        if (body.detail) code = body.detail
+        const body = (await response.json()) as { detail?: unknown }
+        const detail = body.detail
+        if (typeof detail === 'string' && detail) {
+          code = detail
+        } else if (detail && typeof detail === 'object') {
+          // A governed refusal is an object: `{ error, missing }`. Stringifying
+          // it would put "[object Object]" in front of an operator.
+          const shaped = detail as { error?: unknown; missing?: unknown }
+          if (typeof shaped.error === 'string' && shaped.error) code = shaped.error
+          if (Array.isArray(shaped.missing)) {
+            missing = shaped.missing.filter((item): item is string => typeof item === 'string')
+          }
+        }
       } catch { /* Preserve the HTTP status when the response cannot be decoded. */ }
-      throw new OperatorApiError(code, response.status)
+      throw new OperatorApiError(code, response.status, missing)
     }
     // The deadline includes the body, which can stall after headers arrive.
     return await response.json() as T
