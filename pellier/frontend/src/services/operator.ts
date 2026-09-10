@@ -283,8 +283,26 @@ export interface OperatorReview {
   /** Fingerprint of the parameters shown, echoed back on confirm. */
   actionHash: string
   decidedBy: string | null
+  /**
+   * Who asked, kept apart from the customer the proposal names and from the
+   * operator who decides. `unverified` means an anonymous session opened it:
+   * the customer on the review was chosen in the storefront, not proved.
+   */
+  requestedBySub: string | null
+  requesterKind: 'shopper' | 'operator' | 'unverified'
   requestedAt: string | null
   decidedAt: string | null
+}
+
+export function requesterLine(review: Pick<OperatorReview, 'requesterKind' | 'requestedBySub'>): string {
+  const subject = review.requestedBySub ? ` (subject ${review.requestedBySub.slice(0, 8)}…)` : ''
+  if (review.requesterKind === 'shopper') {
+    return `Asked for by the signed-in shopper${subject}.`
+  }
+  if (review.requesterKind === 'operator') {
+    return `Prepared on the desk by staff${subject}; no shopper asked for this.`
+  }
+  return 'Asked for from a session that was not signed in. The customer named here was chosen in the storefront and is not a proved identity.'
 }
 
 export interface OperatorReviewQueue {

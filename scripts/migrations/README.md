@@ -120,6 +120,11 @@ FKs.
 49. **`049_workshop_runs.sql`** creates `pellier.workshop_runs` and stamps
     every evidence table with the current run id from the session setting
     `pellier.run_id`, so one participant run can be reconstructed end to end.
+50. **`050_refine_guided_questions.sql`** refines the guided persona questions
+    the storefront offers.
+51. **`051_review_requester.sql`** binds each review to the verified subject
+    whose turn opened it, or records that none was present, so an anonymous
+    persona session can never read as the customer it named.
 
 ## Run
 
@@ -180,7 +185,9 @@ for migration in \
     046_retrieval_citation_snapshots.sql \
     047_evidence_immutability.sql \
     048_policy_decisions.sql \
-    049_workshop_runs.sql
+    049_workshop_runs.sql \
+    050_refine_guided_questions.sql \
+    051_review_requester.sql
 do
     PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" \
         -U "$DB_USER" -d "$DB_NAME" \

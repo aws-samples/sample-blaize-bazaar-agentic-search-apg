@@ -839,6 +839,10 @@ def _review_payload(
         # of parameters the operator was shown, not a secret.
         "actionHash": row.get("action_hash") or "",
         "decidedBy": row.get("decided_by"),
+        # Three identities kept apart: who asked, who decides, and the customer
+        # the write runs as. A persona chosen in the storefront is not an asker.
+        "requestedBySub": row.get("requested_by_sub") or None,
+        "requesterKind": str(row.get("requester_kind") or "unverified"),
         "requestedAt": _iso(row.get("requested_at")),
         "decidedAt": _iso(row.get("decided_at")),
     }

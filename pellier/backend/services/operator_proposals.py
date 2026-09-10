@@ -240,8 +240,13 @@ async def prepare_proposal(
     capability: Optional[Dict[str, Any]],
     issue: str = "",
     recommendation: Optional[Dict[str, Any]] = None,
+    requested_by_sub: Optional[str] = None,
 ) -> ProposalOutcome:
     """Establish the exact action and open a review for it.
+
+    ``requested_by_sub`` is the authenticated operator preparing the action; the
+    review records it as an operator-prepared proposal so the queue never reads
+    it as a shopper's own request.
 
     ``customer_id`` is the Concierge session's bound customer, resolved by the
     session gate before this is reached. It is never taken from a request body, from
@@ -318,6 +323,8 @@ async def prepare_proposal(
         # piece. None of that is established here, and for a not-as-described return
         # the first clause is simply false.
         recommendation=recommendation or _recommendation_for(item, intent),
+        requested_by_sub=requested_by_sub,
+        requester_kind=rv.REQUESTER_OPERATOR,
     )
     if review_id is None:
         # The investigation still stands. Do not claim a review exists.

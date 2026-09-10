@@ -147,11 +147,19 @@ def action_fingerprint(action: str, args: Mapping[str, Any]) -> str:
 # Creation
 # ---------------------------------------------------------------------------
 
+# Who asked. `shopper` is a verified token, `operator` is the desk, `unverified`
+# is an anonymous session whose customer is a storefront selection.
+REQUESTER_SHOPPER = "shopper"
+REQUESTER_OPERATOR = "operator"
+REQUESTER_UNVERIFIED = "unverified"
+
+_REQUESTER_KINDS = frozenset({REQUESTER_SHOPPER, REQUESTER_OPERATOR, REQUESTER_UNVERIFIED})
+
 _INSERT_REVIEW = """
     INSERT INTO pellier.approvals
         (customer_id, tool, args, status, source_turn_id, order_id,
-         issue, recommendation, action_hash)
-    VALUES (%s, %s, %s::jsonb, 'pending', %s, %s, %s, %s::jsonb, %s)
+         issue, recommendation, action_hash, requested_by_sub, requester_kind)
+    VALUES (%s, %s, %s::jsonb, 'pending', %s, %s, %s, %s::jsonb, %s, %s, %s)
     ON CONFLICT (customer_id, tool, action_hash) WHERE status = 'pending'
     DO NOTHING
     RETURNING id
@@ -211,8 +219,16 @@ async def propose_review(
     source_turn_id: Optional[str],
     issue: str = "",
     recommendation: Optional[Mapping[str, Any]] = None,
+    requested_by_sub: Optional[str] = None,
+    requester_kind: str = REQUESTER_UNVERIFIED,
 ) -> Optional[int]:
     """Record that a human must decide, exactly once per turn and action.
+
+    ``requested_by_sub`` and ``requester_kind`` bind the review to the identity
+    that asked, or to its explicit absence. The customer on the review is what
+    the proposal names; on an anonymous session that is a persona the shopper
+    picked, and an operator reading the queue must be able to tell the two
+    apart before acting on it.
 
     Returns the review id, or ``None`` when the review could not be created.
     Never raises into the caller: this runs on a tool-refusal path, and a
@@ -250,6 +266,8 @@ async def propose_review(
             (issue or "").strip() or None,
             json.dumps(dict(recommendation or {}), sort_keys=True),
             fingerprint,
+            (requested_by_sub or "").strip() or None,
+            requester_kind if requester_kind in _REQUESTER_KINDS else REQUESTER_UNVERIFIED,
         )
     except Exception as exc:  # noqa: BLE001
         logger.error("review creation failed for %s/%s: %s", action, customer_id, exc)
@@ -337,6 +355,13 @@ def record_boundary_review(
         return None
 
     recommendation = _default_recommendation(action, args)
+    # The requester is the turn's verified principal, read from the identity
+    # ContextVar the request bound, never from the tool arguments: a persona
+    # choice puts a customer id in the arguments and proves nothing.
+    from services.turn_identity import current_principal_sub
+
+    requested_by_sub = current_principal_sub()
+    requester_kind = REQUESTER_SHOPPER if requested_by_sub else REQUESTER_UNVERIFIED
     try:
         future = asyncio.run_coroutine_threadsafe(
             propose_review(
@@ -346,6 +371,8 @@ def record_boundary_review(
                 source_turn_id=source_turn_id,
                 issue=issue,
                 recommendation=recommendation,
+                requested_by_sub=requested_by_sub,
+                requester_kind=requester_kind,
             ),
             _main_loop,
         )

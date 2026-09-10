@@ -184,6 +184,14 @@ const ReviewCard: React.FC<{ review: OperatorReview }> = ({ review }) => {
         <span className="operator-cell-note">
           {review.issue || 'Action details awaiting inspection'}
         </span>
+        {review.requesterKind === 'unverified' ? (
+          <span
+            className="operator-cell-note operator-review-requester-flag"
+            data-testid="operator-review-requester-flag"
+          >
+            Requester not signed in
+          </span>
+        ) : null}
       </span>
       <span className="operator-review-action-cell">
         <span className="operator-review-cell-label">Prepared action</span>

@@ -112,6 +112,8 @@ const PENDING_REVIEW = {
   },
   actionHash: THEO_HASH,
   decidedBy: null,
+  requestedBySub: null,
+  requesterKind: 'unverified' as const,
   requestedAt: null,
   decidedAt: null,
 }
@@ -516,6 +518,11 @@ describe('ReviewRecord', () => {
   it('shows the original storefront ask as reported context', async () => {
     mockFetch(() => ({ body: REVIEW_DETAIL }))
     renderRecord()
+
+    const requester = await screen.findByTestId('operator-review-requester')
+    expect(requester).toHaveAttribute('data-requester', 'unverified')
+    expect(requester).toHaveTextContent('not signed in')
+    expect(requester).toHaveTextContent('not a proved identity')
 
     const handoff = await screen.findByTestId('operator-shopper-handoff')
     expect(handoff).toHaveTextContent('What Theo asked Pellier')

@@ -490,6 +490,7 @@ case "$*" in
   *"to_regclass('pellier.commerce_payment_events')"*) printf '{"pellier.commerce_payment_events" if commerce_schema_exists else ""}\n' ;;
   *"to_regclass('pellier.policy_decisions')"*) printf '{"pellier.policy_decisions" if policy_decisions_exists else ""}\n' ;;
   *"to_regclass('pellier.workshop_runs')"*) printf '{"pellier.workshop_runs" if workshop_runs_exists else ""}\n' ;;
+  *"column_name = 'requester_kind'"*) printf 'requester_kind\n' ;;
 esac
 """,
     )

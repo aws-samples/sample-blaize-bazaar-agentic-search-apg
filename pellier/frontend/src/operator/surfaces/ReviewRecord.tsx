@@ -29,8 +29,7 @@ import {
   fetchReview,
   OperatorApiError,
   type OperatorExecutionResult,
-  type OperatorReviewDetail,
-} from '../../services/operator'
+  type OperatorReviewDetail, requesterLine } from '../../services/operator'
 import ActionAssurance from '../components/ActionAssurance'
 import ClientAvatar from '../components/ClientAvatar'
 import OperatorSignInAction from '../components/OperatorSignInAction'
@@ -418,6 +417,13 @@ const ReviewRecordPage: React.FC = () => {
           because it is genuinely optional — a review prepared from an operator request
           may carry none — and a template left "Rachel Green ·" trailing a separator
           with nothing after it. */}
+      <p
+        className="operator-review-requester"
+        data-testid="operator-review-requester"
+        data-requester={review.requesterKind}
+      >
+        {requesterLine(review)}
+      </p>
       <p className="operator-review-origin" data-testid="operator-review-origin">
         {['Prepared from Pellier', client.name, review.issue]
           .filter(Boolean)

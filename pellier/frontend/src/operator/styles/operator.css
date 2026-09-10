@@ -5290,3 +5290,14 @@
 @media (prefers-reduced-motion: reduce) {
   .operator-record-jumps a, .operator-activity-nav a { transition: none; }
 }
+
+.operator-review-requester {
+  margin: 0 0 4px;
+  font-size: var(--text-label);
+  color: var(--op-ink-2);
+}
+
+.operator-review-requester[data-requester='unverified'],
+.operator-review-requester-flag {
+  color: var(--op-caution, var(--dl-warn));
+}

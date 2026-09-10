@@ -126,6 +126,8 @@ class FakeReviewDb:
                 order_id=params[4],
                 issue=params[5],
                 recommendation=json.loads(params[6]),
+                requested_by_sub=params[8] if len(params) > 8 else None,
+                requester_kind=params[9] if len(params) > 9 else "unverified",
                 action_hash=params[7],
             )
             return {"id": row["review_id"]}
@@ -262,6 +264,99 @@ async def test_the_boundary_refusal_opens_exactly_one_review() -> None:
     assert row["action"] == "initiate_return"
     assert row["status"] == "pending"
     assert row["source_turn_id"] == "turn-theo-1"
+
+
+@pytest.mark.asyncio
+async def test_a_review_records_who_asked_or_that_nobody_verified_did() -> None:
+    """The customer on the review is a proposal; the requester is a fact."""
+    db = FakeReviewDb()
+    await rv.propose_review(
+        db,
+        action="initiate_return",
+        args={"customer_id": "CUST-THEO", "product_id": 37, "reason": "damaged"},
+        source_turn_id="turn-theo-signed-in",
+        requested_by_sub="f4981468-theo",
+        requester_kind=rv.REQUESTER_SHOPPER,
+    )
+    await rv.propose_review(
+        db,
+        action="initiate_return",
+        args={"customer_id": "CUST-THEO", "product_id": 38, "reason": "damaged"},
+        source_turn_id="turn-anon-persona",
+    )
+    signed_in, anonymous = db.rows
+    assert signed_in["requested_by_sub"] == "f4981468-theo"
+    assert signed_in["requester_kind"] == "shopper"
+    assert anonymous["requested_by_sub"] is None
+    assert anonymous["requester_kind"] == "unverified"
+
+
+@pytest.mark.asyncio
+async def test_an_unknown_requester_kind_is_stored_as_unverified() -> None:
+    db = FakeReviewDb()
+    await rv.propose_review(
+        db,
+        action="initiate_return",
+        args={"customer_id": "CUST-THEO", "product_id": 37, "reason": "damaged"},
+        source_turn_id="turn-x",
+        requested_by_sub="someone",
+        requester_kind="admin",
+    )
+    assert db.rows[0]["requester_kind"] == "unverified"
+
+
+def test_the_boundary_handoff_reads_the_requester_from_the_turn_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A persona in the tool arguments never becomes the requester."""
+    import asyncio
+
+    from services.turn_identity import principal_sub_var
+
+    captured: dict = {}
+
+    async def _fake_propose(_db, **kwargs):
+        captured.update(kwargs)
+        return 41
+
+    loop = asyncio.new_event_loop()
+    import threading
+
+    thread = threading.Thread(target=loop.run_forever, daemon=True)
+    thread.start()
+    try:
+        monkeypatch.setattr(rv, "propose_review", _fake_propose)
+        monkeypatch.setattr(rv, "_db_service", object())
+        monkeypatch.setattr(rv, "_main_loop", loop)
+        refusal = json.dumps({"error": rv.MANAGED_RAIL_REFUSAL, "message": "governed"})
+        assert rv.is_boundary_refusal(refusal)
+
+        token = principal_sub_var.set("f4981468-theo")
+        try:
+            assert rv.record_boundary_review(
+                action="initiate_return",
+                args={"customer_id": "CUST-MARCO", "product_id": 1, "reason": "damaged"},
+                result=refusal,
+                source_turn_id="turn-1",
+            ) == 41
+        finally:
+            principal_sub_var.reset(token)
+        assert captured["requested_by_sub"] == "f4981468-theo"
+        assert captured["requester_kind"] == "shopper"
+
+        captured.clear()
+        rv.record_boundary_review(
+            action="initiate_return",
+            args={"customer_id": "CUST-THEO", "product_id": 1, "reason": "damaged"},
+            result=refusal,
+            source_turn_id="turn-2",
+        )
+        assert captured["requested_by_sub"] is None
+        assert captured["requester_kind"] == "unverified"
+    finally:
+        loop.call_soon_threadsafe(loop.stop)
+        thread.join(timeout=2)
+        loop.close()
 
 
 @pytest.mark.asyncio

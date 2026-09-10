@@ -464,7 +464,64 @@ async def load_shopper_handoff(
             data=handoff,
         )
     ]
+    requester = await _requester_evidence(db, proposal.get("reviewId"))
+    if requester is not None:
+        evidence.append(requester)
     return handoff, step, evidence
+
+
+_REQUESTER_SELECT = """
+    SELECT requested_by_sub, requester_kind
+      FROM pellier.approvals
+     WHERE id = %s
+"""
+
+
+async def _requester_evidence(db: Any, review_id: Any) -> Optional[Evidence]:
+    """Who opened the review, as a fact the investigator must weigh.
+
+    The customer on a review is what the proposal names. Whether the person
+    who asked was that customer is a separate fact, recorded on the review when
+    it opened: a verified shopper token, the desk itself, or an anonymous
+    session that chose a persona. The last is a gap, not a client.
+    """
+    try:
+        review_id = int(review_id or 0)
+    except (TypeError, ValueError):
+        return None
+    if not review_id:
+        return None
+    try:
+        row = await db.fetch_one(_REQUESTER_SELECT, review_id)
+    except Exception as exc:  # noqa: BLE001 - absence of the fact is reported below
+        logger.info("requester lookup failed for review %s: %s", review_id, exc)
+        row = None
+    if not row:
+        return None
+    kind = str(row.get("requester_kind") or "unverified")
+    subject = str(row.get("requested_by_sub") or "")
+    if kind == "shopper" and subject:
+        detail = (
+            f"Requested by a signed-in shopper, subject {subject[:8]}…; the "
+            "customer named on the review is the one their token names."
+        )
+    elif kind == "operator":
+        detail = "Prepared on the desk by staff; no shopper asked for this action."
+    else:
+        detail = (
+            "Requested from a session that was not signed in. The customer named "
+            "on the review was chosen in the storefront and is not a proved identity."
+        )
+    return Evidence(
+        kind="requester",
+        role=ROLE_FACT,
+        status="verified" if kind in ("shopper", "operator") else "unverified",
+        source=SOURCE_AURORA,
+        label="Who asked for this action",
+        record_id=f"review-{review_id}",
+        detail=detail,
+        data={"requesterKind": kind, "requestedBySub": subject or None},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -952,7 +1009,7 @@ class WorkflowContext:
 
 
 async def _replacement_context(db: Any, *, customer_id: str, request: str,
-                               turn_id: str = "") -> Any:
+                               turn_id: str = "", operator_sub: str = "") -> Any:
     """Ground the order item, retrieve, reconcile inventory. An async generator.
 
     Yields ``("step", payload)`` as each stage actually finishes and finally
@@ -1141,7 +1198,7 @@ def _replacement_prompt_block(result: Any) -> str:
 
 
 async def _investigate_context(db: Any, *, customer_id: str, request: str,
-                               turn_id: str) -> Any:
+                               turn_id: str, operator_sub: str = "") -> Any:
     """Prepare a consequential action, but only when the operator asked for one.
 
     An investigation with no consequential intent contributes nothing: no steps, no
@@ -1176,6 +1233,7 @@ async def _investigate_context(db: Any, *, customer_id: str, request: str,
         outcome = await prop.prepare_proposal(
             db, customer_id=customer_id, request=request, turn_id=turn_id,
             intent=intent, capability=capability,
+            requested_by_sub=operator_sub or None,
         )
 
     if outcome.action is None:
@@ -1568,7 +1626,8 @@ async def stream_turn(
     if stage is not None:
         with _Timer() as t_stage:
             async for stage_kind, stage_data in stage(
-                db, customer_id=customer_id, request=request, turn_id=turn_id
+                db, customer_id=customer_id, request=request, turn_id=turn_id,
+                operator_sub=operator_sub,
             ):
                 if stage_kind == "step":
                     yield "step", stage_data

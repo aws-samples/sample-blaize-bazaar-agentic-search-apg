@@ -304,6 +304,14 @@ if $managed_required; then
     fail "Workshop run schema missing. Apply scripts/migrations/049_workshop_runs.sql."
     ok=false
   fi
+
+  requester_column="$(_psql "SELECT column_name FROM information_schema.columns WHERE table_schema = 'pellier' AND table_name = 'approvals' AND column_name = 'requester_kind';" || echo '')"
+  if [[ "$requester_column" == "requester_kind" ]]; then
+    pass "Review requester schema is installed"
+  else
+    fail "Review requester schema missing. Apply scripts/migrations/051_review_requester.sql."
+    ok=false
+  fi
 fi
 
 # 4. Node version (warn — root-cause diagnostic for the managed pillars below).
