@@ -1267,8 +1267,8 @@ def _authenticated_runtime_smoke(
     username: str,
     env: dict[str, str],
     expected_fingerprint: str = "",
-    attempts: int = 8,
-    wait_seconds: float = 15.0,
+    attempts: int = 12,
+    wait_seconds: float = 20.0,
 ) -> dict[str, Any]:
     """Invoke the deployed Runtime and require the answer to come from THIS build.
 
@@ -1279,6 +1279,13 @@ def _authenticated_runtime_smoke(
     bounded, until that digest is the one the renderer injected, and fails
     with a distinct message when it never is. Without the comparison a smoke
     passing against the old container would certify a package that never ran.
+
+    The budget is sized from a measured swap, not a guess. On 2026-09-10 a Lab 3
+    style package change kept answering from the previous container through
+    eight attempts spread over about four and a half minutes, then served the
+    new build roughly a minute later. Twelve attempts at twenty seconds covers
+    that with margin, and costs nothing on the common path where the first
+    invoke already carries the expected digest.
     """
     runtime_session_id = RUNTIME_SMOKE_SESSION
     decoded: dict[str, Any] = {}
