@@ -8,6 +8,7 @@ import os
 import shutil
 import subprocess
 import sys
+import types
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -1353,8 +1354,7 @@ def _ownership():
 
 def _scannable_sources():
     excluded_parts = {
-        ".agentcore-project", ".git", ".venv", "__pycache__", "node_modules", "tests",
-    }
+        ".agentcore-project", ".git", ".venv", "__pycache__", "node_modules", "tests", ".local",}
     # The manifest defines the forbidden and allowed operation names, so it has to
     # spell them. Scanning it would make the guard fail on its own vocabulary.
     excluded_files = {"scripts/deploy/ownership.py"}
@@ -1461,3 +1461,105 @@ def test_deploy_all_is_only_a_canonical_provisioner_wrapper() -> None:
     assert "deploy_gateway.py" not in source
     assert "deploy_policy.py" not in source
     assert "bedrock-agentcore-control create" not in source
+
+
+def test_a_deployment_suffix_isolates_every_resource_name() -> None:
+    """A release candidate deploys beside a live set without touching it."""
+    import subprocess
+
+    script = (
+        "import render_agentcore_project as r;"
+        "print(r.PROJECT_NAME, r.RUNTIME_NAME, r.MEMORY_NAME, r.GATEWAY_NAME, r.POLICY_ENGINE_NAME)"
+    )
+    env = {**os.environ, "PELLIER_DEPLOYMENT_SUFFIX": "rc", "PYTHONPATH": str(DEPLOY_DIR)}
+    out = subprocess.run(
+        [sys.executable, "-c", script], cwd=DEPLOY_DIR, env=env,
+        capture_output=True, text=True, check=True,
+    ).stdout.split()
+    assert out == [
+        "pellier-rc", "pellier_rc_orchestrator", "PellierRcMemory",
+        "pellier-rc-gateway", "pellier_rc_policy_engine",
+    ]
+    bad = subprocess.run(
+        [sys.executable, "-c", script], cwd=DEPLOY_DIR,
+        env={**env, "PELLIER_DEPLOYMENT_SUFFIX": "Not-Valid"},
+        capture_output=True, text=True,
+    )
+    assert bad.returncode != 0 and "PELLIER_DEPLOYMENT_SUFFIX" in bad.stderr
+    # The default, which every workshop box uses, is unchanged.
+    assert renderer.PROJECT_NAME == "pellier"
+    assert renderer.GATEWAY_NAME == "pellier-gateway"
+
+
+def test_lambda_names_follow_the_suffix_while_target_names_do_not() -> None:
+    """Target names are inside the Cedar action ids the workshop teaches."""
+    import subprocess
+
+    script = (
+        "import provision_agentcore_end_to_end as p;"
+        "print(sorted(c['server_name'] for c in p.EXPECTED_TARGETS.values()))"
+    )
+    env = {**os.environ, "PELLIER_DEPLOYMENT_SUFFIX": "rc", "PYTHONPATH": f"{DEPLOY_DIR}:{DEPLOY_DIR.parent}"}
+    out = subprocess.run(
+        [sys.executable, "-c", script], cwd=DEPLOY_DIR.parent, env=env,
+        capture_output=True, text=True, check=True,
+    ).stdout
+    assert "pellier-rc-search-server" in out and "pellier-rc-experience-server" in out
+    schemas = PROVISIONER_PATH.parent / "deploy" / "gateway_tool_schemas.py"
+    assert "pellier-concierge-experience-target" in schemas.read_text()
+
+
+def test_the_provisioner_attaches_identity_and_tracing_before_any_proof() -> None:
+    """Claims must exist before a token is minted; tracing before spans are awaited."""
+    source = PROVISIONER_PATH.read_text()
+    assert source.index("_deploy_claim_trigger(\n") < source.index("access_token, smoke_username = _cognito_access_token(")
+    assert source.index("_enable_gateway_observability(\n") < source.index("_discover_live_gateway_tools(\n")
+    assert "logType=\"TRACES\"" in source and "deliveryDestinationType=\"XRAY\"" in source
+    assert "claim_trigger_attached" in source and "gateway_tracing_enabled" in source
+
+
+def test_gateway_observability_is_idempotent_over_an_existing_delivery() -> None:
+    provisioner = _load_provisioner()
+
+    class _Logs:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+            self.exceptions = types.SimpleNamespace(
+                ResourceAlreadyExistsException=type("RAE", (Exception,), {}),
+                ConflictException=type("Conflict", (Exception,), {}),
+            )
+
+        def create_log_group(self, **kw):
+            self.calls.append("create_log_group")
+            raise self.exceptions.ResourceAlreadyExistsException()
+
+        def put_delivery_source(self, **kw):
+            self.calls.append(f"source:{kw['logType']}")
+            return {"deliverySource": {"name": kw["name"]}}
+
+        def put_delivery_destination(self, **kw):
+            self.calls.append(f"destination:{kw['deliveryDestinationType']}")
+            return {"deliveryDestination": {"arn": f"arn:dest:{kw['name']}"}}
+
+        def create_delivery(self, **kw):
+            self.calls.append("create_delivery")
+            raise self.exceptions.ConflictException()
+
+        def describe_deliveries(self, **kw):
+            return {"deliveries": [
+                {"id": "d-logs", "deliverySourceName": "gw-1-logs-source", "deliveryDestinationArn": "arn:dest:gw-1-logs-destination"},
+                {"id": "d-traces", "deliverySourceName": "gw-1-traces-source", "deliveryDestinationArn": "arn:dest:gw-1-traces-destination"},
+            ]}
+
+    logs = _Logs()
+    provisioner.boto3.client = lambda *a, **k: logs  # type: ignore[assignment]
+    receipt = provisioner._enable_gateway_observability(
+        region="us-east-1", account_id="123456789012",
+        gateway_arn="arn:aws:bedrock-agentcore:us-east-1:123456789012:gateway/gw-1", gateway_id="gw-1",
+    )
+    assert receipt == {
+        "log_group": "/aws/vendedlogs/bedrock-agentcore/gw-1",
+        "logs_delivery_id": "d-logs",
+        "traces_delivery_id": "d-traces",
+    }
+    assert "source:TRACES" in logs.calls and "destination:XRAY" in logs.calls

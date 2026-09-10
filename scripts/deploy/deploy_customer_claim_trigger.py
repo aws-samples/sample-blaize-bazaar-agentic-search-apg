@@ -71,13 +71,20 @@ def _region() -> str:
     return os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
 
 
-def mapping_from_database(region: str) -> Dict[str, str]:
+def mapping_from_database(
+    region: str,
+    *,
+    cluster_arn: str = "",
+    secret_arn: str = "",
+    database: str = "",
+    allow_empty: bool = False,
+) -> Dict[str, str]:
     """Read subject -> customer from the same table RLS keys off."""
-    cluster_arn = _require("DB_CLUSTER_ARN")
-    secret_arn = os.environ.get("DB_SECRET_ARN") or os.environ.get("SECRET_ARN") or ""
+    cluster_arn = cluster_arn or _require("DB_CLUSTER_ARN")
+    secret_arn = secret_arn or os.environ.get("DB_SECRET_ARN") or os.environ.get("SECRET_ARN") or ""
     if not secret_arn:
         raise SystemExit("DB_SECRET_ARN (or SECRET_ARN) is required to read principal_customers")
-    database = os.environ.get("DB_NAME") or os.environ.get("DATABASE") or "postgres"
+    database = database or os.environ.get("DB_NAME") or os.environ.get("DATABASE") or "postgres"
     rds = boto3.client("rds-data", region_name=region)
     response = rds.execute_statement(
         resourceArn=cluster_arn,
@@ -91,12 +98,50 @@ def mapping_from_database(region: str) -> Dict[str, str]:
         customer = record[1].get("stringValue", "")
         if sub and customer:
             mapping[sub] = customer
-    if not mapping:
+    if not mapping and not allow_empty:
         raise SystemExit(
             "pellier.principal_customers is empty; run scripts/seed_principal_mappings.py "
             "before deploying the claim trigger, or no shopper will carry a claim"
         )
     return mapping
+
+
+def deploy_trigger(
+    *,
+    region: str,
+    pool_id: str,
+    mapping: Dict[str, str],
+    staff_group: str = "",
+    staff_scope: str = "",
+) -> Dict[str, Any]:
+    """Create or update the trigger and attach it to the pool. Idempotent.
+
+    The provisioner calls this with its own inputs; the command line below is
+    the same call with inputs read from the environment.
+    """
+    if staff_group:
+        os.environ["PELLIER_OPERATOR_GROUP"] = staff_group
+    if staff_scope:
+        os.environ["PELLIER_STAFF_SCOPE"] = staff_scope
+    iam = boto3.client("iam", region_name=region)
+    lam = boto3.client("lambda", region_name=region)
+    idp = boto3.client("cognito-idp", region_name=region)
+
+    role_arn = ensure_role(iam)
+    function_arn = ensure_function(lam, role_arn, mapping)
+    pool_arn = idp.describe_user_pool(UserPoolId=pool_id)["UserPool"]["Arn"]
+    ensure_permission(lam, pool_arn)
+    lambda_config = attach_trigger(idp, pool_id, function_arn)
+    return {
+        "function": function_arn,
+        "role": role_arn,
+        "poolId": pool_id,
+        "lambdaConfig": lambda_config,
+        "mappedSubjects": len(mapping),
+        "customers": sorted(set(mapping.values())),
+        "staffGroup": os.environ.get("PELLIER_OPERATOR_GROUP", "pellier-operators"),
+        "staffScope": os.environ.get("PELLIER_STAFF_SCOPE", "returns"),
+    }
 
 
 def ensure_role(iam: Any) -> str:
@@ -236,24 +281,7 @@ def main() -> int:
     pool_id = _require("COGNITO_POOL_ID")
 
     mapping = json.loads(args.mapping_json) if args.mapping_json else mapping_from_database(region)
-    iam = boto3.client("iam", region_name=region)
-    lam = boto3.client("lambda", region_name=region)
-    idp = boto3.client("cognito-idp", region_name=region)
-
-    role_arn = ensure_role(iam)
-    function_arn = ensure_function(lam, role_arn, mapping)
-    pool_arn = idp.describe_user_pool(UserPoolId=pool_id)["UserPool"]["Arn"]
-    ensure_permission(lam, pool_arn)
-    lambda_config = attach_trigger(idp, pool_id, function_arn)
-
-    print(json.dumps({
-        "function": function_arn,
-        "role": role_arn,
-        "poolId": pool_id,
-        "lambdaConfig": lambda_config,
-        "mappedSubjects": len(mapping),
-        "customers": sorted(set(mapping.values())),
-    }, indent=2))
+    print(json.dumps(deploy_trigger(region=region, pool_id=pool_id, mapping=mapping), indent=2))
     return 0
 
 

@@ -37,6 +37,7 @@ if str(DEPLOY_DIR) not in sys.path:
 
 from gateway_tool_schemas import TOOL_SCHEMAS, schema_for  # noqa: E402
 from render_agentcore_project import (  # noqa: E402
+    DEPLOYMENT_SUFFIX,
     AGENTCORE_CLI,
     GATEWAY_NAME,
     MEMORY_NAME,
@@ -49,25 +50,29 @@ from render_agentcore_project import (  # noqa: E402
 )
 
 
+# Lambda names carry the deployment suffix so a release candidate's functions
+# sit beside a live set; target names inside the Gateway do not, because the
+# Cedar action ids the workshop teaches embed them and a Gateway scopes them.
+_SERVER_PREFIX = f"pellier-{DEPLOYMENT_SUFFIX}" if DEPLOYMENT_SUFFIX else "pellier"
 EXPECTED_TARGETS = {
     "search": {
         "handler": "pellier_search_server.lambda_handler",
-        "server_name": "pellier-search-server",
+        "server_name": f"{_SERVER_PREFIX}-search-server",
         "entrypoint": "scripts/deploy/pellier_search_server.py",
     },
     "pricing": {
         "handler": "pellier_pricing_server.lambda_handler",
-        "server_name": "pellier-pricing-server",
+        "server_name": f"{_SERVER_PREFIX}-pricing-server",
         "entrypoint": "scripts/deploy/pellier_pricing_server.py",
     },
     "recommendation": {
         "handler": "pellier_recommend_server.lambda_handler",
-        "server_name": "pellier-recommend-server",
+        "server_name": f"{_SERVER_PREFIX}-recommend-server",
         "entrypoint": "scripts/deploy/pellier_recommend_server.py",
     },
     "experience": {
         "handler": "pellier_experience_server.lambda_handler",
-        "server_name": "pellier-experience-server",
+        "server_name": f"{_SERVER_PREFIX}-experience-server",
         "entrypoint": "scripts/deploy/pellier_experience_server.py",
     },
 }
@@ -383,6 +388,92 @@ def _ensure_protected_log_group(
         )
 
     return receipt()
+
+
+def _deploy_claim_trigger(
+    *,
+    region: str,
+    user_pool_id: str,
+    db_cluster_arn: str,
+    db_secret_arn: str,
+) -> dict[str, Any]:
+    """Attach the customer-claim trigger to the workshop pool. Idempotent."""
+    deploy_path = str(Path(__file__).resolve().parent / "deploy")
+    if deploy_path not in sys.path:
+        sys.path.insert(0, deploy_path)
+    import deploy_customer_claim_trigger as trigger
+
+    mapping = trigger.mapping_from_database(
+        region,
+        cluster_arn=db_cluster_arn,
+        secret_arn=db_secret_arn,
+        allow_empty=True,
+    )
+    if not mapping:
+        logger.warning(
+            "pellier.principal_customers is empty; the claim trigger deploys with no "
+            "mappings and the governed reset re-runs it after seeding"
+        )
+    return trigger.deploy_trigger(region=region, pool_id=user_pool_id, mapping=mapping)
+
+
+def _enable_gateway_observability(
+    *,
+    region: str,
+    account_id: str,
+    gateway_arn: str,
+    gateway_id: str,
+) -> dict[str, Any]:
+    """Deliver the Gateway's application logs and traces to CloudWatch.
+
+    Vended-log deliveries, as the AgentCore observability guide configures them:
+    a delivery source per log type on the Gateway ARN, a CloudWatch Logs
+    destination for application logs, an X-Ray destination for traces, and one
+    delivery joining each pair. Every call is an upsert or tolerates an existing
+    delivery, so a re-run leaves the configuration as it is.
+    """
+    logs = boto3.client("logs", region_name=region, config=AWS_CONFIG)
+    log_group = f"/aws/vendedlogs/bedrock-agentcore/{gateway_id}"
+    try:
+        logs.create_log_group(logGroupName=log_group)
+    except logs.exceptions.ResourceAlreadyExistsException:
+        pass
+    log_group_arn = f"arn:aws:logs:{region}:{account_id}:log-group:{log_group}"
+
+    logs_source = logs.put_delivery_source(
+        name=f"{gateway_id}-logs-source", logType="APPLICATION_LOGS", resourceArn=gateway_arn
+    )["deliverySource"]["name"]
+    traces_source = logs.put_delivery_source(
+        name=f"{gateway_id}-traces-source", logType="TRACES", resourceArn=gateway_arn
+    )["deliverySource"]["name"]
+    logs_destination = logs.put_delivery_destination(
+        name=f"{gateway_id}-logs-destination",
+        deliveryDestinationType="CWL",
+        deliveryDestinationConfiguration={"destinationResourceArn": log_group_arn},
+    )["deliveryDestination"]["arn"]
+    traces_destination = logs.put_delivery_destination(
+        name=f"{gateway_id}-traces-destination", deliveryDestinationType="XRAY"
+    )["deliveryDestination"]["arn"]
+
+    def _deliver(source: str, destination: str) -> str:
+        try:
+            return str(logs.create_delivery(
+                deliverySourceName=source, deliveryDestinationArn=destination
+            )["delivery"]["id"])
+        except logs.exceptions.ConflictException:
+            for delivery in logs.describe_deliveries().get("deliveries", []):
+                if (
+                    delivery.get("deliverySourceName") == source
+                    and delivery.get("deliveryDestinationArn") == destination
+                ):
+                    return str(delivery["id"])
+            raise
+
+    return {
+        "log_group": log_group,
+        "logs_delivery_id": _deliver(logs_source, logs_destination),
+        "traces_delivery_id": _deliver(traces_source, traces_destination),
+    }
 
 
 def _ensure_runtime_log_group(
@@ -1028,7 +1119,7 @@ def _discover_live_gateway_tools(
         for surface in TOOL_SCHEMAS
         for tool in schema_for(surface, workshop=True)
     }
-    if len(tools) != 15 or canonical_names != expected:
+    if len(tools) != len(expected) or canonical_names != expected:
         raise RuntimeError(
             "Live Gateway discovery mismatch: "
             f"expected {sorted(expected)}, observed {sorted(canonical_names)}"
@@ -1736,6 +1827,39 @@ def main() -> int:
         result["verification"]["targets_attached"] = (
             control_proof["target_count"] == 4
         )
+
+        # Identity reaches Cedar as a claim, so the pool's pre-token trigger is
+        # part of the authorization boundary and deploys before any token is
+        # minted for a proof. The map is read from the same table RLS keys off;
+        # an unseeded table yields no claims and is reported, not hidden, and
+        # the governed reset re-runs this once the mappings are seeded.
+        claim_trigger = _deploy_claim_trigger(
+            region=region,
+            user_pool_id=required["cognito_pool"],
+            db_cluster_arn=required["db_cluster_arn"],
+            db_secret_arn=required["db_secret_arn"],
+        )
+        result["identity"] = {"claim_trigger": claim_trigger}
+        result["verification"]["claim_trigger_attached"] = (
+            claim_trigger["lambdaConfig"].get("PreTokenGenerationConfig", {}).get("LambdaVersion")
+            == "V2_0"
+        )
+        result["verification"]["claim_trigger_mapped_subjects"] = claim_trigger["mappedSubjects"]
+        checkpoint()
+
+        # Gateway spans, including the policy engine's own decision attributes,
+        # reach aws/spans only once trace delivery is configured on the Gateway.
+        gateway_observability = _enable_gateway_observability(
+            region=region,
+            account_id=account_id,
+            gateway_arn=gateway_arn,
+            gateway_id=gateway_id,
+        )
+        result["observability"]["gateway"] = gateway_observability
+        result["verification"]["gateway_tracing_enabled"] = bool(
+            gateway_observability.get("traces_delivery_id")
+        )
+        checkpoint()
 
         access_token, smoke_username = _cognito_access_token(
             region=region,

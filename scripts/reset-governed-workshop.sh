@@ -628,6 +628,15 @@ else
   warn "RLS principal mappings incomplete — run scripts/seed_principal_mappings.py (see /tmp/pellier-governed-reset-principals.log)"
 fi
 
+# The token claim is rendered from the same table, so it is refreshed here
+# rather than trusted to still match. Idempotent: same function, same pool.
+if "$PYTHON" "$REPO/scripts/deploy/deploy_customer_claim_trigger.py" \
+     >/tmp/pellier-governed-reset-claim-trigger.log 2>&1; then
+  pass "Customer claim trigger matches the principal mappings"
+else
+  warn "Customer claim trigger not refreshed — shopper tokens may carry no customer claim (see /tmp/pellier-governed-reset-claim-trigger.log)"
+fi
+
 _psql_file "$REPO/scripts/migrations/015_proof_carrying_commerce.sql" \
   >>/tmp/pellier-governed-reset-db.log
 pass "Proof-carrying commerce lifecycle restored"

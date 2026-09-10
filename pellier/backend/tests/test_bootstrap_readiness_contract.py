@@ -827,7 +827,7 @@ def test_policy_attachment_is_a_provisioning_hard_gate() -> None:
     assert "_discover_live_gateway_tools(" in source
     assert '"gateway_tools_discovered"' in source
     assert '"gateway_tool_count"' in source
-    assert "len(tools) != 15" in source
+    assert "len(tools) != len(expected)" in source
     assert "Gateway target mismatch" in source
 
 

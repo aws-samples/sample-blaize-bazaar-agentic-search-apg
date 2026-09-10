@@ -27,11 +27,33 @@ from gateway_tool_schemas import (
 
 
 AGENTCORE_CLI = "@aws/agentcore@0.26.0"
-PROJECT_NAME = "pellier"
-RUNTIME_NAME = "pellier_orchestrator"
-MEMORY_NAME = "PellierMemory"
-GATEWAY_NAME = "pellier-gateway"
-POLICY_ENGINE_NAME = "pellier_policy_engine"
+
+
+def _deployment_suffix() -> str:
+    """An optional label that isolates a second deployment in one account.
+
+    ``PELLIER_DEPLOYMENT_SUFFIX=rc`` renders ``pellier-rc`` resources beside a
+    live ``pellier`` set, so a release candidate can be deployed and proved
+    without touching the environment a workshop or a demo is running on. Empty
+    by default, which is what every workshop box uses. Lowercase letters and
+    digits only, so the label is valid in every resource name it lands in.
+    """
+    raw = os.environ.get("PELLIER_DEPLOYMENT_SUFFIX", "").strip().lower()
+    if raw and not re.fullmatch(r"[a-z][a-z0-9]{0,11}", raw):
+        raise SystemExit(
+            "PELLIER_DEPLOYMENT_SUFFIX must be 1-12 lowercase letters or digits"
+        )
+    return raw
+
+
+DEPLOYMENT_SUFFIX = _deployment_suffix()
+_DASH = f"-{DEPLOYMENT_SUFFIX}" if DEPLOYMENT_SUFFIX else ""
+_UNDER = f"_{DEPLOYMENT_SUFFIX}" if DEPLOYMENT_SUFFIX else ""
+PROJECT_NAME = f"pellier{_DASH}"
+RUNTIME_NAME = f"pellier{_UNDER}_orchestrator"
+MEMORY_NAME = f"Pellier{DEPLOYMENT_SUFFIX.capitalize()}Memory"
+GATEWAY_NAME = f"pellier{_DASH}-gateway"
+POLICY_ENGINE_NAME = f"pellier{_UNDER}_policy_engine"
 EXPERIENCE_TARGET = "pellier-concierge-experience-target"
 INITIATE_RETURN_ACTION = f"{EXPERIENCE_TARGET}___initiate_return"
 RECOMMENDATION_TARGET = "pellier-curation-recommendation-target"

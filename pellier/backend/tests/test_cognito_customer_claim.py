@@ -215,3 +215,58 @@ def test_attach_trigger_refuses_a_lite_pool() -> None:
     with pytest.raises(SystemExit, match="ESSENTIALS or PLUS"):
         deploy.attach_trigger(idp, "us-east-1_test", "arn:aws:lambda:us-east-1:1:function:claim")
     assert idp.updates == []
+
+
+class _Recorder:
+    """Records every AWS call the deployer makes, answering just enough."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, Dict[str, Any]]] = []
+        self.exceptions = types.SimpleNamespace(
+            ResourceConflictException=type("ResourceConflictException", (Exception,), {}),
+        )
+
+    def __getattr__(self, name: str):
+        def call(**kwargs: Any) -> Dict[str, Any]:
+            self.calls.append((name, kwargs))
+            return {
+                "get_role": {"Role": {"Arn": "arn:aws:iam::1:role/pellier-cognito-customer-claim-role"}},
+                "get_function": {},
+                "get_function_configuration": {"State": "Active", "LastUpdateStatus": "Successful"},
+                "update_function_code": {},
+                "update_function_configuration": {"FunctionArn": "arn:aws:lambda:us-east-1:1:function:pellier-cognito-customer-claim"},
+                "add_permission": {},
+                "describe_user_pool": {"UserPool": _pool()},
+                "update_user_pool": {},
+            }.get(name, {})
+        return call
+
+
+def test_deploy_trigger_updates_the_function_and_attaches_the_v2_trigger(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    deploy = _load("deploy_customer_claim_trigger")
+    recorder = _Recorder()
+    monkeypatch.setattr(deploy.boto3, "client", lambda *_a, **_k: recorder)
+    monkeypatch.setattr(deploy.time, "sleep", lambda *_a: None)
+    recorder_pool = _FakeIdp(_pool(), _MEMBERS)
+    monkeypatch.setattr(deploy, "attach_trigger", lambda idp, pool_id, arn: recorder_pool.pool["LambdaConfig"] | {
+        "PreTokenGenerationConfig": {"LambdaVersion": "V2_0", "LambdaArn": arn}
+    })
+
+    receipt = deploy.deploy_trigger(
+        region="us-east-1",
+        pool_id="us-east-1_test",
+        mapping={"sub-marco": "CUST-MARCO"},
+        staff_group="pellier-operators",
+        staff_scope="returns",
+    )
+
+    names = [name for name, _ in recorder.calls]
+    assert "update_function_code" in names and "update_function_configuration" in names
+    assert "add_permission" in names
+    env = next(kw for name, kw in recorder.calls if name == "update_function_configuration")["Environment"]["Variables"]
+    assert json.loads(env["CUSTOMER_CLAIM_MAP"]) == {"sub-marco": "CUST-MARCO"}
+    assert env["STAFF_GROUP"] == "pellier-operators" and env["STAFF_SCOPE"] == "returns"
+    assert receipt["mappedSubjects"] == 1 and receipt["customers"] == ["CUST-MARCO"]
+    assert receipt["lambdaConfig"]["PreTokenGenerationConfig"]["LambdaVersion"] == "V2_0"
