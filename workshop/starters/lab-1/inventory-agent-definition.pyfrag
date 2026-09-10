@@ -12,7 +12,7 @@ _INVENTORY_MODEL_ID = ""
 # Field 4: the reporting max-token ceiling.
 _INVENTORY_MAX_TOKENS = 0
 
-# Field 5: the three tools Inventory Agent owns.
+# Field 5: the two tools Inventory Agent owns.
 _INVENTORY_TOOLS = []
 #
 # Source delta: Inventory Agent has no temperature field. Sonnet 4.6 rejects the

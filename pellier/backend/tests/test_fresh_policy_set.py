@@ -53,11 +53,11 @@ GATEWAY_ARN = "arn:aws:bedrock-agentcore:us-east-1:000000000000:gateway/test-gw"
 CUSTOMER_CLAIM = "custom:customer_id"
 STAFF_CLAIM = "custom:staff_scope"
 
-# The exact 15 this workshop iteration publishes. Written out ONCE, here, so a change to
+# The exact 14 this workshop iteration publishes. Written out ONCE, here, so a change to
 # the derived contract has to be acknowledged in a test rather than absorbed silently.
 EXPECTED_PUBLISHED: Set[str] = {
     "search_products", "search_products_hybrid", "browse_category", "check_inventory",
-    "get_low_stock", "restock_inventory",
+    "get_low_stock",
     "get_price_analysis", "compare_products",
     "get_customer_preferences", "get_audit_trail", "get_trending_products",
     "get_return_policy", "get_related_products",
@@ -67,7 +67,7 @@ EXPECTED_PUBLISHED: Set[str] = {
 EXPECTED_TARGETS: Dict[str, Set[str]] = {
     "pellier-discovery-search-target": {
         "search_products", "search_products_hybrid", "browse_category",
-        "check_inventory", "get_low_stock", "restock_inventory",
+        "check_inventory", "get_low_stock",
     },
     "pellier-value-pricing-target": {"get_price_analysis", "compare_products"},
     "pellier-curation-recommendation-target": {
@@ -106,19 +106,19 @@ def _norm(statement: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def test_the_workshop_publishes_exactly_the_expected_fifteen() -> None:
+def test_the_workshop_publishes_exactly_the_expected_fourteen() -> None:
     assert workshop_published_tools() == EXPECTED_PUBLISHED
 
 
-def test_the_deferred_pair_is_exactly_issue_credit_and_ticket_history() -> None:
-    assert WORKSHOP_DEFERRED_TOOLS == {"issue_credit", "get_ticket_history"}
+def test_the_deferred_set_is_the_two_operator_capabilities_and_the_lab_three_read() -> None:
+    assert WORKSHOP_DEFERRED_TOOLS == {"issue_credit", "restock_inventory", "get_ticket_history"}
 
 
 def test_the_published_set_is_derived_not_hand_copied() -> None:
     """Catalogue minus deferred. A second literal list would drift on the next tool."""
     assert workshop_published_tools() == canonical_tool_names() - WORKSHOP_DEFERRED_TOOLS
     assert len(canonical_tool_names()) == 17
-    assert len(workshop_published_tools()) == 15
+    assert len(workshop_published_tools()) == 14
 
 
 def test_every_published_name_is_unique() -> None:
@@ -534,11 +534,9 @@ def test_the_fresh_authorization_matrix(who: str, action: str, inp, expected: st
     assert _decide(action, inp, claims=claims) == expected
 
 
-def test_restock_inventory_has_zero_matching_permits() -> None:
-    """P1-04. Publishing the schema must not make a mutation callable.
-
-    Cedar is default-deny, so omission from the allow-list IS the control. No redundant
-    permit-plus-forbid pair: that would be a second thing to keep in sync.
+def test_restock_inventory_is_off_the_shopper_gateway_and_has_no_permit() -> None:
+    """Restock is an operator capability. Not published, so no action id; and no
+    permit names it either, so a future publication is still denied by default.
     """
     action = "pellier-discovery-search-target___restock_inventory"
     matching = [
@@ -547,8 +545,8 @@ def test_restock_inventory_has_zero_matching_permits() -> None:
         and not p["statement"].lstrip().startswith("forbid")
     ]
     assert matching == []
-    # It IS published — the tool exists; it simply cannot be authorized.
-    assert "restock_inventory" in workshop_published_tools()
+    assert "restock_inventory" not in workshop_published_tools()
+    assert "restock_inventory" in canonical_tool_names(), "the tool still exists for the desk"
 
 
 def test_a_future_published_tool_is_denied_by_default() -> None:

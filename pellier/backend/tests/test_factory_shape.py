@@ -50,7 +50,7 @@ SPECIALIST_SPECS = [
      {"get_price_analysis", "browse_category", "search_products", "compare_products",
       "get_trending_products"}),
     ("inventory", build_inventory_agent,
-     {"check_inventory", "restock_inventory", "get_low_stock"}),
+     {"check_inventory", "get_low_stock"}),
     ("support", build_support_agent,
      {"get_return_policy", "search_products", "initiate_return", "get_ticket_history",
       "get_customer_preferences", "escalate_to_human"}),
@@ -112,7 +112,7 @@ def test_inventory_tool_names_render_as_inventory_agent() -> None:
     """
     from services.chat import EnhancedChatService
 
-    for tool_name in ("inventory", "check_inventory", "get_low_stock", "restock_inventory"):
+    for tool_name in ("inventory", "check_inventory", "get_low_stock"):
         assert EnhancedChatService._tool_to_agent_name(tool_name) == "Inventory Agent"
 
 

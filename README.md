@@ -176,7 +176,7 @@ as one policy engine:
 |---|---|---|
 | Identity | Cognito JWT verified on the managed rail | Which authenticated human initiated the request |
 | Managed execution | AgentCore Runtime with JWT passthrough | Which orchestrator ran and on which managed rail |
-| Tool contract | AgentCore Gateway exposes a 17-tool target-qualified MCP catalog, 15 of them published to participants | Which callable capability and input schema the agent received |
+| Tool contract | AgentCore Gateway exposes a 17-tool target-qualified MCP catalog, 14 of them published to participants | Which callable capability and input schema the agent received |
 | Authorization | AgentCore Policy evaluates Cedar before Gateway target execution | Which of five states the call reached: `ALLOW`, `DENY`, `WOULD_DENY` (a real LOG_ONLY decision flip), `EVALUATION_INCOMPLETE` (the engine could not be read), or `POLICY_INFERRED` (a match against policy text, which is never presented as a decision) |
 | Data authorization | Aurora SQL functions validate ownership and write invariants | Which records the permitted tool could actually read or mutate |
 | Row-level authorization | PostgreSQL RLS policies on `orders` and `returns`, enforced against the `pellier_agent` and `pellier_query` roles (neither holds `BYPASSRLS`) and scoped by the `pellier.principal_sub` GUC through `pellier.principal_customers` | That a permitted tool holding a valid token still cannot read another shopper's rows, enforced by the database rather than by application code |
@@ -571,7 +571,7 @@ live and reports the route actually observed.
 | **Search Agent**      | Interprets intent, runs semantic search         | Claude Opus 4.6  |
 | **Personalization Agent**            | Pairing, palette, occasion, editorial picks     | Claude Opus 4.6  |
 | **Pricing Agent**      | Price intelligence, deals, percentile context   | Claude Sonnet 4.6 |
-| **Inventory Agent**       | Warehouse stock, restocks, low-inventory alerts | Claude Sonnet 4.6 |
+| **Inventory Agent**       | Warehouse stock and low-inventory alerts        | Claude Sonnet 4.6 |
 | **Customer Service Agent**   | Returns, care, post-purchase                    | Claude Opus 4.6  |
 
 The Operator Concierge adds two bounded graph nodes:
@@ -591,11 +591,13 @@ Per-agent model choice is an architectural decision – Inventory Agent's terse 
 
 17 `@tool` functions form the Gateway catalog, and 17 is also the total in
 `services/agent_tools.py`: every tool that exists is in the catalog. Discovery
-returns all 17 by exact name; this iteration publishes 15 of them to
-participants, holding back `issue_credit` and `get_ticket_history`. The 15
-published names are:
+returns all 17 by exact name; this iteration publishes 14 of them to
+participants, holding back `issue_credit`, `restock_inventory`, and
+`get_ticket_history`. The two operator capabilities stay off the shopper
+Gateway for good: no shopper-facing specialist binds them, and the desk reaches
+them behind its own authorization. The 14 published names are:
 
-`search_products` · `search_products_hybrid` · `get_related_products` · `get_trending_products` · `get_price_analysis` · `browse_category` · `compare_products` · `check_inventory` · `restock_inventory` · `get_low_stock` · `get_return_policy` · `initiate_return` · `get_customer_preferences` · `get_audit_trail` · `escalate_to_human`
+`search_products` · `search_products_hybrid` · `get_related_products` · `get_trending_products` · `get_price_analysis` · `browse_category` · `compare_products` · `check_inventory` · `get_low_stock` · `get_return_policy` · `initiate_return` · `get_customer_preferences` · `get_audit_trail` · `escalate_to_human`
 
 #### One search executor
 

@@ -431,36 +431,6 @@ export const PERSONA_TURN_TRACES: Record<string, PersonaTurnTrace[]> = {
   fresh: PERSONA_HERO_PILLS.fresh.map(() => ({ tools: ['search_products'] })),
 }
 
-export interface OperatorTurn {
-  id: 'running-low' | 'restock-product-37'
-  label: string
-  query: string
-  tools: string[]
-  access: 'read' | 'write'
-}
-
-/**
- * Inventory operations remain visibly separate from a shopper profile. The
- * backend keeps mutating tools on the governed path; Labs keeps their
- * Dispatcher-only constraint explicit before a participant triggers a turn.
- */
-export const OPERATOR_TURNS: OperatorTurn[] = [
-  {
-    id: 'running-low',
-    label: 'Review low stock',
-    query: 'Which pieces are running low?',
-    tools: ['get_low_stock'],
-    access: 'read',
-  },
-  {
-    id: 'restock-product-37',
-    label: 'Restock product 37',
-    query: 'Restock product 37 by 12 units.',
-    tools: ['restock_inventory'],
-    access: 'write',
-  },
-]
-
 // ---------------------------------------------------------------------
 // Featured product ID — the big hero product slot per persona.
 // Maps persona → product ID from the seeded Aurora catalog.

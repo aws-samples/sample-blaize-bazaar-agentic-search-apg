@@ -256,19 +256,16 @@ def test_second_phase_attaches_the_baseline_cedar_set(tmp_path: Path) -> None:
     assert "permit (\n  principal,\n  action,\n" not in statements
 
 
-def test_restock_inventory_is_published_without_a_baseline_permit(tmp_path: Path) -> None:
-    """Published and unauthorized is a DENY, and that is the intended shape.
+def test_restock_inventory_is_neither_published_nor_permitted(tmp_path: Path) -> None:
+    """An operator capability stays off the shopper Gateway.
 
-    ``restock_inventory`` must exist on the Gateway so the operator desk can attempt it
-    and the refusal is a real Cedar decision rather than a missing tool. Naming it in a
-    baseline permit would authorize it for every principal.
+    ``restock_inventory`` is deferred with ``issue_credit``: a shopper token cannot
+    reach it because no action id exists, and no baseline permit names it either, so
+    publishing it later would still be denied by default.
     """
     _, project = _render(tmp_path, include_policies=True)
     policies = project["policyEngines"][0]["policies"]
 
-    # The property is "no PERMIT reaches it", not "the name appears nowhere". It now
-    # appears in `forbid_restock_without_operator_group`, which makes the refusal explicit
-    # and attributable instead of an absence, and a forbid cannot grant anything.
     permits = [
         policy["statement"]
         for policy in policies
@@ -287,7 +284,8 @@ def test_restock_inventory_is_published_without_a_baseline_permit(tmp_path: Path
         for path in schemas
         for tool in json.loads(path.read_text())
     }
-    assert "restock_inventory" in published
+    assert "restock_inventory" not in published
+    assert "issue_credit" not in published
 
 
 def test_deployed_state_reads_mcp_gateway_shape() -> None:

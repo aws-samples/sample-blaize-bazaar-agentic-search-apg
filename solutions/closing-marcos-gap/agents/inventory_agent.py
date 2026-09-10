@@ -14,7 +14,7 @@ import re
 from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
-from services.agent_tools import check_inventory, restock_inventory, get_low_stock
+from services.agent_tools import check_inventory, get_low_stock
 from skills import inject_skills
 from services.persona_context import inject_persona_preamble
 
@@ -48,8 +48,8 @@ _INVENTORY_SYSTEM_PROMPT = (
     "warehouse_name, city, ship_window_min, ship_window_max, quantity}]}.\n"
     "  - WITHOUT argument: aggregate health (totals, low-stock alerts).\n"
     "- get_low_stock: items needing restock, prioritized by rating. "
-    "- restock_inventory: only when the user provides a product ID + quantity. "
-    "If they name a product instead of an ID, say you need the ID. "
+    "Restocking is an operator action on the desk, not something you can do: "
+    "if a customer asks you to restock, say so and offer the current count instead. "
     "</tools>"
     "<output-rules>"
     "ALWAYS call a tool first. No text before the tool call. "
@@ -128,7 +128,7 @@ def build_inventory_agent() -> Agent:
         system_prompt=inject_persona_preamble(
             inject_skills(_INVENTORY_SYSTEM_PROMPT)
         ),
-        tools=[check_inventory, restock_inventory, get_low_stock],
+        tools=[check_inventory, get_low_stock],
     )
 
 
@@ -136,13 +136,12 @@ def build_inventory_agent() -> Agent:
 def inventory(query: str) -> str:
     """
     Analyze inventory levels and provide restocking recommendations.
-    Can also execute restock actions when user provides product ID and quantity.
 
     Args:
-        query: Inventory-related question or restock command
+        query: Inventory-related question
 
     Returns:
-        Restocking recommendations or restock confirmation with product details
+        Stock levels and restocking recommendations with product details
     """
     try:
         tool_results = []

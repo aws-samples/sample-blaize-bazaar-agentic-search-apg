@@ -22,7 +22,7 @@ import json
 from strands import Agent, tool
 from strands.models import BedrockModel
 from config import settings
-from services.agent_tools import check_inventory, restock_inventory, get_low_stock
+from services.agent_tools import check_inventory, get_low_stock
 from skills import inject_skills
 from services.persona_context import inject_persona_preamble
 from services.response_mode import resolve_specialist_model
@@ -60,9 +60,8 @@ _INVENTORY_SYSTEM_PROMPT = (
     "warehouse_name, city, ship_window_min, ship_window_max, quantity}]}.\n"
     "  - WITHOUT argument: aggregate health (totals, low-stock alerts).\n"
     "- get_low_stock: items needing restock, prioritized by rating. "
-    "- restock_inventory: only when the user provides a product ID + quantity. "
-    "Pass a stable idempotency_key for the intended write and a warehouse_id "
-    "(default BK-01). If they name a product instead of an ID, say you need the ID. "
+    "Restocking is an operator action on the desk, not something you can do: "
+    "if a customer asks you to restock, say so and offer the current count instead. "
     "</tools>"
     "<output-rules>"
     "ALWAYS call a tool first. No text before the tool call. "
@@ -110,8 +109,8 @@ _INVENTORY_MODEL_ID = settings.BEDROCK_REPORTING_MODEL
 # Field 4: the reporting max-token ceiling.
 _INVENTORY_MAX_TOKENS = settings.AGENT_MAX_TOKENS_SONNET
 
-# Field 5: the three tools Inventory Agent owns.
-_INVENTORY_TOOLS = [check_inventory, restock_inventory, get_low_stock]
+# Field 5: the two tools Inventory Agent owns.
+_INVENTORY_TOOLS = [check_inventory, get_low_stock]
 #
 # Source delta: Inventory Agent has no temperature field. Sonnet 4.6 rejects the
 # deprecated temperature kwarg, so the correct definition omits it.
@@ -175,13 +174,12 @@ def build_inventory_agent() -> Agent:
 def inventory(query: str) -> str:
     """
     Analyze inventory levels and provide restocking recommendations.
-    Can also execute restock actions when user provides product ID and quantity.
 
     Args:
-        query: Inventory-related question or restock command
+        query: Inventory-related question
 
     Returns:
-        Restocking recommendations or restock confirmation with product details
+        Stock levels and restocking recommendations with product details
     """
     # The other orchestration patterns carry their own scaffold seams
     # (graph_pattern's _UnavailableSpecialistNode, the dispatcher

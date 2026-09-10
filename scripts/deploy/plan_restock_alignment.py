@@ -185,7 +185,10 @@ def plan(live: Dict[str, Any]) -> Dict[str, Any]:
         },
         "freshComparison": {
             "freshBaselineActionCount": len(fresh_ids),
+            # None: a fresh stack does not publish the restock tool on the shopper
+            # Gateway, so there is no action id for any policy to permit.
             "freshRestockActionId": fresh_restock_action_id(),
+            "freshPublishesRestock": fresh_restock_action_id() is not None,
             "freshPermitsRestock": fresh_restock_action_id() in set(fresh_ids),
             "convergesOnCount": len(desired_ids) == len(fresh_ids),
         },
@@ -216,6 +219,7 @@ def offline_plan() -> Dict[str, Any]:
             "freshBaselineActionCount": len(fresh_ids),
             "freshBaselineActions": fresh_ids,
             "freshRestockActionId": fresh_restock_action_id(),
+            "freshPublishesRestock": fresh_restock_action_id() is not None,
             "freshPermitsRestock": fresh_restock_action_id() in set(fresh_ids),
         },
         "intent": (

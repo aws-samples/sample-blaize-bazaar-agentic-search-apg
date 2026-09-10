@@ -381,6 +381,7 @@ for _target in TOOL_SCHEMAS.values():
 # shopper-facing specialist.
 WORKSHOP_DEFERRED_TOOLS: frozenset[str] = frozenset({
     "issue_credit",
+    "restock_inventory",
 })
 # === WORKSHOP · Gateway catalogue · published tools: END ===
 

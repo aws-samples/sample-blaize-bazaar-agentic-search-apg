@@ -417,9 +417,9 @@ def test_the_alignment_planner_reports_restock_as_unpermitted_when_fresh() -> No
     assert result["applied"] is False
     fresh = result["freshComparison"]
     assert fresh["freshPermitsRestock"] is False
-    assert fresh["freshRestockActionId"] == (
-        "pellier-discovery-search-target___restock_inventory"
-    )
+    # A fresh stack publishes no restock tool on the shopper Gateway at all.
+    assert fresh["freshPublishesRestock"] is False
+    assert fresh["freshRestockActionId"] is None
     # Eleven catalogue reads; the two customer-scoped reads carry owner-only permits.
     assert fresh["freshBaselineActionCount"] == 11
-    assert fresh["freshRestockActionId"] not in fresh["freshBaselineActions"]
+    assert not any(a.endswith("___restock_inventory") for a in fresh["freshBaselineActions"])

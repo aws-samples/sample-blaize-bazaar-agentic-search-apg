@@ -53,8 +53,10 @@ tool runs. Aurora Row-Level Security is a second, independent refusal on the
 database session, and Lab 4 proves them separately for exactly that reason. A
 claim that "RLS scopes what the agent can read" is only half the sentence.
 
-`restock_inventory` has no permit. Cedar is default-deny, so omission is the
-control.
+`restock_inventory` is not published on the shopper Gateway and has no permit.
+It is an operator capability behind the desk's own authorization; keeping it
+unpublished means a shopper token has no action id to attempt, and keeping it
+out of every permit means a later publication is still denied by default.
 
 The Lab 4 identity condition (`principal.getTag("custom:customer_id")` bound to
 `context.input.customer_id` on the return action) is **absent from the baseline

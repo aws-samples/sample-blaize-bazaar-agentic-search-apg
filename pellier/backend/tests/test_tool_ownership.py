@@ -28,7 +28,7 @@ appears in `UNBOUND_BY_DECISION` with a reason. That makes both directions fail 
     decision has to be revisited rather than silently reversed.
 
 The scan is import-based rather than runtime-based on purpose. `inventory_agent.py` binds
-its three tools inside the Lab 1 marker region, which is empty until a participant fills
+its two tools inside the Lab 1 marker region, which is empty until a participant fills
 it, but the module-level import names them in either state. A runtime check would report
 the Inventory Agent's tools as orphaned on every unstarted workshop box.
 """
@@ -47,6 +47,12 @@ AGENTS_DIR = BACKEND / "agents"
 # Tools deliberately reachable by no specialist. Each entry is a decision with a reason,
 # not a waiver: removing the reason, or binding the tool, must break this test.
 UNBOUND_BY_DECISION: Dict[str, str] = {
+    "restock_inventory": (
+        "Operator-only. Restocking moves stock, so no shopper-facing specialist binds "
+        "it and it is deferred from the shopper Gateway. Its caller is the operator "
+        "desk's restock endpoint behind require_operator, with the same idempotent "
+        "write path and audit row as every other governed mutation."
+    ),
     "issue_credit": (
         "Operator-only, and deferred for this workshop iteration. Its caller is the "
         "confirmed-review execution path, not a specialist: "

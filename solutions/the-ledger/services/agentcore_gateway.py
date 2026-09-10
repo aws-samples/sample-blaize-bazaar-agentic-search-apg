@@ -107,7 +107,7 @@ MANAGED_SPECIALIST_TOOLS: Dict[str, tuple[str, ...]] = {
         "escalate_to_human",
     ),
     "pricing": ("get_price_analysis", "browse_category", "search_products"),
-    "inventory": ("check_inventory", "get_low_stock", "restock_inventory"),
+    "inventory": ("check_inventory", "get_low_stock"),
     "support": SUPPORT_MANAGED_TOOLS,
 }
 
