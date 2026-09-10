@@ -478,6 +478,11 @@ def main() -> int:
     parser.add_argument("--lambda-arns", type=Path, required=True)
     parser.add_argument("--include-policies", action="store_true")
     parser.add_argument("--action-token", default=INITIATE_RETURN_ACTION)
+    parser.add_argument(
+        "--gateway-arn",
+        default="",
+        help="Deployed Gateway ARN; required with --include-policies",
+    )
     args = parser.parse_args()
 
     lambda_arns = json.loads(args.lambda_arns.read_text())
