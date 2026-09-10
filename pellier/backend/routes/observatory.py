@@ -384,15 +384,14 @@ def _json_object(value: Any) -> dict[str, Any]:
     return {}
 
 
-async def _write_operation_for_execution(
+def _declared_idempotency_key(
     audit_row: dict[str, Any] | None,
     governed_args: Any,
-) -> dict[str, Any] | None:
-    """Resolve the idempotency ledger from principal-scoped execution data.
+) -> str | None:
+    """The key a governed attempt declared, from its audit row or its receipt.
 
-    ``write_operations`` has no principal column of its own. The lookup key is
-    therefore accepted only from the already principal-scoped governed receipt
-    or its linked audit row; this helper never searches the ledger broadly.
+    Both sources are already principal-scoped, so a key taken from them never
+    widens a lookup beyond the caller's own evidence.
     """
     audit_args = _json_object((audit_row or {}).get("args"))
     receipt_args = _json_object(governed_args)
@@ -403,6 +402,88 @@ async def _write_operation_for_execution(
         or receipt_args.get("idempotencyKey")
     )
     if not isinstance(idempotency_key, str) or not idempotency_key.strip():
+        return None
+    return idempotency_key.strip()
+
+
+# Absence, for one declared key, searched in the three places an execution
+# leaves a trace. Same rule as scripts/build_receipt.py::_DENY_ABSENCE and
+# scripts/prove_identity_boundary.py: absence is only ever claimed for a key
+# that was actually searched for. Deliberately not run-scoped, so an execution
+# of the key in another run still surfaces as the contradiction it is.
+_DENY_ABSENCE_SQL = """
+SELECT
+    (SELECT count(*) FROM pellier.tool_audit
+      WHERE args->>'idempotency_key' = %s)             AS execution_rows,
+    (SELECT count(*) FROM pellier.write_operations
+      WHERE idempotency_key = %s)                        AS write_rows,
+    (SELECT count(*) FROM pellier.write_operations
+      WHERE idempotency_key = %s
+        AND completed_at IS NOT NULL)                   AS completed_writes,
+    (SELECT count(*) FROM pellier.inventory_ledger
+      WHERE idempotency_key = %s)                        AS ledger_rows
+"""
+
+
+async def _deny_absence_verdict(
+    latest_governed: dict[str, Any] | None,
+    governed_audit: dict[str, Any] | None,
+) -> tuple[bool, str]:
+    """Whether a DENY receipt's declared key left no execution anywhere.
+
+    A null ``audit_id`` on the DENY row is one signal from the row whose claim
+    is under test, and a row cannot be its own alibi. Returns ``(verified,
+    detail)``; ``verified`` is True only after every table an execution would
+    have written came back empty for the declared key.
+    """
+    if not latest_governed or latest_governed.get("decision") != "DENY":
+        return False, ""
+    key = _declared_idempotency_key(
+        governed_audit, latest_governed.get("args")
+    )
+    if key is None:
+        return False, (
+            "DENY receipt declares no idempotency key, so no execution "
+            "table can be searched; a null audit_id alone is not absence."
+        )
+    try:
+        from app import db_service
+
+        if db_service is None:
+            return False, "Absence search unavailable: no database service."
+        row = await db_service.fetch_one(_DENY_ABSENCE_SQL, key, key, key, key)
+    except Exception as exc:
+        logger.debug("Observatory absence search unavailable: %s", exc)
+        return False, "Absence search unavailable; absence is unverified."
+    counts = {
+        name: int((row or {}).get(name) or 0)
+        for name in ("execution_rows", "write_rows", "completed_writes", "ledger_rows")
+    }
+    if any(counts.values()):
+        return False, (
+            f"Contradicted: key {key} was denied yet tool_audit has "
+            f"{counts['execution_rows']} row(s), write_operations "
+            f"{counts['write_rows']} ({counts['completed_writes']} completed), "
+            f"inventory_ledger {counts['ledger_rows']}."
+        )
+    return True, (
+        f"Keyed search for {key} found no row in tool_audit, "
+        "write_operations, or inventory_ledger: the denied tool did not execute."
+    )
+
+
+async def _write_operation_for_execution(
+    audit_row: dict[str, Any] | None,
+    governed_args: Any,
+) -> dict[str, Any] | None:
+    """Resolve the idempotency ledger from principal-scoped execution data.
+
+    ``write_operations`` has no principal column of its own. The lookup key is
+    therefore accepted only from the already principal-scoped governed receipt
+    or its linked audit row; this helper never searches the ledger broadly.
+    """
+    idempotency_key = _declared_idempotency_key(audit_row, governed_args)
+    if idempotency_key is None:
         return None
     try:
         from app import db_service
@@ -420,7 +501,7 @@ async def _write_operation_for_execution(
              WHERE idempotency_key = %s
              LIMIT 1
             """,
-            idempotency_key.strip(),
+            idempotency_key,
         )
         if not row:
             return None
@@ -954,10 +1035,8 @@ async def _collect_proof_board(
     ])
     governed_decision = latest_governed.get("decision") if latest_governed else ""
     governed_audit_present = bool(governed_audit)
-    governed_absence_verified = bool(
-        latest_governed
-        and governed_decision == "DENY"
-        and latest_governed.get("audit_id") is None
+    governed_absence_verified, absence_check_detail = await _deny_absence_verdict(
+        latest_governed, governed_audit
     )
     managed_receipt.update({
         "policyConfigured": policy_configured,
@@ -997,11 +1076,7 @@ async def _collect_proof_board(
         "writeOperationCompletedAt": (
             write_operation.get("completed_at") if write_operation else None
         ),
-        "absenceCheckDetail": (
-            "JWT-bound helper-classified DENY: the uniquely keyed workshop attempt has no audit_id and no tool_audit row."
-            if governed_absence_verified
-            else ""
-        ),
+        "absenceCheckDetail": absence_check_detail,
     })
 
     cards = [

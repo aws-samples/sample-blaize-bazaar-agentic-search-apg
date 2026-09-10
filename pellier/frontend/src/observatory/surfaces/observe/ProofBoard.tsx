@@ -881,7 +881,7 @@ const ReceiptStrip: React.FC<{ receipt: ManagedReceipt }> = ({ receipt }) => {
         : isDeny && absenceVerified
           ? 'Cedar DENY: tool target did not execute'
           : isDeny
-            ? 'DENY receipt present; absence check pending'
+            ? receipt.absenceCheckDetail || 'DENY receipt present; absence not verified'
             : 'No Gateway ALLOW row',
       state: receipt.gatewayAuditPresent || (isDeny && absenceVerified)
         ? 'pass'

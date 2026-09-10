@@ -163,13 +163,31 @@ class _DenyProofDB(_ProofDB):
                     "customer_id": "theo",
                     "product_id": 37,
                     "reason": "damaged",
+                    "idempotency_key": self.declared_key,
                     "absence_verified": True,
                 },
                 "policy_engine_id": "policy-1",
                 "policy_name": "workshop_identity_match_forbid",
                 "created_at": None,
             }
+        if "AS execution_rows" in query:
+            self.absence_searches.append(params)
+            return dict(self.absence_counts)
         return await super().fetch_one(query, *params)
+
+    # The DENY receipt's own declared key; ``None`` models a receipt that
+    # declared nothing searchable.
+    declared_key: str | None = "workshop-attempt:theo:37"
+    absence_counts: dict = {
+        "execution_rows": 0,
+        "write_rows": 0,
+        "completed_writes": 0,
+        "ledger_rows": 0,
+    }
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.absence_searches: list = []
 
 
 def _client(stub_db: _ProofDB) -> TestClient:
@@ -472,7 +490,8 @@ def test_proof_board_joins_evidence_to_the_verified_principal(monkeypatch) -> No
 
 def test_proof_board_scopes_gateway_deny_absence(monkeypatch) -> None:
     _configure_managed(monkeypatch)
-    client = _client(_DenyProofDB())
+    db = _DenyProofDB()
+    client = _client(db)
 
     r = client.get("/api/observatory/proof-board?session_id=gateway-identity-mismatch-proof")
     assert r.status_code == 200
@@ -482,7 +501,56 @@ def test_proof_board_scopes_gateway_deny_absence(monkeypatch) -> None:
     assert receipt["governedAuditId"] is None
     assert receipt["gatewayAuditPresent"] is False
     assert receipt["gatewayAuditAbsenceVerified"] is True
-    assert "JWT-bound helper-classified DENY" in receipt["absenceCheckDetail"]
+    # Absence is a search result, not a null column: the declared key was
+    # looked for in every table an execution writes.
+    assert db.absence_searches == [("workshop-attempt:theo:37",) * 4]
+    assert "workshop-attempt:theo:37" in receipt["absenceCheckDetail"]
+    assert "tool_audit" in receipt["absenceCheckDetail"]
+    assert "write_operations" in receipt["absenceCheckDetail"]
+
+
+def test_proof_board_reports_a_deny_whose_key_executed_as_a_contradiction(
+    monkeypatch,
+) -> None:
+    """A DENY beside a completed write for the same key is not absence."""
+    _configure_managed(monkeypatch)
+    db = _DenyProofDB()
+    db.absence_counts = {
+        "execution_rows": 1,
+        "write_rows": 1,
+        "completed_writes": 1,
+        "ledger_rows": 0,
+    }
+    client = _client(db)
+
+    r = client.get("/api/observatory/proof-board?session_id=gateway-identity-mismatch-proof")
+    assert r.status_code == 200
+    receipt = r.json()["managedReceipt"]
+
+    assert receipt["governedDecision"] == "DENY"
+    assert receipt["gatewayAuditAbsenceVerified"] is False
+    assert "contradict" in receipt["absenceCheckDetail"].lower()
+    assert "write_operations" in receipt["absenceCheckDetail"]
+
+
+def test_proof_board_cannot_verify_absence_without_a_declared_key(
+    monkeypatch,
+) -> None:
+    """A null audit_id alone never proves the tool did not run."""
+    _configure_managed(monkeypatch)
+    db = _DenyProofDB()
+    db.declared_key = None
+    client = _client(db)
+
+    r = client.get("/api/observatory/proof-board?session_id=gateway-identity-mismatch-proof")
+    assert r.status_code == 200
+    receipt = r.json()["managedReceipt"]
+
+    assert receipt["governedDecision"] == "DENY"
+    assert receipt["governedAuditId"] is None
+    assert receipt["gatewayAuditAbsenceVerified"] is False
+    assert db.absence_searches == []
+    assert "no idempotency key" in receipt["absenceCheckDetail"]
 
 
 def test_build_state_reports_inventory_agent_midpoint(monkeypatch) -> None:
