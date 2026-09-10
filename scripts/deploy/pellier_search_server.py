@@ -135,8 +135,103 @@ def _write_tool_audit_in_transaction(
     )
 
 
-def semantic_search(query: str, limit: int = 5, max_price: float = None, min_rating: float = None) -> dict:
-    """Search products by semantic similarity using pgvector."""
+# Mirrors ``HybridSearch._build_or_tsquery`` in services/hybrid_search.py.
+# ``plainto_tsquery`` ANDs every stem together, so a conversational query such
+# as "a thoughtful gift for someone who loves morning rituals" matches no
+# description at all and the lexical branch contributes nothing. The in-process
+# rail OR-joins the meaningful tokens and lets ``to_tsquery`` stem them; this
+# rail must do the same or the two rails rank one catalog differently.
+# tests/test_gateway_eligibility_parity.py holds the two builders to identical
+# output and the stop-word set to the same literal.
+_FTS_STOP_WORDS = frozenset({
+    "the", "and", "for", "with", "that", "this", "have", "has",
+    "are", "was", "were", "from", "into", "out", "but", "not",
+    "any", "all", "some", "one", "two", "three", "what", "where",
+    "when", "how", "who", "why", "you", "your", "yours", "our",
+    "their", "they", "them", "his", "her", "him", "she", "him",
+    "let", "lets", "just", "really", "also", "more", "most",
+    "much", "many", "very",
+    # Conversational filler that never adds retrieval signal.
+    "something", "someone", "somebody", "anything", "anyone",
+    "thing", "things", "stuff", "kind", "sort", "type",
+    "good", "great", "nice", "really", "would", "could", "should",
+    "want", "need", "like", "love", "loves", "loving",
+    # Generic shopping verbs.
+    "find", "show", "give", "get", "browse", "recommend",
+    "suggest", "help", "tell", "look", "looking",
+})
+
+
+def _build_or_tsquery(query: str) -> str:
+    """OR-of-tokens input for ``to_tsquery``, identical to the in-process builder."""
+    if not query:
+        return ""
+    cleaned = re.sub(r"[^\w\s-]", " ", query.lower())
+    tokens = [t.strip("-") for t in cleaned.split() if len(t) > 2]
+    tokens = [t for t in tokens if t not in _FTS_STOP_WORDS]
+    seen: set = set()
+    unique: list = []
+    for t in tokens:
+        if t not in seen:
+            seen.add(t)
+            unique.append(t)
+    return " | ".join(unique)
+
+
+def _as_number(value: Any) -> float | None:
+    """A row value as a float, or ``None`` when it cannot be judged."""
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _violates_hard_filters(
+    row: dict[str, Any],
+    *,
+    max_price: float | None = None,
+    min_rating: float | None = None,
+    category: str | None = None,
+) -> bool:
+    """Post-rerank eligibility recheck, mirroring the in-process executor.
+
+    ``services/planned_hybrid_retrieval.py::_violates_hard_constraints`` rechecks
+    every returned row against the hard predicates after the reranker, so a row
+    that slipped past the SQL is never returned. A field the row does not carry,
+    or carries as something uncoercible, cannot be judged and is left to the SQL
+    predicate, which remains the enforcement point.
+    """
+    price = _as_number(row.get("price"))
+    if max_price and price is not None and price > float(max_price) + 1e-9:
+        return True
+    rating = _as_number(row.get("stars", row.get("rating")))
+    if min_rating and rating is not None and rating < float(min_rating) - 1e-9:
+        return True
+    name = row.get("category_name", row.get("category"))
+    if category and name is not None and str(category).lower() not in str(name).lower():
+        return True
+    quantity = _as_number(row.get("quantity"))
+    if quantity is not None and quantity <= 0:
+        return True
+    return False
+
+
+def semantic_search(
+    query: str,
+    limit: int = 5,
+    max_price: float = None,
+    min_rating: float = None,
+    category: str = None,
+) -> dict:
+    """Search products by semantic similarity using pgvector.
+
+    Every filter, ``category`` included, is a SQL predicate, so the limit
+    applies after the filters exactly as ``BusinessLogic.search_products``
+    applies it in process. Filtering the top rows afterwards would return
+    fewer than ``limit`` pieces whenever a category is asked for.
+    """
     embedding = _get_embedding(query)
     embedding_str = "[" + ",".join(str(x) for x in embedding) + "]"
 
@@ -153,6 +248,11 @@ def semantic_search(query: str, limit: int = 5, max_price: float = None, min_rat
     if min_rating:
         where_clauses.append("rating >= :min_rating")
         parameters.append({"name": "min_rating", "value": {"doubleValue": float(min_rating)}})
+    if category:
+        where_clauses.append("lower(category) LIKE :category")
+        parameters.append(
+            {"name": "category", "value": {"stringValue": _prepare_like_pattern(category)}}
+        )
     where_sql = " AND ".join(where_clauses)
 
     # NO session GUCs here: each Data API execute_statement carries exactly
@@ -225,7 +325,8 @@ def search_products_hybrid(
     Lambda microVM instead of the orchestrator's process. Three stages:
 
       1. Vector branch (pgvector cosine, k=20) and FTS branch
-         (`ts_rank_cd`, k=20) execute in a single SQL statement against
+         (`ts_rank_cd` over the same OR-joined `to_tsquery` the in-process
+         rail builds, k=20) execute in a single SQL statement against
          `pellier.product_catalog`. Each Data API `ExecuteStatement`
          carries exactly one statement, so we fold the two ranked lists
          into a CTE plus Reciprocal Rank Fusion (RRF) inside the same
@@ -255,7 +356,7 @@ def search_products_hybrid(
     where_clauses = ["quantity > 0", "NOT (tags ? 'archive')"]
     parameters = [
         {"name": "embedding", "value": {"stringValue": embedding_str}},
-        {"name": "query", "value": {"stringValue": query}},
+        {"name": "ts_query", "value": {"stringValue": _build_or_tsquery(query)}},
     ]
     if max_price:
         where_clauses.append("price <= :max_price")
@@ -289,10 +390,10 @@ def search_products_hybrid(
         ),
         fts_results AS (
           SELECT "productId" AS pid,
-                 row_number() OVER (ORDER BY ts_rank_cd(description_tsv, plainto_tsquery(:query)) DESC) AS frank
+                 row_number() OVER (ORDER BY ts_rank_cd(description_tsv, to_tsquery('english', :ts_query)) DESC) AS frank
           FROM {SCHEMA}.product_catalog
           WHERE {where_sql}
-            AND description_tsv @@ plainto_tsquery(:query)
+            AND description_tsv @@ to_tsquery('english', :ts_query)
           LIMIT 20
         ),
         rrf AS (
@@ -342,9 +443,17 @@ def search_products_hybrid(
         ordered = [{**c, "rerank_score": None} for c in candidates]
         search_method = "hybrid (rerank fallback to RRF order)"
 
-    # The hard filters already ran in SQL before fusion, so the reranked
-    # order is the final order and only the limit applies here.
-    filtered = ordered[: max(1, int(limit))]
+    # The hard filters ran in SQL before fusion and are rechecked on the
+    # reranked rows, as the in-process executor does, so a row that slipped
+    # past the SQL is never returned on this rail either.
+    eligible = [
+        row
+        for row in ordered
+        if not _violates_hard_filters(
+            row, max_price=max_price, min_rating=min_rating, category=category
+        )
+    ]
+    filtered = eligible[: max(1, int(limit))]
 
     return {
         "status": "success",
@@ -372,6 +481,8 @@ def search_products_hybrid(
                 "rerank_top_n": min(limit * 3, 30),
                 "rerank_applied": bool(rerank_results),
                 "hard_filters_before_fusion": True,
+                "eligibility_recheck": True,
+                "eligibility_dropped": len(ordered) - len(eligible),
             },
             "index_parameters": {
                 "vector_candidate_limit": 20,
@@ -745,16 +856,9 @@ def search_products(
         limit=limit,
         max_price=max_price,
         min_rating=min_rating,
+        category=category,
     )
     candidates = [dict(product) for product in result.get("products", [])]
-    if category:
-        products = [
-            product
-            for product in result.get("products", [])
-            if category.lower() in str(product.get("category_name", "")).lower()
-        ]
-        result["products"] = products
-        result["count"] = len(products)
     result["status"] = "success"
     result["search_method"] = "semantic"
     selected = [
