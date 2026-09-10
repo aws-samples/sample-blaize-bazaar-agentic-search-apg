@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import pathlib
 import os
 import shutil
 import subprocess
@@ -1689,6 +1690,44 @@ def test_unified_trace_summary_accepts_a_redacted_trace() -> None:
     assert proof["agent_input_observed"] is False and proof["tool_input_output_observed"] is False
     assert proof["tool_input_output_sanitized"] is True
     assert proof["step_latency_observed"] is True
+
+
+def test_the_readiness_gate_asks_for_content_only_when_the_runtime_keeps_it() -> None:
+    """A deployment that redacts model content must not fail for redacting it.
+
+    The gate used to require `unified_trace_agent_input`, `agent_output` and
+    `tool_io_structured` unconditionally. With redaction on by default those are
+    False, False and None on a completely healthy stack, and a real provision run
+    failed on 2026-09-10 for exactly that reason.
+    """
+    source = (
+        pathlib.Path(__file__).resolve().parents[3]
+        / "scripts"
+        / "provision_agentcore_end_to_end.py"
+    ).read_text(encoding="utf-8")
+    start = source.index("required_checks = (")
+    gate = source[start:source.index("missing = [", start)]
+
+    # Structure is always required; it is what a redacted trace still proves.
+    for always in (
+        "unified_trace_agent_span",
+        "unified_trace_model_span",
+        "unified_trace_tool_span",
+        "unified_trace_step_latency",
+        "unified_trace_tool_io_sanitized",
+    ):
+        assert always in gate
+
+    redacted, kept = gate.split("else:", 1)
+    # The content checks live only on the not-redacted side.
+    for content_check in (
+        "unified_trace_agent_input",
+        "unified_trace_agent_output",
+        "unified_trace_tool_io_structured",
+    ):
+        assert content_check in kept
+        assert content_check not in redacted
+    assert "unified_trace_content_redacted" in redacted
 
 
 def test_unified_trace_summary_rejects_clear_text_content_when_redaction_is_on() -> None:

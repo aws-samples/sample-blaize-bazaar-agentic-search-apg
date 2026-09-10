@@ -2171,6 +2171,9 @@ def main() -> int:
         result["verification"]["unified_trace_step_latency"] = trace_proof[
             "step_latency_observed"
         ]
+        result["verification"]["unified_trace_content_redacted"] = bool(
+            trace_proof.get("content_redacted")
+        )
 
         required_checks = (
             "targets_attached",
@@ -2189,12 +2192,23 @@ def main() -> int:
             "unified_trace_agent_span",
             "unified_trace_model_span",
             "unified_trace_tool_span",
-            "unified_trace_agent_input",
-            "unified_trace_agent_output",
-            "unified_trace_tool_io_structured",
             "unified_trace_tool_io_sanitized",
             "unified_trace_step_latency",
         )
+        # What a complete trace contains depends on whether the Runtime was told
+        # to redact model content, which it is by default. Under redaction the
+        # trace carries no prompt, completion, or tool payload at all, and
+        # `_summarize_trace_records` has already refused any that leaked. Asking
+        # for the content anyway failed a correct deployment for doing the
+        # private thing (live, 2026-09-10).
+        if result["verification"]["unified_trace_content_redacted"]:
+            required_checks += ("unified_trace_content_redacted",)
+        else:
+            required_checks += (
+                "unified_trace_agent_input",
+                "unified_trace_agent_output",
+                "unified_trace_tool_io_structured",
+            )
         missing = [
             check
             for check in required_checks
