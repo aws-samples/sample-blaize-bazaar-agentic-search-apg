@@ -187,6 +187,40 @@ _RESOLVE_ORDER = """
      LIMIT 1
 """
 
+# The authorization mapping, read to decide whether a signed-in requester is the
+# customer the review names. It is the table RLS keys on: a subject with no row
+# for this customer may well be a shopper, and is still not *this* shopper.
+_PRINCIPAL_OWNS_CUSTOMER = """
+    SELECT 1 AS owns
+      FROM pellier.principal_customers
+     WHERE principal_sub = %s
+       AND customer_id = %s
+     LIMIT 1
+"""
+
+
+async def requester_kind_for_principal(
+    db: Any, principal_sub: Optional[str], customer_id: str
+) -> str:
+    """``shopper`` only when the verified subject maps to the review's customer.
+
+    A signed-in shopper can ask for an action on any persona the storefront
+    offers, so the token proves who asked and nothing about whose rows the
+    review names. Unless the authorization mapping ties the subject to that
+    customer, the request is recorded as unverified with the subject kept, so
+    an operator can see that a known shopper asked about someone else's order.
+    A lookup that fails is treated the same way: absence of proof is not proof.
+    """
+    sub = str(principal_sub or "").strip()
+    if not sub:
+        return REQUESTER_UNVERIFIED
+    try:
+        row = await db.fetch_one(_PRINCIPAL_OWNS_CUSTOMER, sub, str(customer_id))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("principal mapping lookup failed for %s: %s", customer_id, exc)
+        return REQUESTER_UNVERIFIED
+    return REQUESTER_SHOPPER if row else REQUESTER_UNVERIFIED
+
 
 async def resolve_order_id(
     db: Any, customer_id: str, product_id: Any
@@ -228,7 +262,9 @@ async def propose_review(
     that asked, or to its explicit absence. The customer on the review is what
     the proposal names; on an anonymous session that is a persona the shopper
     picked, and an operator reading the queue must be able to tell the two
-    apart before acting on it.
+    apart before acting on it. A ``shopper`` kind is kept only when the
+    authorization mapping ties the subject to that customer; otherwise the
+    subject is recorded and the kind falls back to ``unverified``.
 
     Returns the review id, or ``None`` when the review could not be created.
     Never raises into the caller: this runs on a tool-refusal path, and a
@@ -251,6 +287,10 @@ async def propose_review(
         return None
 
     customer_id = material["customer_id"]
+    if requester_kind == REQUESTER_SHOPPER:
+        requester_kind = await requester_kind_for_principal(
+            db, requested_by_sub, customer_id
+        )
     order_id = None
     if action == "initiate_return":
         order_id = await resolve_order_id(db, customer_id, material["product_id"])

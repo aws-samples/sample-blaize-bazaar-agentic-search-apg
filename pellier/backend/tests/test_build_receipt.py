@@ -671,7 +671,9 @@ def pg() -> Any:
         )
         cur.execute(
             "CREATE TABLE governed_turn_receipts (turn_id text PRIMARY KEY,"
-            " session_id text, principal_sub text, rail text, terminal_status text,"
+            " session_id text, principal_sub text,"
+            " principal_verified boolean NOT NULL DEFAULT false,"
+            " rail text, terminal_status text,"
             " trace jsonb DEFAULT '{}'::jsonb, created_at timestamptz DEFAULT now(),"
             " run_id text)"
         )
@@ -694,6 +696,7 @@ def pg() -> Any:
             " audit_id bigint, principal_id text, tool text, caller text,"
             " decision text, args jsonb DEFAULT '{}'::jsonb, policy_engine_id text,"
             " policy_name text, verified_subject text, identity_source text,"
+            " principal_label text,"
             " created_at timestamptz DEFAULT now(), run_id text)"
         )
         cur.execute(

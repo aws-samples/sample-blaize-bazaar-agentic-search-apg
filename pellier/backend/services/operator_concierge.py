@@ -502,11 +502,17 @@ async def _requester_evidence(db: Any, review_id: Any) -> Optional[Evidence]:
     subject = str(row.get("requested_by_sub") or "")
     if kind == "shopper" and subject:
         detail = (
-            f"Requested by a signed-in shopper, subject {subject[:8]}…; the "
-            "customer named on the review is the one their token names."
+            f"Requested by a signed-in shopper, subject {subject[:8]}…, whose "
+            "token maps to the customer named on the review."
         )
     elif kind == "operator":
         detail = "Prepared on the desk by staff; no shopper asked for this action."
+    elif subject:
+        detail = (
+            f"Requested by a signed-in shopper, subject {subject[:8]}…, whose "
+            "token does not map to the customer named on the review. That "
+            "customer was chosen in the storefront and is not a proved identity."
+        )
     else:
         detail = (
             "Requested from a session that was not signed in. The customer named "

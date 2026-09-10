@@ -65,6 +65,7 @@ class FakeReviewDb:
     def __init__(self, rows: Optional[List[Dict[str, Any]]] = None) -> None:
         self.rows: List[Dict[str, Any]] = list(rows or [])
         self.statements: List[str] = []
+        self.mappings: set = set()
         self._next_id = max((r["review_id"] for r in self.rows), default=0) + 1
 
     # -- helpers ---------------------------------------------------------
@@ -103,6 +104,8 @@ class FakeReviewDb:
     # -- db surface ------------------------------------------------------
     async def fetch_one(self, query: str, *params: Any) -> Optional[Dict[str, Any]]:
         self.statements.append(query)
+        if "FROM pellier.principal_customers" in query:
+            return {"owns": 1} if tuple(params) in self.mappings else None
         if "FROM pellier.orders" in query and "WHERE customer_id" in query:
             return {"id": THEO["order_id"]}
         if query.strip().startswith("INSERT INTO pellier.approvals"):
@@ -270,6 +273,7 @@ async def test_the_boundary_refusal_opens_exactly_one_review() -> None:
 async def test_a_review_records_who_asked_or_that_nobody_verified_did() -> None:
     """The customer on the review is a proposal; the requester is a fact."""
     db = FakeReviewDb()
+    db.mappings.add(("f4981468-theo", "CUST-THEO"))
     await rv.propose_review(
         db,
         action="initiate_return",
@@ -301,6 +305,56 @@ async def test_an_unknown_requester_kind_is_stored_as_unverified() -> None:
         source_turn_id="turn-x",
         requested_by_sub="someone",
         requester_kind="admin",
+    )
+    assert db.rows[0]["requester_kind"] == "unverified"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("mapped_customer", "expected_kind"),
+    [("CUST-THEO", "shopper"), ("CUST-MARCO", "unverified"), (None, "unverified")],
+)
+async def test_a_signed_in_requester_is_a_shopper_only_for_their_own_customer(
+    mapped_customer: Optional[str], expected_kind: str
+) -> None:
+    """The token proves who asked; the mapping proves whose order it is.
+
+    A verified subject filing for a persona the storefront let them pick is
+    recorded with the subject kept and the kind downgraded, never as a shopper
+    whose token names the customer on the review.
+    """
+    db = FakeReviewDb()
+    if mapped_customer:
+        db.mappings.add(("f4981468-theo", mapped_customer))
+    await rv.propose_review(
+        db,
+        action="initiate_return",
+        args={"customer_id": "CUST-THEO", "product_id": 37, "reason": "damaged"},
+        source_turn_id="turn-x",
+        requested_by_sub="f4981468-theo",
+        requester_kind="shopper",
+    )
+    assert db.rows[0]["requester_kind"] == expected_kind
+    assert db.rows[0]["requested_by_sub"] == "f4981468-theo"
+
+
+@pytest.mark.asyncio
+async def test_a_failed_mapping_lookup_never_upgrades_a_requester() -> None:
+    db = FakeReviewDb()
+
+    async def _boom(query: str, *params: Any):
+        if "principal_customers" in query:
+            raise RuntimeError("mapping unavailable")
+        return await FakeReviewDb.fetch_one(db, query, *params)
+
+    db.fetch_one = _boom  # type: ignore[method-assign]
+    await rv.propose_review(
+        db,
+        action="initiate_return",
+        args={"customer_id": "CUST-THEO", "product_id": 37, "reason": "damaged"},
+        source_turn_id="turn-x",
+        requested_by_sub="f4981468-theo",
+        requester_kind="shopper",
     )
     assert db.rows[0]["requester_kind"] == "unverified"
 

@@ -112,3 +112,27 @@ def test_publishing_ticket_history_also_installs_ownership(monkeypatch):
     assert 'principal.getTag("custom:customer_id") == context.input.customer_id' in owned
     assert "CUST-THEO" not in owned and "username" not in owned
     assert "get_ticket_history_identity_scope" not in policies
+
+
+def test_no_statement_rewrites_the_material_a_person_confirmed() -> None:
+    """approvals.customer_id, tool, args and action_hash are write-once.
+
+    A confirmation echoes the fingerprint and an execution recomputes it from
+    the stored args. That proves the row still says what the person was shown
+    only if nothing can rewrite those columns after the insert, so every UPDATE
+    the application issues against the table is inspected for them.
+    """
+    import re
+
+    backend = Path(__file__).resolve().parents[1]
+    updates = re.compile(r"UPDATE\s+pellier\.approvals\s+SET(.*?)\bWHERE\b", re.S | re.I)
+    material = re.compile(r"\b(customer_id|tool|args|action_hash)\s*=")
+    seen, offenders = 0, []
+    for folder in ("services", "routes"):
+        for path in sorted((backend / folder).rglob("*.py")):
+            for match in updates.finditer(path.read_text()):
+                seen += 1
+                if material.search(match.group(1)):
+                    offenders.append(f"{path.relative_to(backend)}: {match.group(0)[:100]}")
+    assert seen >= 2, "the decision and execution-turn updates were not found"
+    assert not offenders, offenders

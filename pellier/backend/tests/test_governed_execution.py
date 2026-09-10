@@ -15,6 +15,7 @@ identity must never become the Row-Level Security subject.
 
 from __future__ import annotations
 
+import asyncio
 import os
 import sys
 from pathlib import Path
@@ -423,6 +424,27 @@ async def test_a_retry_reuses_the_same_execution_turn() -> None:
     )
     assert first.execution_turn_id == second.execution_turn_id
     assert len(db.claimed_turns) == 1, "a second execution turn was minted"
+
+
+@pytest.mark.asyncio
+async def test_concurrent_executions_share_one_turn_and_one_write_key() -> None:
+    """Two submissions of one confirmed action reach the write with one key.
+
+    The turn is assigned once by the database's own guard, and the write key is
+    derived from the review and its fingerprint rather than minted per request,
+    so the second submission collapses onto the first inside
+    ``pellier.write_operations`` instead of becoming a second business effect.
+    """
+    db = FakeDb()
+    first, second = await asyncio.gather(
+        ge.execute_confirmed_review(db, approved_review(), operator_sub=OPERATOR_SUBJECT),
+        ge.execute_confirmed_review(db, approved_review(), operator_sub=OPERATOR_SUBJECT),
+    )
+    assert first.execution_turn_id == second.execution_turn_id
+    assert first.idempotency_key == second.idempotency_key
+    assert len(db.claimed_turns) == 1, "a second execution turn was minted"
+    keys = {call["idempotency_key"] for call in FakeLogic.calls}
+    assert keys == {first.idempotency_key}, keys
 
 
 def test_the_database_refuses_an_execution_turn_on_an_unconfirmed_review() -> None:
