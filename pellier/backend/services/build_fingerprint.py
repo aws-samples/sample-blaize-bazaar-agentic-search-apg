@@ -67,6 +67,7 @@ RUNTIME_SOURCE_FILES: tuple[Path, ...] = (
     Path("services/agentcore_gateway.py"),
     Path("services/conversation_context.py"),
     Path("services/intent_router.py"),
+    Path("services/otel_content_redaction.py"),
     Path("services/product_envelope.py"),
     Path("services/response_mode.py"),
 )

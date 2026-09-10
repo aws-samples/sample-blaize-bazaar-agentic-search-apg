@@ -188,3 +188,48 @@ def test_renderer_and_backend_share_one_file_list() -> None:
         "render_agentcore_project.py has reintroduced its own copy of the "
         "packaged-file list; it must import the one in services.build_fingerprint."
     )
+
+
+def test_the_runtime_package_imports_only_what_it_ships() -> None:
+    """Every module a packaged file imports at module scope is itself packaged.
+
+    The renderer copies exactly ``RUNTIME_SOURCE_FILES`` into the Runtime
+    container, so an entrypoint import of an unlisted backend module passes
+    every local test and then crashes the container at startup, which the
+    service reports only as an initialization timeout. ``config`` is the one
+    module the package resolves another way, through environment variables.
+    """
+    import ast
+
+    packaged = {path.as_posix() for path in RUNTIME_SOURCE_FILES}
+    local_roots = ("services", "agents", "skills", "routes", "pellier_copy")
+
+    def module_scope_imports(tree: ast.Module):
+        stack = list(tree.body)
+        while stack:
+            node = stack.pop()
+            if isinstance(node, (ast.If, ast.Try)):
+                stack.extend(node.body)
+                stack.extend(getattr(node, "orelse", []))
+                stack.extend(getattr(node, "finalbody", []))
+                for handler in getattr(node, "handlers", []):
+                    stack.extend(handler.body)
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                yield node.module
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    yield alias.name
+
+    unshipped = {}
+    for relative in sorted(packaged):
+        if not relative.endswith(".py"):
+            continue
+        tree = ast.parse((BACKEND / relative).read_text())
+        for module in module_scope_imports(tree):
+            if module.split(".")[0] not in local_roots:
+                continue
+            as_file = module.replace(".", "/") + ".py"
+            as_package = module.replace(".", "/") + "/__init__.py"
+            if as_file not in packaged and as_package not in packaged:
+                unshipped.setdefault(relative, []).append(module)
+    assert not unshipped, f"packaged files import modules the package does not ship: {unshipped}"
