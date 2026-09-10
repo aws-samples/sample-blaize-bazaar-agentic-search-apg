@@ -1477,7 +1477,7 @@ def test_a_deployment_suffix_isolates_every_resource_name() -> None:
         capture_output=True, text=True, check=True,
     ).stdout.split()
     assert out == [
-        "pellier-rc", "pellier_rc_orchestrator", "PellierRcMemory",
+        "pellierrc", "pellier_rc_orchestrator", "PellierRcMemory",
         "pellier-rc-gateway", "pellier_rc_policy_engine",
     ]
     bad = subprocess.run(
@@ -1518,7 +1518,9 @@ def test_the_provisioner_attaches_identity_and_tracing_before_any_proof() -> Non
     assert "claim_trigger_attached" in source and "gateway_tracing_enabled" in source
 
 
-def test_gateway_observability_is_idempotent_over_an_existing_delivery() -> None:
+def test_gateway_observability_is_idempotent_over_an_existing_delivery(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     provisioner = _load_provisioner()
 
     class _Logs:
@@ -1552,7 +1554,7 @@ def test_gateway_observability_is_idempotent_over_an_existing_delivery() -> None
             ]}
 
     logs = _Logs()
-    provisioner.boto3.client = lambda *a, **k: logs  # type: ignore[assignment]
+    monkeypatch.setattr(provisioner.boto3, "client", lambda *a, **k: logs)
     receipt = provisioner._enable_gateway_observability(
         region="us-east-1", account_id="123456789012",
         gateway_arn="arn:aws:bedrock-agentcore:us-east-1:123456789012:gateway/gw-1", gateway_id="gw-1",

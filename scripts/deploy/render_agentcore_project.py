@@ -51,7 +51,7 @@ def _deployment_suffix() -> str:
 DEPLOYMENT_SUFFIX = _deployment_suffix()
 _DASH = f"-{DEPLOYMENT_SUFFIX}" if DEPLOYMENT_SUFFIX else ""
 _UNDER = f"_{DEPLOYMENT_SUFFIX}" if DEPLOYMENT_SUFFIX else ""
-PROJECT_NAME = f"pellier{_DASH}"
+PROJECT_NAME = f"pellier{DEPLOYMENT_SUFFIX}"
 RUNTIME_NAME = f"pellier{_UNDER}_orchestrator"
 MEMORY_NAME = f"Pellier{DEPLOYMENT_SUFFIX.capitalize()}Memory"
 GATEWAY_NAME = f"pellier{_DASH}-gateway"
