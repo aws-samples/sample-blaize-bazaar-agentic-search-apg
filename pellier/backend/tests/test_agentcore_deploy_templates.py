@@ -1160,6 +1160,9 @@ def test_trace_poll_uses_pinned_cli_and_downloads_the_matching_session(
         )
 
     monkeypatch.setattr(provisioner, "_agentcore", _agentcore)
+    # The fixture trace carries clear-text content, which is the unredacted
+    # contract; a redacting Runtime would keep polling for a trace without it.
+    monkeypatch.setenv("OTEL_REDACT_MODEL_CONTENT", "0")
 
     proof = provisioner._wait_for_unified_trace(
         root=tmp_path,
@@ -1651,3 +1654,61 @@ def test_rendered_build_fingerprint_is_read_from_the_project(tmp_path: Path) -> 
         ]}],
     }))
     assert provisioner._rendered_build_fingerprint(tmp_path) == "abc123"
+
+
+def _strip_content_attributes(records: list) -> list:
+    """What a redacting Runtime exports: the same spans without any content attribute."""
+    provisioner = _load_provisioner()
+    for record in records:
+        message = record["@message"]
+        encoded = isinstance(message, str)
+        span = json.loads(message) if encoded else message
+        attrs = span.get("attributes", {})
+        for key in provisioner._CONTENT_ATTRIBUTE_KEYS:
+            attrs.pop(key, None)
+        record["@message"] = json.dumps(span) if encoded else span
+    return records
+
+
+def test_unified_trace_summary_accepts_a_redacted_trace() -> None:
+    """With redaction on, Strands emits no content attributes; the structure still proves the turn."""
+    provisioner = _load_provisioner()
+    trace_id = "4bf92f3577b34da6a3ce929d0e0e4736"
+    session_id = "runtime-proof-000000000000000000001"
+    runtime_arn = "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/pellier_orchestrator-abc123"
+    records = _strip_content_attributes(
+        _unified_trace_records(trace_id=trace_id, session_id=session_id, runtime_arn=runtime_arn)
+    )
+    proof = provisioner._summarize_trace_records(
+        records, trace_id=trace_id, session_id=session_id, runtime_arn=runtime_arn,
+        content_redacted=True,
+    )
+    assert proof["content_redacted"] is True
+    assert proof["agent_span"] and proof["model_span"] and proof["tool_span"]
+    assert proof["agent_input_observed"] is False and proof["tool_input_output_observed"] is False
+    assert proof["tool_input_output_sanitized"] is True
+    assert proof["step_latency_observed"] is True
+
+
+def test_unified_trace_summary_rejects_clear_text_content_when_redaction_is_on() -> None:
+    provisioner = _load_provisioner()
+    trace_id = "4bf92f3577b34da6a3ce929d0e0e4736"
+    session_id = "runtime-proof-000000000000000000001"
+    runtime_arn = "arn:aws:bedrock-agentcore:us-east-1:123456789012:runtime/pellier_orchestrator-abc123"
+    records = _unified_trace_records(trace_id=trace_id, session_id=session_id, runtime_arn=runtime_arn)
+    with pytest.raises(RuntimeError, match="clear text"):
+        provisioner._summarize_trace_records(
+            records, trace_id=trace_id, session_id=session_id, runtime_arn=runtime_arn,
+            content_redacted=True,
+        )
+
+
+def test_runtime_redaction_flag_mirrors_the_entrypoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    provisioner = _load_provisioner()
+    monkeypatch.delenv("OTEL_REDACT_MODEL_CONTENT", raising=False)
+    assert provisioner._runtime_redacts_content() is True
+    for raw in ("0", "false", "No", "off"):
+        monkeypatch.setenv("OTEL_REDACT_MODEL_CONTENT", raw)
+        assert provisioner._runtime_redacts_content() is False
+    monkeypatch.setenv("OTEL_REDACT_MODEL_CONTENT", "1")
+    assert provisioner._runtime_redacts_content() is True

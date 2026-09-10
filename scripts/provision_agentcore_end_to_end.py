@@ -1284,14 +1284,60 @@ def _authenticated_runtime_smoke(
     }
 
 
+_REDACTED_CONTENT_MARKER = "[REDACTED]"
+_CONTENT_ATTRIBUTE_KEYS = (
+    _AGENT_INPUT_ATTRIBUTE_KEYS
+    + _AGENT_OUTPUT_ATTRIBUTE_KEYS
+    + _TOOL_INPUT_ATTRIBUTE_KEYS
+    + _TOOL_OUTPUT_ATTRIBUTE_KEYS
+)
+
+
+def _runtime_redacts_content() -> bool:
+    """Whether the deployed entrypoint withholds model and tool content from spans.
+
+    Mirrors ``_env_flag("OTEL_REDACT_MODEL_CONTENT", default=True)`` in
+    ``agentcore_runtime.py``: redaction is on unless the variable says otherwise,
+    and the trace proof has to expect what the container was told to do.
+    """
+    raw = os.environ.get("OTEL_REDACT_MODEL_CONTENT", "").strip().lower()
+    if not raw:
+        return True
+    return raw not in {"0", "false", "no", "off"}
+
+
+def _clear_text_content_keys(spans: list[dict[str, Any]]) -> list[str]:
+    """Content attributes that reached the trace as anything but the redaction marker."""
+    leaked: set[str] = set()
+    for span in spans:
+        attributes = span.get("attributes") or {}
+        for key in _CONTENT_ATTRIBUTE_KEYS:
+            value = attributes.get(key)
+            if value is None or value == "":
+                continue
+            if str(value).strip() == _REDACTED_CONTENT_MARKER:
+                continue
+            leaked.add(key)
+    return sorted(leaked)
+
+
 def _summarize_trace_records(
     records: Any,
     *,
     trace_id: str,
     session_id: str,
     runtime_arn: str,
+    content_redacted: bool = False,
 ) -> dict[str, Any]:
-    """Validate the downloaded unified trace and return bounded proof metadata."""
+    """Validate the downloaded unified trace and return bounded proof metadata.
+
+    ``content_redacted`` states what the deployed entrypoint was told to do. When
+    the Runtime redacts model content, Strands emits no prompt, completion, or
+    tool input/output attributes at all, so the proof is that none reached the
+    trace in clear text while the agent, model, tool and session structure
+    still did. When redaction is off, the trace must carry sanitized,
+    structured tool input and output as before.
+    """
     if not isinstance(records, list):
         raise RuntimeError("AgentCore trace download must be a JSON array")
 
@@ -1455,6 +1501,53 @@ def _summarize_trace_records(
             "Unified trace is missing required span classes: " + ", ".join(missing)
         )
 
+    if content_redacted:
+        leaked = _clear_text_content_keys(spans)
+        if leaked:
+            raise RuntimeError(
+                "Unified trace exported model or tool content in clear text although "
+                "the Runtime redacts it: " + ", ".join(leaked)
+            )
+        step_latencies = {
+            "agent": duration_ms(agent_spans[0]),
+            "model": duration_ms(model_spans[0]),
+            "tool": duration_ms(tool_spans[0]),
+        }
+        if any(value is None for value in step_latencies.values()):
+            raise RuntimeError(
+                "Unified trace is missing per-step latency for agent, model, or tool"
+            )
+        return {
+            "trace_id": trace_id,
+            "session_id": session_id,
+            "runtime_arn": runtime_arn,
+            "span_count": len(spans),
+            "span_names": sorted({str(span.get("name", "")) for span in spans}),
+            "agent_span": True,
+            "model_span": True,
+            "tool_span": True,
+            "content_redacted": True,
+            "agent_input_observed": False,
+            "agent_output_observed": False,
+            "tool_input_output_observed": False,
+            "tool_input_output_structured": None,
+            "tool_input_output_sanitized": True,
+            "attribute_contract": {
+                "agent_input": None,
+                "agent_output": None,
+                "tool_input": None,
+                "tool_output": None,
+            },
+            "step_latency_observed": True,
+            "step_latency_ms": step_latencies,
+            "model_ids": sorted(
+                {str(attributes(span)["gen_ai.request.model"]) for span in model_spans}
+            ),
+            "tool_names": sorted(
+                {str(attributes(span)["gen_ai.tool.name"]) for span in tool_spans}
+            ),
+        }
+
     agent_input_key, agent_input = first_attribute(
         spans, _AGENT_INPUT_ATTRIBUTE_KEYS
     )
@@ -1507,6 +1600,7 @@ def _summarize_trace_records(
         "agent_span": True,
         "model_span": True,
         "tool_span": True,
+        "content_redacted": False,
         "agent_input_observed": True,
         "agent_output_observed": True,
         "tool_input_output_observed": True,
@@ -1614,6 +1708,7 @@ def _wait_for_unified_trace(
                 trace_id=trace_id,
                 session_id=session_id,
                 runtime_arn=runtime_arn,
+                content_redacted=_runtime_redacts_content(),
             )
             proof["listed_span_count"] = int(match.get("spanCount") or 0)
             proof["runtime_log_group"] = _runtime_log_group_name(runtime_arn)
