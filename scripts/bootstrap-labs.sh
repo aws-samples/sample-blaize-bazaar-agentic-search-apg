@@ -1209,7 +1209,24 @@ EOF
         upsert_env "AGENTCORE_GATEWAY_ID" "$GATEWAY_ID" "$REPO_PATH/.env"
         upsert_env "AGENTCORE_GATEWAY_ARN" "$GATEWAY_ARN" "$REPO_PATH/.env"
         upsert_env "AGENTCORE_GATEWAY_URL" "$GATEWAY_URL" "$REPO_PATH/.env"
-        upsert_env "USE_AGENTCORE_RUNTIME" "true" "$REPO_PATH/.env"
+        # The storefront rail is format-dependent.
+        #
+        # On the builders format the managed path is an OPTIONAL flex, not the
+        # required path. Flipping USE_AGENTCORE_RUNTIME=true here would route
+        # every shopper turn through the Runtime container, whose tools execute
+        # in the Gateway's Lambda target (scripts/deploy/pellier_search_server.py)
+        # — NOT the in-process services/agent_tools.py the participant edits in
+        # Lab 2, and NOT the stock_keeper.py grant they add. Lab 2's two edits
+        # would silently become no-ops while the lab still reported success.
+        # Keep the storefront in-process; the flex invokes the Runtime directly
+        # with `uv run scripts/builders_lab.py runtime`, which reads
+        # AGENTCORE_RUNTIME_ENDPOINT written just above.
+        if [ "${WORKSHOP_FORMAT:-builders}" = "builders" ]; then
+            upsert_env "USE_AGENTCORE_RUNTIME" "false" "$REPO_PATH/.env"
+            log "Runtime recorded for the optional flex; storefront stays in-process"
+        else
+            upsert_env "USE_AGENTCORE_RUNTIME" "true" "$REPO_PATH/.env"
+        fi
         if [ -n "$POLICY_ENGINE_ID" ]; then
             upsert_env "AGENTCORE_POLICY_ENGINE_ID" "$POLICY_ENGINE_ID" "$REPO_PATH/.env"
             log "✅ Managed AgentCore Policy engine: $POLICY_ENGINE_ID"

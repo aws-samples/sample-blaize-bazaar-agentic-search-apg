@@ -319,3 +319,29 @@ def test_preference_seed_uses_access_token() -> None:
     source = SEED_PREFERENCES.read_text(encoding="utf-8")
     assert "AuthenticationResult.AccessToken" in source
     assert "AuthenticationResult.IdToken" not in source
+
+
+def test_builders_storefront_stays_in_process_when_managed_path_provisions() -> None:
+    """The optional Runtime flex must never move the storefront rail.
+
+    A managed Runtime dispatches tools to the Gateway's Lambda target, not to
+    ``services/agent_tools.py``. Flipping the storefront onto that rail would
+    turn both of Lab 2's edits into silent no-ops while the lab still reported
+    success, so the builders format records the endpoint and stays in-process.
+    """
+    bootstrap = BUILDERS_BOOTSTRAP.read_text(encoding="utf-8")
+
+    builders_branch = (
+        'if [ "${WORKSHOP_FORMAT:-builders}" = "builders" ]; then\n'
+        '            upsert_env "USE_AGENTCORE_RUNTIME" "false"'
+    )
+    assert builders_branch in bootstrap, (
+        "managed provisioning must branch on WORKSHOP_FORMAT and leave the "
+        "builders storefront on the in-process rail"
+    )
+    assert bootstrap.index(builders_branch) < bootstrap.index(
+        'upsert_env "USE_AGENTCORE_RUNTIME" "true"'
+    ), "the builders branch must guard the managed flip"
+
+    assert 'upsert_env "AGENTCORE_RUNTIME_ENDPOINT" "$RUNTIME_ARN"' in bootstrap
+    assert "storefront stays in-process" in bootstrap

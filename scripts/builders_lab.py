@@ -456,6 +456,149 @@ def ledger(args: argparse.Namespace) -> int:
     return 0
 
 
+def _repo_env() -> dict[str, str]:
+    """Read the bootstrap-written repository .env without extra dependencies."""
+    env_path = Path(__file__).resolve().parents[1] / ".env"
+    values: dict[str, str] = {}
+    if not env_path.is_file():
+        return values
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        values[key.strip()] = value.strip().strip('"').strip("'")
+    return values
+
+
+def runtime(args: argparse.Namespace) -> int:
+    """Invoke the managed AgentCore Runtime once, outside the storefront rail.
+
+    This is the optional flex. Pellier itself keeps answering on the
+    in-process rail, so the floor_check written in Lab 2 stays the code that
+    serves shoppers. The managed Runtime executes its tools in the Gateway's
+    Lambda target instead, which is why this beat proves the execution
+    boundary and the identity check rather than re-proving the tool body.
+    """
+    env = _repo_env()
+    endpoint = env.get("AGENTCORE_RUNTIME_ENDPOINT") or os.environ.get(
+        "AGENTCORE_RUNTIME_ENDPOINT", ""
+    )
+    if not endpoint:
+        print(
+            "SKIPPED: no managed Runtime on this account.\n"
+            "AGENTCORE_RUNTIME_ENDPOINT is unset, so provisioning did not "
+            "complete the managed path. This beat is optional and nothing in "
+            "the required labs depends on it; see /var/log/pellier-agentcore.log."
+        )
+        return 0
+
+    region = (
+        env.get("AWS_DEFAULT_REGION")
+        or env.get("AWS_REGION")
+        or os.environ.get("AWS_DEFAULT_REGION")
+        or os.environ.get("AWS_REGION")
+        or "us-east-1"
+    )
+    token = "" if args.without_token else os.environ.get("PELLIER_TOKEN", "")
+    if not token and not args.without_token:
+        print(
+            "ERROR: no Cognito access token in $PELLIER_TOKEN.\n"
+            "The managed Runtime is JWT-gated and refuses unauthenticated "
+            "calls. Mint one first:\n\n"
+            "    source ~/pellier-token.sh marco\n",
+            file=sys.stderr,
+        )
+        return 1
+
+    # The Runtime keys managed session state off this header and requires at
+    # least 33 characters.
+    session_id = f"flex-{secrets.token_hex(16)}".ljust(33, "0")
+    payload = json.dumps(
+        {
+            "prompt": args.query,
+            "session_id": session_id,
+            "user_id": args.user_id,
+        }
+    ).encode("utf-8")
+
+    # A CUSTOM_JWT runtime is invoked over the raw HTTPS data plane with the
+    # Cognito token as a Bearer header; SigV4 signing is rejected.
+    url = (
+        f"https://bedrock-agentcore.{region}.amazonaws.com"
+        f"/runtimes/{urllib.parse.quote(endpoint, safe='')}"
+        "/invocations?qualifier=DEFAULT"
+    )
+    headers = {
+        "Content-Type": "application/json",
+        "X-Amzn-Bedrock-AgentCore-Runtime-Session-Id": session_id,
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    started = time.monotonic()
+    try:
+        request = urllib.request.Request(
+            url, data=payload, headers=headers, method="POST"
+        )
+        with urllib.request.urlopen(request, timeout=args.timeout) as response:
+            raw = response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:400]
+        if args.without_token:
+            print(
+                f"Refused, as expected: HTTP {exc.code}.\n{detail}\n\n"
+                "The managed Runtime enforces the Cognito authorizer before "
+                "any agent code runs. Identity is a gate here, not a label."
+            )
+            return 0
+        print(f"ERROR: Runtime refused the call: HTTP {exc.code}\n{detail}",
+              file=sys.stderr)
+        return 1
+    except OSError as exc:
+        print(f"ERROR: could not reach the managed Runtime: {exc}", file=sys.stderr)
+        return 1
+
+    elapsed_ms = int((time.monotonic() - started) * 1000)
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        parsed = {"response": raw}
+
+    if args.without_token:
+        print(
+            "Unexpected: the Runtime answered an unauthenticated call.\n"
+            f"{json.dumps(parsed, indent=2)}",
+            file=sys.stderr,
+        )
+        return 1
+
+    rail = str(parsed.get("rail") or "unknown")
+    answer = str(parsed.get("response") or parsed.get("error") or raw)
+    print(json.dumps(parsed, indent=2))
+    print(
+        f"\nrail: {rail}    observedMs: {elapsed_ms}    session: {session_id}",
+        file=sys.stderr,
+    )
+    print(
+        "\nThe Pellier storefront did not change. It still answers Marco "
+        "in-process with the floor_check you wrote in Lab 2. This one call "
+        "went to the managed Runtime instead, which runs its tools in the "
+        "Gateway's Lambda target — a different execution boundary reached "
+        "with your Cognito token.",
+        file=sys.stderr,
+    )
+    if rail != "gateway-mcp":
+        print(
+            f"\nNote: expected rail 'gateway-mcp', got {rail!r}. The managed "
+            "path may be only partly provisioned.",
+            file=sys.stderr,
+        )
+    if answer.strip().startswith("{"):
+        return 1
+    return 0
+
+
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(description=__doc__)
     root.add_argument("--base-url", default=DEFAULT_BASE_URL)
@@ -524,6 +667,23 @@ def parser() -> argparse.ArgumentParser:
         default=Path("/tmp/pellier-memory-turn.sse"),
     )
     ledger_parser.set_defaults(handler=ledger)
+
+    runtime_parser = commands.add_parser("runtime")
+    runtime_parser.add_argument(
+        "--query",
+        default="Is the Hadley shirt at the Brooklyn warehouse?",
+    )
+    runtime_parser.add_argument("--user-id", default="marco")
+    runtime_parser.add_argument("--timeout", type=int, default=120)
+    runtime_parser.add_argument(
+        "--without-token",
+        action="store_true",
+        help=(
+            "Invoke with no Authorization header to show the managed "
+            "Runtime refusing an unauthenticated call."
+        ),
+    )
+    runtime_parser.set_defaults(handler=runtime)
     return root
 
 
