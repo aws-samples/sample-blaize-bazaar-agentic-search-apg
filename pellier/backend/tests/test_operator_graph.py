@@ -191,7 +191,9 @@ def test_operator_graph_has_two_ordered_agents_and_a_durable_checkpoint(
     assert builder.graph.trace_attributes["pellier.graph.id"] == GRAPH.GRAPH_ID
     assert result.raw == '{"summary":"Grounded."}'
     assert result.metadata["pattern"] == GRAPH.GRAPH_PATTERN
-    assert result.metadata["deploymentTarget"] == "AgentCore Runtime"
+    assert result.metadata["execution"] == "application-orchestrated"
+    assert result.metadata["deploymentTarget"] == GRAPH.DEPLOYMENT_TARGET
+    assert "AgentCore Runtime" not in result.metadata["deploymentTarget"]
     assert [node["nodeId"] for node in result.metadata["executedNodes"]] == [
         GRAPH.INVESTIGATOR_NODE,
         GRAPH.PLANNER_NODE,

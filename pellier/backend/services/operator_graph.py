@@ -22,6 +22,13 @@ logger = logging.getLogger(__name__)
 
 GRAPH_ID = "operator-concierge-v1"
 GRAPH_PATTERN = "strands-graph"
+# Where this graph actually runs. The Operator Concierge is orchestrated by the
+# application: Strands GraphBuilder executes inside the Pellier backend process,
+# and nothing here is invoked through AgentCore Runtime, which hosts the
+# storefront path. The label says so, because an evidence surface that named
+# the managed runtime as the target would be claiming an execution boundary
+# the desk does not cross.
+DEPLOYMENT_TARGET = "Pellier backend process (application-orchestrated)"
 INVESTIGATOR_NODE = "case-investigator"
 PLANNER_NODE = "resolution-planner"
 READ_ONLY_COMPLETE = "READ_ONLY_COMPLETE"
@@ -201,7 +208,7 @@ def run_operator_graph(
                 "graphId": GRAPH_ID,
                 "pattern": GRAPH_PATTERN,
                 "execution": "application-orchestrated",
-                "deploymentTarget": "AgentCore Runtime",
+                "deploymentTarget": DEPLOYMENT_TARGET,
                 "agents": [INVESTIGATOR_NODE, PLANNER_NODE],
                 "executedNodes": [],
                 "durationMs": duration,
@@ -223,7 +230,7 @@ def run_operator_graph(
             "graphId": GRAPH_ID,
             "pattern": GRAPH_PATTERN,
             "execution": "application-orchestrated",
-            "deploymentTarget": "AgentCore Runtime",
+            "deploymentTarget": DEPLOYMENT_TARGET,
             "agents": [INVESTIGATOR_NODE, PLANNER_NODE],
             "executedNodes": nodes,
             "durationMs": duration,

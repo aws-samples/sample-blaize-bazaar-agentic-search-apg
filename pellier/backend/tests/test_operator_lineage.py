@@ -144,7 +144,7 @@ def test_lineage_joins_handoff_review_graph_and_operator_scoped_execution(
             "turnId": "turn-operator",
             "orchestration": {
                 "pattern": "strands-graph",
-                "deploymentTarget": "AgentCore Runtime",
+                "deploymentTarget": "Pellier backend process (application-orchestrated)",
                 "executedNodes": [
                     {
                         "nodeId": "case-investigator",
