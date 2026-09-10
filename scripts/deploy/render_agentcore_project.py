@@ -34,11 +34,13 @@ AGENTCORE_CLI = "@aws/agentcore@0.26.0"
 def _deployment_suffix() -> str:
     """An optional label that isolates a second deployment in one account.
 
-    ``PELLIER_DEPLOYMENT_SUFFIX=rc`` renders ``pellier-rc`` resources beside a
-    live ``pellier`` set, so a release candidate can be deployed and proved
-    without touching the environment a workshop or a demo is running on. Empty
-    by default, which is what every workshop box uses. Lowercase letters and
-    digits only, so the label is valid in every resource name it lands in.
+    ``PELLIER_DEPLOYMENT_SUFFIX=rc`` renders ``pellier-rc`` resources and a
+    ``pellierrc`` CLI project beside a live ``pellier`` set, so a release
+    candidate can be deployed and proved without touching the environment a
+    workshop or a demo is running on. Empty by default, which is what every
+    workshop box uses. Lowercase letters and digits only, so the label is valid
+    in every resource name it lands in; the CLI project name in particular
+    accepts nothing but letters and digits.
     """
     raw = os.environ.get("PELLIER_DEPLOYMENT_SUFFIX", "").strip().lower()
     if raw and not re.fullmatch(r"[a-z][a-z0-9]{0,11}", raw):
