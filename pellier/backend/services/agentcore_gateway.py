@@ -500,10 +500,15 @@ class ManagedGatewayDispatcher:
                 "configured specialist model"
             )
 
+        # Captured on this thread: the transport factory runs on Strands'
+        # background thread, where no span is current.
+        trace_context = _current_trace_context()
+
         def _create_transport():
             return _gateway_streamable_http_transport(
                 gateway_url,
                 self.access_token,
+                trace_context=trace_context,
             )
 
         mcp_client = MCPClient(_create_transport)
@@ -691,7 +696,43 @@ def get_streamable_http_app(name: str = "pellier-gateway") -> Any:
     return mcp_server.streamable_http_app()
 
 
-def _gateway_headers(access_token: Optional[str] = None) -> Dict[str, str]:
+def _current_trace_context() -> Any:
+    """The OpenTelemetry context on the calling thread, or ``None``.
+
+    Strands runs the MCP transport on a background thread where no span is
+    current, so the context has to be captured here, on the thread that owns
+    the turn, and handed to the transport explicitly.
+    """
+    try:
+        from opentelemetry import context as otel_context
+
+        return otel_context.get_current()
+    except Exception:  # pragma: no cover - OTEL API absent
+        return None
+
+
+def _inject_trace_context(headers: Dict[str, str], trace_context: Any) -> None:
+    """Add a W3C ``traceparent`` for the captured context, if it holds a span.
+
+    This is what lets a Gateway or Lambda span join the same trace as the
+    Runtime invocation instead of starting a fresh one. Without a span the
+    propagator writes nothing, so the headers stay exactly as before.
+    """
+    if trace_context is None:
+        return
+    try:
+        from opentelemetry import propagate
+
+        propagate.inject(headers, context=trace_context)
+    except Exception as exc:  # pragma: no cover - propagation is best effort
+        logger.debug("Gateway trace context not injected: %s", exc)
+
+
+def _gateway_headers(
+    access_token: Optional[str] = None,
+    *,
+    trace_context: Any = None,
+) -> Dict[str, str]:
     """Build the auth headers for an MCP call to the AgentCore Gateway.
 
     The Gateway is deployed with a Cognito CUSTOM_JWT authorizer, so the
@@ -706,16 +747,20 @@ def _gateway_headers(access_token: Optional[str] = None) -> Dict[str, str]:
     path: it requires a bearer token before constructing this client.
     """
     if access_token:
-        return {"Authorization": f"Bearer {access_token}"}
-    return {
-        "x-api-key": _runtime_or_app_setting("AGENTCORE_GATEWAY_API_KEY")
-    }
+        headers = {"Authorization": f"Bearer {access_token}"}
+    else:
+        headers = {
+            "x-api-key": _runtime_or_app_setting("AGENTCORE_GATEWAY_API_KEY")
+        }
+    _inject_trace_context(headers, trace_context)
+    return headers
 
 
 @asynccontextmanager
 async def _gateway_streamable_http_transport(
     gateway_url: str,
     access_token: Optional[str] = None,
+    trace_context: Any = None,
 ):
     """Open the current MCP streamable-HTTP transport with caller identity."""
     import httpx
@@ -723,7 +768,7 @@ async def _gateway_streamable_http_transport(
 
     timeout = httpx.Timeout(30.0, read=300.0)
     async with httpx.AsyncClient(
-        headers=_gateway_headers(access_token),
+        headers=_gateway_headers(access_token, trace_context=trace_context),
         timeout=timeout,
         follow_redirects=True,
     ) as http_client:
