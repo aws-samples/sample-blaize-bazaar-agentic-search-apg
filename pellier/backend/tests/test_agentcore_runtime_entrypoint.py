@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 import types
 from pathlib import Path
@@ -199,3 +200,43 @@ def test_entrypoint_rejects_truncated_model_output(
         # answer is exactly as worth knowing as which produced a good one.
         "build_fingerprint": "",
     }
+
+
+def test_entrypoint_installs_model_content_redaction_before_the_tracer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The managed rail must withhold prompts and completions like app.py does.
+
+    Strands' tracer reads OTEL_SEMCONV_STABILITY_OPT_IN once, when it is
+    constructed. The Runtime container never runs app.py's lifespan, so unless
+    the entrypoint installs the redact-all token itself, every agent span the
+    platform exports carries the shopper's words in clear text.
+    """
+    from services.otel_content_redaction import SEMCONV_ENV, redaction_already_configured
+
+    monkeypatch.delenv(SEMCONV_ENV, raising=False)
+    monkeypatch.delenv("OTEL_REDACT_MODEL_CONTENT", raising=False)
+
+    _load_entrypoint(monkeypatch, response=_Response("Linen for Goa"))
+
+    assert redaction_already_configured(os.environ.get(SEMCONV_ENV, ""))
+
+    # Order matters: the token must be in place before any Strands-importing
+    # module can construct a tracer.
+    source = ENTRYPOINT.read_text(encoding="utf-8")
+    assert source.index("apply_model_content_redaction(") < source.index(
+        "from bedrock_agentcore.runtime import BedrockAgentCoreApp"
+    )
+
+
+def test_entrypoint_leaves_redaction_off_only_when_told_to(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from services.otel_content_redaction import SEMCONV_ENV, redaction_already_configured
+
+    monkeypatch.delenv(SEMCONV_ENV, raising=False)
+    monkeypatch.setenv("OTEL_REDACT_MODEL_CONTENT", "false")
+
+    _load_entrypoint(monkeypatch, response=_Response("Linen for Goa"))
+
+    assert not redaction_already_configured(os.environ.get(SEMCONV_ENV, ""))

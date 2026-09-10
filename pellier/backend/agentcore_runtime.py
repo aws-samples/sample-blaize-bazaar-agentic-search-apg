@@ -62,6 +62,26 @@ if os.environ.get("AGENT_MODEL_ID") and not os.environ.get("BEDROCK_ROUTER_MODEL
 # render that as unknown, never as a mismatch.
 _build_fingerprint = os.environ.get("PELLIER_BUILD_FINGERPRINT", "").strip()
 
+
+def _env_flag(name: str, *, default: bool) -> bool:
+    raw = os.environ.get(name, "")
+    if not raw.strip():
+        return default
+    return raw.strip().lower() not in {"0", "false", "no", "off"}
+
+
+# Withhold prompts, completions, and tool results from every span this
+# container exports. Strands' tracer reads OTEL_SEMCONV_STABILITY_OPT_IN once,
+# when it is constructed, so the token must be in place before any module that
+# can build one is imported. app.py does this in its lifespan; the Runtime never
+# runs that lifespan, and the platform's own instrumentation would otherwise
+# ship the shopper's words in clear text.
+from services.otel_content_redaction import apply_model_content_redaction
+
+apply_model_content_redaction(
+    enabled=_env_flag("OTEL_REDACT_MODEL_CONTENT", default=True)
+)
+
 try:
     from bedrock_agentcore.runtime import BedrockAgentCoreApp
 
