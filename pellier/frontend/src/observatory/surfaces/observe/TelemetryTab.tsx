@@ -1630,6 +1630,19 @@ const TelemetryTab: React.FC = () => {
                     >
                       {check.status.replace(/_/g, ' ')}
                     </span>
+                    {check.detail ? (
+                      <span
+                        style={{
+                          display: 'block',
+                          marginTop: 2,
+                          fontFamily: 'var(--obs-sans)',
+                          fontSize: 'var(--text-label)',
+                          color: 'var(--obs-ink-2)',
+                        }}
+                      >
+                        {check.detail}
+                      </span>
+                    ) : null}
                   </div>
                 ))}
               </div>
