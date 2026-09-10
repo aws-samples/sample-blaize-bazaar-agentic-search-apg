@@ -63,15 +63,113 @@ CANONICAL_ANNA_QUERY = "A housewarming gift under $100 that is currently in stoc
 CANONICAL_ANNA_GOLDEN_IDS: tuple[str, ...] = ("21", "22", "23", "25", "27", "29")
 # === WORKSHOP · Retrieval eval · golden set: END ===
 
+# The held-out checks. Lab 2b's labels tune one knob, the rerank pool size;
+# these check the choice on requests the labels never described. They are
+# provided rather than authored. A pool size chosen on Anna's labels has to
+# hold here, or it is a hypothesis rather than a decision.
+#
+# One held-out product slice with its own labels, from a different part of the
+# catalog. Definition, pinned the same way the golden set is:
+#
+#   SELECT "productId"
+#     FROM pellier.product_catalog
+#    WHERE category = 'Beauty'
+#      AND quantity > 0
+#      AND tags @> '["gift"]'::jsonb
+#      AND NOT (tags ? 'archive')
+#    ORDER BY "productId";
+CANONICAL_HELD_OUT_QUERY = "A beauty gift for someone who loves a slow morning ritual."
+CANONICAL_HELD_OUT_GOLDEN_IDS: tuple[str, ...] = ("26", "47", "55", "56")
+
+# Four query cases, each exercising a different way retrieval can be wrong while
+# the ranking looks fine. ``labels`` cases are scored like the tuning set; the
+# other kinds are pass/fail on what came back.
+HELD_OUT_KIND_LABELS = "labels"
+HELD_OUT_KIND_MUST_NOT_RETURN = "must_not_return"
+HELD_OUT_KIND_NO_RESULT = "no_result"
+HELD_OUT_CASES: tuple[dict, ...] = (
+    {
+        "id": "slice",
+        "kind": HELD_OUT_KIND_LABELS,
+        "query": CANONICAL_HELD_OUT_QUERY,
+        "golden_ids": CANONICAL_HELD_OUT_GOLDEN_IDS,
+        "rule": "in-stock Beauty pieces tagged gift",
+    },
+    {
+        # An exclusion the shopper states. The candle in the housewarming set must
+        # not come back, and the rest of that set must.
+        "id": "exclusion",
+        "kind": HELD_OUT_KIND_LABELS,
+        "query": "A housewarming gift under $100, but no candles.",
+        "golden_ids": ("22", "23", "25", "27", "29"),
+        "rule": "in-stock Home Decor pieces tagged gift and home at or under $100, not tagged candle",
+    },
+    {
+        # A ceiling low enough that most gifts fall out; the two that remain must lead.
+        "id": "tight_budget",
+        "kind": HELD_OUT_KIND_LABELS,
+        "query": "A small gift under $40.",
+        "golden_ids": ("23", "30"),
+        "rule": "in-stock pieces tagged gift at or under $40",
+    },
+    {
+        # A piece the catalog carries with no units. Relevance would rank it first;
+        # eligibility must keep it out of the answer.
+        "id": "unavailable",
+        "kind": HELD_OUT_KIND_MUST_NOT_RETURN,
+        "query": "Is the Quilted Silk Vest available?",
+        "must_not_return": ("43",),
+        "rule": "a sold-out piece is never returned",
+    },
+    {
+        # Nothing in the catalog satisfies this; the honest answer is no rows.
+        "id": "no_result",
+        "kind": HELD_OUT_KIND_NO_RESULT,
+        "query": "A cashmere gift under $30.",
+        "rule": "no in-stock cashmere piece costs $30 or less",
+    },
+)
+
+
+def score_held_out_case(case: dict, execution: SearchExecution, *, limit: int) -> Dict[str, Any]:
+    """One held-out case, one pool size: the metrics for a labelled case, a
+    pass/fail for the other kinds. Never a score invented from a case that has
+    no labels."""
+    returned_ids = _product_ids(execution.returned)
+    if case["kind"] == HELD_OUT_KIND_LABELS:
+        variant = micro_eval_variant(
+            execution, latencies_ms=[0.0], golden_ids=case["golden_ids"], limit=limit
+        )
+        variant["passed"] = variant["context_precision"] > 0.0
+        return variant
+    if case["kind"] == HELD_OUT_KIND_MUST_NOT_RETURN:
+        leaked = sorted(set(returned_ids) & set(case["must_not_return"]))
+        return {
+            "pool_k": execution.rerank_pool_k,
+            "returned": len(returned_ids),
+            "leaked": leaked,
+            "passed": not leaked,
+        }
+    return {
+        "pool_k": execution.rerank_pool_k,
+        "returned": len(returned_ids),
+        "passed": len(returned_ids) == 0,
+    }
+
 # Below three documents the reranker has nothing to reorder.
 RERANK_POOL_MIN = 3
 
-# The micro-eval repeats each pool-size variant so its latency percentiles
-# describe a distribution rather than one observation. Repetitions buy nothing
-# else: over a fixed pool the quality metrics are deterministic, so they are
-# scored once from the first pass. Every extra repetition is two SQL round
-# trips and one Bedrock Rerank call, which is why the ceiling is low and the
-# default is lower.
+# The micro-eval repeats each pool-size variant to measure the warm path, and
+# the endpoint reports cold and warm apart rather than blending them. Every
+# repetition sends an identical rerank request, and `services/rerank.py` caches
+# on (query, documents, top_n, model_id), so with the cache enabled the first
+# pass pays Bedrock and passes 2..N are cache hits. A single p50 over both
+# describes neither, and moves with the repetition count rather than with
+# anything about the system. Repetitions buy nothing else: over a fixed pool
+# the quality metrics are deterministic, so they are scored once from the first
+# pass. Every extra repetition is still two SQL round trips -- and one more
+# Bedrock Rerank call when the cache is off -- which is why the ceiling is low
+# and the default is lower.
 MICRO_EVAL_REPETITIONS_DEFAULT = 3
 MICRO_EVAL_REPETITIONS_MAX = 5
 
@@ -427,7 +525,15 @@ def micro_eval_variant(
             short_result_rate: 1.0 when the pass returned fewer than ``limit``
                 rows, else 0.0. A rate over one deterministic observation.
             citation_coverage: returned rows carrying a citable id / returned.
-            latency_ms_p50 / p95: percentiles over the repetition latencies.
+                This is *citable-result* coverage: whether a row could be
+                cited, not whether the answer's claims were supported by
+                citations. Answer-level citation support is a separate
+                measurement over generated text and is not scored here.
+            latency_ms_p50 / p95: percentiles over whatever ``latencies_ms``
+                holds. The caller decides what that is, and the micro-eval
+                endpoint passes the cold pass alone, so read these as
+                percentiles over the samples given -- not as evidence that
+                more than one sample was taken.
     """
     golden = {str(value) for value in golden_ids}
     pool_ids = set(_product_ids(execution.rerank_pool))

@@ -875,14 +875,22 @@ def test_build_state_detects_each_reference_solution_as_built(
     live_rel, solution_rel = live_for_step[step]
     live = REPO / live_rel
     backup = live.read_bytes()
+    reloaded = ("services.planned_hybrid_retrieval", "services.agentcore_gateway")
+    # Other test modules hold references to these module objects. Popping them
+    # for good would leave those references stale and their monkeypatches
+    # aimed at an object nothing imports any more; the originals go back.
+    originals = {name: sys.modules.get(name) for name in reloaded}
     try:
         shutil.copyfile(REPO / solution_rel, live)
-        for module in ("services.planned_hybrid_retrieval", "services.agentcore_gateway"):
+        for module in reloaded:
             sys.modules.pop(module, None)
         assert getattr(observatory, detector)() is False, (
             f"step {step}: the reference solution is not detected as built"
         )
     finally:
         live.write_bytes(backup)
-        for module in ("services.planned_hybrid_retrieval", "services.agentcore_gateway"):
-            sys.modules.pop(module, None)
+        for module, original in originals.items():
+            if original is not None:
+                sys.modules[module] = original
+            else:
+                sys.modules.pop(module, None)
