@@ -432,3 +432,27 @@ def test_mcp_invocation_through_call_tool_returns_valid_json_envelope(
 def test_local_mcp_tool_names_constant_matches_expected() -> None:
     assert set(gateway.LOCAL_MCP_TOOL_NAMES) == EXPECTED_TOOL_NAMES
     assert len(gateway.LOCAL_MCP_TOOL_NAMES) == 17
+
+
+def test_gateway_tool_names_are_read_through_the_strands_tool_interface() -> None:
+    """Strands 1.48's ``MCPAgentTool`` exposes ``tool_name`` and ``tool_spec``, not ``name``.
+
+    The venv tests never build a real ``MCPAgentTool``, so a ``tool.name`` read
+    passes every local test and raises ``AttributeError`` on the first managed
+    turn. Both the live dispatcher and the Lab 3b twin are pinned to the
+    interface the installed SDK actually has.
+    """
+    from pathlib import Path
+
+    from strands.tools.mcp.mcp_agent_tool import MCPAgentTool
+
+    assert hasattr(MCPAgentTool, "tool_name") and hasattr(MCPAgentTool, "tool_spec")
+    assert not hasattr(MCPAgentTool, "name")
+    backend = Path(__file__).resolve().parents[1]
+    for path in (
+        backend / "services" / "agentcore_gateway.py",
+        backend.parents[1] / "solutions" / "the-ledger" / "services" / "agentcore_gateway.py",
+    ):
+        source = path.read_text()
+        assert "tool.name" not in source, f"{path.name} reads MCPAgentTool.name"
+        assert "tool.tool_name" in source
