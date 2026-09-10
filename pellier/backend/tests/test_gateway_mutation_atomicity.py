@@ -110,6 +110,45 @@ def _assert_shared_transaction(client: _DataApi) -> None:
     assert not client.rollbacks
 
 
+def test_issue_credit_casts_every_argument_at_the_call_site(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A Data API integer arrives as bigint, and the function takes an integer.
+
+    PostgreSQL does not narrow bigint to integer while resolving an overload, so
+    the unqualified call raised `function pellier.apply_store_credit(text, text,
+    text, bigint, text, unknown) does not exist` on the live Gateway (2026-09-10).
+    Cedar allowed the call, the Lambda ran, and no credit row was written: the
+    kind of failure that looks like a working boundary until someone counts rows.
+    """
+    module = _load_server("pellier_experience_server.py", "experience_credit_casts")
+    client = _DataApi({"status": "success", "credit_id": 7})
+    monkeypatch.setattr(_dataapi(), "rds_client", client)
+
+    module.issue_credit(
+        customer_id="CUST-THEO",
+        amount_cents=2500,
+        reason="damaged",
+        idempotency_key="credit-cast-1",
+    )
+
+    credit_sql = next(
+        call["sql"] for call in client.statements if "apply_store_credit" in call["sql"]
+    )
+    for cast in (
+        ":idempotency_key::text",
+        ":request_hash::text",
+        ":cid::text",
+        ":amount_cents::integer",
+        ":reason::text",
+        "NULL::text",
+    ):
+        assert cast in credit_sql, credit_sql
+    # An uncast bind is what broke it; none may come back.
+    assert ":amount_cents," not in credit_sql
+    assert ", NULL)" not in credit_sql
+
+
 def test_initiate_return_binds_the_runtime_role_and_customer_subject_first(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

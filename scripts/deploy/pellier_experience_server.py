@@ -264,8 +264,16 @@ def issue_credit(
     try:
         rows = _execute_in_transaction(
             transaction_id,
+            # Every argument is cast at the call site. The Data API sends an
+            # integer as `longValue`, which arrives as bigint, and PostgreSQL
+            # does not implicitly narrow bigint to the function's `integer`
+            # parameter when resolving an overload. Live on 2026-09-10 that
+            # produced "function pellier.apply_store_credit(text, text, text,
+            # bigint, text, unknown) does not exist" - Cedar allowed the call,
+            # the Lambda ran, and no credit row was written.
             f"SELECT {SCHEMA}.apply_store_credit("
-            ":idempotency_key, :request_hash, :cid, :amount_cents, :reason, NULL"
+            ":idempotency_key::text, :request_hash::text, :cid::text,"
+            " :amount_cents::integer, :reason::text, NULL::text"
             ") AS result;",
             [
                 {"name": "idempotency_key", "value": {"stringValue": clean_key}},
