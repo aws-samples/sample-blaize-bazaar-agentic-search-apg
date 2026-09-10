@@ -140,7 +140,9 @@ def semantic_search(query: str, limit: int = 5, max_price: float = None, min_rat
     embedding = _get_embedding(query)
     embedding_str = "[" + ",".join(str(x) for x in embedding) + "]"
 
-    where_clauses = ["quantity > 0"]
+    # Same eligibility floor as services/vector_search.py: in stock and not a
+    # seeded archive distractor. Swapping rails must not widen the catalog.
+    where_clauses = ["quantity > 0", "NOT (tags ? 'archive')"]
     parameters = [
         {"name": "embedding", "value": {"stringValue": embedding_str}},
         {"name": "lim", "value": {"longValue": int(limit)}},
@@ -248,7 +250,9 @@ def search_products_hybrid(
     embedding_ms = int((time.monotonic() - retrieval_started) * 1000)
     embedding_str = "[" + ",".join(str(x) for x in embedding) + "]"
 
-    where_clauses = ["quantity > 0"]
+    # Mirrors services/hybrid_search.py: both branches gate on stock and on
+    # the archive tag before fusion, so RRF never sees a retired piece.
+    where_clauses = ["quantity > 0", "NOT (tags ? 'archive')"]
     parameters = [
         {"name": "embedding", "value": {"stringValue": embedding_str}},
         {"name": "query", "value": {"stringValue": query}},
@@ -789,7 +793,12 @@ def browse_category(
     limit: int = 5,
 ) -> dict:
     """Browse one category with deterministic rating and price filters."""
-    conditions = ["lower(category) LIKE :category", "quantity > 0"]
+    # Mirrors BusinessLogic.get_products_by_category: archived rows never browse.
+    conditions = [
+        "lower(category) LIKE :category",
+        "quantity > 0",
+        "NOT (tags ? 'archive')",
+    ]
     parameters = [
         {
             "name": "category",
