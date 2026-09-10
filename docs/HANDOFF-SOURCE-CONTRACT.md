@@ -98,8 +98,8 @@ policy. The desk invokes exactly two capabilities:
 | `issue_credit` | **not published** | no action id exists, so a policy naming it is rejected as `unrecognized action` |
 
 A policy gating `restock_inventory` on the group was added and removed. It enforced
-nothing: `restock_inventory` is an Inventory Agent tool with no operator route, and it has
-no matching permit, so an operator and a shopper are **both denied either way**. It changed
+nothing: `restock_inventory` is a deferred tool with no operator route (the shopper-facing
+Inventory Agent no longer binds it), and it has no matching permit, so an operator and a shopper are **both denied either way**. It changed
 the recorded reason and no outcome, while risking the whole provision on an unproven
 `getTag(...).contains(...)` under `FAIL_ON_ANY_FINDINGS`, where a rejected policy fails
 `agentcore deploy` and leaves no Gateway, Runtime or Memory.
