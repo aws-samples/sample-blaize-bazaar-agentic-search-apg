@@ -340,7 +340,11 @@ describe('ProofBoard', () => {
       const row = await screen.findByTestId('managed-build-fingerprint');
       expect(row).toHaveAttribute('data-build-state', 'current');
       expect(row).toHaveTextContent('This checkout');
-      expect(row).toHaveTextContent('abc123def456');
+      // A match still prints both sides. The badge is a conclusion; the two
+      // digests are what it was read from, and a participant asked to trust
+      // the badge alone cannot check the claim the lab is making.
+      expect(row).toHaveTextContent('executed abc123def456');
+      expect(row).toHaveTextContent('expected abc123def456');
     });
 
     it('names both digests when the deployment is older than this checkout', async () => {
@@ -354,8 +358,8 @@ describe('ProofBoard', () => {
       expect(row).toHaveTextContent('Older deployment');
       // Both sides are shown: "yours differs" is only actionable if the
       // participant can see which two things differ.
-      expect(row).toHaveTextContent('aaaaaaaaaaaa');
-      expect(row).toHaveTextContent('bbbbbbbbbbbb');
+      expect(row).toHaveTextContent('executed aaaaaaaaaaaa');
+      expect(row).toHaveTextContent('expected bbbbbbbbbbbb');
     });
 
     it('reports an unstamped runtime as not reported, never as stale', async () => {
@@ -370,6 +374,8 @@ describe('ProofBoard', () => {
       const row = await screen.findByTestId('managed-build-fingerprint');
       expect(row).toHaveAttribute('data-build-state', 'unknown');
       expect(row).toHaveTextContent('Not reported');
+      expect(row).toHaveTextContent('executed not reported');
+      expect(row).toHaveTextContent('expected bbbbbbbbbbbb');
       expect(row).not.toHaveTextContent('Older deployment');
     });
 

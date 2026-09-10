@@ -702,7 +702,7 @@ const ManagedTraceCorrelation: React.FC<{ receipt: ManagedReceipt }> = ({ receip
     ['Trace', traceId],
     ['Runtime request', requestId],
     ['Session', sessionId],
-    ['Provenance', receipt.evidenceProvenance],
+    ['Evidence from', receipt.evidenceProvenance],
   ].filter((row): row is [string, string] => Boolean(row[1]));
   const buildState = receipt.buildState ?? 'unknown';
   const deployedBuild = (receipt.buildFingerprint || '').slice(0, 12);
@@ -711,6 +711,10 @@ const ManagedTraceCorrelation: React.FC<{ receipt: ManagedReceipt }> = ({ receip
   // the list above because it is the one line that answers "did Runtime run
   // the code I just packaged?" -- and because a stale build has to read as a
   // finding, not as another correlation id.
+  //
+  // Both digests are printed in every state, including a match. "This checkout"
+  // is a conclusion; the two hashes are the reading it was drawn from, and a
+  // participant who cannot see them has to take the badge on trust.
   const buildTone: { tone: ProofTone; label: string } =
     buildState === 'current'
       ? { tone: 'ok', label: 'This checkout' }
@@ -754,10 +758,10 @@ const ManagedTraceCorrelation: React.FC<{ receipt: ManagedReceipt }> = ({ receip
           style={{ color: 'var(--obs-ink-2)', fontSize: '11px', overflowWrap: 'anywhere' }}
         >
           {buildState === 'unknown'
-            ? 'Runtime reported no build fingerprint'
-            : buildState === 'stale'
-              ? `deployed ${deployedBuild} · checkout ${localBuild}`
-              : deployedBuild}
+            ? localBuild
+              ? `executed not reported · expected ${localBuild}`
+              : 'Runtime reported no build fingerprint'
+            : `executed ${deployedBuild} · expected ${localBuild}`}
         </span>
       </div>
       {rows.length > 0 ? (

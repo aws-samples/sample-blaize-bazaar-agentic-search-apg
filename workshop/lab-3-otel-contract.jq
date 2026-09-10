@@ -1,14 +1,15 @@
-# Lab 4 provided check: what "traced" means for one managed turn.
+# Lab 3 provided check: what "traced" means for one managed turn.
 #
 # Four predicates over the spans of one trace, each ruling out a different way
 # a trace can be useless: telemetry from something that is not the agent, a
 # turn that called no model, a turn that touched no system, and someone else's
-# session. This is a check the guide runs, not a build: Lab 4b is the keyed
-# absence query in workshop/lab-4-absence.sql.
+# session. This is a check the guide runs, not a build. It reads structure, not
+# text: the Runtime redacts model content from spans, so no predicate here can
+# depend on a prompt or a completion.
 #
 # Run with:
 #   jq --arg trace "$TRACE_ID" --arg session "$RUNTIME_SESSION" \
-#     -f workshop/lab-4-otel-contract.jq /tmp/pellier-runtime-trace.json
+#     -f workshop/lab-3-otel-contract.jq /tmp/pellier-runtime-trace.json
 
 [
   .[]

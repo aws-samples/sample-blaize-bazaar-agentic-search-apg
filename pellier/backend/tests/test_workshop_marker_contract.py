@@ -133,7 +133,7 @@ LAB4_ABSENCE_PLACEHOLDERS = (
     "NULL::bigint AS denied_ledger_rows",
     "NULL::bigint AS allowed_finalized_writes",
 )
-LAB4_TRACE_CONTRACT = "workshop/lab-4-otel-contract.jq"
+LAB3_TRACE_CONTRACT = "workshop/lab-3-otel-contract.jq"
 
 LAB4_STARTER = "policies/workshop_identity_match_forbid.cedar"
 LAB4_REFERENCE = "solutions/the-concierge/policies/identity_match_forbid.cedar"
@@ -355,7 +355,7 @@ def test_lab4_starter_fails_until_the_absence_query_is_authored() -> None:
 
 
 def test_the_trace_contract_is_a_provided_check_not_a_build() -> None:
-    contract = _read(LAB4_TRACE_CONTRACT)
+    contract = _read(LAB3_TRACE_CONTRACT)
     assert "WORKSHOP ·" not in contract, "the trace contract is provided; it carries no build markers"
     for predicate in ("invoke_agent", "gen_ai.request.model", "execute_tool", "gen_ai.tool.name", 'attributes["session.id"]'):
         assert predicate in contract
@@ -644,9 +644,9 @@ def test_no_lab_anchor_is_a_broken_path() -> None:
         LAB2_REFERENCE,
         LAB2_GOLDEN_REFERENCE,
         LAB2_GOLDEN_REGION[0],
+        LAB3_TRACE_CONTRACT,
         LAB4_ABSENCE_STARTER,
         LAB4_ABSENCE_REFERENCE,
-        LAB4_TRACE_CONTRACT,
         LAB4_STARTER,
         LAB4_REFERENCE,
         LAB4_PROOF_SCRIPT,

@@ -80,9 +80,10 @@ psql -v ON_ERROR_STOP=1 \
 ## Lab 4: Govern and Prove Agent Actions
 
 Lab 4a is the Cedar identity rule; Lab 4b is the keyed absence query. The
-OpenTelemetry trace contract (`workshop/lab-4-otel-contract.jq`) is a provided
-check with no recovery copy. The absence query's recovery copy reads the same
-tables the participant's would; it cannot manufacture the rows it counts:
+OpenTelemetry trace contract (`workshop/lab-3-otel-contract.jq`) runs at the end
+of Lab 3 and is a provided check with no recovery copy. The absence query's
+recovery copy reads the same tables the participant's would; it cannot
+manufacture the rows it counts:
 
 ```bash
 cp solutions/the-ledger/observability/lab-4-absence-solution.sql \

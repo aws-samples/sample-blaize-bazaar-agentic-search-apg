@@ -846,7 +846,7 @@ sample-pellier-agentic-search-apg/
 │
 ├── workshop/                              Participant build surface: lab-2-rrf.sql,
 │                                          lab-4-absence.sql, lab-4-rls.sql, the provided
-│                                          lab-4-otel-contract.jq,
+│                                          lab-3-otel-contract.jq,
 │                                          starters/, architecture-diagrams/
 ├── policies/                              Cedar policy set applied to the policy engine
 ├── skills/                                Strands runtime skills (5) + scoped guidance
