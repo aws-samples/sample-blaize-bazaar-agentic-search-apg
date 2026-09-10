@@ -1,0 +1,175 @@
+"""The customer claim comes from the subject map and nothing else.
+
+``scripts/deploy/cognito_customer_claim.py`` is the Cognito pre-token trigger
+that stamps ``custom:customer_id`` on shopper access tokens. Cedar binds that
+claim to a tool's ``customer_id`` input, so the trigger is part of the
+authorization boundary: a claim issued from anything a shopper controls would
+let a persona choice become an identity.
+
+``deploy_customer_claim_trigger.py`` attaches it with ``UpdateUserPool``, which
+replaces the pool's mutable settings wholesale. The pass-through test guards
+the one mistake that silently strips MFA, recovery, or admin-create settings
+from a live pool.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import sys
+import types
+from pathlib import Path
+from typing import Any, Dict
+
+import pytest
+
+DEPLOY = Path(__file__).resolve().parents[3] / "scripts" / "deploy"
+
+
+def _load(name: str):
+    spec = importlib.util.spec_from_file_location(name, DEPLOY / f"{name}.py")
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture
+def trigger(monkeypatch: pytest.MonkeyPatch):
+    module = _load("cognito_customer_claim")
+    monkeypatch.setenv(
+        module.MAP_ENV,
+        json.dumps({"sub-marco": "CUST-MARCO", "sub-bad": "not a customer id"}),
+    )
+    return module
+
+
+def _event(sub: str, **extra: Any) -> Dict[str, Any]:
+    return {
+        "triggerSource": "TokenGeneration_Authentication",
+        "request": {
+            "userAttributes": {"sub": sub, "custom:customer_id": "CUST-FORGED"},
+            "clientMetadata": {"customer_id": "CUST-FORGED"},
+            **extra,
+        },
+        "response": {},
+    }
+
+
+def test_mapped_subject_gets_the_claim_on_the_access_token_only(trigger) -> None:
+    out = trigger.handler(_event("sub-marco"), None)
+
+    details = out["response"]["claimsAndScopeOverrideDetails"]
+    assert details == {
+        "accessTokenGeneration": {"claimsToAddOrOverride": {"custom:customer_id": "CUST-MARCO"}}
+    }
+    assert "idTokenGeneration" not in details
+
+
+def test_unmapped_subject_gets_no_claim_even_when_the_request_names_one(trigger) -> None:
+    out = trigger.handler(_event("sub-unknown"), None)
+
+    assert "claimsAndScopeOverrideDetails" not in out["response"]
+
+
+def test_malformed_mapping_value_is_refused(trigger) -> None:
+    out = trigger.handler(_event("sub-bad"), None)
+
+    assert "claimsAndScopeOverrideDetails" not in out["response"]
+
+
+def test_missing_or_invalid_map_issues_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    module = _load("cognito_customer_claim")
+    monkeypatch.setenv(module.MAP_ENV, "{not json")
+    assert "claimsAndScopeOverrideDetails" not in module.handler(_event("sub-marco"), None)["response"]
+    monkeypatch.delenv(module.MAP_ENV)
+    assert "claimsAndScopeOverrideDetails" not in module.handler(_event("sub-marco"), None)["response"]
+
+
+def test_handler_never_reads_client_metadata_or_user_attributes_for_the_value() -> None:
+    source = (DEPLOY / "cognito_customer_claim.py").read_text(encoding="utf-8")
+    assert "clientMetadata" not in source.split('"""', 2)[2], "clientMetadata must not reach the handler"
+    body = source.split("def handler", 1)[1]
+    assert 'attributes.get("sub")' in body
+    assert "custom:customer_id" not in body.replace("CLAIM_NAME", "")
+
+
+class _FakeIdp:
+    """Enough of cognito-idp to check what UpdateUserPool is told."""
+
+    def __init__(self, pool: Dict[str, Any], members: set[str]) -> None:
+        self.pool = pool
+        self.updates: list[Dict[str, Any]] = []
+        shape = types.SimpleNamespace(members={name: None for name in members})
+        op = types.SimpleNamespace(input_shape=shape)
+        self.meta = types.SimpleNamespace(
+            service_model=types.SimpleNamespace(operation_model=lambda _name: op)
+        )
+
+    def describe_user_pool(self, UserPoolId: str) -> Dict[str, Any]:
+        return {"UserPool": dict(self.pool)}
+
+    def update_user_pool(self, **kwargs: Any) -> None:
+        self.updates.append(kwargs)
+        self.pool["LambdaConfig"] = kwargs["LambdaConfig"]
+
+
+_MEMBERS = {
+    "UserPoolId", "PoolName", "Policies", "LambdaConfig", "MfaConfiguration",
+    "AdminCreateUserConfig", "AccountRecoverySetting", "UserPoolTier", "DeletionProtection",
+}
+
+
+def _pool(tier: str = "ESSENTIALS") -> Dict[str, Any]:
+    return {
+        "Id": "us-east-1_test",
+        "Name": "pellier-test",
+        "Arn": "arn:aws:cognito-idp:us-east-1:1:userpool/us-east-1_test",
+        "UserPoolTier": tier,
+        "Policies": {"PasswordPolicy": {"MinimumLength": 12, "TemporaryPasswordValidityDays": 7}},
+        "MfaConfiguration": "OPTIONAL",
+        "AdminCreateUserConfig": {"AllowAdminCreateUserOnly": True, "UnusedAccountValidityDays": 7},
+        "AccountRecoverySetting": {"RecoveryMechanisms": [{"Priority": 1, "Name": "admin_only"}]},
+        "DeletionProtection": "ACTIVE",
+        "LambdaConfig": {"PostConfirmation": "arn:aws:lambda:us-east-1:1:function:existing"},
+        "SchemaAttributes": [{"Name": "sub"}],
+    }
+
+
+def test_attach_trigger_passes_every_existing_setting_through() -> None:
+    deploy = _load("deploy_customer_claim_trigger")
+    idp = _FakeIdp(_pool(), _MEMBERS)
+
+    result = deploy.attach_trigger(idp, "us-east-1_test", "arn:aws:lambda:us-east-1:1:function:claim")
+
+    (update,) = idp.updates
+    assert update["UserPoolId"] == "us-east-1_test"
+    assert update["PoolName"] == "pellier-test"
+    assert update["MfaConfiguration"] == "OPTIONAL"
+    assert update["AccountRecoverySetting"] == _pool()["AccountRecoverySetting"]
+    assert update["DeletionProtection"] == "ACTIVE"
+    assert update["UserPoolTier"] == "ESSENTIALS"
+    assert update["Policies"] == _pool()["Policies"]
+    # The deprecated validity beside the password policy's own is rejected by Cognito.
+    assert update["AdminCreateUserConfig"] == {"AllowAdminCreateUserOnly": True}
+    # Read-only describe fields never reach the update.
+    assert "SchemaAttributes" not in update and "Arn" not in update and "Id" not in update
+    # Existing triggers survive; the V2_0 config is merged in, not swapped for V1.
+    assert update["LambdaConfig"] == {
+        "PostConfirmation": "arn:aws:lambda:us-east-1:1:function:existing",
+        "PreTokenGenerationConfig": {
+            "LambdaVersion": "V2_0",
+            "LambdaArn": "arn:aws:lambda:us-east-1:1:function:claim",
+        },
+    }
+    assert result["PreTokenGenerationConfig"]["LambdaVersion"] == "V2_0"
+
+
+def test_attach_trigger_refuses_a_lite_pool() -> None:
+    deploy = _load("deploy_customer_claim_trigger")
+    idp = _FakeIdp(_pool(tier="LITE"), _MEMBERS)
+
+    with pytest.raises(SystemExit, match="ESSENTIALS or PLUS"):
+        deploy.attach_trigger(idp, "us-east-1_test", "arn:aws:lambda:us-east-1:1:function:claim")
+    assert idp.updates == []
