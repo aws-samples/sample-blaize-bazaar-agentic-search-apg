@@ -78,7 +78,7 @@ and `PellierURL` from Event outputs, then follow the guide's readiness check.
 | 0–10 | Facilitator framing | Understand the PostgreSQL and agent request paths |
 | 10–15 | Set Up Your Environment | Open both tabs and verify the starter gaps |
 | 15–30 | Lab 1: From pgvector to Agentic Retrieval | Run a pgvector SQL query, compare four retrieval paths, inspect filters, and explain your choice |
-| 30–55 | Lab 2: Extend Your Agent with a PostgreSQL Tool | Build and test `floor_check`, grant it to Stock Keeper, then inspect Marco’s answer and audit receipt |
+| 30–55 | Lab 2: Extend Your Agent with a Tool That Reads PostgreSQL | Build and test `floor_check`, grant it to Stock Keeper, then inspect Marco’s answer and audit receipt |
 | 55–60 | Wrap-Up | Explain the design and save your edits and evidence |
 
 The guide's **Explore PostgreSQL and Agent Architecture** reference provides
