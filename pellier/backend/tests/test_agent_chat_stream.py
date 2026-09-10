@@ -663,7 +663,9 @@ def test_unexpected_memory_read_failure_is_receipted_as_failed(
             raise RuntimeError("transport interrupted")
 
         async def append_session_turns(self, _namespace, _turns):
-            return None
+            from services.agentcore_memory import BACKEND_AGENTCORE
+
+            return BACKEND_AGENTCORE
 
     async def _runtime(**_kwargs):
         return "Response completed without prior memory context"
@@ -863,3 +865,52 @@ def test_get_session_anonymous_reads_anon_namespace(
     assert payload["namespace"] == "anon-anon-sid"
     assert payload["authenticated"] is False
     assert len(payload["turns"]) == 2
+
+
+def test_process_local_memory_write_is_not_receipted_as_managed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The receipt names the store that actually held the turn.
+
+    With strict mode off, a dead or unset Memory resource silently lands the
+    write in a process-local dict. The Observatory renders ``agentcore-memory``
+    as managed persistence, so that source is reserved for a write the SDK
+    confirmed.
+    """
+    from services.agentcore_memory import BACKEND_PROCESS_LOCAL
+
+    class _Memory:
+        async def get_session_history(self, _namespace):
+            return []
+
+        async def append_session_turns(self, _namespace, _turns):
+            return BACKEND_PROCESS_LOCAL
+
+    async def _runtime(**_kwargs):
+        return "Response completed"
+
+    import routes.agent as agent_module
+
+    monkeypatch.setattr(agent_module, "run_agent", _runtime)
+    context = UserContext(
+        user_id="marco",
+        session_id="proof",
+        namespace="user-marco-session-proof",
+        access_token="token",
+    )
+
+    async def _collect():
+        return [
+            event
+            async for event in _stream_agent_response(
+                message="Remember Goa.",
+                context=context,
+                memory=_Memory(),
+            )
+        ]
+
+    events = _parse_sse("".join(asyncio.run(_collect())))
+    receipt = events[1]["data"]
+    assert receipt["source"] == "process-local"
+    assert receipt["write_status"] == "succeeded"
+    assert receipt["turns_persisted"] == 2

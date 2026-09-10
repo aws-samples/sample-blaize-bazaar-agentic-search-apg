@@ -72,7 +72,7 @@ from services.agentcore_identity import (
     UserContext,
     get_agentcore_identity_service,
 )
-from services.agentcore_memory import AgentCoreMemory, ManagedMemoryError
+from services.agentcore_memory import BACKEND_AGENTCORE, AgentCoreMemory, ManagedMemoryError
 from services.agentcore_runtime import ManagedRuntimeError, get_latest_trace, run_agent
 from routes.user import get_agentcore_memory
 
@@ -225,7 +225,7 @@ async def _stream_agent_response(
     if memory_read_failed:
         memory_receipt["error_code"] = "memory_read_failed"
     try:
-        await memory.append_session_turns(
+        write_backend = await memory.append_session_turns(
             context.namespace,
             [
                 {"role": "user", "content": message},
@@ -234,6 +234,12 @@ async def _stream_agent_response(
         )
         memory_receipt["turns_persisted"] = 2
         memory_receipt["write_status"] = "succeeded"
+        # ``agentcore-memory`` is reserved for a write the SDK confirmed. The
+        # non-strict rail falls back to a process-local dict and returns
+        # normally; the Observatory renders that source as managed
+        # persistence unless the receipt says otherwise.
+        if write_backend != BACKEND_AGENTCORE:
+            memory_receipt["source"] = "process-local"
     except ManagedMemoryError as exc:
         logger.warning(
             "Managed Memory rejected session %s after invocation",

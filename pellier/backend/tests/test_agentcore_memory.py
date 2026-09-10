@@ -596,3 +596,52 @@ def test_get_semantic_memories_returns_empty_on_sdk_error() -> None:
     mem._sdk_manager = _BoomManager()
 
     assert _run(mem.get_semantic_memories("CUST-ANNA")) == []
+
+
+def test_append_session_turns_reports_the_process_local_store(memory) -> None:
+    """A fallback write must say so, or a receipt reads it as managed proof."""
+    import services.agentcore_memory as mem_module
+
+    backend = _run(
+        memory.append_session_turns(
+            "anon-proof",
+            [{"role": "user", "content": "Remember Goa."}],
+        )
+    )
+
+    assert backend == mem_module.BACKEND_PROCESS_LOCAL
+
+
+def test_append_session_turns_reports_agentcore_when_the_sdk_write_lands(
+    memory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import services.agentcore_memory as mem_module
+
+    class _Session:
+        def __init__(self) -> None:
+            self.messages: list[Any] = []
+
+        def add_turns(self, messages: list[Any]) -> None:
+            self.messages.extend(messages)
+
+    class _Manager:
+        def __init__(self) -> None:
+            self.session = _Session()
+
+        def create_memory_session(self, actor_id: str, session_id: str) -> _Session:
+            assert actor_id == session_id == "user-marco-session-proof"
+            return self.session
+
+    manager = _Manager()
+    monkeypatch.setattr(memory, "_get_sdk_manager", lambda: manager)
+
+    backend = _run(
+        memory.append_session_turns(
+            "user-marco-session-proof",
+            [{"role": "user", "content": "Remember Goa."}],
+        )
+    )
+
+    assert backend == mem_module.BACKEND_AGENTCORE
+    assert len(manager.session.messages) == 1
+    assert mem_module._SESSION_STORE == {}

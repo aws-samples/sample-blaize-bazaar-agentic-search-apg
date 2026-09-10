@@ -393,14 +393,20 @@ class AgentCoreMemory:
         self,
         session_ns: str,
         turns: List[Dict[str, Any]],
-    ) -> None:
+    ) -> str:
         """Append one logical turn as a single AgentCore Memory event.
 
         SHOPPER WRAPPER — semantics frozen. `actor_id == session_id == session_ns`
         is intentional and load-bearing for shopper isolation.
+
+        Returns which store held the write, ``BACKEND_AGENTCORE`` or
+        ``BACKEND_PROCESS_LOCAL``, like ``append_memory_event``. A non-strict
+        SDK failure lands the turn in the process-local dict and returns
+        normally; without the backend a receipt would report that fallback
+        as managed persistence.
         """
         if not turns:
-            return
+            return BACKEND_PROCESS_LOCAL
         mgr = self._get_sdk_manager()
         if mgr is not None:
             try:
@@ -416,7 +422,7 @@ class AgentCoreMemory:
                 session.add_turns(
                     messages=[self._to_conversational(turn) for turn in turns]
                 )
-                return
+                return BACKEND_AGENTCORE
             except Exception as exc:  # pragma: no cover - SDK error path
                 if self._strict:
                     raise ManagedMemoryError(
@@ -431,6 +437,7 @@ class AgentCoreMemory:
         _SESSION_STORE.setdefault(session_ns, []).extend(
             dict(turn) for turn in turns
         )
+        return BACKEND_PROCESS_LOCAL
 
     async def get_memory_events(
         self, *, actor_id: str, session_id: str
