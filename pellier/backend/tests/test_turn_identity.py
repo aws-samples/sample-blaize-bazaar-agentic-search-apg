@@ -142,7 +142,14 @@ def test_unknown_verified_username_does_not_fall_back_to_persona() -> None:
 
 
 def test_chat_uses_one_identity_service_namespace_for_shopper_stm() -> None:
-    """The agent manager and Observatory replay must use the same STM key."""
+    """The STM writer and the Observatory replay must use the same key.
+
+    The only working-memory write in the chat service is the explicit facade
+    call, keyed by the identity service's namespace builder. The Strands
+    session manager that used to be attached beside it never took effect and
+    is gone, so a second namespace derivation in this file would be a
+    regression, not a redundancy.
+    """
     from pathlib import Path
 
     chat_source = (
@@ -150,9 +157,9 @@ def test_chat_uses_one_identity_service_namespace_for_shopper_stm() -> None:
     ).read_text()
 
     assert "resolve_turn_identity" in chat_source
-    assert chat_source.count("AgentCoreIdentityService.build_namespace(") >= 3
-    assert chat_source.count("session_id=memory_namespace") >= 2
-    assert chat_source.count("user_id=memory_namespace") >= 2
+    assert chat_source.count("AgentCoreIdentityService.build_namespace(") == 1
+    assert "session_manager" not in chat_source
+    assert "create_agentcore_session_manager" not in chat_source
     assert "memory_user_id = turn_identity.memory_actor()" not in chat_source
 
 

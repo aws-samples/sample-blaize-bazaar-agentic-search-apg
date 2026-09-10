@@ -85,7 +85,13 @@ AWS_CONFIG = Config(
 )
 TRANSACTION_SEARCH_POLICY = "TransactionSearchXRayAccess"
 RUNTIME_SMOKE_SESSION = "builders-smoke-session-0000000000000001"
-TRACE_DELIVERY_TIMEOUT_SECONDS = 240
+# Unified traces reach CloudWatch minutes after the invoke: on 2026-09-10 a smoke
+# session's trace was listed only after the first 4-minute wait had expired,
+# although it did arrive. The bound is generous because a false "no trace"
+# here fails a deploy whose every other proof passed; the list window is wider
+# than the wait so a late trace is still inside it.
+TRACE_DELIVERY_TIMEOUT_SECONDS = 900
+TRACE_LIST_WINDOW = "30m"
 CLOUDTRAIL_AUDIT_TIMEOUT_SECONDS = 300
 CLOUDTRAIL_AUDIT_LOOKBACK_SECONDS = 60
 CLOUDTRAIL_AGENTCORE_EVENT_SOURCE = "bedrock-agentcore.amazonaws.com"
@@ -1551,7 +1557,7 @@ def _wait_for_unified_trace(
                 "--runtime",
                 RUNTIME_NAME,
                 "--since",
-                "15m",
+                TRACE_LIST_WINDOW,
                 "--limit",
                 "20",
                 "--json",
@@ -1588,7 +1594,7 @@ def _wait_for_unified_trace(
                 "--runtime",
                 RUNTIME_NAME,
                 "--since",
-                "15m",
+                TRACE_LIST_WINDOW,
                 "--output",
                 str(trace_path),
                 "--json",
