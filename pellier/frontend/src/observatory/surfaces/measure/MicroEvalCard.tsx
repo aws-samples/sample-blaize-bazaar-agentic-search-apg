@@ -275,6 +275,7 @@ const MicroEvalCard: React.FC = () => {
         samples.warm === 1 ? 'repetition' : 'repetitions'
       } per pool.${cacheClause}`
     : null;
+  const heldOut = result.held_out;
 
   return (
     <ExpCard>
@@ -375,6 +376,86 @@ const MicroEvalCard: React.FC = () => {
           </tbody>
         </table>
       </div>
+
+      {heldOut && heldOut.variants.length > 0 ? (
+        <div data-testid="micro-eval-held-out" style={{ marginTop: '14px' }}>
+          <p
+            style={{
+              margin: '0 0 8px',
+              fontFamily: 'var(--obs-sans)',
+              fontSize: '13px',
+              lineHeight: 1.5,
+              color: 'var(--obs-ink-2)',
+            }}
+          >
+            {`Held-out check: the same pools scored on ${heldOut.golden_set_size} provided labels for "${heldOut.query}". Your labels choose the pool; these check the choice.`}
+          </p>
+          <div style={{ overflowX: 'auto' }}>
+            <table
+              aria-label="Held-out rerank pool comparison"
+              style={{ width: '100%', borderCollapse: 'collapse' }}
+            >
+              <thead>
+                <tr>
+                  <th scope="col" style={{ ...headerStyle, textAlign: 'left' }}>
+                    Held-out metric
+                  </th>
+                  {[...heldOut.variants]
+                    .sort((a, b) => b.pool_k - a.pool_k)
+                    .map((variant) => (
+                      <th key={variant.pool_k} scope="col" style={headerStyle}>
+                        {`pool_k ${variant.pool_k}`}
+                      </th>
+                    ))}
+                </tr>
+              </thead>
+              <tbody>
+                {METRICS.filter((metric) =>
+                  ['candidate_coverage', 'context_precision', 'mrr'].includes(metric.field),
+                ).map((metric) => (
+                  <tr key={`held-out-${metric.field}`}>
+                    <th
+                      scope="row"
+                      style={{
+                        ...cellStyle,
+                        textAlign: 'left',
+                        fontFamily: 'var(--obs-sans)',
+                        fontWeight: 500,
+                        whiteSpace: 'normal',
+                      }}
+                    >
+                      {metric.label}
+                    </th>
+                    {[...heldOut.variants]
+                      .sort((a, b) => b.pool_k - a.pool_k)
+                      .map((variant) => (
+                        <td key={variant.pool_k} style={cellStyle}>
+                          {formatValue(variant[metric.field], metric.format)}
+                        </td>
+                      ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {result.generalizes ? (
+            <p
+              data-testid="micro-eval-generalizes"
+              style={{
+                margin: '8px 0 0',
+                fontFamily: 'var(--obs-sans)',
+                fontSize: '13px',
+                lineHeight: 1.5,
+                color: 'var(--obs-ink-1)',
+              }}
+            >
+              {result.generalizes.agree
+                ? `pool_k ${result.generalizes.tuning_best_pool_k} wins on your labels and on the held-out labels.`
+                : `pool_k ${result.generalizes.tuning_best_pool_k} wins on your labels, but pool_k ${result.generalizes.held_out_best_pool_k} wins held out. A finding, not a failure: decide which to ship, and say why the sets disagree.`}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {samplesNote ? (
         <p

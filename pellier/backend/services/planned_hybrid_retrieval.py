@@ -89,6 +89,22 @@ CANONICAL_ANNA_QUERY = "A housewarming gift under $100 that is currently in stoc
 CANONICAL_ANNA_GOLDEN_IDS: tuple[str, ...] = ()
 # === WORKSHOP · Retrieval eval · golden set: END ===
 
+# The held-out set. Lab 2b's labels tune one knob, the rerank pool size; these
+# labels check the choice. They are provided rather than authored, and they
+# describe a different query under a different definition, so a pool size
+# chosen on Anna's labels has to hold on rows it never saw. Definition, derived
+# from the catalog and pinned the same way the golden set is:
+#
+#   SELECT "productId"
+#     FROM pellier.product_catalog
+#    WHERE category = 'Beauty'
+#      AND quantity > 0
+#      AND tags @> '["gift"]'::jsonb
+#      AND NOT (tags ? 'archive')
+#    ORDER BY "productId";
+CANONICAL_HELD_OUT_QUERY = "A beauty gift for someone who loves a slow morning ritual."
+CANONICAL_HELD_OUT_GOLDEN_IDS: tuple[str, ...] = ("26", "47", "55", "56")
+
 # Below three documents the reranker has nothing to reorder.
 RERANK_POOL_MIN = 3
 

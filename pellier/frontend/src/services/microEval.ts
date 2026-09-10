@@ -86,6 +86,18 @@ export interface MicroEvalResult {
    */
   golden_set_size?: number
   variants: MicroEvalVariant[]
+  /** The same pool sizes scored on provided labels for a query the tuning labels never described. */
+  held_out?: {
+    query: string
+    golden_set_size: number
+    variants: MicroEvalVariant[]
+  }
+  /** Whether the pool that wins on the tuning labels also wins held out. */
+  generalizes?: {
+    tuning_best_pool_k: number | null
+    held_out_best_pool_k: number | null
+    agree: boolean
+  }
 }
 
 const NUMERIC_FIELDS: Array<keyof MicroEvalVariant> = [
