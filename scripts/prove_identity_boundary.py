@@ -11,13 +11,15 @@ Every case sends the same protected input::
 
     initiate_return(customer_id="CUST-JESSICA", product_id=<resolved>, reason="damaged")
 
-Only the authenticated Cognito principal changes, so nothing about the *request*
-can explain the different outcomes:
+Four attempts, four different outcomes, so each layer is seen doing its own job:
 
-    marco  -> DENY   one keyed policy receipt, zero execution, zero effect
-    anna   -> DENY   one keyed policy receipt, zero execution, zero effect
-    jessica -> ALLOW one keyed policy receipt, one execution, one canonical effect
-    jessica -> replay same idempotency key: second receipt, no second effect
+    marco   -> DENY    another shopper targets Jessica: one keyed policy receipt,
+                       zero execution, zero effect (permission)
+    jessica -> REFUSE  Jessica asks for a piece she never ordered: Cedar allows,
+                       the tool runs, the business rule refuses, no committed
+                       return (eligibility, which policy cannot judge)
+    jessica -> ALLOW   one keyed policy receipt, one execution, one canonical effect
+    jessica -> replay  same idempotency key: second receipt, no second effect
 
 The canonical effect is exactly one ``pellier.write_operations`` row. That table
 is keyed by ``idempotency_key`` as its primary key, so "exactly one" is enforced
@@ -186,6 +188,28 @@ def _eligible_products(cfg: Dict[str, str]) -> List[Tuple[int, str]]:
     return products
 
 
+def _ineligible_product(cfg: Dict[str, str]) -> Optional[int]:
+    """A piece Jessica never ordered, lowest curated id first.
+
+    The business-refusal case needs a request that policy permits and the
+    business rule refuses. "Never ordered" is that rule's clearest form, and
+    reading it from the order rows keeps the case true after a reseed.
+    """
+    alias = TARGET_CUSTOMER.split("-", 1)[-1].lower()
+    owner_filter = (
+        f"(o.customer_id = {_quote(TARGET_CUSTOMER)} OR lower(o.customer_id) = {_quote(alias)})"
+    )
+    value = _scalar(
+        cfg,
+        "SELECT min(pc.product_id) "
+        "  FROM pellier.product_catalog pc "
+        " WHERE NOT (pc.tags ? 'archive') "
+        "   AND pc.product_id NOT IN ("
+        f"       SELECT o.product_id FROM pellier.orders o WHERE {owner_filter})",
+    )
+    return int(value) if value and str(value).strip().isdigit() else None
+
+
 def _resolve_product(
     cfg: Dict[str, str], requested: Optional[int]
 ) -> Tuple[Optional[int], List[Tuple[int, str]], str]:
@@ -258,8 +282,25 @@ def _invoke(
             payload = json.loads(stdout[stdout.index("{"):])
         except (ValueError, json.JSONDecodeError):
             payload = {}
+    tool_status = ""
+    tool_message = ""
+    result = payload.get("tool_result") or {}
+    for block in (result.get("content") or []) if isinstance(result, dict) else []:
+        text = block.get("text") if isinstance(block, dict) else None
+        if not text:
+            continue
+        try:
+            body = json.loads(text)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            continue
+        if isinstance(body, dict):
+            tool_status = str(body.get("status") or "")
+            tool_message = str(body.get("message") or "")[:200]
+            break
     return {
         "observed_outcome": payload.get("outcome", "unknown"),
+        "tool_status": tool_status,
+        "tool_message": tool_message,
         "exit_code": proc.returncode,
         "stderr": proc.stderr.strip()[:400],
     }
@@ -371,6 +412,26 @@ def _verdict(case: Dict[str, Any], ev: Dict[str, Any]) -> Tuple[bool, str]:
             )
         return True, "refused before execution; no artifact carries this key"
 
+    if case["kind"] == "refuse":
+        # Permission and eligibility are different judges. Cedar allowed the
+        # owner; the tool ran; the business rule refused; nothing committed.
+        if ev["recorded_decision"] != "ALLOW":
+            return False, f"receipt records {ev['recorded_decision']!r}, not ALLOW"
+        if execs != 1:
+            return False, f"expected exactly one execution row, found {execs}"
+        if writes or ev["ledger_rows"]:
+            return False, (
+                f"a business refusal must commit nothing: {writes} finalized write / "
+                f"{ev['ledger_rows']} ledger rows"
+            )
+        if case.get("tool_status") != "error":
+            return False, (
+                f"expected the tool to refuse with status 'error', got "
+                f"{case.get('tool_status')!r} ({case.get('tool_message')!r})"
+            )
+        if case.get("domain_return"):
+            return False, "a refused request produced a return row"
+        return True, "permitted, executed, refused by the business rule; nothing committed"
     domain_return = case.get("domain_return") or {}
     expected_product = case.get("product_id")
     domain_matches = (
@@ -628,13 +689,20 @@ def main(argv: Optional[List[str]] = None) -> int:
     allow_key = f"identity-boundary-{run_id}-jessica"
     replay_receipt_key = f"identity-boundary-{run_id}-jessica-replay"
 
+    ineligible_product = _ineligible_product(cfg)
+    if ineligible_product is None:
+        print(f"FAIL  could not find a curated product {TARGET_CUSTOMER} never ordered")
+        return 2
     cases: List[Dict[str, Any]] = [
         {"kind": "deny", "username": "marco", "expected_outcome": "deny",
          "receipt_key": f"identity-boundary-{run_id}-marco",
          "idempotency_key": f"identity-boundary-{run_id}-marco"},
-        {"kind": "deny", "username": "anna", "expected_outcome": "deny",
-         "receipt_key": f"identity-boundary-{run_id}-anna",
-         "idempotency_key": f"identity-boundary-{run_id}-anna"},
+        # Same owner, a piece she never ordered. Cedar permits the owner; the
+        # business rule refuses; nothing commits. Policy cannot make this call.
+        {"kind": "refuse", "username": "jessica", "expected_outcome": "allow",
+         "product_id": ineligible_product,
+         "receipt_key": f"identity-boundary-{run_id}-jessica-ineligible",
+         "idempotency_key": f"identity-boundary-{run_id}-jessica-ineligible"},
         {"kind": "allow", "username": "jessica", "expected_outcome": "allow",
          "receipt_key": allow_key, "idempotency_key": allow_key},
         # A distinct receipt proves a second invocation; the write key remains
@@ -654,7 +722,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     for case in cases:
         result = _invoke(
             username=case["username"],
-            product_id=product_id,
+            product_id=case.get("product_id", product_id),
             receipt_key=case["receipt_key"],
             idempotency_key=case["idempotency_key"],
             expect=case["expected_outcome"],
@@ -666,6 +734,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             receipt_key=case["receipt_key"],
             idempotency_key=case["idempotency_key"],
         )
+        if case["kind"] == "refuse":
+            case["domain_return"] = _return_evidence(cfg, case["idempotency_key"])
         if case["kind"] == "allow":
             case["domain_return"] = _return_evidence(cfg, case["idempotency_key"])
             case["product_id"] = product_id
@@ -681,7 +751,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         case["keyed_evidence"] = ev
         case["passed"] = passed
         case["note"] = why
-        label = case["kind"] if case["kind"] != "deny" else "deny "
+        label = {"deny": "deny ", "refuse": "refuse"}.get(case["kind"], case["kind"])
         print(f"  [{'PASS' if passed else 'FAIL'}] {case['username']:<6} {label:<7} "
               f"-> {case['observed_outcome']:<7} {why}")
         print(f"         receipt {case['receipt_key']}")

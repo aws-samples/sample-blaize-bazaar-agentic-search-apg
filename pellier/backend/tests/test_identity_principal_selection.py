@@ -155,12 +155,14 @@ def test_proof_driver_targets_one_customer_for_every_principal():
     assert driver.count('"--customer-id"') == 1, (
         "customer_id must be passed from one place so no case can diverge."
     )
-    # The matrix: two refusals, one permit, one replay of the permit's key.
+    # The matrix: one policy denial, one business refusal, one permit, one replay
+    # of the permit's key. Four attempts, four different outcomes.
     for case in ('"username": "marco", "expected_outcome": "deny"',
-                 '"username": "anna", "expected_outcome": "deny"',
-                 '"username": "jessica", "expected_outcome": "allow"'):
+                 '"kind": "refuse", "username": "jessica", "expected_outcome": "allow"',
+                 '"kind": "allow", "username": "jessica", "expected_outcome": "allow"'):
         assert case in driver, f"missing matrix case: {case}"
     assert '"kind": "replay"' in driver, "the idempotent replay case is missing"
+    assert "_ineligible_product" in driver, "the refusal case must pick an unordered piece"
     # The replay must reuse the ALLOW key rather than mint a new one.
     assert driver.count("allow_key") >= 3
     # Absence is proved by the attempt's own key, never by a time window.
@@ -225,13 +227,14 @@ def _evidence(
 
 
 def test_matrix_uses_a_receipt_key_per_invocation_and_one_replayed_write_key(monkeypatch):
-    """Two Gateway attempts must remain visible while the write stays singular."""
+    """Four attempts stay visible as four receipts while the write stays singular."""
     driver = _load_proof_driver()
     calls: list[dict] = []
     evidence = iter(
         [
             _evidence(decision="DENY", execution_rows=0, write_rows=0, canonical_writes=0),
-            _evidence(decision="DENY", execution_rows=0, write_rows=0, canonical_writes=0),
+            # The business refusal: permitted and executed, nothing finalized.
+            _evidence(decision="ALLOW", execution_rows=1, write_rows=1, canonical_writes=0),
             _evidence(decision="ALLOW", execution_rows=1, write_rows=1, canonical_writes=1),
             _evidence(
                 decision="ALLOW",
@@ -258,17 +261,24 @@ def test_matrix_uses_a_receipt_key_per_invocation_and_one_replayed_write_key(mon
         "_resolve_product",
         lambda _cfg, _requested: (41, [(41, "Coral Lacquer Catchall")], "resolved"),
     )
+    monkeypatch.setattr(driver, "_ineligible_product", lambda _cfg: 7)
     monkeypatch.setattr(
         driver,
         "_invoke",
         lambda **kwargs: calls.append(kwargs)
-        or {"observed_outcome": kwargs["expect"], "exit_code": 0, "stderr": ""},
+        or {
+            "observed_outcome": kwargs["expect"],
+            "tool_status": "error" if kwargs["product_id"] == 7 else "success",
+            "tool_message": "Customer CUST-JESSICA did not order product 7" if kwargs["product_id"] == 7 else "",
+            "exit_code": 0,
+            "stderr": "",
+        },
     )
     monkeypatch.setattr(driver, "_keyed_evidence", lambda *_args, **_kwargs: next(evidence))
     monkeypatch.setattr(
         driver,
         "_return_evidence",
-        lambda *_args, **_kwargs: {
+        lambda _cfg, idempotency_key: {} if idempotency_key.endswith("ineligible") else {
             "return_id": 77,
             "customer_id": "CUST-JESSICA",
             "product_id": 41,
@@ -284,16 +294,17 @@ def test_matrix_uses_a_receipt_key_per_invocation_and_one_replayed_write_key(mon
     assert driver.main(["--skip-aurora"]) == 0
     assert [call["receipt_key"] for call in calls] == [
         "identity-boundary-matrixrun0-marco",
-        "identity-boundary-matrixrun0-anna",
+        "identity-boundary-matrixrun0-jessica-ineligible",
         "identity-boundary-matrixrun0-jessica",
         "identity-boundary-matrixrun0-jessica-replay",
     ]
     assert [call["idempotency_key"] for call in calls] == [
         "identity-boundary-matrixrun0-marco",
-        "identity-boundary-matrixrun0-anna",
+        "identity-boundary-matrixrun0-jessica-ineligible",
         "identity-boundary-matrixrun0-jessica",
         "identity-boundary-matrixrun0-jessica",
     ]
+    assert [call["product_id"] for call in calls] == [41, 7, 41, 41]
 
 
 def test_allow_verdict_requires_one_finalized_successful_write_and_exact_return():

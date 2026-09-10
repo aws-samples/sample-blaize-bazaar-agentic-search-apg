@@ -359,7 +359,7 @@ What each lab asks of the participant, and what they leave with:
 | **Lab 1 · Build**<br>**Build a PostgreSQL-Grounded Agent** | Marco needs a live availability answer. | Complete the Inventory Agent's warehouse capability, then reconcile the response, warehouse rows, and execution evidence in PostgreSQL. | An agent answer is grounded only when it can be checked against the system of record and an execution receipt. |
 | **Lab 2 · Build & Measure**<br>**Build and Measure PostgreSQL Hybrid Retrieval** | Anna narrows a morning-ritual gift to two in-stock options under $100, then chooses from that same shortlist. | **2a** Restore the hybrid-ranking calculation. **2b** Label the rows that count as relevant, then read the micro-eval that divides by them. Prove the returned products met price and stock constraints. | Retrieval quality is a measured tradeoff, and the measurement rests on a labeling judgment a person makes. Relevance can rank results; PostgreSQL enforces eligibility. |
 | **Lab 3 · Deploy & Operate**<br>**Deploy and Operate the Managed Agent Path** | Theo's return request reaches a support specialist the managed Gateway cannot yet serve. | **3a** Publish the customer-scoped read the specialist needs, and keep the money movement deferred. **3b** Reconcile what the Runtime asks the Gateway for, and bind that read to the authenticated caller. Deploy, then verify Memory beyond the application process and confirm the build fingerprint on the managed receipt is their own. | Deploying is not the proof. The published catalogue, the executed revision, managed Memory, and the trace each prove a different part of the path, and a successful answer proves none of them. |
-| **Lab 4 · Govern**<br>**Govern and Prove Agent Actions** | Jessica's return action is allowed only for Jessica; Marco and Anna are the negative controls. | **4a** Define the identity-to-customer Cedar rule, then run the deny, allow, and replay cases. **4b** Author the keyed absence query that proves the denied call left no execution, write, or ledger row, beside a positive control; then run the provided trace contract. Prove policy, execution, durable-effect, and database-enforcement outcomes separately, then complete Jessica's Operator investigation and stop before approval. | Authentication, policy authorization, execution, database enforcement, staff access, durable effects, and human approval are separate controls and separate facts. Observability is how you find that out after the fact. |
+| **Lab 4 · Govern**<br>**Govern and Prove Agent Actions** | Jessica's return action is allowed only for Jessica; Marco is the denied control and an unordered piece is the refused one. | **4a** Define the identity-to-customer Cedar rule, then run the deny, allow, and replay cases. **4b** Author the keyed absence query that proves the denied call left no execution, write, or ledger row, beside a positive control; then run the provided trace contract. Prove policy, execution, durable-effect, and database-enforcement outcomes separately, then complete Jessica's Operator investigation and stop before approval. | Authentication, policy authorization, execution, database enforcement, staff access, durable effects, and human approval are separate controls and separate facts. Observability is how you find that out after the fact. |
 
 ### Time box
 
@@ -494,8 +494,10 @@ Operator investigation stops at the pending human checkpoint.
 
 #### Lab 4 - Jessica governs a consequential action
 
-- **Predict.** Same request, four principals. Ask the room which cases will be
-  denied, which will execute, and what the replay will and will not change.
+- **Predict.** Four attempts at one return: another shopper, the owner for a
+  piece she never ordered, the owner, and the owner again. Ask which will be
+  denied by policy, which will run and be refused by the business rule, which
+  will commit, and what the replay will not change.
 - **Change (4a).** Complete the fail-closed identity-to-customer rule in the
   Cedar policy. It is deliberately participant-authored and exercises the
   condition without weakening the shipped row-level-security backstop.
