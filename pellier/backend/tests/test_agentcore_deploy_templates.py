@@ -1712,3 +1712,15 @@ def test_runtime_redaction_flag_mirrors_the_entrypoint(monkeypatch: pytest.Monke
         assert provisioner._runtime_redacts_content() is False
     monkeypatch.setenv("OTEL_REDACT_MODEL_CONTENT", "1")
     assert provisioner._runtime_redacts_content() is True
+
+
+def test_the_publication_view_renders_without_aws() -> None:
+    """The handoff's AWS-free gate must run; a required ARN it cannot have is a placeholder."""
+    import subprocess
+
+    proc = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "scripts" / "describe_workshop_publication.py")],
+        capture_output=True, text=True, env={**os.environ, "PELLIER_DISABLE_DOTENV": "1"},
+    )
+    assert proc.returncode == 0, proc.stderr[-800:]
+    assert "baseline_permit_workshop_tools" in proc.stdout

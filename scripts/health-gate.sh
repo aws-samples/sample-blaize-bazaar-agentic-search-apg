@@ -522,6 +522,59 @@ if [[ -n "${COGNITO_USER_POOL_ID:-${COGNITO_POOL_ID:-}}" ]]; then
       fi
     fi
   fi
+
+  # 13. Shopper tokens carry the customer claim. The owner-scoped Cedar permits
+  # read custom:customer_id from the access token, stamped by the pre-token
+  # trigger from pellier.principal_customers. A detached trigger, a stale
+  # mapping, or a pool plan change drops the claim silently, and every
+  # owner-scoped Gateway read is then denied for the whole session while
+  # sign-in itself still works. Proved the same way the Operator check is: mint
+  # a real token for a seeded shopper and read the claim Cognito put in it.
+  shopper_credentials=""
+  if [[ -n "${COGNITO_TEST_CREDENTIALS_SECRET_ARN:-}" ]]; then
+    shopper_credentials="$(aws secretsmanager get-secret-value \
+      --secret-id "$COGNITO_TEST_CREDENTIALS_SECRET_ARN" \
+      --region "${AWS_REGION:-us-east-1}" --query SecretString --output text 2>/dev/null || true)"
+  fi
+  shopper_user="$(printf '%s' "$shopper_credentials" | python3 -c 'import json,sys
+d=json.load(sys.stdin); u=[x for x in d.get("users",[]) if str(x.get("username","")).lower()!="operator"]
+print(u[0]["username"] if u else "")' 2>/dev/null || true)"
+  shopper_password="$(printf '%s' "$shopper_credentials" | python3 -c 'import json,sys
+d=json.load(sys.stdin); u=[x for x in d.get("users",[]) if str(x.get("username","")).lower()!="operator"]
+print(u[0]["password"] if u else "")' 2>/dev/null || true)"
+  if [[ -z "$shopper_user" || -z "$shopper_password" ]]; then
+    managed_missing "No seeded shopper credentials; the customer claim on shopper tokens is unverified"
+  else
+    shopper_auth="USERNAME=${shopper_user},PASSWORD=${shopper_password}"
+    if [[ -n "${COGNITO_CLIENT_SECRET:-}" ]]; then
+      shopper_hash="$(python3 -c 'import sys,hmac,hashlib,base64;u,c,k=sys.argv[1:4];print(base64.b64encode(hmac.new(k.encode(),(u+c).encode(),hashlib.sha256).digest()).decode())' \
+        "$shopper_user" "$operator_client" "$COGNITO_CLIENT_SECRET" 2>/dev/null || true)"
+      [[ -n "$shopper_hash" ]] && shopper_auth="${shopper_auth},SECRET_HASH=${shopper_hash}"
+    fi
+    shopper_token="$(aws cognito-idp admin-initiate-auth \
+      --user-pool-id "$operator_pool" --client-id "$operator_client" \
+      --auth-flow ADMIN_USER_PASSWORD_AUTH --auth-parameters "$shopper_auth" \
+      --region "${AWS_REGION:-us-east-1}" \
+      --query 'AuthenticationResult.AccessToken' --output text 2>/dev/null || true)"
+    if [[ -z "$shopper_token" || "$shopper_token" == "None" ]]; then
+      managed_missing "Seeded shopper ${shopper_user} cannot obtain a Cognito access token"
+    else
+      shopper_claim="$(printf '%s' "$shopper_token" | python3 -c 'import sys,json,base64
+p=sys.stdin.read().strip().split(".")[1]; p+="="*(-len(p)%4)
+print(json.loads(base64.urlsafe_b64decode(p)).get("custom:customer_id",""))' 2>/dev/null || true)"
+      shopper_sub="$(printf '%s' "$shopper_token" | python3 -c 'import sys,json,base64
+p=sys.stdin.read().strip().split(".")[1]; p+="="*(-len(p)%4)
+print(json.loads(base64.urlsafe_b64decode(p)).get("sub",""))' 2>/dev/null || true)"
+      mapped_customer="$(_psql "SELECT customer_id FROM pellier.principal_customers WHERE principal_sub = '${shopper_sub}' LIMIT 1;" 2>/dev/null || echo '')"
+      if [[ -z "$shopper_claim" ]]; then
+        managed_missing "Shopper ${shopper_user}'s access token carries no custom:customer_id; run scripts/deploy/deploy_customer_claim_trigger.py"
+      elif [[ "$shopper_claim" == "$mapped_customer" ]]; then
+        pass "Shopper ${shopper_user}'s access token carries custom:customer_id=${shopper_claim}, matching the mapping"
+      else
+        managed_missing "Shopper ${shopper_user}'s claim ${shopper_claim} does not match the mapping (${mapped_customer:-none})"
+      fi
+    fi
+  fi
 else
   managed_missing "No Cognito pool id — operator group authorization is unverified"
 fi

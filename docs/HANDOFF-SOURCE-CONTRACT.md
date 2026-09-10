@@ -104,7 +104,7 @@ the recorded reason and no outcome, while risking the whole provision on an unpr
 `getTag(...).contains(...)` under `FAIL_ON_ANY_FINDINGS`, where a rejected policy fails
 `agentcore deploy` and leaves no Gateway, Runtime or Memory.
 
-`test_no_baseline_policy_claims_operator_enforcement` stops that returning as reassurance.
+`test_staff_authority_is_a_scope_claim_never_a_group_name` stops that returning as reassurance.
 **When an operator-only tool is intentionally published**, add a separate single-action
 policy for it, live-validate it, and update that test to expect it by name rather than
 deleting the guard.
@@ -364,7 +364,7 @@ run, so the rehearsal is their first real exercise. Expect them here before anyt
 
 **Do not reintroduce the ineffective operator Cedar policy, and do not publish
 `issue_credit` merely to manufacture Cedar coverage.** Both are recorded decisions with
-tests behind them: `test_no_baseline_policy_claims_operator_enforcement` and
+tests behind them: `test_staff_authority_is_a_scope_claim_never_a_group_name` and
 `test_every_policy_action_exists_in_the_published_schema`.
 
 ### Known open, and not defects

@@ -412,12 +412,24 @@ def _run_health_gate(
     managed_receipt: dict[str, object] | None = None,
     shopper_in_operator_group: bool = False,
     operator_token_ready: bool = True,
+    shopper_claim_ready: bool = True,
     quarantine: str | None = None,
     provision_state: str | None = None,
     provision_phase: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     repo = tmp_path / "repo"
     fake_bin = tmp_path / "bin"
+    # A real-looking access token for the seeded shopper. The gate decodes its
+    # payload the way the application does, so the claim has to be inside it.
+    import base64 as _b64
+
+    def _jwt_segment(payload: dict) -> str:
+        return _b64.urlsafe_b64encode(json.dumps(payload).encode()).decode().rstrip("=")
+
+    shopper_payload = {"sub": "marco-sub", "token_use": "access", "username": "marco"}
+    if shopper_claim_ready:
+        shopper_payload["custom:customer_id"] = "CUST-MARCO"
+    shopper_jwt = ".".join((_jwt_segment({"alg": "none"}), _jwt_segment(shopper_payload), "sig"))
     repo.mkdir()
     fake_bin.mkdir()
     # Both lifecycle markers default to /var/lib/pellier on a box. Point them at
@@ -452,6 +464,7 @@ def _run_health_gate(
                 "COGNITO_CLIENT_ID=client-123",
                 "COGNITO_CLIENT_SECRET=test-client-secret",
                 "COGNITO_DOMAIN=pellier-example.auth.us-east-1.amazoncognito.com",
+                "COGNITO_TEST_CREDENTIALS_SECRET_ARN=arn:aws:secretsmanager:us-east-1:123:secret:test-credentials",
                 "WORKSHOP_ID=example",
             ]
         )
@@ -475,6 +488,7 @@ esac
         f"""#!/bin/bash
 case "$*" in
   *inventory_consistency_check*) printf '0\n' ;;
+  *"principal_customers WHERE principal_sub"*) printf 'CUST-MARCO\n' ;;
   *product_catalog*) printf '1000\n' ;;
   *warehouse_inventory*) printf '180\n' ;;
   *governed_receipts*) printf '1\n' ;;
@@ -520,6 +534,9 @@ case "$*" in
   *describe-user-pool-client*AllowedOAuthScopes*)
     printf 'openid email profile\\n'
     exit 0 ;;
+  *admin-initiate-auth*USERNAME=marco*)
+    printf '%s\\n' '{shopper_jwt}'
+    exit 0 ;;
   *admin-initiate-auth*)
     if [ "{'true' if operator_token_ready else 'false'}" = "true" ]; then
       printf 'operator-access-token\\n'
@@ -529,6 +546,9 @@ case "$*" in
     exit 0 ;;
   *get-user*)
     printf 'operator\\n'
+    exit 0 ;;
+  *get-secret-value*)
+    printf '%s\\n' '{{"users": [{{"username": "marco", "password": "pw"}}, {{"username": "operator", "password": "pw"}}]}}'
     exit 0 ;;
   *) printf 'ENFORCE\n' ;;
 esac
@@ -958,6 +978,36 @@ def test_reset_verifies_the_principal_mappings() -> None:
         "config rather than evidence, so it is not truncated, but an empty "
         "mapping must not pass silently"
     )
+    # Both identity steps fail closed: a warning let the reset report READY while
+    # every shopper was denied their own rows or every owner-scoped read was denied.
+    assert "_quarantine principal-mappings" in body
+    assert "_quarantine claim-trigger" in body
+    assert 'warn "RLS principal mappings incomplete' not in body
+    assert 'warn "Customer claim trigger' not in body
+
+
+def test_health_gate_proves_the_customer_claim_on_a_shopper_token() -> None:
+    gate = HEALTH_GATE.read_text(encoding="utf-8")
+    assert "custom:customer_id" in gate
+    assert "principal_customers WHERE principal_sub" in gate
+    assert "carries no custom:customer_id" in gate
+
+
+def test_the_health_gate_refuses_a_shopper_token_without_the_customer_claim(tmp_path) -> None:
+    """A detached claim trigger denies every owner-scoped read while sign-in still works."""
+    proc = _run_health_gate(
+        tmp_path, model_ready=True, workshop_format="governed", managed_ready=True,
+        shopper_claim_ready=False,
+    )
+    assert proc.returncode != 0, proc.stdout
+    assert "carries no custom:customer_id" in proc.stdout
+
+
+def test_the_health_gate_passes_a_shopper_token_whose_claim_matches_the_mapping(tmp_path) -> None:
+    proc = _run_health_gate(
+        tmp_path, model_ready=True, workshop_format="governed", managed_ready=True,
+    )
+    assert "custom:customer_id=CUST-MARCO, matching the mapping" in proc.stdout, proc.stdout
 
 
 def test_reset_does_not_truncate_the_authorization_mapping() -> None:

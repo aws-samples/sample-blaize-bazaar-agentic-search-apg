@@ -39,6 +39,7 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 DEPLOY = REPO / "scripts" / "deploy"
 sys.path.insert(0, str(DEPLOY))
 
+from plan_restock_alignment import PLACEHOLDER_GATEWAY_ARN  # noqa: E402
 from gateway_tool_schemas import (  # noqa: E402
     TOOL_SCHEMAS,
     WORKSHOP_DEFERRED_TOOLS,
@@ -73,7 +74,9 @@ def tools_view() -> Dict[str, Any]:
 
 
 def policies_view() -> Dict[str, Any]:
-    policies = baseline_policies()
+    # Tool-specific statements pin the Gateway by ARN, which this AWS-free view
+    # does not have; the placeholder keeps the statement shape reviewable.
+    policies = baseline_policies(gateway_arn=PLACEHOLDER_GATEWAY_ARN)
     described: Dict[str, Any] = {}
     for policy in policies:
         statement = str(policy.get("statement", ""))

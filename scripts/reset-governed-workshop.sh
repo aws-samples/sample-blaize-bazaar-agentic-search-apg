@@ -621,11 +621,18 @@ pass "Operator desk reseeded: support tickets, credit on file, empty semantic ca
 # gets verified here: an empty mapping denies every signed-in shopper their
 # own orders, which presents as a broken application rather than as
 # governance, and reset is where a deterministic starting state is asserted.
+# Both identity steps fail closed. A warning here used to let the reset report a
+# healthy box while every signed-in shopper was denied their own rows (empty
+# mapping) or every owner-scoped Gateway read was denied (token without the
+# customer claim). Neither presents as governance; both present as a broken
+# application, and only at the first shopper turn.
 if "$PYTHON" "$REPO/scripts/seed_principal_mappings.py" --check \
      >/tmp/pellier-governed-reset-principals.log 2>&1; then
   pass "RLS principal mappings intact for every named shopper"
 else
-  warn "RLS principal mappings incomplete — run scripts/seed_principal_mappings.py (see /tmp/pellier-governed-reset-principals.log)"
+  fail "RLS principal mappings incomplete — run scripts/seed_principal_mappings.py (see /tmp/pellier-governed-reset-principals.log)"
+  _quarantine principal-mappings "RLS principal mappings incomplete"
+  exit 1
 fi
 
 # The token claim is rendered from the same table, so it is refreshed here
@@ -634,7 +641,9 @@ if "$PYTHON" "$REPO/scripts/deploy/deploy_customer_claim_trigger.py" \
      >/tmp/pellier-governed-reset-claim-trigger.log 2>&1; then
   pass "Customer claim trigger matches the principal mappings"
 else
-  warn "Customer claim trigger not refreshed — shopper tokens may carry no customer claim (see /tmp/pellier-governed-reset-claim-trigger.log)"
+  fail "Customer claim trigger not refreshed — shopper tokens would carry no customer claim (see /tmp/pellier-governed-reset-claim-trigger.log)"
+  _quarantine claim-trigger "Customer claim trigger not refreshed"
+  exit 1
 fi
 
 _psql_file "$REPO/scripts/migrations/015_proof_carrying_commerce.sql" \
