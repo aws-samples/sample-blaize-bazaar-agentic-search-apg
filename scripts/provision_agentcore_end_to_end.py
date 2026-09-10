@@ -39,6 +39,7 @@ from gateway_tool_schemas import TOOL_SCHEMAS, schema_for  # noqa: E402
 from render_agentcore_project import (  # noqa: E402
     DEPLOYMENT_SUFFIX,
     AGENTCORE_CLI,
+    FINGERPRINT_ENV_VAR,
     GATEWAY_NAME,
     MEMORY_NAME,
     POLICY_ENGINE_NAME,
@@ -1153,28 +1154,30 @@ def _seed_memory(
     return json.loads(proc.stdout)
 
 
-def _authenticated_runtime_smoke(
-    *,
-    root: Path,
-    access_token: str,
-    username: str,
-    env: dict[str, str],
-) -> dict[str, Any]:
-    runtime_session_id = RUNTIME_SMOKE_SESSION
-    proc = _agentcore(
-        root,
-        "invoke",
-        "--runtime",
-        RUNTIME_NAME,
-        "--session-id",
-        runtime_session_id,
-        "--bearer-token",
-        access_token,
-        "--prompt",
-        "Smoke test: find one linen item under 150. Do not mutate data.",
-        "--json",
-        env=env,
-    )
+def _rendered_build_fingerprint(root: Path) -> str:
+    """The build digest the renderer injected into the project's Runtime.
+
+    Read back from the rendered project rather than recomputed, so the smoke
+    compares against exactly the value the deployed container was given.
+    Empty when the project carries none.
+    """
+    path = root / "agentcore" / "agentcore.json"
+    if not path.is_file():
+        return ""
+    stack: list[Any] = [json.loads(path.read_text())]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, dict):
+            if node.get("name") == FINGERPRINT_ENV_VAR and isinstance(node.get("value"), str):
+                return node["value"].strip()
+            stack.extend(node.values())
+        elif isinstance(node, list):
+            stack.extend(node)
+    return ""
+
+
+def _decode_runtime_invoke(proc: subprocess.CompletedProcess[str]) -> dict[str, Any]:
+    """The Runtime's own JSON envelope from one CLI invoke, or a RuntimeError."""
     try:
         cli_payload = json.loads(proc.stdout)
     except json.JSONDecodeError as exc:
@@ -1185,15 +1188,73 @@ def _authenticated_runtime_smoke(
     raw_response = cli_payload.get("response")
     if isinstance(raw_response, str):
         try:
-            decoded = json.loads(raw_response)
+            return json.loads(raw_response)
         except json.JSONDecodeError as exc:
             raise RuntimeError(
                 "AgentCore CLI Runtime response was not a JSON object"
             ) from exc
-    elif isinstance(raw_response, dict):
-        decoded = raw_response
+    if isinstance(raw_response, dict):
+        return raw_response
+    raise RuntimeError("AgentCore CLI Runtime response was missing")
+
+
+def _authenticated_runtime_smoke(
+    *,
+    root: Path,
+    access_token: str,
+    username: str,
+    env: dict[str, str],
+    expected_fingerprint: str = "",
+    attempts: int = 8,
+    wait_seconds: float = 15.0,
+) -> dict[str, Any]:
+    """Invoke the deployed Runtime and require the answer to come from THIS build.
+
+    A runtime endpoint reports the new version as live before every warm
+    container of the previous version has been retired, so the first invoke
+    after a deploy can be answered by yesterday's package. The entrypoint
+    echoes the build digest it was started with; the smoke keeps invoking,
+    bounded, until that digest is the one the renderer injected, and fails
+    with a distinct message when it never is. Without the comparison a smoke
+    passing against the old container would certify a package that never ran.
+    """
+    runtime_session_id = RUNTIME_SMOKE_SESSION
+    decoded: dict[str, Any] = {}
+    answered_by = ""
+    for attempt in range(1, max(1, attempts) + 1):
+        proc = _agentcore(
+            root,
+            "invoke",
+            "--runtime",
+            RUNTIME_NAME,
+            "--session-id",
+            runtime_session_id,
+            "--bearer-token",
+            access_token,
+            "--prompt",
+            "Smoke test: find one linen item under 150. Do not mutate data.",
+            "--json",
+            env=env,
+        )
+        decoded = _decode_runtime_invoke(proc)
+        answered_by = str(decoded.get("build_fingerprint") or "").strip()
+        if not expected_fingerprint or answered_by == expected_fingerprint:
+            break
+        if attempt < attempts:
+            print(
+                f"Runtime answered with build {answered_by[:12] or 'unknown'}, "
+                f"expected {expected_fingerprint[:12]}; the endpoint is still serving "
+                f"the previous version, retrying in {wait_seconds:g}s "
+                f"({attempt}/{attempts})",
+                flush=True,
+            )
+            time.sleep(wait_seconds)
     else:
-        raise RuntimeError("AgentCore CLI Runtime response was missing")
+        raise RuntimeError(
+            f"Runtime answered with build {answered_by or 'unknown'} after {attempts} "
+            f"attempts; expected {expected_fingerprint}. The endpoint is still serving "
+            "the previous version, so this package has not been proved to run."
+        )
 
     if not str(decoded.get("response", "")).strip():
         raise RuntimeError("Runtime smoke returned an empty response")
@@ -1210,6 +1271,10 @@ def _authenticated_runtime_smoke(
         "specialist": decoded.get("specialist"),
         "gateway_tools": decoded.get("gateway_tools", []),
         "response_preview": str(decoded["response"])[:200],
+        "build_fingerprint": answered_by,
+        "build_fingerprint_expected": expected_fingerprint,
+        "build_fingerprint_match": bool(expected_fingerprint) and answered_by == expected_fingerprint,
+        "attempts": attempt,
     }
 
 
@@ -1916,9 +1981,13 @@ def main() -> int:
             access_token=access_token,
             username=smoke_username,
             env=deploy_env,
+            expected_fingerprint=_rendered_build_fingerprint(root),
         )
         result["verification"]["authenticated_runtime_invoke_smoke"] = True
         result["verification"]["runtime_invoke_smoke"] = runtime_smoke
+        result["verification"]["runtime_build_fingerprint_match"] = runtime_smoke[
+            "build_fingerprint_match"
+        ]
         trace_proof = _wait_for_unified_trace(
             root=root,
             session_id=runtime_smoke["session_id"],

@@ -1592,3 +1592,62 @@ def test_gateway_observability_is_idempotent_over_an_existing_delivery(
         "traces_delivery_id": "d-traces",
     }
     assert "source:TRACES" in logs.calls and "destination:XRAY" in logs.calls
+
+
+def _cli_invoke_result(fingerprint: str, text: str = "One linen shirt under 150.") -> Any:
+    import subprocess
+
+    body = {"response": text, "rail": "gateway-mcp", "build_fingerprint": fingerprint}
+    return subprocess.CompletedProcess(
+        args=["npx"], returncode=0, stdout=json.dumps({"success": True, "response": body}), stderr=""
+    )
+
+
+def test_runtime_smoke_waits_for_the_deployed_build_to_answer(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A warm container of the previous version answers first; the smoke keeps going."""
+    provisioner = _load_provisioner()
+    answers = iter(["old" * 8, "old" * 8, "new" * 8])
+    calls: list[tuple[str, ...]] = []
+
+    def _fake_agentcore(_root: Path, *args: str, env: dict[str, str]) -> Any:
+        calls.append(args)
+        return _cli_invoke_result(next(answers))
+
+    monkeypatch.setattr(provisioner, "_agentcore", _fake_agentcore)
+    monkeypatch.setattr(provisioner.time, "sleep", lambda _s: None)
+    smoke = provisioner._authenticated_runtime_smoke(
+        root=tmp_path, access_token="t", username="marco", env={},
+        expected_fingerprint="new" * 8, attempts=5, wait_seconds=0,
+    )
+    assert smoke["build_fingerprint_match"] is True and smoke["attempts"] == 3
+    assert smoke["build_fingerprint"] == "new" * 8 and len(calls) == 3
+    assert all(args[0] == "invoke" and "--session-id" in args for args in calls)
+
+
+def test_runtime_smoke_refuses_when_only_the_previous_build_ever_answers(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    provisioner = _load_provisioner()
+    monkeypatch.setattr(provisioner, "_agentcore", lambda _r, *a, env: _cli_invoke_result("old" * 8))
+    monkeypatch.setattr(provisioner.time, "sleep", lambda _s: None)
+    with pytest.raises(RuntimeError, match="still serving the previous version"):
+        provisioner._authenticated_runtime_smoke(
+            root=tmp_path, access_token="t", username="marco", env={},
+            expected_fingerprint="new" * 8, attempts=3, wait_seconds=0,
+        )
+
+
+def test_rendered_build_fingerprint_is_read_from_the_project(tmp_path: Path) -> None:
+    provisioner = _load_provisioner()
+    assert provisioner._rendered_build_fingerprint(tmp_path) == ""
+    config = tmp_path / "agentcore"
+    config.mkdir()
+    (config / "agentcore.json").write_text(json.dumps({
+        "runtimes": [{"name": "r", "environmentVariables": [
+            {"name": "OTHER", "value": "x"},
+            {"name": provisioner.FINGERPRINT_ENV_VAR, "value": " abc123 "},
+        ]}],
+    }))
+    assert provisioner._rendered_build_fingerprint(tmp_path) == "abc123"
