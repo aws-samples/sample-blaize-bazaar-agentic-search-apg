@@ -16,7 +16,12 @@
 #      When that path is not writable the file fallback still reaches the
 #      service, because it runs as this user and reads ~/.pellier/run_id.
 #   4. Restart the pellier service so its pool binds the setting.
-#   5. Print the id.
+#   5. Say hello to the deployed AgentCore Runtime and record the build id it
+#      reports. That is the predeployed baseline Lab 3 compares against, and it
+#      puts managed execution in front of the room during orientation rather
+#      than fifty minutes in. This step never fails the run: a box without a
+#      token helper or a deployed Runtime is still a box that can start Lab 1.
+#   6. Print the id.
 #
 # Exit status: 0 when the id is minted, recorded, and the service is back;
 # 1 when the id could not be minted or recorded, or the service did not
@@ -212,6 +217,18 @@ if _restart_service; then
 else
   fail "Run id recorded, but 'systemctl restart pellier' failed; run 'start-backend' and retry"
   exit 1
+fi
+
+# --- 5. one managed turn, so "deployed" is a thing they have seen ------------
+RUNTIME_HELLO="$SCRIPT_DIR/runtime_hello.sh"
+if [ -x "$RUNTIME_HELLO" ]; then
+  echo "------------------------------------------------------------"
+  echo "AgentCore Runtime hello"
+  if bash "$RUNTIME_HELLO" --persona "${PERSONA:-marco}" --label baseline; then
+    info "Lab 3 deploys your own build and this id changes."
+  else
+    warn "Runtime hello skipped. Labs 1 and 2 do not need it; Lab 3 sets it up."
+  fi
 fi
 
 echo "------------------------------------------------------------"
