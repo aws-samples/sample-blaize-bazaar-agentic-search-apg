@@ -424,9 +424,12 @@ Operator investigation stops at the pending human checkpoint.
 - **Run.** Replay Marco's three turns: linen for Goa, the pairing question,
   then the Brooklyn fulfillment question.
 - **Prove.** Reconcile the answer against Aurora warehouse rows and the
-  execution row in `pellier.tool_audit`. The receipt line is
+  newest execution row in `pellier.tool_audit`. The receipt line is
   `01.execution_row`. An answer that reads correct and leaves no row has
-  proved nothing.
+  proved nothing. Then run the supplied two-case check: a piece the shop does
+  not carry must come back `not_found`, and the sold-out Quilted Silk Vest
+  must come back `success` with zero units. Unknown and zero are different
+  answers, and the tool body must never turn one into the other.
 - **Explain.** An agent answer is grounded only when it can be checked against
   the system of record and an execution receipt. The same shape applies to any
   entitlement, claim-status, or capacity lookup.
