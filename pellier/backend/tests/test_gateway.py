@@ -456,3 +456,14 @@ def test_gateway_tool_names_are_read_through_the_strands_tool_interface() -> Non
         source = path.read_text()
         assert "tool.name" not in source, f"{path.name} reads MCPAgentTool.name"
         assert "tool.tool_name" in source
+
+
+def test_a_shopper_specialist_may_not_bind_a_staff_only_gateway_tool() -> None:
+    """The Gateway publishes issue_credit for the desk; binding it to a shopper agent is refused."""
+    from services import agentcore_gateway as gateway_module
+
+    gateway_module.assert_no_staff_only_binding("search", ["search_products", "compare_products"])
+    with pytest.raises(RuntimeError, match="staff-only Gateway tools: issue_credit"):
+        gateway_module.assert_no_staff_only_binding("support", ["get_return_policy", "issue_credit"])
+    assert "issue_credit" not in gateway_module.SUPPORT_CALLER_BOUND_TOOLS
+    assert gateway_module.STAFF_ONLY_GATEWAY_TOOLS == frozenset({"issue_credit"})

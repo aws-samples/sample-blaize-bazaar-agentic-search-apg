@@ -997,6 +997,7 @@ class TestManagedCataloguesAgree:
         gateway = types.ModuleType("services.agentcore_gateway")
         gateway.SUPPORT_MANAGED_TOOLS = tuple(managed)
         gateway.SUPPORT_CALLER_BOUND_TOOLS = frozenset(bound)
+        gateway.STAFF_ONLY_GATEWAY_TOOLS = frozenset({"issue_credit"})
         monkeypatch.setitem(sys.modules, "services.agentcore_gateway", gateway)
 
         return doctor._managed_catalogues_agree()

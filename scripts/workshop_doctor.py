@@ -351,6 +351,7 @@ def _managed_catalogues_agree(repo: pathlib.Path = REPO) -> Check:
         sys.path.insert(0, str(BACKEND))
         from gateway_tool_schemas import workshop_published_tools
         from services.agentcore_gateway import (
+            STAFF_ONLY_GATEWAY_TOOLS,
             SUPPORT_CALLER_BOUND_TOOLS,
             SUPPORT_MANAGED_TOOLS,
         )
@@ -359,22 +360,28 @@ def _managed_catalogues_agree(repo: pathlib.Path = REPO) -> Check:
 
     published = workshop_published_tools()
     missing = sorted(set(SUPPORT_MANAGED_TOOLS) - published)
-    if missing:
+    staff_only = sorted(set(SUPPORT_MANAGED_TOOLS) & STAFF_ONLY_GATEWAY_TOOLS)
+    if missing or staff_only:
         # Name the step that is actually outstanding. Telling someone who has
         # finished 3a to go and do 3a sends them to re-read a file they just
         # got right.
-        steps = []
-        if "get_ticket_history" in missing:
-            steps.append("Lab 3a (publish the customer-scoped read)")
-        if "issue_credit" in missing:
-            steps.append("Lab 3b (drop the operator-only tool from the specialist)")
+        facts, steps = [], []
+        if missing:
+            facts.append(
+                "the support specialist asks the Gateway for "
+                f"{', '.join(missing)}, which it does not publish"
+            )
+            if "get_ticket_history" in missing:
+                steps.append("Lab 3a (publish the customer-scoped read)")
+        if staff_only:
+            facts.append(
+                f"the support specialist names staff-only Gateway tools: {', '.join(staff_only)} "
+                "(published for the operator desk; a shopper-facing specialist must not bind "
+                "them and the dispatcher refuses to build one that does)"
+            )
+            steps.append("Lab 3b (drop the staff-only tool from the specialist)")
         remedy = " and ".join(steps) or "Lab 3"
-        return Check(
-            name,
-            False,
-            "the support specialist asks the Gateway for "
-            f"{', '.join(missing)}, which it does not publish: complete {remedy}",
-        )
+        return Check(name, False, f"{'; '.join(facts)}: complete {remedy}")
     unbound = sorted(
         tool
         for tool in ("get_ticket_history",)

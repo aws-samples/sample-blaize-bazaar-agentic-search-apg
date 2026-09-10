@@ -64,7 +64,7 @@ RECOMMENDATION_TARGET = "pellier-curation-recommendation-target"
 CUSTOMER_PREFERENCES_ACTION = f"{RECOMMENDATION_TARGET}___get_customer_preferences"
 AUDIT_TRAIL_ACTION = f"{RECOMMENDATION_TARGET}___get_audit_trail"
 RESTOCK_ACTION = "pellier-discovery-search-target___restock_inventory"
-ISSUE_CREDIT_ACTION = "pellier-concierge-experience-target___issue_credit"
+ISSUE_CREDIT_ACTION = f"{EXPERIENCE_TARGET}___issue_credit"
 WORKSHOP_RUNTIME_EXPOSURE = "public-workshop-only"
 
 # The packaged-file list and the digest algorithm live in the backend so that
@@ -199,12 +199,13 @@ def baseline_policies(
        proves the DENY is theirs. ``tests/test_fresh_policy_set.py`` fails if
        the ownership binding reappears here.
 
-    4. ``initiate_return_staff_scope`` — staff (principals whose
-       ``custom:staff_scope`` is ``returns``) may execute a return the
-       operator desk confirmed. The desk calls the Gateway with the
-       operator's own token, so this permit authorizes a person, not a service.
-       It carries no reason condition: a resolved dispute is not a
-       damaged-goods return.
+    4. ``initiate_return_staff_scope`` and ``issue_credit_staff_scope`` — staff
+       (principals whose ``custom:staff_scope`` is ``returns``) may execute a
+       return or a store credit the operator desk confirmed. The desk calls the
+       Gateway with the operator's own token, so each permit
+       authorizes a person, not a service. Neither carries a reason condition: a resolved
+       dispute is not a damaged-goods return. No shopper permit names
+       ``issue_credit``, so a shopper token is denied it by default.
 
     5. When Lab 3 publishes ``get_ticket_history``, an owner-only permit for it
        lands in the same deployment as its publication.
@@ -295,6 +296,22 @@ def baseline_policies(
             ),
             "statement": (
                 f"permit ({OAUTH_PRINCIPAL}, action == AgentCore::Action::\"{action_token}\", "
+                f"{gateway})\n"
+                "when {\n"
+                f'  principal.hasTag("{STAFF_CLAIM}") &&\n'
+                f'  principal.getTag("{STAFF_CLAIM}") == "{STAFF_RETURNS_SCOPE}"\n'
+                "};"
+            ),
+            "validationMode": "FAIL_ON_ANY_FINDINGS",
+            "enforcementMode": "ACTIVE",
+        },
+        {
+            "name": "issue_credit_staff_scope",
+            "description": (
+                "Permit staff holding the returns scope to execute a confirmed store credit"
+            ),
+            "statement": (
+                f"permit ({OAUTH_PRINCIPAL}, action == AgentCore::Action::\"{ISSUE_CREDIT_ACTION}\", "
                 f"{gateway})\n"
                 "when {\n"
                 f'  principal.hasTag("{STAFF_CLAIM}") &&\n'

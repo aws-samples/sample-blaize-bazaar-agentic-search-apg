@@ -111,10 +111,12 @@ LAB3_FALLBACK_COPIES: Tuple[Tuple[str, str], ...] = (
      "pellier/backend/services/agentcore_gateway.py"),
 )
 
-# The tool Lab 3a publishes and Lab 3b binds to the caller, and the one that
-# stays deferred in both. Getting these backwards is the whole lesson.
+# The tool Lab 3a publishes and Lab 3b binds to the caller, the one that stays
+# deferred in both, and the staff-only tool the shopper specialist must drop in 3b.
+# Getting these backwards is the whole lesson.
 LAB3_PUBLISHED_TOOL = "get_ticket_history"
-LAB3_DEFERRED_TOOL = "issue_credit"
+LAB3_DEFERRED_TOOL = "restock_inventory"
+LAB3_STAFF_ONLY_TOOL = "issue_credit"
 
 # ---------------------------------------------------------------------------
 # Lab 4, "40-govern-actions-and-prove-outcomes": a Cedar rule and a trace
@@ -456,7 +458,10 @@ def test_lab3_reference_publishes_the_read_and_withholds_the_money_movement() ->
     published = solution.workshop_published_tools()
     assert LAB3_PUBLISHED_TOOL in published
     assert LAB3_DEFERRED_TOOL not in published, (
-        "issue_credit moves money and belongs to the operator desk, not a shopper agent"
+        "restock_inventory moves stock and belongs to the operator desk, not a shopper agent"
+    )
+    assert LAB3_STAFF_ONLY_TOOL in published, (
+        "issue_credit is published for the operator desk under a staff-only permit"
     )
 
 

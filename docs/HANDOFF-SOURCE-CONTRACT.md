@@ -12,7 +12,7 @@ Read `CLAUDE.md` first for the repository contract and the participant/maintaine
 | number | meaning | source |
 |---|---|---|
 | **17** | the canonical tool vocabulary. Every Gateway surface Lambda and every schema in `TOOL_SCHEMAS` covers all of them, and `/api/observatory/build-state` reports all of them. | `scripts/deploy/gateway_tool_schemas.py` |
-| **15** | what this workshop iteration **publishes**. `issue_credit` and `get_ticket_history` are deferred: their governance is undecided, so a fresh provision must not expose them. | `WORKSHOP_DEFERRED_TOOLS` in the same module |
+| **15** | what this workshop iteration **publishes** at the start, 16 after Lab 3a. `restock_inventory` and `get_ticket_history` are deferred; `issue_credit` is published for staff only. | `WORKSHOP_DEFERRED_TOOLS` in the same module |
 
 Conflating them produces a step that counts tools and gets the wrong answer. Recompute
 both, plus the per-target split and the baseline Cedar, with:
@@ -27,7 +27,7 @@ the full vocabulary to compute what it is deliberately not publishing.
 
 ## Baseline authorization on a fresh stack
 
-5 policies, all permits, no forbid. `scripts/deploy/render_agentcore_project.py` is
+6 policies, all permits, no forbid. `scripts/deploy/render_agentcore_project.py` is
 the source; this table is checked against it by
 `pellier/backend/tests/test_fresh_policy_set.py`. Every statement types the
 principal as `AgentCore::OAuthUser` and pins `resource ==` to the deployed
@@ -40,6 +40,7 @@ Gateway ARN, which is why policies render only in the second deploy phase.
 | `get_audit_trail_owner_only` | permit | the same condition on the audit-trail read |
 | `initiate_return_shopper_damaged` | permit | a principal carrying `custom:customer_id`, with `context.input.reason == "damaged"`; no ownership binding |
 | `initiate_return_staff_scope` | permit | a principal whose `custom:staff_scope` is `returns`; no reason condition |
+| `issue_credit_staff_scope` | permit | the same staff condition on `issue_credit`; no shopper permit names that action |
 
 Identity reaches Cedar as a claim. The Cognito pre-token trigger
 (`scripts/deploy/cognito_customer_claim.py`) stamps `custom:customer_id` from
@@ -95,7 +96,7 @@ policy. The desk invokes exactly two capabilities:
 | capability | on a fresh Gateway | why it cannot carry an operator-only condition |
 |---|---|---|
 | `initiate_return` | published, permitted (damaged-only) | shared with the shopper rail, and it is Lab 4's whole subject |
-| `issue_credit` | **not published** | no action id exists, so a policy naming it is rejected as `unrecognized action` |
+| `issue_credit` | published, permitted (staff scope only) | the desk executes an approved credit with the operator's own token; no shopper permit names it |
 
 A policy gating `restock_inventory` on the group was added and removed. It enforced
 nothing: `restock_inventory` is a deferred tool with no operator route (the shopper-facing
@@ -109,10 +110,11 @@ the recorded reason and no outcome, while risking the whole provision on an unpr
 policy for it, live-validate it, and update that test to expect it by name rather than
 deleting the guard.
 
-Note the asymmetry precisely: a shopper cannot reach `issue_credit` through the Gateway
-because the action is **absent**, which is a stronger guarantee than a forbid and a
-different one. An earlier docstring called it a Cedar forbid. Naming the wrong layer as the
-one denying is how each layer ends up believing the other is enforcing.
+Note the layers precisely: a shopper cannot execute `issue_credit` through the Gateway
+because no permit names a shopper principal for it, so the engine denies by default; and
+no shopper-facing specialist can bind it, because the managed dispatcher refuses to build
+one that does. Neither is a forbid. Naming the wrong layer as the one denying is how each
+layer ends up believing the other is enforcing.
 
 The group name has exactly one source: `services/auth.py::OPERATOR_GROUP`. The renderer
 no longer carries a copy, because a second constant with no policy behind it is drift
@@ -362,10 +364,12 @@ the whole commit range. None of that exercises a clean AWS account.
 Each of those five was fixed from a log or from source inspection, not from a green fresh
 run, so the rehearsal is their first real exercise. Expect them here before anything else.
 
-**Do not reintroduce the ineffective operator Cedar policy, and do not publish
-`issue_credit` merely to manufacture Cedar coverage.** Both are recorded decisions with
-tests behind them: `test_staff_authority_is_a_scope_claim_never_a_group_name` and
-`test_every_policy_action_exists_in_the_published_schema`.
+**Do not reintroduce the ineffective operator Cedar policy.** `issue_credit` is
+published because the desk executes an approved credit through it, and its only permit
+requires the staff scope claim; that is a purpose, not manufactured coverage. Both are
+recorded decisions with tests behind them:
+`test_staff_authority_is_a_scope_claim_never_a_group_name` and
+`test_issue_credit_is_published_for_staff_and_unreachable_by_a_shopper`.
 
 ### Known open, and not defects
 

@@ -162,9 +162,10 @@ This is intentionally not one long-running agent invocation. The Strands graph
 ends after investigation and planning; human decision, policy authorization,
 database enforcement, and outcome evidence remain separate, replayable
 boundaries. `initiate_return` follows that complete managed path.
-`issue_credit` remains deliberately unpublished and therefore has no Cedar
-verdict; its operator-group API boundary and PostgreSQL controls must not be
-misreported as policy enforcement. See [WORKSHOP.md](WORKSHOP.md) for the Marco,
+`issue_credit` is published for the operator desk only: its Cedar permit requires
+the staff scope claim, no shopper permit names it, and no shopper-facing
+specialist binds it. The desk executes an approved credit through the Gateway
+with the operator's own token. See [WORKSHOP.md](WORKSHOP.md) for the Marco,
 Anna, Theo, Jessica, and guest journeys that teach this pattern.
 
 ## Governance model
@@ -591,13 +592,14 @@ Per-agent model choice is an architectural decision – Inventory Agent's terse 
 
 17 `@tool` functions form the Gateway catalog, and 17 is also the total in
 `services/agent_tools.py`: every tool that exists is in the catalog. Discovery
-returns all 17 by exact name; this iteration publishes 14 of them to
-participants, holding back `issue_credit`, `restock_inventory`, and
-`get_ticket_history`. The two operator capabilities stay off the shopper
-Gateway for good: no shopper-facing specialist binds them, and the desk reaches
-them behind its own authorization. The 14 published names are:
+returns all 17 by exact name; this iteration publishes 15 of them at the start
+(16 once Lab 3a publishes `get_ticket_history`), holding back
+`restock_inventory` and `get_ticket_history`. `issue_credit` is published for
+staff only, and `restock_inventory` stays off the shopper Gateway: no
+shopper-facing specialist binds either, and the desk reaches them behind its
+own authorization. The 15 published names are:
 
-`search_products` · `search_products_hybrid` · `get_related_products` · `get_trending_products` · `get_price_analysis` · `browse_category` · `compare_products` · `check_inventory` · `get_low_stock` · `get_return_policy` · `initiate_return` · `get_customer_preferences` · `get_audit_trail` · `escalate_to_human`
+`search_products` · `search_products_hybrid` · `get_related_products` · `get_trending_products` · `get_price_analysis` · `browse_category` · `compare_products` · `check_inventory` · `get_low_stock` · `get_return_policy` · `initiate_return` · `get_customer_preferences` · `get_audit_trail` · `escalate_to_human` · `issue_credit`
 
 #### One search executor
 

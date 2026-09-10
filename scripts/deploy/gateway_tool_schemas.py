@@ -355,15 +355,15 @@ for _target in TOOL_SCHEMAS.values():
 # through a Gateway target: 17 tools. It is deliberately the superset, because a schema
 # is a description of a capability and publication is a separate decision.
 #
-# Three of those capabilities are DEFERRED for this workshop iteration. Publishing a tool
-# gives it an MCP action id, a Cedar action, a capability-endpoint state and a place in
-# participant-visible discovery, and none of these has the governance design that
-# earns those things on the shopper Gateway:
+# Publishing a tool gives it an MCP action id, a Cedar action, a capability-endpoint
+# state and a place in participant-visible discovery. Two capabilities are DEFERRED at
+# the start of this workshop iteration, and one is published for staff only:
 #
-#   issue_credit        moves money. Operator-only today, reachable only after
-#                       review confirmation through the governed execution path;
-#                       no shopper-facing agent holds the grant. Its Policy posture
-#                       is an open decision, so it is not published.
+#   issue_credit        moves money. PUBLISHED, because the operator desk executes an
+#                       approved credit through the Gateway with the operator's own
+#                       token, and the baseline permit for it requires the staff scope
+#                       claim. No shopper permit names it, so a shopper token is denied
+#                       by default, and no shopper-facing specialist binds it.
 #
 #   restock_inventory   moves stock. An operator capability behind the desk's own
 #                       authorization; no shopper-facing specialist binds it, and a
@@ -383,19 +383,19 @@ for _target in TOOL_SCHEMAS.values():
 # schema in the catalogue above but is withheld from the Gateway, so the
 # managed rail cannot serve it.
 #
-# Publish the read; keep the operator capabilities deferred. Remove exactly one
-# name from this set. `issue_credit` and `restock_inventory` stay: one moves
-# money and one moves stock, both belong to the operator desk, and no
-# shopper-facing specialist holds either grant.
+# Publish the read; keep restock deferred. Remove exactly one name from this
+# set. `restock_inventory` stays: it moves stock, belongs to the operator desk,
+# and no shopper-facing specialist holds that grant. `issue_credit` is not in
+# this set because it is already published for staff only: its baseline permit
+# requires the staff scope claim, and no shopper permit names it.
 #
 # Then deploy, and pair this with Lab 3b so the Runtime asks the Gateway for
 # exactly what the Gateway now publishes:
 #     python3 scripts/provision_agentcore_end_to_end.py --repo-path "$PWD"
 #
-# Verify (live, the real check): the Observatory Tool Registry publishes 15
+# Verify (live, the real check): the Observatory Tool Registry publishes 16
 # Gateway tools, and `get_ticket_history` appears in an MCP tool listing.
 WORKSHOP_DEFERRED_TOOLS: frozenset[str] = frozenset({
-    "issue_credit",
     "restock_inventory",
     "get_ticket_history",
 })

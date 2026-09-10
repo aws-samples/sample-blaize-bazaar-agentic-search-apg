@@ -355,15 +355,19 @@ for _target in TOOL_SCHEMAS.values():
 # through a Gateway target: 17 tools. It is deliberately the superset, because a schema
 # is a description of a capability and publication is a separate decision.
 #
-# Two of those capabilities are DEFERRED for this workshop iteration. Publishing a tool
-# gives it an MCP action id, a Cedar action, a capability-endpoint state and a place in
-# participant-visible discovery, and neither of these has the governance design that
-# earns those things yet:
+# Publishing a tool gives it an MCP action id, a Cedar action, a capability-endpoint
+# state and a place in participant-visible discovery. Two capabilities are DEFERRED at
+# the start of this workshop iteration, and one is published for staff only:
 #
-#   issue_credit        moves money. Operator-only today, reachable only after
-#                       review confirmation through the governed execution path;
-#                       no shopper-facing agent holds the grant. Its Policy posture
-#                       is an open decision, so it is not published.
+#   issue_credit        moves money. PUBLISHED, because the operator desk executes an
+#                       approved credit through the Gateway with the operator's own
+#                       token, and the baseline permit for it requires the staff scope
+#                       claim. No shopper permit names it, so a shopper token is denied
+#                       by default, and no shopper-facing specialist binds it.
+#
+#   restock_inventory   moves stock. An operator capability behind the desk's own
+#                       authorization; no shopper-facing specialist binds it, and a
+#                       shopper token must not be able to reach it on the Gateway.
 #
 #   get_ticket_history  reads a customer's support history. The read is only safe under
 #                       an ownership condition, and binding that condition is Lab 3b.
@@ -380,7 +384,6 @@ for _target in TOOL_SCHEMAS.values():
 # it moves money and belongs to the operator review desk, not to any
 # shopper-facing specialist.
 WORKSHOP_DEFERRED_TOOLS: frozenset[str] = frozenset({
-    "issue_credit",
     "restock_inventory",
 })
 # === WORKSHOP · Gateway catalogue · published tools: END ===

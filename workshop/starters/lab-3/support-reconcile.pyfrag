@@ -8,11 +8,11 @@
 #
 # Two decisions, both governance rather than plumbing:
 #
-#   1. SUPPORT_MANAGED_TOOLS must name only tools the Gateway publishes. Lab 3a
-#      publishes `get_ticket_history`. `issue_credit` moves money, stays
-#      deferred in `scripts/deploy/gateway_tool_schemas.py`, and is reachable
-#      only through the operator review desk — no shopper-facing specialist
-#      holds that grant.
+#   1. SUPPORT_MANAGED_TOOLS must name only tools the Gateway publishes to a
+#      shopper. Lab 3a publishes `get_ticket_history`. `issue_credit` moves
+#      money: the Gateway publishes it for the operator desk under a staff-only
+#      permit, and no shopper-facing specialist may bind it, so the dispatcher
+#      refuses to build a specialist that names it (STAFF_ONLY_GATEWAY_TOOLS).
 #   2. SUPPORT_CALLER_BOUND_TOOLS names the tools whose `customer_id` the server
 #      overwrites with the authenticated caller's id before execution. A read of
 #      someone's support history is only safe under that ownership condition;

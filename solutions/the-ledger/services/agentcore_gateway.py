@@ -29,7 +29,7 @@ import os
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Sequence
 
 from services.product_envelope import ProductExtractor
 
@@ -70,6 +70,23 @@ LOCAL_MCP_TOOL_NAMES: List[str] = [
     "issue_credit",
     "get_ticket_history",
 ]
+
+# Published for the operator desk, never for a shopper-facing specialist. The
+# Gateway serves these to any caller it lists them for, and Cedar decides per
+# call, so the boundary that matters here is the binding: a specialist that
+# names one of these would hand the model a money-moving tool and rely on a
+# policy denial to catch it. The dispatcher refuses to build such a specialist.
+STAFF_ONLY_GATEWAY_TOOLS: frozenset[str] = frozenset({"issue_credit"})
+
+
+def assert_no_staff_only_binding(specialist: str, allowed_tools: Sequence[str]) -> None:
+    """Refuse a shopper specialist that names a staff-only Gateway tool."""
+    staff_only = sorted(set(allowed_tools) & STAFF_ONLY_GATEWAY_TOOLS)
+    if staff_only:
+        raise RuntimeError(
+            f"{specialist} names staff-only Gateway tools: {', '.join(staff_only)}"
+        )
+
 
 # === WORKSHOP · Managed catalogue · support reconcile: START ===
 # SOLUTION - the support specialist's managed contract, reconciled.
@@ -488,6 +505,7 @@ class ManagedGatewayDispatcher:
                 self.access_token,
             )
 
+        assert_no_staff_only_binding(specialist, allowed_tools)
         mcp_client = MCPClient(_create_transport)
         mcp_client.start()
         try:

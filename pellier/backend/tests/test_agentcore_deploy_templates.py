@@ -239,8 +239,8 @@ def test_memory_gateway_targets_and_policy_engine_share_one_project(
 
     schemas = sorted((root / "tool-schemas").glob("*.json"))
     assert len(schemas) == 4
-    # 15, not the canonical 17: `issue_credit` and `get_ticket_history` are deferred for
-    # this workshop iteration, so they are not published. Derived rather than written as
+    # 15 at the start, not the canonical 17: `restock_inventory` and `get_ticket_history`
+    # are deferred until the desk and Lab 3a publish them. Derived rather than written as
     # a literal, because the literal is what went stale.
     assert sum(len(json.loads(path.read_text())) for path in schemas) == len(
         schemas_module.workshop_published_tools()
@@ -287,9 +287,10 @@ def test_second_phase_attaches_the_baseline_cedar_set(tmp_path: Path) -> None:
 def test_restock_inventory_is_neither_published_nor_permitted(tmp_path: Path) -> None:
     """An operator capability stays off the shopper Gateway.
 
-    ``restock_inventory`` is deferred with ``issue_credit``: a shopper token cannot
-    reach it because no action id exists, and no baseline permit names it either, so
-    publishing it later would still be denied by default.
+    ``restock_inventory`` is deferred: a shopper token cannot reach it because no
+    action id exists, and no baseline permit names it either, so publishing it later
+    would still be denied by default. ``issue_credit`` is published, and only its
+    staff-scope permit names it.
     """
     _, project = _render(tmp_path, include_policies=True)
     policies = project["policyEngines"][0]["policies"]
@@ -313,7 +314,7 @@ def test_restock_inventory_is_neither_published_nor_permitted(tmp_path: Path) ->
         for tool in json.loads(path.read_text())
     }
     assert "restock_inventory" not in published
-    assert "issue_credit" not in published
+    assert "issue_credit" in published
 
 
 def test_deployed_state_reads_mcp_gateway_shape() -> None:

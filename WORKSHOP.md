@@ -470,10 +470,10 @@ Operator investigation stops at the pending human checkpoint.
   carries no version and `qualifier=DEFAULT` is an alias.
 - **Change (3a).** The support specialist reads a customer's past tickets
   before answering, and the Gateway does not publish that tool. Publish
-  `get_ticket_history`; leave `issue_credit` deferred. That second half is the
-  decision, not an oversight: a read scoped to one customer is safe to hand a
-  shopper-facing specialist, and money movement belongs to the operator review
-  desk.
+  `get_ticket_history`; leave `restock_inventory` deferred. `issue_credit` is
+  already published, for staff only: a read scoped to one customer is safe to
+  hand a shopper-facing specialist, and money movement belongs to the operator
+  review desk, which executes it with the operator's own token.
 - **Change (3b).** Reconcile the Runtime side. The managed dispatcher asks the
   Gateway for exactly the tools it names and raises `Gateway is missing support
   tools` when one is absent, so the two catalogues have to agree. Then bind the

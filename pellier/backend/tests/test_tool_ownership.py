@@ -54,12 +54,12 @@ UNBOUND_BY_DECISION: Dict[str, str] = {
         "write path and audit row as every other governed mutation."
     ),
     "issue_credit": (
-        "Operator-only, and deferred for this workshop iteration. Its caller is the "
-        "confirmed-review execution path, not a specialist: "
-        "Cedar forbids the action for shopper principals precisely so a shopper-facing "
-        "agent cannot move money, and binding it to one would put the capability back "
-        "inside the conversation it was removed from. It is also absent from the "
-        "published Gateway set, so a fresh provision does not expose it at all."
+        "Operator-only. Its caller is the confirmed-review execution path, not a "
+        "specialist: the Gateway publishes it for the operator desk under a permit "
+        "that requires the staff scope claim, no shopper permit names it, and the "
+        "managed dispatcher refuses to build a shopper specialist that binds it. "
+        "Binding it to one would put the capability back inside the conversation "
+        "it was removed from."
     ),
 }
 

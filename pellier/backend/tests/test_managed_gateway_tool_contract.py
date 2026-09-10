@@ -5,8 +5,8 @@ mistake, so they are named here once:
 
   * **17** tools in the canonical vocabulary. Every Gateway surface Lambda and every
     schema in ``gateway_tool_schemas.TOOL_SCHEMAS`` covers all of them.
-  * **15** tools this workshop iteration PUBLISHES, because ``issue_credit`` and
-    ``get_ticket_history`` are deferred. That subset is asserted in
+  * **15** tools this workshop iteration PUBLISHES at the start (16 after Lab 3a),
+    because ``restock_inventory`` and ``get_ticket_history`` are deferred. That subset is asserted in
     ``test_fresh_policy_set.py``, which owns the publication contract.
 
 This file asserts the vocabulary, not the publication subset.

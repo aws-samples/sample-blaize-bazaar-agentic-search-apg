@@ -11,7 +11,7 @@ validated live contract without a single test going red:
   * the actor/customer OWNERSHIP condition pre-installed on `initiate_return` — which is
     the Lab 4 challenge, so a fresh stack shipped the participant's answer and step 3's
     DENY fired before they wrote anything;
-  * `issue_credit` and `get_ticket_history` published while both are deferred.
+  * `get_ticket_history` published while it is deferred, or `issue_credit` reachable by a shopper.
 
 These tests parse the GENERATED Cedar. They do not re-implement a second policy model,
 and they never assert a count alone: a count passes while the names are wrong.
@@ -62,6 +62,7 @@ EXPECTED_PUBLISHED: Set[str] = {
     "get_customer_preferences", "get_audit_trail", "get_trending_products",
     "get_return_policy", "get_related_products",
     "initiate_return", "escalate_to_human",
+    "issue_credit",
 }
 
 EXPECTED_TARGETS: Dict[str, Set[str]] = {
@@ -74,7 +75,7 @@ EXPECTED_TARGETS: Dict[str, Set[str]] = {
         "get_customer_preferences", "get_audit_trail", "get_trending_products",
         "get_return_policy", "get_related_products",
     },
-    "pellier-concierge-experience-target": {"initiate_return", "escalate_to_human"},
+    "pellier-concierge-experience-target": {"initiate_return", "escalate_to_human", "issue_credit"},
 }
 
 RETIRED = {
@@ -106,19 +107,20 @@ def _norm(statement: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def test_the_workshop_publishes_exactly_the_expected_fourteen() -> None:
+def test_the_workshop_publishes_exactly_the_expected_fifteen() -> None:
     assert workshop_published_tools() == EXPECTED_PUBLISHED
 
 
-def test_the_deferred_set_is_the_two_operator_capabilities_and_the_lab_three_read() -> None:
-    assert WORKSHOP_DEFERRED_TOOLS == {"issue_credit", "restock_inventory", "get_ticket_history"}
+def test_the_deferred_set_is_restock_and_the_lab_three_read() -> None:
+    """`issue_credit` is published for staff; restock waits for the desk's own route."""
+    assert WORKSHOP_DEFERRED_TOOLS == {"restock_inventory", "get_ticket_history"}
 
 
 def test_the_published_set_is_derived_not_hand_copied() -> None:
     """Catalogue minus deferred. A second literal list would drift on the next tool."""
     assert workshop_published_tools() == canonical_tool_names() - WORKSHOP_DEFERRED_TOOLS
     assert len(canonical_tool_names()) == 17
-    assert len(workshop_published_tools()) == 14
+    assert len(workshop_published_tools()) == 15
 
 
 def test_every_published_name_is_unique() -> None:
@@ -138,12 +140,12 @@ def test_no_deferred_name_is_published() -> None:
     assert workshop_published_tools() & WORKSHOP_DEFERRED_TOOLS == set()
 
 
-def test_the_experience_target_publishes_only_the_two_governed_actions() -> None:
-    """`issue_credit` and `get_ticket_history` live on this target and must not ship."""
+def test_the_experience_target_publishes_the_three_governed_actions() -> None:
+    """`get_ticket_history` lives on this target and must not ship before Lab 3a."""
     served = [t["name"] for t in schema_for("experience", workshop=True)]
-    assert served == ["initiate_return", "escalate_to_human"]
+    assert served == ["initiate_return", "issue_credit", "escalate_to_human"]
     full = [t["name"] for t in schema_for("experience", workshop=False)]
-    assert set(full) - set(served) == {"issue_credit", "get_ticket_history"}
+    assert set(full) - set(served) == {"get_ticket_history"}
 
 
 # ---------------------------------------------------------------------------
@@ -158,6 +160,7 @@ def test_the_fresh_policy_set_is_exactly_the_named_baseline_and_scoped_reads() -
         *CUSTOMER_READ_POLICIES,
         "initiate_return_shopper_damaged",
         "initiate_return_staff_scope",
+        "issue_credit_staff_scope",
     }
 
 
@@ -246,21 +249,22 @@ def test_the_two_authority_boundaries_are_recorded_where_they_are_enforced() -> 
     assert "custom:staff_scope" in auth
 
 
-def test_issue_credit_is_absent_from_the_gateway_rather_than_forbidden() -> None:
-    """Absent is a stronger guarantee than forbidden, and a different one.
-
-    A fresh Gateway publishes no `issue_credit` action id, so a shopper cannot reach it
-    there at all. Saying Cedar "forbids" it, as an earlier docstring did, names the wrong
-    layer as the one denying, which is how each layer ends up believing the other is
-    enforcing.
+def test_issue_credit_is_published_for_staff_and_unreachable_by_a_shopper() -> None:
+    """Published, so the operator desk can execute an approved credit through the
+    Gateway with the operator's own token; permitted only under the staff scope
+    claim; named by no shopper permit, so a shopper token is denied by default.
     """
-    assert "issue_credit" in WORKSHOP_DEFERRED_TOOLS
+    assert "issue_credit" not in WORKSHOP_DEFERRED_TOOLS
     published = {
         tool for tools in workshop_target_tools().values() for tool in tools
     }
-    assert "issue_credit" not in published
-    for policy in _policies():
-        assert "issue_credit" not in policy["statement"], policy["name"]
+    assert "issue_credit" in published
+    naming = [p for p in _policies() if f"{EXPERIENCE}___issue_credit" in _actions(p["statement"])]
+    assert [p["name"] for p in naming] == ["issue_credit_staff_scope"]
+    statement = naming[0]["statement"]
+    assert statement.lstrip().startswith("permit")
+    assert 'principal.getTag("custom:staff_scope") == "returns"' in statement
+    assert "custom:customer_id" not in statement
 
 
 def test_every_policy_is_active_and_validated_strictly() -> None:
@@ -285,13 +289,16 @@ def test_the_baseline_permits_exactly_the_eleven_catalogue_reads() -> None:
         for target, tools in EXPECTED_TARGETS.items()
         for tool in tools
         if tool not in {
-            "initiate_return", "restock_inventory",
+            "initiate_return", "restock_inventory", "issue_credit",
             "get_customer_preferences", "get_audit_trail",
         }
     }
     actual = set(_actions(_by_name()["baseline_permit_workshop_tools"]["statement"]))
     assert actual == expected
     assert len(actual) == 11
+    assert not any("issue_credit" in action for action in actual), (
+        "the unconditional catalogue permit must never reach the staff-only credit"
+    )
 
 
 def test_the_baseline_is_unconditional() -> None:
@@ -526,6 +533,8 @@ RETURN_DAMAGED = {"customer_id": "CUST-THEO", "reason": "damaged"}
     ("staff", f"{RECOMMENDATION}___get_customer_preferences", {"customer_id": "CUST-MARCO"}, "DENY"),
     ("stranger", f"{RECOMMENDATION}___get_audit_trail", {"customer_id": "CUST-MARCO"}, "DENY"),
     ("shopper", f"{EXPERIENCE}___issue_credit", {}, "DENY"),
+    ("staff", f"{EXPERIENCE}___issue_credit", {}, "ALLOW"),
+    ("stranger", f"{EXPERIENCE}___issue_credit", {}, "DENY"),
     ("shopper", f"{EXPERIENCE}___get_ticket_history", {"customer_id": "CUST-MARCO"}, "DENY"),
     ("shopper", f"{EXPERIENCE}___some_future_tool", {}, "DENY"),
 ])
@@ -550,7 +559,7 @@ def test_restock_inventory_is_off_the_shopper_gateway_and_has_no_permit() -> Non
 
 
 def test_a_future_published_tool_is_denied_by_default() -> None:
-    for future in ("get_ticket_history", "issue_credit", "anything_at_all"):
+    for future in ("get_ticket_history", "anything_at_all"):
         action = f"{EXPERIENCE}___{future}"
         assert _decide(action, None) == "DENY", future
         assert _decide(action, "damaged") == "DENY", future
@@ -635,7 +644,7 @@ def test_the_application_catalogue_reconciles_with_the_workshop_contract() -> No
 
         agent_tools.py @tool          what the process can execute (18, incl. in-process only)
         LOCAL_MCP_TOOL_NAMES          local in-process / MCP catalog (17)
-        workshop_published_tools()    what a fresh workshop provision publishes (15)
+        workshop_published_tools()    what a fresh workshop provision publishes (15, 16 after Lab 3a)
 
     Asserted as a DERIVED relationship rather than a fourth literal list, so adding a
     tool has to be classified once and cannot drift here.
