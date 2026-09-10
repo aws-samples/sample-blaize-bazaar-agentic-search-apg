@@ -79,13 +79,14 @@ psql -v ON_ERROR_STOP=1 \
 
 ## Lab 4: Govern and Prove Agent Actions
 
-Lab 4a is the Cedar identity rule; Lab 4b is the OpenTelemetry acceptance
-contract. The trace contract's recovery copy does not provision or change
-managed resources:
+Lab 4a is the Cedar identity rule; Lab 4b is the keyed absence query. The
+OpenTelemetry trace contract (`workshop/lab-4-otel-contract.jq`) is a provided
+check with no recovery copy. The absence query's recovery copy reads the same
+tables the participant's would; it cannot manufacture the rows it counts:
 
 ```bash
-cp solutions/the-ledger/observability/lab-4-otel-contract-solution.jq \
-  workshop/lab-4-otel-contract.jq
+cp solutions/the-ledger/observability/lab-4-absence-solution.sql \
+  workshop/lab-4-absence.sql
 ```
 
 It joins `governed_receipts` to `tool_audit` and resolves the authenticated Marco principal against the Theo customer named in tool input.
@@ -121,7 +122,7 @@ format leaves every participant build incomplete and restores them with
 `scripts/reset_participant_exercises.py`: the Inventory Agent definition and
 `check_inventory` body for Lab 1, the golden set for Lab 2b, the Gateway
 catalogue and the Runtime support contract for Lab 3, and the RRF worksheet,
-trace contract and Cedar rule as whole-file starters.
+absence query and Cedar rule as whole-file starters.
 `scripts/bootstrap-labs.sh` is the source of truth for that branch-specific
 behavior.
 

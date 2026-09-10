@@ -75,7 +75,7 @@ test authorization boundaries, and prove whether an action reached the database.
 | **3a** | publishing the Gateway tool the specialist needs | `scripts/deploy/gateway_tool_schemas.py` |
 | **3b** | reconciling the Runtime catalogue with the Gateway | `pellier/backend/services/agentcore_gateway.py` |
 | **4a** | the identity-to-customer Cedar rule | `policies/workshop_identity_match_forbid.cedar` |
-| **4b** | the OpenTelemetry trace contract | `workshop/lab-4-otel-contract.jq` |
+| **4b** | the keyed absence query that proves a denial did nothing | `workshop/lab-4-absence.sql` |
 
 `workshop/lab-4-rls.sql` is a **proof** artifact, not a build: Lab 4 runs it to
 show PostgreSQL refusing another shopper's rows. `scripts/build_receipt.py`
@@ -518,7 +518,7 @@ The session content (lab manual, CloudFormation, prereq images) lives in the sep
 | Lab 1: Build a PostgreSQL-Grounded Agent | Complete Inventory Agent and `check_inventory`, then prove Marco's answer against live inventory and `tool_audit`. |
 | Lab 2: Build and Measure PostgreSQL Hybrid Retrieval | Restore the RRF fusion, label the rows that count as relevant for Anna's query, then compare vector, hybrid, hybrid + rerank, and agentic retrieval and make a quality, latency, and cost decision against that labeling. |
 | Lab 3: Deploy and Operate the Managed Agent Path | Publish the customer-scoped read Theo's return needs on the Gateway, reconcile what the Runtime asks the Gateway for and bind that read to the caller, deploy, then prove the managed receipt carries your own build fingerprint, that Memory survives a fresh process, and that the four memory substrates have four different owners. |
-| Lab 4: Govern and Prove Agent Actions | Author one Cedar rule and the OpenTelemetry trace contract, prove Gateway DENY prevents execution, confirm the matching identity is allowed, complete Jessica's Operator investigation up to the human checkpoint, prove Row-Level Security refuses another shopper's rows, replay a write to show it applies exactly once, and reset participant policy. |
+| Lab 4: Govern and Prove Agent Actions | Author one Cedar rule and the keyed absence query, prove Gateway DENY prevents execution, run the provided OpenTelemetry trace contract, confirm the matching identity is allowed, complete Jessica's Operator investigation up to the human checkpoint, prove Row-Level Security refuses another shopper's rows, replay a write to show it applies exactly once, and reset participant policy. |
 | Close | Map the pattern to your own stack, wrap up, and Q&A. |
 
 Make canonical edits to the lab manual in the Workshop Studio repo, not here.
@@ -843,7 +843,8 @@ sample-pellier-agentic-search-apg/
 │           └── data/                        36 displayed product records + persona curation
 │
 ├── workshop/                              Participant build surface: lab-2-rrf.sql,
-│                                          lab-4-otel-contract.jq, lab-4-rls.sql,
+│                                          lab-4-absence.sql, lab-4-rls.sql, the provided
+│                                          lab-4-otel-contract.jq,
 │                                          starters/, architecture-diagrams/
 ├── policies/                              Cedar policy set applied to the policy engine
 ├── skills/                                Strands runtime skills (5) + scoped guidance

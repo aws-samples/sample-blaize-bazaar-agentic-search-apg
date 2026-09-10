@@ -230,8 +230,8 @@ class TestSourceState:
                 "solutions/the-ledger/services/agentcore_gateway.py",
             "4a_identity_rule_authored":
                 "solutions/the-concierge/policies/identity_match_forbid.cedar",
-            "4b_trace_contract_authored":
-                "solutions/the-ledger/observability/lab-4-otel-contract-solution.jq",
+            "4b_absence_query_authored":
+                "solutions/the-ledger/observability/lab-4-absence-solution.sql",
         }
         for _lab, name, _path, region, markers in receipt_module._BUILDS:
             solution = receipt_module.REPO / solutions[name]

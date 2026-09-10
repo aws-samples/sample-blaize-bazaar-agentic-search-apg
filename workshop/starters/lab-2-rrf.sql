@@ -82,5 +82,5 @@ SELECT coalesce(
   \echo 'Lab 2 RRF build passed'
 \else
   \echo 'Lab 2 RRF build failed: complete the fusion expression'
-  \quit 1
+  DO $fail$ BEGIN RAISE EXCEPTION 'lab worksheet failed; see the line above'; END $fail$;
 \endif

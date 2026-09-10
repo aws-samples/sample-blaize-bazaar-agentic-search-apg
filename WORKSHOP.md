@@ -344,7 +344,7 @@ At a glance, which is the whole shape of the two hours on one screen:
 | **Lab 1 · Build a PostgreSQL-Grounded Agent** | Marco | Inventory Agent definition | the `check_inventory` body | 20 min |
 | **Lab 2 · Build and Measure PostgreSQL Hybrid Retrieval** | Anna | the RRF fusion expression | the labelled golden set | 20 min |
 | **Lab 3 · Deploy and Operate the Managed Agent Path** | Theo | publish the Gateway tool | reconcile the Runtime catalogue, then deploy | 30 min |
-| **Lab 4 · Govern and Prove Agent Actions** | Jessica | the Cedar identity rule | the OpenTelemetry trace contract | 30 min |
+| **Lab 4 · Govern and Prove Agent Actions** | Jessica | the Cedar identity rule | the keyed absence query | 30 min |
 
 Plus 10 minutes for orientation and `workshop-start`, and 10 to close. The
 budgets are repeated beside the labs here on purpose: a table that names the
@@ -359,7 +359,7 @@ What each lab asks of the participant, and what they leave with:
 | **Lab 1 · Build**<br>**Build a PostgreSQL-Grounded Agent** | Marco needs a live availability answer. | Complete the Inventory Agent's warehouse capability, then reconcile the response, warehouse rows, and execution evidence in PostgreSQL. | An agent answer is grounded only when it can be checked against the system of record and an execution receipt. |
 | **Lab 2 · Build & Measure**<br>**Build and Measure PostgreSQL Hybrid Retrieval** | Anna narrows a morning-ritual gift to two in-stock options under $100, then chooses from that same shortlist. | **2a** Restore the hybrid-ranking calculation. **2b** Label the rows that count as relevant, then read the micro-eval that divides by them. Prove the returned products met price and stock constraints. | Retrieval quality is a measured tradeoff, and the measurement rests on a labeling judgment a person makes. Relevance can rank results; PostgreSQL enforces eligibility. |
 | **Lab 3 · Deploy & Operate**<br>**Deploy and Operate the Managed Agent Path** | Theo's return request reaches a support specialist the managed Gateway cannot yet serve. | **3a** Publish the customer-scoped read the specialist needs, and keep the money movement deferred. **3b** Reconcile what the Runtime asks the Gateway for, and bind that read to the authenticated caller. Deploy, then verify Memory beyond the application process and confirm the build fingerprint on the managed receipt is their own. | Deploying is not the proof. The published catalogue, the executed revision, managed Memory, and the trace each prove a different part of the path, and a successful answer proves none of them. |
-| **Lab 4 · Govern**<br>**Govern and Prove Agent Actions** | Jessica's return action is allowed only for Jessica; Marco and Anna are the negative controls. | **4a** Define the identity-to-customer Cedar rule, then run the deny, allow, and replay cases. **4b** Author the OpenTelemetry trace contract that says what a complete managed trace must contain. Prove policy, execution, durable-effect, and database-enforcement outcomes separately, then complete Jessica's Operator investigation and stop before approval. | Authentication, policy authorization, execution, database enforcement, staff access, durable effects, and human approval are separate controls and separate facts. Observability is how you find that out after the fact. |
+| **Lab 4 · Govern**<br>**Govern and Prove Agent Actions** | Jessica's return action is allowed only for Jessica; Marco and Anna are the negative controls. | **4a** Define the identity-to-customer Cedar rule, then run the deny, allow, and replay cases. **4b** Author the keyed absence query that proves the denied call left no execution, write, or ledger row, beside a positive control; then run the provided trace contract. Prove policy, execution, durable-effect, and database-enforcement outcomes separately, then complete Jessica's Operator investigation and stop before approval. | Authentication, policy authorization, execution, database enforcement, staff access, durable effects, and human approval are separate controls and separate facts. Observability is how you find that out after the fact. |
 
 ### Time box
 
@@ -373,7 +373,7 @@ from the close, which is why the close is last and short.
 | **Lab 1 · Marco** | 20 min | Two small edits in one file each, and the first receipt. Most of the cost is the first read of an unfamiliar tree. |
 | **Lab 2 · Anna** | 20 min | One SQL expression, one labeling query, and the comparison. Both builds are short; reading the measurement is the work. |
 | **Lab 3 · Theo** | 30 min | Two edits plus a real deploy. The deploy has wall clock nobody can compress, so this lab gets the extra ten minutes rather than borrowing them. |
-| **Lab 4 · Jessica** | 30 min | A Cedar rule, four principals, the trace contract, and the RLS proof. Four separate outcomes to establish, and establishing them separately is the point. |
+| **Lab 4 · Jessica** | 30 min | A Cedar rule, four principals, the keyed absence query, the provided trace contract, and the RLS proof. Four separate outcomes to establish, and establishing them separately is the point. |
 | Close | 10 min | What travels off the box. |
 
 Two labs at 20 and two at 30 is deliberate. Labs 1 and 2 are bounded edits with
@@ -499,14 +499,16 @@ Operator investigation stops at the pending human checkpoint.
 - **Change (4a).** Complete the fail-closed identity-to-customer rule in the
   Cedar policy. It is deliberately participant-authored and exercises the
   condition without weakening the shipped row-level-security backstop.
-- **Change (4b).** Author the OpenTelemetry trace contract: the predicates that
-  say what a complete managed trace must contain. They start `false`, which is
-  the honest starting position. Deciding that an agent span, a model span, a
-  tool span and a session-correlated span are each required is the exercise;
-  running the contract afterwards is arithmetic.
-- **Run.** Exercise the deny, allow, and replay cases, run the trace contract
-  against a real managed trace, then complete Jessica's three-turn Operator
-  investigation and stop before approval.
+- **Change (4b).** Author the keyed absence query: for the idempotency key the
+  denied call carried, count the execution, claimed-write, finalized-write and
+  ledger rows, and beside them the finalized writes for the allowed key. The
+  counts start as `NULL`, which the worksheet refuses. The control is the
+  exercise: four zeros prove nothing until the same search finds the one write
+  the allowed call made, and finds exactly one, which is the replay restated.
+- **Run.** Exercise the deny, allow, and replay cases, run your absence query
+  with their keys, run the provided OpenTelemetry trace contract against a real
+  managed trace, then complete Jessica's three-turn Operator investigation and
+  stop before approval.
 - **Prove.** Establish four separate outcomes: the policy decision, the
   execution row (or its keyed absence), the durable write, and the database
   enforcement result. The receipt lines are `04.deny_did_not_execute` beside

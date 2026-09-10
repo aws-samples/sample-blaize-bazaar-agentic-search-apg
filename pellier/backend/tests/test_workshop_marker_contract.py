@@ -33,7 +33,8 @@ fingerprint, which is how the participant proves their own build answered.
 
 **Lab 4 - Govern and Prove Agent Actions.** A starter Cedar file that must NOT contain
 the answer, a reference rule that must, one proof script whose flags the guide passes
-verbatim, and a jq trace contract whose OTEL predicates start false.
+verbatim, and a keyed absence worksheet whose counts start as NULL placeholders. The
+OpenTelemetry trace contract is a provided check the guide runs, not a build.
 """
 
 from __future__ import annotations
@@ -120,9 +121,17 @@ LAB3_DEFERRED_TOOL = "issue_credit"
 # contract.
 # ---------------------------------------------------------------------------
 
-LAB4_OTEL_STARTER = "workshop/lab-4-otel-contract.jq"
-LAB4_OTEL_REFERENCE = "solutions/the-ledger/observability/lab-4-otel-contract-solution.jq"
-LAB4_OTEL_MARKER = "WORKSHOP · AgentCore OTEL · trace contract"
+LAB4_ABSENCE_STARTER = "workshop/lab-4-absence.sql"
+LAB4_ABSENCE_REFERENCE = "solutions/the-ledger/observability/lab-4-absence-solution.sql"
+LAB4_ABSENCE_MARKER = "WORKSHOP · Keyed absence · deny proof"
+LAB4_ABSENCE_PLACEHOLDERS = (
+    "NULL::bigint AS denied_execution_rows",
+    "NULL::bigint AS denied_write_rows",
+    "NULL::bigint AS denied_finalized_writes",
+    "NULL::bigint AS denied_ledger_rows",
+    "NULL::bigint AS allowed_finalized_writes",
+)
+LAB4_TRACE_CONTRACT = "workshop/lab-4-otel-contract.jq"
 
 LAB4_STARTER = "policies/workshop_identity_match_forbid.cedar"
 LAB4_REFERENCE = "solutions/the-concierge/policies/identity_match_forbid.cedar"
@@ -177,9 +186,9 @@ PARTICIPANT_STARTERS = {
         "workshop/starters/lab-3/support-reconcile.pyfrag",
         "pellier/backend/services/agentcore_gateway.py",
     ),
-    "lab-4-otel": (
-        "workshop/starters/lab-4-otel-contract.jq",
-        LAB4_OTEL_STARTER,
+    "lab-4-absence": (
+        "workshop/starters/lab-4-absence.sql",
+        LAB4_ABSENCE_STARTER,
     ),
     "lab-4-cedar": (
         "workshop/starters/workshop_identity_match_forbid.cedar",
@@ -291,7 +300,7 @@ def test_lab1_fallback_copy_keeps_the_markers(source: str, destination: str) -> 
     "starter,reference,label",
     (
         (LAB2_STARTER, LAB2_REFERENCE, LAB2_MARKER),
-        (LAB4_OTEL_STARTER, LAB4_OTEL_REFERENCE, LAB4_OTEL_MARKER),
+        (LAB4_ABSENCE_STARTER, LAB4_ABSENCE_REFERENCE, LAB4_ABSENCE_MARKER),
     ),
 )
 def test_labs_2_and_3_have_matching_build_markers(
@@ -312,23 +321,43 @@ def test_lab2_starter_fails_until_rrf_is_authored() -> None:
     assert "0::numeric AS recomputed_rrf" not in reference
     assert reference.count("1.0 / (60 +") == 2
     assert "\\if :fusion_matches" in starter
-    assert "\\quit 1" in starter
+    # `\quit` takes no argument; a raised exception under ON_ERROR_STOP is what makes
+    # the worksheet exit non-zero, so a shell `&&` or `set -e` sees the failure.
+    assert "\\quit 1" not in starter
+    assert "RAISE EXCEPTION" in starter
 
 
-def test_lab3_starter_fails_until_otel_contract_is_authored() -> None:
-    starter = _read(LAB4_OTEL_STARTER)
-    reference = _read(LAB4_OTEL_REFERENCE)
-    for field in ("agentSpan", "modelSpan", "toolSpan", "sessionCorrelated"):
-        assert f"{field}: false" in starter
-        assert f"{field}: false" not in reference
+def test_lab4_starter_fails_until_the_absence_query_is_authored() -> None:
+    """The starter's counts are NULL, which the worksheet refuses; the twin reads the tables."""
+    starter = _read(LAB4_ABSENCE_STARTER)
+    reference = _read(LAB4_ABSENCE_REFERENCE)
+    for placeholder in LAB4_ABSENCE_PLACEHOLDERS:
+        assert placeholder in starter
+        assert placeholder not in reference
+    assert "\\if :lab_4_authored" in starter and "\\quit 1" not in starter
+    assert "RAISE EXCEPTION" in starter
     for required in (
-        "invoke_agent",
-        "gen_ai.request.model",
-        "execute_tool",
-        "gen_ai.tool.name",
-        'attributes["session.id"]',
+        "pellier.tool_audit",
+        "args->>'idempotency_key' = :'deny_key'",
+        "pellier.write_operations",
+        "completed_at IS NOT NULL",
+        "result->>'status' = 'success'",
+        "pellier.inventory_ledger",
+        ":'allow_key'",
     ):
-        assert required in reference
+        assert required in reference, f"reference absence query lacks {required}"
+    region = reference.split(f"{LAB4_ABSENCE_MARKER}: START ===")[1].split(f"{LAB4_ABSENCE_MARKER}: END ===")[0]
+    assert region.count(":'deny_key'") == 4 and region.count(":'allow_key'") == 1
+    # The worksheet's own verdict: absence AND positive control, never absence alone.
+    assert ":lab_4_allowed_finalized_writes = 1" in starter
+
+
+def test_the_trace_contract_is_a_provided_check_not_a_build() -> None:
+    contract = _read(LAB4_TRACE_CONTRACT)
+    assert "WORKSHOP ·" not in contract, "the trace contract is provided; it carries no build markers"
+    for predicate in ("invoke_agent", "gen_ai.request.model", "execute_tool", "gen_ai.tool.name", 'attributes["session.id"]'):
+        assert predicate in contract
+    assert ": false" not in contract
 
 
 def test_lab2_golden_set_region_has_exactly_one_marker_pair() -> None:
@@ -610,8 +639,9 @@ def test_no_lab_anchor_is_a_broken_path() -> None:
         LAB2_REFERENCE,
         LAB2_GOLDEN_REFERENCE,
         LAB2_GOLDEN_REGION[0],
-        LAB4_OTEL_STARTER,
-        LAB4_OTEL_REFERENCE,
+        LAB4_ABSENCE_STARTER,
+        LAB4_ABSENCE_REFERENCE,
+        LAB4_TRACE_CONTRACT,
         LAB4_STARTER,
         LAB4_REFERENCE,
         LAB4_PROOF_SCRIPT,
@@ -633,7 +663,7 @@ def test_participant_starter_copies_are_incomplete_not_solutions() -> None:
     inventory_agent = _read(PARTICIPANT_STARTERS["lab-1-inventory-agent"][0])
     inventory_tool = _read(PARTICIPANT_STARTERS["lab-1-inventory-tool"][0])
     lab2 = _read(PARTICIPANT_STARTERS["lab-2-rrf"][0])
-    lab3 = _read(PARTICIPANT_STARTERS["lab-4-otel"][0])
+    absence = _read(PARTICIPANT_STARTERS["lab-4-absence"][0])
     lab4 = _read(PARTICIPANT_STARTERS["lab-4-cedar"][0])
 
     assert "_INVENTORY_AGENT_STUBBED = True" in inventory_agent
@@ -641,8 +671,8 @@ def test_participant_starter_copies_are_incomplete_not_solutions() -> None:
     assert '"error": "check_inventory is in stub state"' in inventory_tool
     assert "result = _run_async(logic.check_inventory" not in inventory_tool
     assert "0::numeric AS recomputed_rrf" in lab2
-    for field in ("agentSpan", "modelSpan", "toolSpan", "sessionCorrelated"):
-        assert f"{field}: false" in lab3
+    assert all(placeholder in absence for placeholder in LAB4_ABSENCE_PLACEHOLDERS)
+    assert "FROM pellier.tool_audit" not in absence
     assert re.search(r"unless\s*\{\s*false\s*\}", lab4)
     assert "CUST-JESSICA" not in lab4
 

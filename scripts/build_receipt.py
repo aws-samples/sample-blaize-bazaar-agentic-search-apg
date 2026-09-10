@@ -167,11 +167,14 @@ _BUILDS: tuple[tuple[str, str, pathlib.Path, Optional[str], tuple[str, ...]], ..
         None, ("unless {\n  false\n}",),
     ),
     (
-        "04_govern_and_prove", "4b_trace_contract_authored",
-        REPO / "workshop" / "lab-4-otel-contract.jq",
-        "AgentCore OTEL \u00b7 trace contract",
-        ("agentSpan: false", "modelSpan: false", "toolSpan: false",
-         "sessionCorrelated: false"),
+        "04_govern_and_prove", "4b_absence_query_authored",
+        REPO / "workshop" / "lab-4-absence.sql",
+        "Keyed absence \u00b7 deny proof",
+        ("NULL::bigint AS denied_execution_rows",
+         "NULL::bigint AS denied_write_rows",
+         "NULL::bigint AS denied_finalized_writes",
+         "NULL::bigint AS denied_ledger_rows",
+         "NULL::bigint AS allowed_finalized_writes"),
     ),
 )
 

@@ -65,9 +65,9 @@ FILE_EXERCISES = (
         destination="workshop/lab-2-rrf.sql",
     ),
     FileExercise(
-        exercise_id="lab-4-otel",
-        starter="workshop/starters/lab-4-otel-contract.jq",
-        destination="workshop/lab-4-otel-contract.jq",
+        exercise_id="lab-4-absence",
+        starter="workshop/starters/lab-4-absence.sql",
+        destination="workshop/lab-4-absence.sql",
     ),
     FileExercise(
         exercise_id="lab-4-cedar",

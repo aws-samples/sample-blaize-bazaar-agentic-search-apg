@@ -69,7 +69,7 @@ SELECT o.product_id AS jessica_product_id
 \if :{?jessica_product_id}
 \else
   \warn 'Lab 4 needs one returnable Jessica product for the positive write control'
-  \quit 1
+  DO $fail$ BEGIN RAISE EXCEPTION 'Lab 4 RLS proof failed; see the line above'; END $fail$;
 \endif
 
 BEGIN;
@@ -81,7 +81,7 @@ SELECT current_setting('pellier.principal_sub', true) = :'jessica_sub'
 \if :jessica_principal_bound
 \else
   \warn 'Jessica principal was not bound to the RLS transaction'
-  \quit 1
+  DO $fail$ BEGIN RAISE EXCEPTION 'Lab 4 RLS proof failed; see the line above'; END $fail$;
 \endif
 
 SELECT count(*) AS jessica_jessica_rows
@@ -94,7 +94,7 @@ SELECT :'jessica_jessica_rows'::INTEGER = 0 AS jessica_read_failed
 \gset
 \if :jessica_read_failed
   \warn 'Jessica could not read any Jessica rows; the positive control failed'
-  \quit 1
+  DO $fail$ BEGIN RAISE EXCEPTION 'Lab 4 RLS proof failed; see the line above'; END $fail$;
 \endif
 ROLLBACK;
 
@@ -107,7 +107,7 @@ SELECT current_setting('pellier.principal_sub', true) = :'marco_sub'
 \if :marco_principal_bound
 \else
   \warn 'Marco principal was not bound to the RLS transaction'
-  \quit 1
+  DO $fail$ BEGIN RAISE EXCEPTION 'Lab 4 RLS proof failed; see the line above'; END $fail$;
 \endif
 
 SELECT count(*) AS marco_jessica_rows
@@ -120,7 +120,7 @@ SELECT :'marco_jessica_rows'::INTEGER <> 0 AS marco_read_failed
 \gset
 \if :marco_read_failed
   \warn 'Marco could read Jessica rows; the RLS read boundary failed'
-  \quit 1
+  DO $fail$ BEGIN RAISE EXCEPTION 'Lab 4 RLS proof failed; see the line above'; END $fail$;
 \endif
 ROLLBACK;
 
@@ -220,7 +220,7 @@ SELECT current_user <> 'pellier_agent' AS role_probe_failed
 \gset
 \if :role_probe_failed
   \warn 'The write proof is not running as pellier_agent'
-  \quit 1
+  DO $fail$ BEGIN RAISE EXCEPTION 'Lab 4 RLS proof failed; see the line above'; END $fail$;
 \endif
 
 SELECT set_config('pellier.lab4_product_id', :'jessica_product_id', true);

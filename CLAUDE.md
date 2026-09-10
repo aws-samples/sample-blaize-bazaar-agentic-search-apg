@@ -96,7 +96,7 @@ anchored to one person, in climbing order of difficulty:
 | 1. Build a PostgreSQL-Grounded Agent | Marco | Inventory Agent definition | `check_inventory` body |
 | 2. Build and Measure PostgreSQL Hybrid Retrieval | Anna | RRF fusion expression | the labelled golden set |
 | 3. Deploy and Operate the Managed Agent Path | Theo | publish the Gateway tool | reconcile the Runtime catalogue, then deploy |
-| 4. Govern and Prove Agent Actions | Jessica | the Cedar identity rule | the OpenTelemetry trace contract |
+| 4. Govern and Prove Agent Actions | Jessica | the Cedar identity rule | the keyed absence query |
 
 `tests/test_workshop_marker_contract.py` is the authoritative inventory of
 those builds: their marker regions, starter fragments, and reference
