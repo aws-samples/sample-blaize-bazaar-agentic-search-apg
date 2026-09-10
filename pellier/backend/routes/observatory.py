@@ -1405,7 +1405,8 @@ async def list_sessions(
                    ) AND NOT EXISTS (
                        SELECT 1 FROM pellier.governed_turn_receipts foreign_turn
                         WHERE foreign_turn.session_id = ta.session_id
-                          AND foreign_turn.principal_sub IS DISTINCT FROM %s
+                          AND foreign_turn.principal_sub IS NOT NULL
+                          AND foreign_turn.principal_sub <> %s
                    ) AND NOT EXISTS (
                        SELECT 1 FROM pellier.governed_receipts foreign_decision
                         WHERE foreign_decision.session_id = ta.session_id
@@ -1510,7 +1511,8 @@ async def get_session(
                        SELECT 1
                          FROM pellier.governed_turn_receipts foreign_turn
                         WHERE foreign_turn.session_id = %s
-                          AND foreign_turn.principal_sub IS DISTINCT FROM %s
+                          AND foreign_turn.principal_sub IS NOT NULL
+                          AND foreign_turn.principal_sub <> %s
                    )
                  LIMIT 1
                 """,

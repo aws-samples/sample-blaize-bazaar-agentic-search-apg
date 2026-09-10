@@ -75,7 +75,12 @@ def test_authenticated_session_replay_rejects_mixed_principals() -> None:
         Path(__file__).resolve().parents[1] / "routes" / "observatory.py"
     ).read_text()
 
-    assert "foreign_turn.principal_sub IS DISTINCT FROM %s" in source
+    # Another identified principal makes the session foreign. An anonymous
+    # turn does not: a shopper who signed in mid-session must not be locked
+    # out of their own replay by the turn they took before signing in.
+    assert "foreign_turn.principal_sub IS NOT NULL" in source
+    assert "AND foreign_turn.principal_sub <> %s" in source
+    assert "foreign_turn.principal_sub IS DISTINCT FROM %s" not in source
     assert "raise_on_error=True" in source
 
 
