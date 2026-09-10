@@ -343,7 +343,7 @@ the whole commit range. None of that exercises a clean AWS account.
    * `/var/log/bootstrap-environment.log`
    * `/var/log/pellier-agentcore.log`
    * `/var/log/pellier-health-gate.log`
-4. Verify Runtime, Memory, Gateway, **15** published tools, **3** Cedar policies, Aurora
+4. Verify Runtime, Memory, Gateway, **15** published tools, **6** Cedar policies, Aurora
    Row-Level Security, and the `pellier-operators` membership boundary.
 5. Run all four labs with the participant commands, including operator access and the
    shopper `403`.

@@ -229,7 +229,7 @@ describe('ProofBoard', () => {
     expect(await screen.findByText('Proof Board')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'Read the durable runtime, policy, execution, and Aurora evidence recorded by the workshop. Use a terminal or SQL fallback whenever you need canonical proof.',
+        'Read the durable runtime, policy, execution, and Aurora evidence recorded by the workshop. Run the SQL yourself when you need the proof rather than a summary.',
       ),
     ).toBeInTheDocument();
     expect(

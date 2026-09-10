@@ -74,7 +74,7 @@ export const LAB_EXERCISES: readonly LabExercise[] = [
     evidenceAssertion:
       'One session-scoped invocation identifies the requested product and warehouse, reports live Aurora values, and links exactly one check_inventory execution row.',
     decisionPrompt:
-      'Which table owns inventory truth, and what invariant prevents the aggregate and warehouse ledger from drifting?',
+      'Which table owns inventory truth, and what invariant keeps the aggregate and the per-warehouse rows from drifting apart?',
     primaryAction: {
       label: 'Open live workbench',
       to: '/observatory/workbench',

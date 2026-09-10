@@ -1557,8 +1557,8 @@ const ProofBoard: React.FC<ProofBoardProps> = ({ focusCardId }) => {
         title="Proof Board"
         summary={
           isAuditFocus
-            ? 'A focused read of the live Aurora ledger and governed receipt. The SQL result remains the canonical proof; this view confirms that the expected evidence is present.'
-            : 'Read the durable runtime, policy, execution, and Aurora evidence recorded by the workshop. Use a terminal or SQL fallback whenever you need canonical proof.'
+            ? 'A focused read of the live Aurora rows and governed receipt. The SQL result is the proof; this view confirms that the expected evidence is present.'
+            : 'Read the durable runtime, policy, execution, and Aurora evidence recorded by the workshop. Run the SQL yourself when you need the proof rather than a summary.'
         }
       />
 

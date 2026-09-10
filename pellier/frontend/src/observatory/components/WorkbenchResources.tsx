@@ -226,7 +226,7 @@ export default function WorkbenchResources({
         ))}
       </div>
 
-      <p className="workbench-resources-legend">These views are optional. Use <code>psql</code> and the AgentCore CLI for canonical lab proof.</p>
+      <p className="workbench-resources-legend">These views are optional. Use <code>psql</code> and the AgentCore CLI for the lab proof.</p>
     </div>
   );
 

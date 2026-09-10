@@ -198,7 +198,7 @@ def test_every_conditional_policy_pins_one_action() -> None:
     types such as `Mcp`, `CallTool` and `InvokeLLM`.
 
     Unconditional policies may use `action in [...]` freely: there is no condition to
-    type-check, which is why the baseline allow-list may list thirteen.
+    type-check, which is why the baseline allow-list names eleven at once.
     """
     for policy in _policies():
         statement = policy["statement"]
@@ -642,7 +642,7 @@ def test_the_application_catalogue_reconciles_with_the_workshop_contract() -> No
 
     Three places name the tool set and each has a different job:
 
-        agent_tools.py @tool          what the process can execute (18, incl. in-process only)
+        agent_tools.py @tool          what the process can execute (17)
         LOCAL_MCP_TOOL_NAMES          local in-process / MCP catalog (17)
         workshop_published_tools()    what a fresh workshop provision publishes (15, 16 after Lab 3a)
 

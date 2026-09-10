@@ -177,7 +177,7 @@ as one policy engine:
 |---|---|---|
 | Identity | Cognito JWT verified on the managed rail | Which authenticated human initiated the request |
 | Managed execution | AgentCore Runtime with JWT passthrough | Which orchestrator ran and on which managed rail |
-| Tool contract | AgentCore Gateway exposes a 17-tool target-qualified MCP catalog, 14 of them published to participants | Which callable capability and input schema the agent received |
+| Tool contract | AgentCore Gateway exposes a 17-tool target-qualified MCP catalog, 15 of them published at the start and 16 after Lab 3a | Which callable capability and input schema the agent received |
 | Authorization | AgentCore Policy evaluates Cedar before Gateway target execution | Which of five states the call reached: `ALLOW`, `DENY`, `WOULD_DENY` (a real LOG_ONLY decision flip), `EVALUATION_INCOMPLETE` (the engine could not be read), or `POLICY_INFERRED` (a match against policy text, which is never presented as a decision) |
 | Data authorization | Aurora SQL functions validate ownership and write invariants | Which records the permitted tool could actually read or mutate |
 | Row-level authorization | PostgreSQL RLS policies on `orders` and `returns`, enforced against the `pellier_agent` and `pellier_query` roles (neither holds `BYPASSRLS`) and scoped by the `pellier.principal_sub` GUC through `pellier.principal_customers` | That a permitted tool holding a valid token still cannot read another shopper's rows, enforced by the database rather than by application code |

@@ -7,6 +7,8 @@
 
 ## The workshop in one minute
 
+**4 labs, 8 bounded builds, 2 workflows on the participant path.**
+
 Pellier is a governed agentic retail experience. A shopper asks for help in a
 premium storefront; a Strands dispatcher selects a bounded specialist; and
 Aurora PostgreSQL supplies the facts behind the answer. Participants then move
@@ -344,12 +346,12 @@ At a glance, which is the whole shape of the two hours on one screen:
 | **Lab 1 · Build a PostgreSQL-Grounded Agent** | Marco | Inventory Agent definition | the `check_inventory` body | 20 min |
 | **Lab 2 · Build and Measure PostgreSQL Hybrid Retrieval** | Anna | the RRF fusion expression | the labelled golden set | 20 min |
 | **Lab 3 · Deploy and Operate the Managed Agent Path** | Theo | publish the Gateway tool | reconcile the Runtime catalogue, then deploy | 30 min |
-| **Lab 4 · Govern and Prove Agent Actions** | Jessica | the Cedar identity rule | the keyed absence query | 30 min |
+| **Lab 4 · Govern and Prove Agent Actions** | Jessica | the Cedar identity rule | the keyed absence query | 25 min |
 
-Plus 10 minutes for orientation and `workshop-start`, and 10 to close. The
+Plus a 10-minute opening talk, 7 minutes of orientation, and 5 to close. The
 budgets are repeated beside the labs here on purpose: a table that names the
 work without naming its cost invites a room to plan four equal labs, and they
-are not four equal labs. The reasoning behind 20/20/30/30 is under Time box
+are not four equal labs. The reasoning behind 20/20/30/25 is under Time box
 below.
 
 What each lab asks of the participant, and what they leave with:
@@ -359,31 +361,73 @@ What each lab asks of the participant, and what they leave with:
 | **Lab 1 · Build**<br>**Build a PostgreSQL-Grounded Agent** | Marco needs a live availability answer. | Complete the Inventory Agent's warehouse capability, then reconcile the response, warehouse rows, and execution evidence in PostgreSQL. | An agent answer is grounded only when it can be checked against the system of record and an execution receipt. |
 | **Lab 2 · Build & Measure**<br>**Build and Measure PostgreSQL Hybrid Retrieval** | Anna narrows a morning-ritual gift to two in-stock options under $100, then chooses from that same shortlist. | **2a** Restore the hybrid-ranking calculation. **2b** Label the rows that count as relevant, then read the micro-eval that divides by them. Prove the returned products met price and stock constraints. | Retrieval quality is a measured tradeoff, and the measurement rests on a labeling judgment a person makes. Relevance can rank results; PostgreSQL enforces eligibility. |
 | **Lab 3 · Deploy & Operate**<br>**Deploy and Operate the Managed Agent Path** | Theo's return request reaches a support specialist the managed Gateway cannot yet serve. | **3a** Publish the customer-scoped read the specialist needs, and keep the money movement deferred. **3b** Reconcile what the Runtime asks the Gateway for, and bind that read to the authenticated caller. Deploy, then verify Memory beyond the application process and confirm the build fingerprint on the managed receipt is their own. | Deploying is not the proof. The published catalogue, the executed revision, managed Memory, and the trace each prove a different part of the path, and a successful answer proves none of them. |
-| **Lab 4 · Govern**<br>**Govern and Prove Agent Actions** | Jessica's return action is allowed only for Jessica; Marco is the denied control and an unordered piece is the refused one. | **4a** Define the identity-to-customer Cedar rule, then run the deny, allow, and replay cases. **4b** Author the keyed absence query that proves the denied call left no execution, write, or ledger row, beside a positive control; then run the provided trace contract. Prove policy, execution, durable-effect, and database-enforcement outcomes separately, then complete Jessica's Operator investigation and stop before approval. | Authentication, policy authorization, execution, database enforcement, staff access, durable effects, and human approval are separate controls and separate facts. Observability is how you find that out after the fact. |
+| **Lab 4 · Govern**<br>**Govern and Prove Agent Actions** | Jessica's return action is allowed only for Jessica; Marco is the denied control and an unordered piece is the refused one. | **4a** Define the identity-to-customer Cedar rule, then run four attempts: denied, refused, allowed, replayed. **4b** Author the keyed absence query that proves the denied call left no execution, write, or ledger row, beside a positive control. Prove policy, execution, durable-effect, and database-enforcement outcomes separately, then open Jessica's case in Operator and stop before approval. | Authentication, policy authorization, execution, database enforcement, staff access, durable effects, and human approval are separate controls and separate facts. Observability is how you find that out after the fact. |
 
 ### Time box
 
-Two hours, and the room is self-paced, so these are budgets rather than a
-schedule. A lab that runs over does not steal from the next one: it steals
-from the close, which is why the close is last and short.
+Two speakers open for ten minutes. The remaining 110 are hands-on, staffed by
+table leads on the floor, and the room is self-paced, so these are budgets
+rather than a schedule.
 
-| Segment | Budget | Why it costs what it costs |
+| Minutes | Segment | Budget | Why it costs what it costs |
+|---|---|---|---|
+| 0-10 | Opening talk | 10 min | Two speakers. The retail problem and the four questions the workshop separates. |
+| 10-17 | Orientation and `workshop-start` | 7 min | One run id, the two surfaces, one Runtime turn. No architecture tour. |
+| 17-37 | **Lab 1 · Marco** | 20 min | Two small edits, one file each, and the first receipt. Most of the cost is the first read of an unfamiliar tree. |
+| 37-57 | **Lab 2 · Anna** | 20 min | One SQL expression, one labeling decision, and the comparison. Both builds are short; reading the measurement is the work. |
+| 57-87 | **Lab 3 · Theo** | 30 min | Two edits plus a real deploy. The deploy has wall clock nobody can compress, so this lab gets the extra ten minutes rather than borrowing them. |
+| 87-112 | **Lab 4 · Jessica** | 25 min | A Cedar rule, four attempts, the keyed absence query, and the RLS proof. Four outcomes to establish, and establishing them separately is the point. |
+| 112-117 | Close | 5 min | What travels off the box. |
+
+Three minutes are unallocated. They are the room's only float, and a single
+slow deploy will use them.
+
+Two labs at 20, one at 30 and one at 25 is deliberate. Labs 1 and 2 are bounded
+edits with fast feedback. Lab 3 waits on a deploy nobody can speed up. Lab 4
+waits on policy evaluation, and a room that has not been given time for it will
+skip the proof and keep the answer.
+
+The Runtime moved into orientation for the same reason. A participant used to
+spend the first fifty minutes without seeing managed execution at all;
+`workshop-start` now sends one turn to the deployed Runtime and prints the build
+id that answered, which is the id Lab 3's own deploy has to change.
+
+If the room is running behind, cut Lab 4's Operator turn and the close, in that
+order. Never cut a Prove beat: a lab without its proof teaches that the demo
+worked.
+
+### What the room is made of
+
+Counts a speaker will be asked for, all read from the code rather than from an
+earlier version of this brief.
+
+| Thing | Count | Where it lives |
 |---|---|---|
-| Orientation and `workshop-start` | 10 min | One run id, the two surfaces, and the shape of the proof. No architecture tour. |
-| **Lab 1 · Marco** | 20 min | Two small edits in one file each, and the first receipt. Most of the cost is the first read of an unfamiliar tree. |
-| **Lab 2 · Anna** | 20 min | One SQL expression, one labeling query, and the comparison. Both builds are short; reading the measurement is the work. |
-| **Lab 3 · Theo** | 30 min | Two edits plus a real deploy. The deploy has wall clock nobody can compress, so this lab gets the extra ten minutes rather than borrowing them. |
-| **Lab 4 · Jessica** | 30 min | A Cedar rule, four principals, the keyed absence query, the provided trace contract, and the RLS proof. Four separate outcomes to establish, and establishing them separately is the point. |
-| Close | 10 min | What travels off the box. |
+| Labs, each with two bounded builds | 4 labs, 8 builds | `tests/test_workshop_marker_contract.py` is the inventory |
+| Workflows on the participant path | 2 | Storefront dispatcher; Operator Concierge graph (`services/operator_graph.py`) |
+| Specialist agents | 5 | `agents/`: search, recommendation, pricing, inventory, support |
+| Tools in the application process | 17 | `services/agent_tools.py` |
+| Tool schemas defined for the Gateway | 17 | `scripts/deploy/gateway_tool_schemas.py` |
+| Published on the Gateway at the start | 15 | two deferred by decision: `get_ticket_history`, `restock_inventory` |
+| Published after Lab 3a | 16 | Lab 3a publishes `get_ticket_history`; `restock_inventory` stays deferred |
+| Cedar policy statements | 6 → 7 → 8 | 6 at baseline, 7 once 3a publishes the read, 8 once 4a adds the identity rule |
+| AgentCore Memory strategies | 1 | `USER_PREFERENCE`, which is what makes extracted preferences real |
+| Runtime skills available to specialists | 5 | `skills/*/SKILL.md` |
+| Shopper identities | 4 | Cognito users marco, anna, theo, jessica |
+| Staff identity | 1 | Cognito user `operator`, in the `pellier-operators` group |
+| Products seeded | 60 curated + 940 archive | `scripts/seed_pellier_catalog.py`; the archive rows are distractors retrieval has to reject |
+| Warehouses | 3 | BK-01 Brooklyn, ATX-02 Austin, PDX-01 Portland |
 
-Two labs at 20 and two at 30 is deliberate. Labs 1 and 2 are bounded edits with
-fast feedback; Labs 3 and 4 each wait on something real, a deploy and a policy
-evaluation, and a room that has not been given time for that will skip the
-proof and keep the answer.
+Two counts people reliably get wrong. **Seventeen tools exist and fifteen are
+published**, because describing a tool and exposing it are separate decisions,
+and Lab 3a is where a participant makes one. **`issue_credit` is published and
+staff-only**: the operator desk executes an approved credit through the Gateway
+with the operator's own token, its only permit requires the staff scope claim,
+and no shopper-facing specialist may bind it.
 
-If the room is running behind, cut Lab 4's Operator investigation and the
-close, in that order. Never cut a Prove beat: a lab without its proof teaches
-that the demo worked.
+Two other Strands orchestration patterns ship in the repository, agents-as-tools
+and a `GraphBuilder` graph, as reference implementations. They are not on the
+participant path and should not be counted as workflows the room runs.
 
 ### Exact participant exercises
 
@@ -500,8 +544,9 @@ Operator investigation stops at the pending human checkpoint.
   Gateway, and PostgreSQL evidence.
 - **Explain.** Deploying is not the proof. A published tool contract, an
   executed revision, managed Memory, and a trace each prove a different part of
-  the path. The same split applies wherever a control plane and a data plane
-  are deployed separately.
+  the path. The trace contract runs here too, over the trace this lab produced.
+  The same split applies wherever a control plane and a data plane are deployed
+  separately.
 
 #### Lab 4 - Jessica governs a consequential action
 
@@ -518,10 +563,10 @@ Operator investigation stops at the pending human checkpoint.
   counts start as `NULL`, which the worksheet refuses. The control is the
   exercise: four zeros prove nothing until the same search finds the one write
   the allowed call made, and finds exactly one, which is the replay restated.
-- **Run.** Exercise the deny, allow, and replay cases, run your absence query
-  with their keys, run the provided OpenTelemetry trace contract against a real
-  managed trace, then complete Jessica's three-turn Operator investigation and
-  stop before approval.
+- **Run.** Exercise the four attempts, run your absence query with their keys,
+  then open Jessica's case in Operator, read the proposal, and stop before
+  approval. The OpenTelemetry trace contract runs at the end of Lab 3, beside
+  the trace it reads.
 - **Prove.** Establish four separate outcomes: the policy decision, the
   execution row (or its keyed absence), the durable write, and the database
   enforcement result. The receipt lines are `04.deny_did_not_execute` beside
@@ -537,10 +582,10 @@ a shopper turn honestly stops. Jessica's is where authorization, database
 enforcement, and durable evidence are proved, because there identity is the
 only variable that changes between the denied and allowed cases.
 
-The labs intentionally form one narrative: ground the answer, measure the
-retrieval decision against a labeling you chose, deploy that work onto the
-managed path, then govern a consequential action and prove its outcome from
-policy, execution, durable effect, database enforcement, and trace.
+The labs form one sequence: ground the answer, measure the retrieval decision
+against labels you chose, deploy that work onto the managed path, then govern a
+consequential action and prove its outcome from policy, execution, durable
+effect, and database enforcement.
 
 ## The memory distinction
 
@@ -605,7 +650,7 @@ precise than "the agent did it."
 
 ## Suggested flow for speakers
 
-1. **Narrative lead:** Open in the storefront. Establish the retail problem and
+1. **Story lead:** Open in the storefront. Establish the retail problem and
    choose the persona that will anchor the next lab.
 2. **Lab lead:** Move to the workshop workspace. Keep the build moment small.
    Participants can work manually or with the assisted pane, open hints in
@@ -678,11 +723,11 @@ constraint, and recorded the evidence."
 - Rehearse the exact four-lab path with the participant environment.
 - Verify that PostgreSQL access, AgentCore access, and the required credentials
   are ready.
-- Choose speaker ownership for Storefront narrative, labs, managed path, and
+- Choose speaker ownership for the Storefront story, labs, managed path, and
   governance.
-- Rehearse Jessica's required three-turn Operator close and verify it stops at
-  the human checkpoint after preparing, but without approving or executing, a
-  business action.
+- Rehearse Jessica's Operator close. It is one turn on the required path, and it
+  must stop at the human checkpoint after preparing, but without approving or
+  executing, a business action.
 - Run `receipt` on the rehearsal box after the four labs. It reports each
   boundary as PROVED, NOT YET, or UNCHECKED, and the third is the one to read
   carefully: UNCHECKED means the query could not run, not that the step
@@ -701,11 +746,11 @@ evidence over assertion, and governance that holds at more than one layer.
 
 ## Facilitator extensions: predict, inspect, vary
 
-Offer one optional variation per lab after the required proof. The workbench exposes the same prediction and evidence checklist next to each journey. Keep Anna’s canonical benchmark and relevance labels fixed when comparing retrieval metrics. Natural conversation prompts are a separate exercise.
+Offer one optional variation per lab after the required proof. The workbench exposes the same prediction and evidence checklist next to each journey. Keep Anna’s benchmark query and relevance labels fixed when comparing retrieval metrics. Natural conversation prompts are a separate exercise.
 
 - **Marco:** Compare “Hadley Linen Shirt” with “A lightweight linen button-up for humid afternoons.” Inspect lexical contribution, semantic candidates, and rank changes. Similar intent does not require identical ordering.
 - **Anna:** Keep the same recipient in mind, but make the budget under $70. Verify that the new ceiling replaces the previous one while recipient context persists. Inspect the exact boundary predicate; the workshop benchmark uses an inclusive price ceiling.
 - **Theo:** I prefer matte glazes and compact pieces for my breakfast tray. Verify the new preference in a Memory event using the guide’s independent process. Then ask “Which pairing suits my routine?” without repeating it. Distinguish prompt history, Aurora history, and managed Memory; actors are scoped to this conversation.
-- **Jessica:** Have we handled something similar before? Show the outcome and explain what must be checked again. Use prior-resolution recall as context. Previous receipts grant no current authority; an empty result is valid. Resolve conflicting support notes against the authoritative ledger.
+- **Jessica:** Have we handled something similar before? Show the outcome and explain what must be checked again. Use prior-resolution recall as context. Previous receipts grant no current authority; an empty result is valid. Resolve conflicting support notes against the order and return rows in Aurora.
 
-For an advanced extension, use the existing controlled identity proof to repeat the same protected request with an authorized and mismatched principal. Compare policy, tool execution, durable effect, and RLS independently. Do not use a selected persona as authentication. Ask participants to paraphrase a required prompt and check routing and constraints outside the scripted wording. For Jessica, reconcile a conflicting source note against the authoritative ledger before proposing any remedy.
+For an advanced extension, use the existing controlled identity proof to repeat the same protected request with an authorized and mismatched principal. Compare policy, tool execution, durable effect, and RLS independently. Do not use a selected persona as authentication. Ask participants to paraphrase a required prompt and check routing and constraints outside the scripted wording. For Jessica, reconcile a conflicting source note against the Aurora order and return rows before proposing any remedy.

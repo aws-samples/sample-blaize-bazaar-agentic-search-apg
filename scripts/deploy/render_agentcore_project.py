@@ -214,7 +214,9 @@ def baseline_policies(
 
         restock_inventory   an operator capability with no shopper permit.
                             Cedar is default-deny, so omission is the control.
-        issue_credit        deferred, not published: no action id exists.
+        issue_credit        published, staff only: its one permit requires the
+                            staff scope claim and no shopper-facing
+                            specialist may bind it.
 
     A token with neither claim is an authenticated stranger. It may read the
     catalogue and nothing else. This is a teaching baseline, not a claim about a

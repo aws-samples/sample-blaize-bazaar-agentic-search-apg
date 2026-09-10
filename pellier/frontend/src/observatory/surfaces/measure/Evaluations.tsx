@@ -926,7 +926,7 @@ const ProvenanceStrip: React.FC<{ envelope: EvaluationsEnvelope }> = ({
       }}
     >
       <Eyebrow
-        label={`Evidence provenance · active: ${envelope.provenance}`}
+        label={`Where this evidence came from · active: ${envelope.provenance}`}
         variant="muted"
       />
       <p
@@ -938,8 +938,8 @@ const ProvenanceStrip: React.FC<{ envelope: EvaluationsEnvelope }> = ({
           margin: '8px 0 10px',
         }}
       >
-        These states are not interchangeable. The scorecards below carry the{' '}
-        <strong>{envelope.provenance}</strong> provenance.
+        These states are not interchangeable. The scorecards below are{' '}
+        <strong>{envelope.provenance}</strong> data.
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
         {entries.map(([name, state]) => (
