@@ -213,7 +213,6 @@ def baseline_policies(
             "refusing to render a baseline permit that permits nothing; "
             "check WORKSHOP_DEFERRED_TOOLS"
         )
-
     action_list = ",\n".join(
         f'    AgentCore::Action::"{action}"' for action in sorted(allowed)
     )
