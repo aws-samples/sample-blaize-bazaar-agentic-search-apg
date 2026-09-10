@@ -178,12 +178,39 @@ def test_runtime_bundle_contains_only_managed_import_graph(tmp_path: Path) -> No
 
 
 def test_runtime_bridges_cli_injected_discovery_names() -> None:
+    """The entrypoint resolves the injected names by shape, not by spelling.
+
+    The CLI names the variables after the project's resources, so the default
+    ``pellier-gateway`` and a suffixed ``pellier-rc-gateway`` inject different
+    names; a hardcoded spelling left a suffixed Runtime without its Gateway.
+    """
+    from services.runtime_env import bridge_cli_injected_names
+
     source = ENTRYPOINT.read_text()
-    assert "AGENTCORE_GATEWAY_PELLIER_GATEWAY_URL" in source
-    assert "MEMORY_PELLIERMEMORY_ID" in source
-    assert 'os.environ["AGENTCORE_GATEWAY_URL"]' in source
-    assert 'os.environ["AGENTCORE_MEMORY_ID"]' in source
-    assert "MCP_GATEWAY_URL" in source  # compatibility fallback only
+    assert "bridge_cli_injected_names(os.environ)" in source
+    assert "AGENTCORE_GATEWAY_PELLIER_GATEWAY_URL" not in source
+
+    default = {
+        "AGENTCORE_GATEWAY_PELLIER_GATEWAY_URL": "https://d/mcp",
+        "MEMORY_PELLIERMEMORY_ID": "mem-d",
+    }
+    assert bridge_cli_injected_names(default) == {
+        "AGENTCORE_GATEWAY_URL": "https://d/mcp", "AGENTCORE_MEMORY_ID": "mem-d",
+    }
+    suffixed = {
+        "AGENTCORE_GATEWAY_PELLIER_RC_GATEWAY_URL": "https://rc/mcp",
+        "AGENTCORE_GATEWAY_PELLIER_RC_GATEWAY_AUTH_TYPE": "CUSTOM_JWT",
+        "MEMORY_PELLIERRCMEMORY_ID": "mem-rc",
+    }
+    assert bridge_cli_injected_names(suffixed) == {
+        "AGENTCORE_GATEWAY_URL": "https://rc/mcp", "AGENTCORE_MEMORY_ID": "mem-rc",
+    }
+    explicit = {**suffixed, "AGENTCORE_GATEWAY_URL": "https://x/mcp", "AGENTCORE_MEMORY_ID": "m"}
+    assert bridge_cli_injected_names(explicit) == {}
+    assert bridge_cli_injected_names({"MCP_GATEWAY_URL": "https://legacy/mcp"}) == {
+        "AGENTCORE_GATEWAY_URL": "https://legacy/mcp",
+    }
+    assert bridge_cli_injected_names({}) == {}
 
 
 def test_memory_gateway_targets_and_policy_engine_share_one_project(

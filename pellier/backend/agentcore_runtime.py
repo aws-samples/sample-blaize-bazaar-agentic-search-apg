@@ -37,17 +37,12 @@ from typing import Any, Dict, Optional
 logger = logging.getLogger(__name__)
 
 # Bridge CLI-injected resource discovery names BEFORE the first `config`
-# import. Settings are built once at import time.
-_gateway_url = (
-    os.environ.get("AGENTCORE_GATEWAY_PELLIER_GATEWAY_URL")
-    or os.environ.get("MCP_GATEWAY_URL")
-)
-if _gateway_url and not os.environ.get("AGENTCORE_GATEWAY_URL"):
-    os.environ["AGENTCORE_GATEWAY_URL"] = _gateway_url
-if os.environ.get("MEMORY_PELLIERMEMORY_ID") and not os.environ.get(
-    "AGENTCORE_MEMORY_ID"
-):
-    os.environ["AGENTCORE_MEMORY_ID"] = os.environ["MEMORY_PELLIERMEMORY_ID"]
+# import. Settings are built once at import time. The CLI names the variables
+# after the project's resources, so they are resolved by shape: a deployment
+# with suffixed names injects different variables than the default one.
+from services.runtime_env import bridge_cli_injected_names
+
+os.environ.update(bridge_cli_injected_names(os.environ))
 if os.environ.get("AGENT_MODEL_ID") and not os.environ.get("BEDROCK_ROUTER_MODEL"):
     os.environ["BEDROCK_ROUTER_MODEL"] = os.environ["AGENT_MODEL_ID"]
 
