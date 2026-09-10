@@ -158,10 +158,9 @@ async def _gateway_catalog(gateway_url: str, token: str) -> List[str]:
 
 
 def _scoped_read_tool(catalog: List[str]) -> Optional[str]:
-    for logical in ("get_customer_preferences", "preference_snapshot"):
-        for name in catalog:
-            if name.endswith(f"___{logical}"):
-                return name
+    for name in catalog:
+        if name.endswith("___get_customer_preferences"):
+            return name
     return None
 
 

@@ -83,7 +83,7 @@ def test_renderer_owns_baseline_cedar_and_enforce_attachment() -> None:
     Enumerating names here as well is what allowed the baseline to drift: two copies
     agreed with each other and both disagreed with the live environment.
     """
-    policies = renderer.baseline_policies()
+    policies = renderer.baseline_policies(gateway_arn="arn:aws:bedrock-agentcore:us-east-1:000000000000:gateway/test-gw")
 
     assert policies, "the renderer must emit a baseline"
     assert all(policy["enforcementMode"] == "ACTIVE" for policy in policies)
@@ -94,8 +94,9 @@ def test_renderer_owns_baseline_cedar_and_enforce_attachment() -> None:
     statements = "\n".join(policy["statement"] for policy in policies)
     assert renderer.INITIATE_RETURN_ACTION in statements
     assert 'context.input.reason == "damaged"' in statements
-    assert "resource is AgentCore::Gateway" in statements
-    assert "permit (principal, action, resource is AgentCore::Gateway)" not in statements
+    assert 'resource == AgentCore::Gateway::"arn:aws:bedrock-agentcore:us-east-1:000000000000:gateway/test-gw"' in statements
+    assert "resource is AgentCore::Gateway" not in statements
+    assert "permit (principal, action, resource" not in statements
 
     # The Lab 4 return-ownership condition is the participant's work. Sensitive
     # Gateway reads now carry their own self-service constraints, but no
@@ -106,27 +107,31 @@ def test_renderer_owns_baseline_cedar_and_enforce_attachment() -> None:
         for policy in policies
         if renderer.INITIATE_RETURN_ACTION in policy["statement"]
     )
-    assert 'principal.getTag("username")' not in return_statements
+    assert 'principal.getTag("custom:customer_id") == context.input' not in return_statements
     assert "CUST-MARCO" not in return_statements
-
     for name, action in (
-        (
-            "get_customer_preferences_identity_scope",
-            renderer.CUSTOMER_PREFERENCES_ACTION,
-        ),
-        ("get_audit_trail_identity_scope", renderer.AUDIT_TRAIL_ACTION),
+        ("get_customer_preferences_owner_only", renderer.CUSTOMER_PREFERENCES_ACTION),
+        ("get_audit_trail_owner_only", renderer.AUDIT_TRAIL_ACTION),
     ):
         policy = next(item for item in policies if item["name"] == name)
-        assert policy["statement"].lstrip().startswith("forbid")
+        assert policy["statement"].lstrip().startswith("permit (principal is AgentCore::OAuthUser")
         assert action in policy["statement"]
-        assert 'principal.hasTag("username")' in policy["statement"]
+        assert 'principal.hasTag("custom:customer_id")' in policy["statement"]
+        assert 'principal.getTag("custom:customer_id") == context.input.customer_id' in policy["statement"]
 
     source = RENDERER_PATH.read_text()
     assert '"mode": "ENFORCE"' in source
     assert '"policyEngines"' in source
 
 
-def test_participant_cedar_files_are_direct_cli_sources() -> None:
+def test_participant_cedar_files_need_only_the_gateway_arn_substituted() -> None:
+    """The starter and the solution are CLI sources once the Gateway ARN is filled in.
+
+    The live analyzer rejects `resource is AgentCore::Gateway` for a pinned action, and
+    a tracked file cannot carry an account's ARN, so both files name the Gateway with
+    the ``${PELLIER_GATEWAY_ARN}`` placeholder the lab guide substitutes before
+    ``agentcore add policy --source``. Nothing else is templated.
+    """
     expected_action = (
         'AgentCore::Action::"'
         "pellier-concierge-experience-target___initiate_return"
@@ -134,27 +139,23 @@ def test_participant_cedar_files_are_direct_cli_sources() -> None:
     )
     starter = STARTER_CEDAR.read_text()
     solution = SOLUTION_CEDAR.read_text()
-
     for statement in (starter, solution):
         assert expected_action in statement
-        assert "resource is AgentCore::Gateway" in statement
+        assert 'resource == AgentCore::Gateway::"${PELLIER_GATEWAY_ARN}"' in statement
+        assert "resource is AgentCore::Gateway" not in statement
         assert "ACTION_TOKEN" not in statement
-        assert "GATEWAY_ARN" not in statement
-
+        code = "\n".join(
+            line for line in statement.splitlines() if not line.strip().startswith("//")
+        )
+        assert code.count("${") == 1, "only the Gateway ARN is templated"
+        assert "principal is AgentCore::OAuthUser" in statement
     assert "false" in starter
     assert "unless" in starter
     assert "unless" in solution
-    assert 'principal.hasTag("username")' in solution
+    assert 'principal.hasTag("custom:customer_id")' in solution
     assert "context.input has customer_id" in solution
-    for username, customer_id in (
-        ("marco", "CUST-MARCO"),
-        ("anna", "CUST-ANNA"),
-        ("theo", "CUST-THEO"),
-        ("jessica", "CUST-JESSICA"),
-    ):
-        assert f'principal.getTag("username") == "{username}"' in solution
-        assert f'context.input.customer_id == "{customer_id}"' in solution
-    assert 'principal.getTag("username") == context.input.customer_id' not in solution
+    assert 'principal.getTag("custom:customer_id") == context.input.customer_id' in solution
+    assert 'getTag("username")' not in solution
 
 
 def test_advanced_dogwood_example_teaches_sequence_without_false_enforcement() -> None:
@@ -419,5 +420,6 @@ def test_the_alignment_planner_reports_restock_as_unpermitted_when_fresh() -> No
     assert fresh["freshRestockActionId"] == (
         "pellier-discovery-search-target___restock_inventory"
     )
-    assert fresh["freshBaselineActionCount"] == 13
+    # Eleven catalogue reads; the two customer-scoped reads carry owner-only permits.
+    assert fresh["freshBaselineActionCount"] == 11
     assert fresh["freshRestockActionId"] not in fresh["freshBaselineActions"]

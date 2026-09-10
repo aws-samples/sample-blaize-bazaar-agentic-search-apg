@@ -92,19 +92,23 @@ def test_publishing_ticket_history_also_installs_ownership(monkeypatch):
         *published[renderer.EXPERIENCE_TARGET], "get_ticket_history", "issue_credit", "future_tool",
     ]
     monkeypatch.setattr(renderer, "workshop_target_tools", lambda: published)
-    policies = {item["name"]: item["statement"] for item in renderer.baseline_policies()}
+    arn = "arn:aws:bedrock-agentcore:us-east-1:000000000000:gateway/test-gw"
+    policies = {
+        item["name"]: item["statement"]
+        for item in renderer.baseline_policies(gateway_arn=arn)
+    }
     permit = policies["baseline_permit_workshop_tools"]
     assert "___get_ticket_history" not in permit
-    owned_permit = policies["get_ticket_history_permit_owner"]
-    assert owned_permit.startswith("permit")
-    assert "when {" in owned_permit
-    assert 'context.input.customer_id == "CUST-THEO"' in owned_permit
     assert "___issue_credit" not in permit
     assert "___future_tool" not in permit
-    scope = policies["get_ticket_history_identity_scope"]
-    assert scope.startswith("forbid")
-    assert "___get_ticket_history" in scope
-    assert 'principal.hasTag("username")' in scope
-    assert "context.input has customer_id" in scope
-    assert 'principal.getTag("username") == "theo"' in scope
-    assert 'context.input.customer_id == "CUST-THEO"' in scope
+    # Published in the same deployment as its owner-only permit: the read is
+    # reachable only by the customer the token names, never by a caller who
+    # merely supplies a customer_id.
+    owned = policies["get_ticket_history_owner_only"]
+    assert owned.startswith("permit (principal is AgentCore::OAuthUser")
+    assert "___get_ticket_history" in owned
+    assert 'principal.hasTag("custom:customer_id")' in owned
+    assert "context.input has customer_id" in owned
+    assert 'principal.getTag("custom:customer_id") == context.input.customer_id' in owned
+    assert "CUST-THEO" not in owned and "username" not in owned
+    assert "get_ticket_history_identity_scope" not in policies

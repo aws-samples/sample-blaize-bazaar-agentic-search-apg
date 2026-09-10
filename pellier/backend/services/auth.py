@@ -63,13 +63,14 @@ async def get_current_user(request: Request) -> Optional[Dict[str, Any]]:
 
 # The Cognito group that authorizes the operator desk.
 #
-# THE ONLY PLACE operator authorization is enforced. There is no Gateway-side
-# defence-in-depth: the one genuinely operator-only capability (`issue_credit`) is
-# deferred, so a fresh Gateway has no action id a Cedar policy could name, and the one
-# published capability the desk uses (`initiate_return`) is shared with the shopper rail
-# and is Lab 4's subject. See `baseline_policies` in
-# `scripts/deploy/render_agentcore_project.py`, which records what to add when an
-# operator-only tool is published.
+# Operator authority is enforced twice, and the two layers read the same fact.
+# Here, `require_operator` checks group membership on every desk route. At the
+# Gateway, the pre-token trigger stamps `custom:staff_scope` on the access
+# token of a group member, and the `initiate_return_staff_scope` permit in
+# `scripts/deploy/render_agentcore_project.py` requires that claim, so the
+# desk's confirmed return is authorized as a person, with the operator's own
+# token, rather than as a service. `issue_credit` stays unpublished, so it has
+# no Gateway action id and this boundary is the only one it has.
 OPERATOR_GROUP = "pellier-operators"
 
 

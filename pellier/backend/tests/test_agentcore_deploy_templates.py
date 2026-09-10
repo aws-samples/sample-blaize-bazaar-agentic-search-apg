@@ -79,9 +79,13 @@ def _render(tmp_path: Path, *, include_policies: bool) -> tuple[Path, dict[str, 
         fast_model_id="global.anthropic.claude-haiku-4-5-20251001-v1:0",
         workshop_id="p12345678",
         include_policies=include_policies,
+        gateway_arn=TEST_GATEWAY_ARN if include_policies else "",
     )
     config = json.loads((root / "agentcore" / "agentcore.json").read_text())
     return root, config
+
+
+TEST_GATEWAY_ARN = "arn:aws:bedrock-agentcore:us-east-1:000000000000:gateway/test-gw"
 
 
 def test_agentcore_cli_is_pinned_once() -> None:
@@ -232,7 +236,7 @@ def test_second_phase_attaches_the_baseline_cedar_set(tmp_path: Path) -> None:
     """
     _, project = _render(tmp_path, include_policies=True)
     policies = project["policyEngines"][0]["policies"]
-    expected = renderer.baseline_policies()
+    expected = renderer.baseline_policies(gateway_arn=TEST_GATEWAY_ARN)
 
     assert [policy["name"] for policy in policies] == [p["name"] for p in expected]
     assert all(policy["enforcementMode"] == "ACTIVE" for policy in policies)
@@ -241,11 +245,14 @@ def test_second_phase_attaches_the_baseline_cedar_set(tmp_path: Path) -> None:
     )
     statements = "\n".join(policy["statement"] for policy in policies)
     assert renderer.INITIATE_RETURN_ACTION in statements
-    assert "resource is AgentCore::Gateway" in statements
+    # Tool-specific policies must pin the deployed Gateway by ARN; the service
+    # rejects `resource is AgentCore::Gateway` for a constrained action.
+    assert f'resource == AgentCore::Gateway::"{TEST_GATEWAY_ARN}"' in statements
+    assert "resource is AgentCore::Gateway" not in statements
     # A wildcard permit authorizes any action published later, including one added after
     # this project was reviewed. Default-deny is the whole reason the allow-list is
     # written out action by action.
-    assert "permit (principal, action, resource is AgentCore::Gateway)" not in statements
+    assert "permit (principal, action, resource" not in statements
     assert "permit (\n  principal,\n  action,\n" not in statements
 
 

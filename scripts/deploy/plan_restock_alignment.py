@@ -58,6 +58,7 @@ from gateway_tool_schemas import workshop_target_tools  # noqa: E402
 # The tool whose authorization diverges. Named once; both the live action id and the
 # fresh action id are derived from it, because the two vocabularies differ.
 RESTOCK_TOOL_CANONICAL = "restock_inventory"
+PLACEHOLDER_GATEWAY_ARN = "arn:aws:bedrock-agentcore:us-east-1:000000000000:gateway/fresh"
 
 ACTION_RE = re.compile(r'AgentCore::Action::"([^"]+)"')
 
@@ -76,7 +77,8 @@ def desired_fresh_action_ids() -> List[str]:
     """The action ids a FRESH stack's baseline permit names, from the renderer's source."""
     from render_agentcore_project import baseline_policies
 
-    for policy in baseline_policies():
+    # Only action ids are read here; any well-formed ARN renders the same set.
+    for policy in baseline_policies(gateway_arn=PLACEHOLDER_GATEWAY_ARN):
         if policy["name"] == "baseline_permit_workshop_tools":
             return sorted(set(ACTION_RE.findall(str(policy["statement"]))))
     raise SystemExit("the fresh renderer no longer emits baseline_permit_workshop_tools")

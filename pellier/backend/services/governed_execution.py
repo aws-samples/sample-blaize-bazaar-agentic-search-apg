@@ -818,6 +818,52 @@ def select_rail(access_token: Optional[str]) -> RailSelection:
     )
 
 
+def require_enforced_engine(
+    selection: RailSelection, engine_state: Optional["PolicyEngineState"]
+) -> RailSelection:
+    """Refuse the managed rail unless the Gateway attachment is verified ENFORCE.
+
+    A configured engine id proves an engine exists, not that the Gateway is
+    enforcing it. ``LOG_ONLY`` at the gateway scope means every verdict is an
+    observation and the write commits regardless; an unreadable engine means
+    the mode is unknown. Both fail closed for a governed write: the operator
+    asked for a governed action, and an action that ran with no enforced
+    verdict is the failure this format exists to prevent. The check is a
+    precondition, not a guarantee against a concurrent mode change; the tool
+    and database controls stay in place behind it.
+
+    Args:
+        selection: The rail chosen from configuration.
+        engine_state: The engine's declared state, or None when unreadable.
+
+    Returns:
+        The selection unchanged when it is not the managed rail, when the
+        format is not governed, or when the gateway is ENFORCE; otherwise a
+        refusal naming the observed mode.
+    """
+    if selection.rail != RAIL_GATEWAY:
+        return selection
+    from config import settings
+
+    governed = str(getattr(settings, "WORKSHOP_FORMAT", "") or "").lower() == "governed"
+    if not governed:
+        return selection
+    if engine_state is not None and engine_state.enforcement_is_on:
+        return selection
+    observed = (engine_state.gateway_mode if engine_state else "") or "unreadable"
+    missing = f"policy_engine_mode=ENFORCE (observed: {observed})"
+    return RailSelection(
+        rail=RAIL_REFUSED,
+        refusal_reason=(
+            "This deployment runs the governed format, where a write executes only "
+            "under an enforcing policy engine. The Gateway attachment is "
+            f"{observed}, so no enforced verdict was possible. Missing: {missing}. "
+            "Nothing was executed."
+        ),
+        missing=(missing,),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Policy-denial classification
 # ---------------------------------------------------------------------------
@@ -1463,7 +1509,7 @@ async def execute_confirmed_review(
     execution_turn_id = await claim_execution_turn(db, review_id)
     idempotency_key = execution_idempotency_key(review_id, action_hash)
 
-    selection = select_rail(access_token)
+    selection = require_enforced_engine(select_rail(access_token), engine_state)
     rail = selection.rail
 
     if rail == RAIL_REFUSED:

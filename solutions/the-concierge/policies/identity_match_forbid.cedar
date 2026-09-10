@@ -1,24 +1,19 @@
-// Required Lab 4 reference rule: the authenticated principal may only file a
-// return for itself. AgentCore Policy exposes JWT claims as principal tags, so
-// the Cognito access token's `username` claim is comparable against the tool
-// input. The `unless` shape is fail-closed: a missing claim, missing
-// customer_id, or mismatched identity is denied.
+// Required Lab 4 reference rule: a shopper may file a return only for the
+// customer their token says they are. Cognito stamps `custom:customer_id` on
+// the access token from the principal mapping, AgentCore Policy exposes that
+// claim as a principal tag, and the rule compares the tag with the tool input.
+// The `when` clause scopes the forbid to principals carrying a customer claim,
+// so staff are governed by their own permit. The `unless` shape is fail-closed
+// for shoppers: a missing customer_id or a mismatched customer is denied.
 forbid(
-  principal,
+  principal is AgentCore::OAuthUser,
   action == AgentCore::Action::"pellier-concierge-experience-target___initiate_return",
-  resource is AgentCore::Gateway
+  resource == AgentCore::Gateway::"${PELLIER_GATEWAY_ARN}"
 )
+when {
+  principal.hasTag("custom:customer_id")
+}
 unless {
-  principal.hasTag("username") &&
   context.input has customer_id &&
-  (
-    (principal.getTag("username") == "marco" &&
-      context.input.customer_id == "CUST-MARCO") ||
-    (principal.getTag("username") == "anna" &&
-      context.input.customer_id == "CUST-ANNA") ||
-    (principal.getTag("username") == "theo" &&
-      context.input.customer_id == "CUST-THEO") ||
-    (principal.getTag("username") == "jessica" &&
-      context.input.customer_id == "CUST-JESSICA")
-  )
+  principal.getTag("custom:customer_id") == context.input.customer_id
 };

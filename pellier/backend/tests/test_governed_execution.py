@@ -39,6 +39,11 @@ THEO_SUBJECT = "sub-theo-cognito"
 OPERATOR_SUBJECT = "sub-operator-cognito"
 
 
+# The gateway attachment every governed write now requires. Tests about denial
+# classification and telemetry pass this so the mode precondition is satisfied.
+ENFORCED = ge.PolicyEngineState(gateway_mode="ENFORCE", policies={}, matching_forbids=())
+
+
 def approved_review(**overrides: Any) -> Dict[str, Any]:
     row = {
         "review_id": 12,
@@ -1162,6 +1167,7 @@ async def test_a_gateway_denial_is_a_deny_and_is_persisted_as_a_governed_receipt
 
     outcome = await ge.execute_confirmed_review(
         FakeDb(), approved_review(), operator_sub=OPERATOR_SUBJECT, access_token="jwt",
+        engine_state=ENFORCED,
     )
     assert outcome.rail == ge.RAIL_GATEWAY
     assert outcome.policy == ge.POLICY_DENY
@@ -1194,28 +1200,63 @@ async def test_a_returned_call_under_enforce_is_an_allow_from_the_gateway_respon
 
 
 @pytest.mark.asyncio
-async def test_a_returned_call_under_log_only_with_a_text_match_is_inferred(
+async def test_a_log_only_gateway_refuses_the_write_before_the_call(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The former WOULD_DENY path. It can only infer now."""
+    """LOG_ONLY means every verdict is an observation and the write would commit.
+
+    The governed format requires an enforced verdict, so the desk refuses before
+    the Gateway is called: no tool ran, no observation was collected, and the
+    refusal receipt names the mode it observed.
+    """
     _governed(monkeypatch)
     _gateway_returns(monkeypatch, ge.POLICY_ALLOW)
-    FakeCollector.result = {"states": ["POLICY_INFERRED"], "ids": [9],
-                            "terminal": "POLICY_INFERRED"}
     log_only = ge.PolicyEngineState(
         gateway_mode="LOG_ONLY",
         policies={"process_return_damaged_only": ("forbid", "ACTIVE")},
         matching_forbids=("process_return_damaged_only",),
     )
-    outcome = await ge.execute_confirmed_review(
-        FakeDb(), approved_review(), operator_sub=OPERATOR_SUBJECT, access_token="jwt",
-        engine_state=log_only,
-    )
-    assert outcome.policy == ge.POLICY_INFERRED
-    assert outcome.policy != ge.POLICY_WOULD_DENY
-    assert outcome.aurora == ge.AURORA_PERMITTED
-    # A returned call under LOG_ONLY is not a decision, so no governed-receipt row.
-    assert FakeCollector.calls[0]["prior"] == []
+    with pytest.raises(ge.GovernedRailUnavailable) as raised:
+        await ge.execute_confirmed_review(
+            FakeDb(), approved_review(), operator_sub=OPERATOR_SUBJECT, access_token="jwt",
+            engine_state=log_only,
+        )
+    assert raised.value.missing == ("policy_engine_mode=ENFORCE (observed: LOG_ONLY)",)
+    assert raised.value.status_code == 409
+    assert FakeCollector.calls == []
+    assert FakeLogic.calls == []
+
+
+@pytest.mark.asyncio
+async def test_an_unreadable_engine_refuses_the_write(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unknown is not ENFORCE. The mode must be verified, not assumed."""
+    _governed(monkeypatch)
+    _gateway_returns(monkeypatch, ge.POLICY_ALLOW)
+    with pytest.raises(ge.GovernedRailUnavailable) as raised:
+        await ge.execute_confirmed_review(
+            FakeDb(), approved_review(), operator_sub=OPERATOR_SUBJECT, access_token="jwt",
+            engine_state=None,
+        )
+    assert raised.value.missing == ("policy_engine_mode=ENFORCE (observed: unreadable)",)
+    assert FakeCollector.calls == []
+
+
+def test_the_mode_precondition_applies_only_to_the_governed_managed_rail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from config import settings
+
+    gateway = ge.RailSelection(rail=ge.RAIL_GATEWAY)
+    monkeypatch.setattr(settings, "WORKSHOP_FORMAT", "governed", raising=False)
+    assert ge.require_enforced_engine(gateway, ENFORCED) is gateway
+    assert ge.require_enforced_engine(gateway, None).rail == ge.RAIL_REFUSED
+    refused = ge.RailSelection(rail=ge.RAIL_REFUSED, missing=("access_token",))
+    assert ge.require_enforced_engine(refused, None) is refused
+    assert ge.require_enforced_engine(ge.RailSelection(rail=ge.RAIL_IN_PROCESS), None).rail == ge.RAIL_IN_PROCESS
+    monkeypatch.setattr(settings, "WORKSHOP_FORMAT", "builders", raising=False)
+    assert ge.require_enforced_engine(gateway, None) is gateway
 
 
 @pytest.mark.asyncio
@@ -1249,6 +1290,7 @@ async def test_a_span_deny_on_a_call_that_returned_reads_as_would_deny(
 
     outcome = await ge.execute_confirmed_review(
         FakeDb(), approved_review(), operator_sub=OPERATOR_SUBJECT, access_token="jwt",
+        engine_state=ENFORCED,
     )
     assert outcome.policy == ge.POLICY_WOULD_DENY
     assert outcome.aurora == ge.AURORA_PERMITTED
@@ -1265,9 +1307,11 @@ async def test_telemetry_collection_failure_keeps_the_base_reading(
 
     outcome = await ge.execute_confirmed_review(
         FakeDb(), approved_review(), operator_sub=OPERATOR_SUBJECT, access_token="jwt",
+        engine_state=ENFORCED,
     )
-    # No engine state and no telemetry: nothing may be claimed.
-    assert outcome.policy == ge.POLICY_EVALUATION_INCOMPLETE
+    # An enforcing engine returned the call, so the base reading is ALLOW; the
+    # missing telemetry is recorded beside it rather than replacing it.
+    assert outcome.policy == ge.POLICY_ALLOW
     assert "could not be collected" in outcome.notes["policy_decisions"]
     assert "logs unreachable" in outcome.notes["policy_decisions"]
     assert outcome.aurora == ge.AURORA_PERMITTED
@@ -1284,6 +1328,7 @@ async def test_the_observation_window_brackets_the_gateway_call(
     before = datetime.now(timezone.utc)
     await ge.execute_confirmed_review(
         FakeDb(), approved_review(), operator_sub=OPERATOR_SUBJECT, access_token="jwt",
+        engine_state=ENFORCED,
     )
     after = datetime.now(timezone.utc)
     call = FakeCollector.calls[0]
@@ -1334,6 +1379,7 @@ async def test_observations_are_collected_before_the_receipt_is_written(
 
     await ge.execute_confirmed_review(
         FakeDb(), approved_review(), operator_sub=OPERATOR_SUBJECT, access_token="jwt",
+        engine_state=ENFORCED,
     )
     assert order == ["collect_for_turn", "record_receipt"], (
         "the rail (and so the observation) must resolve before the receipt insert"

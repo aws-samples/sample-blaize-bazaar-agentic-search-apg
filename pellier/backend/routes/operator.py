@@ -51,13 +51,14 @@ which the current three-policy baseline does not contain. Naming a capability th
 wrong layer is denying is how each layer ends up believing the other is enforcing.
 
 On the desk, ``issue_credit`` is reachable only behind ``require_operator``, which
-means membership in ``auth.OPERATOR_GROUP`` rather than merely a valid token. That
-API boundary is the ONLY operator authorization: there is no Gateway-side
-defence-in-depth for it, because the one genuinely operator-only capability is
-unpublished and the one published capability the desk uses (``initiate_return``)
-is shared with the shopper rail. See the `baseline_policies` docstring in
-`scripts/deploy/render_agentcore_project.py` for why, and what to add when an
-operator-only tool is published.
+means membership in ``auth.OPERATOR_GROUP`` rather than merely a valid token. For
+``initiate_return`` the Gateway enforces the same fact a second time: the
+operator's access token carries ``custom:staff_scope`` because the pre-token
+trigger saw the group membership, and the ``initiate_return_staff_scope`` permit
+requires that claim. The shopper permit requires a customer claim instead, and
+the Lab 4 forbid is scoped to customer-claim holders, so neither touches staff.
+See the `baseline_policies` docstring in
+`scripts/deploy/render_agentcore_project.py`.
 
 **Ownership is enforced in SQL, not here.** ``initiate_return`` joins
 ``orders`` against the customer and product before it writes, so an operator

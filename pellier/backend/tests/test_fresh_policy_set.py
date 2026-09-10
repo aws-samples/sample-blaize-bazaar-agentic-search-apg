@@ -43,11 +43,15 @@ EXPERIENCE = "pellier-concierge-experience-target"
 RETURN_ACTION = f"{EXPERIENCE}___initiate_return"
 RECOMMENDATION = "pellier-curation-recommendation-target"
 CUSTOMER_READ_POLICIES = {
-    "get_customer_preferences_identity_scope": (
+    "get_customer_preferences_owner_only": (
         f"{RECOMMENDATION}___get_customer_preferences"
     ),
-    "get_audit_trail_identity_scope": f"{RECOMMENDATION}___get_audit_trail",
+    "get_audit_trail_owner_only": f"{RECOMMENDATION}___get_audit_trail",
 }
+# A syntactically valid ARN; policies render only after the Gateway exists.
+GATEWAY_ARN = "arn:aws:bedrock-agentcore:us-east-1:000000000000:gateway/test-gw"
+CUSTOMER_CLAIM = "custom:customer_id"
+STAFF_CLAIM = "custom:staff_scope"
 
 # The exact 15 this workshop iteration publishes. Written out ONCE, here, so a change to
 # the derived contract has to be acknowledged in a test rather than absorbed silently.
@@ -82,7 +86,7 @@ RETIRED = {
 
 
 def _policies() -> List[dict]:
-    return baseline_policies()
+    return baseline_policies(gateway_arn=GATEWAY_ARN)
 
 
 def _by_name() -> Dict[str, dict]:
@@ -152,8 +156,8 @@ def test_the_fresh_policy_set_is_exactly_the_named_baseline_and_scoped_reads() -
     assert set(_by_name()) == {
         "baseline_permit_workshop_tools",
         *CUSTOMER_READ_POLICIES,
-        "initiate_return_damaged_only",
-        "initiate_return_deny_other_reasons",
+        "initiate_return_shopper_damaged",
+        "initiate_return_staff_scope",
     }
 
 
@@ -207,58 +211,39 @@ def test_every_conditional_policy_pins_one_action() -> None:
         )
 
 
-def test_no_baseline_policy_claims_operator_enforcement() -> None:
-    """Operator authorization is an API-only boundary, and must not be faked here.
+def test_staff_authority_is_a_scope_claim_never_a_group_name() -> None:
+    """Staff authority is positively verified, and it is not a Cognito group literal.
 
-    A policy gating `restock_inventory` on the operator Cognito group was added and then
-    removed, because it enforced nothing: `restock_inventory` is an Inventory Agent tool
-    with no operator route, and it has no matching permit, so an operator and a shopper are
-    both denied either way. It changed the recorded reason and no outcome, while risking
-    the whole provision on an unproven `getTag(...).contains(...)` under
-    FAIL_ON_ANY_FINDINGS.
-
-    This guard exists so that cannot come back as reassurance. Gateway-side operator
-    enforcement is only meaningful once a genuinely operator-only action is published;
-    until then, a policy mentioning the group is decorative at best and a deploy risk at
-    worst. When such a tool IS published, add a single-action policy for it, live-validate
-    it, and update this test to expect it by name rather than deleting the guard.
+    The pre-token trigger stamps `custom:staff_scope` from operator group membership,
+    so the policy reads a string claim the engine is proven to expose as a tag. A
+    policy reading `cognito:groups` directly would depend on an array-claim tag
+    representation nobody validated, and naming the group in Cedar would couple
+    the policy to pool administration.
     """
     from services.auth import OPERATOR_GROUP
 
+    staff = _norm(_by_name()["initiate_return_staff_scope"]["statement"])
+    assert staff.startswith("permit (principal is AgentCore::OAuthUser,")
+    assert f'principal.hasTag("{STAFF_CLAIM}")' in staff
+    assert f'principal.getTag("{STAFF_CLAIM}") == "returns"' in staff
+    assert "reason" not in staff, "a resolved dispute is not a damaged-goods return"
     for policy in _policies():
-        statement = policy["statement"]
-        assert OPERATOR_GROUP not in statement, (
-            f"{policy['name']} names the operator group. Which published, operator-only "
-            "action does it gate? If the answer is none, it enforces nothing."
-        )
-        assert "cognito:groups" not in statement, (
-            f"{policy['name']} reads cognito:groups, whose tag representation is not "
-            "validated against this engine. See the renderer docstring."
-        )
+        assert OPERATOR_GROUP not in policy["statement"], policy["name"]
+        assert "cognito:groups" not in policy["statement"], policy["name"]
 
 
-def test_the_operator_only_limitation_is_recorded_where_it_would_be_changed() -> None:
-    """A gap someone can act on, not one they have to rediscover.
-
-    Three places a reader would land: the renderer that would carry such a policy, the
-    dependency that is the actual boundary, and the route module that describes the
-    asymmetry with the shopper rail.
-    """
+def test_the_two_authority_boundaries_are_recorded_where_they_are_enforced() -> None:
+    """Operator authority is enforced twice, and each place says so."""
     renderer = pathlib.Path(
         os.path.abspath("../../scripts/deploy/render_agentcore_project.py")
     ).read_text(encoding="utf-8")
-    assert "WHY THERE IS NO OPERATOR-AUTHORIZATION POLICY HERE" in renderer
-    assert "WHEN AN OPERATOR-ONLY TOOL IS INTENTIONALLY PUBLISHED" in renderer
+    assert "initiate_return_staff_scope" in renderer
+    assert "authorizes a person, not a service" in renderer
 
     auth = pathlib.Path(
         os.path.abspath("../../pellier/backend/services/auth.py")
     ).read_text(encoding="utf-8")
-    assert "THE ONLY PLACE operator authorization is enforced" in auth
-
-    routes = pathlib.Path(
-        os.path.abspath("../../pellier/backend/routes/operator.py")
-    ).read_text(encoding="utf-8")
-    assert "there is no Gateway-side" in routes
+    assert "custom:staff_scope" in auth
 
 
 def test_issue_credit_is_absent_from_the_gateway_rather_than_forbidden() -> None:
@@ -293,16 +278,20 @@ def test_the_baseline_is_an_exact_allow_list_not_a_wildcard() -> None:
     assert 'action in AgentCore::Action::"pellier-' not in statement
 
 
-def test_the_baseline_permits_exactly_the_thirteen_safe_actions() -> None:
+def test_the_baseline_permits_exactly_the_eleven_catalogue_reads() -> None:
+    """Customer-scoped reads and writes never sit in the unconditional permit."""
     expected = {
         f"{target}___{tool}"
         for target, tools in EXPECTED_TARGETS.items()
         for tool in tools
-        if tool not in {"initiate_return", "restock_inventory"}
+        if tool not in {
+            "initiate_return", "restock_inventory",
+            "get_customer_preferences", "get_audit_trail",
+        }
     }
     actual = set(_actions(_by_name()["baseline_permit_workshop_tools"]["statement"]))
     assert actual == expected
-    assert len(actual) == 13
+    assert len(actual) == 11
 
 
 def test_the_baseline_is_unconditional() -> None:
@@ -311,40 +300,78 @@ def test_the_baseline_is_unconditional() -> None:
     assert "unless {" not in statement
 
 
-def test_the_return_pair_names_the_canonical_action_only() -> None:
-    for name in ("initiate_return_damaged_only", "initiate_return_deny_other_reasons"):
+def test_the_return_permits_name_the_canonical_action_only() -> None:
+    for name in ("initiate_return_shopper_damaged", "initiate_return_staff_scope"):
         actions = _actions(_by_name()[name]["statement"])
         assert actions == [RETURN_ACTION], name
         assert "process_return" not in _by_name()[name]["statement"], name
 
 
-def test_the_return_permit_is_damaged_only_and_the_forbid_is_its_complement() -> None:
-    permit = _norm(_by_name()["initiate_return_damaged_only"]["statement"])
-    forbid = _norm(_by_name()["initiate_return_deny_other_reasons"]["statement"])
-    assert permit.startswith("permit (")
+def test_the_shopper_return_permit_requires_a_customer_claim_and_damaged() -> None:
+    """A token with no customer claim cannot file a return, whatever the reason.
+
+    The ownership binding is deliberately absent here; that is Lab 4.
+    """
+    permit = _norm(_by_name()["initiate_return_shopper_damaged"]["statement"])
+    assert permit.startswith("permit (principal is AgentCore::OAuthUser,")
+    assert f'principal.hasTag("{CUSTOMER_CLAIM}")' in permit
     assert 'context.input has reason && context.input.reason == "damaged"' in permit
-    assert forbid.startswith("forbid (")
-    assert '!(context.input has reason) || context.input.reason != "damaged"' in forbid
 
 
-def test_sensitive_gateway_reads_are_fail_closed_to_the_verified_customer() -> None:
+def test_there_is_no_forbid_in_the_fresh_baseline() -> None:
+    """Forbid wins over permit, so a baseline forbid could silently block staff.
+
+    Every restriction is expressed as a condition on a permit; the only forbid in
+    the workshop is the one the participant writes in Lab 4, scoped by `when` to
+    principals carrying a customer claim.
+    """
+    for policy in _policies():
+        assert not _norm(policy["statement"]).startswith("forbid"), policy["name"]
+
+
+def test_sensitive_gateway_reads_are_permitted_only_to_the_claimed_customer() -> None:
     """Direct Gateway invocation must not turn a customer_id into authority."""
     for name, action in CUSTOMER_READ_POLICIES.items():
         statement = _norm(_by_name()[name]["statement"])
-        assert statement.startswith("forbid ("), name
+        assert statement.startswith("permit (principal is AgentCore::OAuthUser,"), name
         assert f'AgentCore::Action::"{action}"' in statement, name
-        assert 'principal.hasTag("username")' in statement, name
+        assert f'principal.hasTag("{CUSTOMER_CLAIM}")' in statement, name
         assert "context.input has customer_id" in statement, name
-        for username, customer_id in (
-            ("marco", "CUST-MARCO"),
-            ("anna", "CUST-ANNA"),
-            ("theo", "CUST-THEO"),
-            ("jessica", "CUST-JESSICA"),
-        ):
-            assert (
-                f'principal.getTag("username") == "{username}"' in statement
-            ), name
-            assert f'context.input.customer_id == "{customer_id}"' in statement, name
+        assert (
+            f'principal.getTag("{CUSTOMER_CLAIM}") == context.input.customer_id'
+            in statement
+        ), name
+        assert "username" not in statement, name
+        assert "CUST-" not in statement, name
+
+
+def test_every_policy_is_typed_and_pinned_to_the_gateway_arn() -> None:
+    """Untyped `hasTag` rules fail validation; `resource is` fails for pinned actions.
+
+    Both were rejected by the live analyzer on 2026-09-09: an IAM principal has no
+    tags, so an untyped conditional rule reads as denying every request, and a
+    tool-specific policy must constrain the resource to one Gateway ARN.
+    """
+    for policy in _policies():
+        statement = _norm(policy["statement"])
+        assert "principal is AgentCore::OAuthUser" in statement, policy["name"]
+        assert f'resource == AgentCore::Gateway::"{GATEWAY_ARN}"' in statement, policy["name"]
+        assert "resource is AgentCore::Gateway" not in statement, policy["name"]
+
+
+def test_policies_cannot_render_without_the_gateway_arn() -> None:
+    with pytest.raises(SystemExit, match="Gateway ARN"):
+        baseline_policies(gateway_arn="")
+
+
+def test_an_authenticated_stranger_may_only_read_the_catalogue() -> None:
+    """A token with neither claim matches exactly one permit."""
+    unconditional = [
+        policy["name"]
+        for policy in _policies()
+        if "hasTag(" not in policy["statement"]
+    ]
+    assert unconditional == ["baseline_permit_workshop_tools"]
 
 
 # ---------------------------------------------------------------------------
@@ -355,8 +382,8 @@ def test_sensitive_gateway_reads_are_fail_closed_to_the_verified_customer() -> N
 def test_no_fresh_policy_contains_the_lab_four_ownership_condition() -> None:
     """The load-bearing assertion of this file.
 
-    Binding `principal.getTag("username")` to `context.input.customer_id` is the Lab 4
-    exercise. A baseline that already contains it makes the exercise semantically false:
+    Binding the customer claim to `context.input.customer_id` on the return action is
+    the Lab 4 exercise. A baseline that already contains it makes the exercise semantically false:
     the cross-customer DENY the participant is meant to create already happens.
 
     The assertion is the BINDING, not the mere presence of a tag read. It used to be
@@ -370,8 +397,8 @@ def test_no_fresh_policy_contains_the_lab_four_ownership_condition() -> None:
         name = policy["name"]
         if RETURN_ACTION not in _actions(statement):
             continue
+        assert f'getTag("{CUSTOMER_CLAIM}")' not in statement, name
         assert 'getTag("username")' not in statement, name
-        assert 'hasTag("username")' not in statement, name
         assert "context.input.customer_id" not in statement, name
         assert "context.input has customer_id" not in statement, name
 
@@ -406,44 +433,105 @@ def test_the_renderer_documents_the_omission_as_deliberate() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _decide(action: str, reason: str | None) -> str:
+SHOPPER = {CUSTOMER_CLAIM: "CUST-MARCO"}
+STAFF = {STAFF_CLAIM: "returns"}
+STRANGER: Dict[str, str] = {}
+
+
+def _conditions_hold(body: str, claims: Dict[str, str], inp: Dict[str, str]) -> bool:
+    """Whether one `when`/`unless` body holds for this principal and input.
+
+    A deliberately small model of the conditions the baseline and the Lab 4 rule
+    actually use: the `false` literal, claim presence, claim-to-input equality, a
+    literal scope, input presence, and the reason. Anything a policy starts using
+    that this does not model must be added here, so a new condition cannot pass
+    by being ignored.
+    """
+    body = " ".join(body.split())
+    if not body:
+        return True
+    if body == "false":
+        return False
+    if f'principal.hasTag("{CUSTOMER_CLAIM}")' in body and CUSTOMER_CLAIM not in claims:
+        return False
+    if f'principal.hasTag("{STAFF_CLAIM}")' in body and STAFF_CLAIM not in claims:
+        return False
+    if "context.input has customer_id" in body and "customer_id" not in inp:
+        return False
+    if f'principal.getTag("{CUSTOMER_CLAIM}") == context.input.customer_id' in body:
+        if claims.get(CUSTOMER_CLAIM) != inp.get("customer_id"):
+            return False
+    scope = re.search(rf'principal\.getTag\("{STAFF_CLAIM}"\) == "([a-z_-]+)"', body)
+    if scope and claims.get(STAFF_CLAIM) != scope.group(1):
+        return False
+    if 'context.input.reason == "damaged"' in body and inp.get("reason") != "damaged":
+        return False
+    return True
+
+
+def _statement_applies(statement: str, claims: Dict[str, str], inp: Dict[str, str]) -> bool:
+    """A permit or forbid applies when its `when` holds and its `unless` does not."""
+    when = re.search(r"when\s*\{(.*?)\}", statement, re.DOTALL)
+    unless = re.search(r"unless\s*\{(.*?)\}", statement, re.DOTALL)
+    if not _conditions_hold(when.group(1) if when else "", claims, inp):
+        return False
+    if unless and _conditions_hold(unless.group(1), claims, inp):
+        return False
+    return True
+
+
+def _decide(
+    action: str,
+    inp: Dict[str, str] | None = None,
+    *,
+    claims: Dict[str, str] = SHOPPER,
+    extra: List[str] | None = None,
+) -> str:
     """Evaluate the generated statements. Cedar is default-deny and forbid wins."""
+    inp = inp or {}
     permits, forbids = [], []
-    for policy in _policies():
-        statement = policy["statement"]
-        actions = _actions(statement)
-        scoped_in_list = "action in [" in statement
-        matches = action in actions if (actions and not scoped_in_list) else action in actions
-        if not matches:
+    statements = [(p["name"], p["statement"]) for p in _policies()]
+    statements += [(f"extra-{i}", text) for i, text in enumerate(extra or [])]
+    for name, statement in statements:
+        if action not in _actions(statement):
             continue
-        if "reason" in statement:
-            damaged = reason == "damaged"
-            wants_damaged = 'reason == "damaged"' in statement
-            applies = damaged if wants_damaged else not damaged
-        else:
-            applies = True
-        if not applies:
+        if not _statement_applies(statement, claims, inp):
             continue
-        (forbids if statement.lstrip().startswith("forbid") else permits).append(policy["name"])
+        effect = " ".join(
+            line for line in statement.splitlines() if not line.strip().startswith("//")
+        ).lstrip()
+        (forbids if effect.startswith("forbid") else permits).append(name)
     if forbids:
         return "DENY"
     return "ALLOW" if permits else "DENY"
 
 
-@pytest.mark.parametrize(("action", "reason", "expected"), [
-    (RETURN_ACTION, "damaged", "ALLOW"),
-    (RETURN_ACTION, "not_as_described", "DENY"),
-    (RETURN_ACTION, "changed_mind", "DENY"),
-    (RETURN_ACTION, None, "DENY"),
-    ("pellier-discovery-search-target___restock_inventory", None, "DENY"),
-    ("pellier-discovery-search-target___check_inventory", None, "ALLOW"),
-    (f"{EXPERIENCE}___escalate_to_human", None, "ALLOW"),
-    (f"{EXPERIENCE}___issue_credit", None, "DENY"),
-    (f"{EXPERIENCE}___get_ticket_history", None, "DENY"),
-    (f"{EXPERIENCE}___some_future_tool", None, "DENY"),
+RETURN_DAMAGED = {"customer_id": "CUST-THEO", "reason": "damaged"}
+
+
+@pytest.mark.parametrize(("who", "action", "inp", "expected"), [
+    ("shopper", RETURN_ACTION, RETURN_DAMAGED, "ALLOW"),
+    ("shopper", RETURN_ACTION, {"customer_id": "CUST-THEO", "reason": "not_as_described"}, "DENY"),
+    ("shopper", RETURN_ACTION, {"customer_id": "CUST-THEO", "reason": "changed_mind"}, "DENY"),
+    ("shopper", RETURN_ACTION, {"customer_id": "CUST-THEO"}, "DENY"),
+    ("staff", RETURN_ACTION, {"customer_id": "CUST-THEO", "reason": "changed_mind"}, "ALLOW"),
+    ("staff", RETURN_ACTION, RETURN_DAMAGED, "ALLOW"),
+    ("stranger", RETURN_ACTION, RETURN_DAMAGED, "DENY"),
+    ("shopper", "pellier-discovery-search-target___restock_inventory", {}, "DENY"),
+    ("staff", "pellier-discovery-search-target___restock_inventory", {}, "DENY"),
+    ("stranger", "pellier-discovery-search-target___check_inventory", {}, "ALLOW"),
+    ("shopper", f"{EXPERIENCE}___escalate_to_human", {}, "ALLOW"),
+    ("shopper", f"{RECOMMENDATION}___get_customer_preferences", {"customer_id": "CUST-MARCO"}, "ALLOW"),
+    ("shopper", f"{RECOMMENDATION}___get_customer_preferences", {"customer_id": "CUST-THEO"}, "DENY"),
+    ("staff", f"{RECOMMENDATION}___get_customer_preferences", {"customer_id": "CUST-MARCO"}, "DENY"),
+    ("stranger", f"{RECOMMENDATION}___get_audit_trail", {"customer_id": "CUST-MARCO"}, "DENY"),
+    ("shopper", f"{EXPERIENCE}___issue_credit", {}, "DENY"),
+    ("shopper", f"{EXPERIENCE}___get_ticket_history", {"customer_id": "CUST-MARCO"}, "DENY"),
+    ("shopper", f"{EXPERIENCE}___some_future_tool", {}, "DENY"),
 ])
-def test_the_fresh_authorization_matrix(action: str, reason, expected: str) -> None:
-    assert _decide(action, reason) == expected
+def test_the_fresh_authorization_matrix(who: str, action: str, inp, expected: str) -> None:
+    claims = {"shopper": SHOPPER, "staff": STAFF, "stranger": STRANGER}[who]
+    assert _decide(action, inp, claims=claims) == expected
 
 
 def test_restock_inventory_has_zero_matching_permits() -> None:
@@ -479,44 +567,28 @@ SOLUTION = pathlib.Path(
     "../../solutions/the-concierge/policies/identity_match_forbid.cedar")
 
 
-def _ownership_holds(username: str, customer_id: str) -> bool:
-    """The solution rule's `unless` clause, read from the shipped Cedar.
-
-    Parsed from the file rather than reimplemented, so the test cannot pass against a
-    solution that no longer says this.
-    """
-    body = SOLUTION.read_text()
-    pairs = re.findall(
-        r'getTag\("username"\)\s*==\s*"([a-z]+)"\s*&&\s*'
-        r'context\.input\.customer_id\s*==\s*"([A-Z\-]+)"',
-        body,
-    )
-    assert pairs, "the solution no longer binds usernames to customer ids"
-    return (username, customer_id) in pairs
+def _solution_statement() -> str:
+    """The participant's completed rule, comments dropped, ARN placeholder filled in."""
+    lines = [
+        line for line in SOLUTION.read_text().splitlines()
+        if not line.strip().startswith("//")
+    ]
+    return "\n".join(lines).replace("${PELLIER_GATEWAY_ARN}", GATEWAY_ARN)
 
 
 def test_the_challenge_file_ships_unsolved() -> None:
-    """`unless { false }` denies everything, which is the honest starting state.
-
-    A challenge file containing the answer is the other half of the P1-01 defect.
-    """
+    """`unless { false }` denies every shopper return, the honest starting state."""
     body = CHALLENGE.read_text()
     assert re.search(r"unless\s*\{\s*false\s*\}", body)
-    assert 'getTag("username")' not in body
+    assert "getTag(" not in body
     assert "CUST-MARCO" not in body
 
 
 def test_the_solution_file_contains_the_ownership_binding() -> None:
     body = SOLUTION.read_text()
-    assert 'principal.hasTag("username")' in body
+    assert f'principal.hasTag("{CUSTOMER_CLAIM}")' in body
     assert "context.input has customer_id" in body
-    for username, customer in (
-        ("marco", "CUST-MARCO"),
-        ("anna", "CUST-ANNA"),
-        ("theo", "CUST-THEO"),
-        ("jessica", "CUST-JESSICA"),
-    ):
-        assert _ownership_holds(username, customer), f"{username}/{customer}"
+    assert f'principal.getTag("{CUSTOMER_CLAIM}") == context.input.customer_id' in body
 
 
 def test_before_the_solution_a_cross_customer_return_is_permitted() -> None:
@@ -524,24 +596,26 @@ def test_before_the_solution_a_cross_customer_return_is_permitted() -> None:
 
     This must ALLOW on the fresh baseline, or the participant has nothing to discover.
     """
-    assert _decide(RETURN_ACTION, "damaged") == "ALLOW"
+    assert _decide(RETURN_ACTION, RETURN_DAMAGED, claims=SHOPPER) == "ALLOW"
     for policy in _policies():
         if RETURN_ACTION not in _actions(policy["statement"]):
             continue
-        assert 'getTag("username")' not in policy["statement"]
+        assert f'getTag("{CUSTOMER_CLAIM}")' not in policy["statement"]
 
 
 def test_after_the_solution_the_cross_customer_return_is_denied() -> None:
     """Case G. The same call, with the participant's rule added.
 
-    The forbid's `unless` fails for marco/CUST-THEO, so the forbid applies and Cedar
-    denies — while the owner's own damaged return still passes.
+    The forbid's `unless` fails for Marco's token and Theo's customer id, so Cedar
+    denies, while the owner's own damaged return still passes and staff, who carry
+    no customer claim, are untouched by the forbid.
     """
-    assert _ownership_holds("marco", "CUST-JESSICA") is False
-    assert _ownership_holds("jessica", "CUST-JESSICA") is True
-    # And the baseline the solution lands on still permits the damaged case, so the
-    # DENY is attributable to the participant's rule and nothing else.
-    assert _decide(RETURN_ACTION, "damaged") == "ALLOW"
+    rule = [_solution_statement()]
+    assert _decide(RETURN_ACTION, RETURN_DAMAGED, claims=SHOPPER, extra=rule) == "DENY"
+    own = {"customer_id": "CUST-MARCO", "reason": "damaged"}
+    assert _decide(RETURN_ACTION, own, claims=SHOPPER, extra=rule) == "ALLOW"
+    assert _decide(RETURN_ACTION, RETURN_DAMAGED, claims=STAFF, extra=rule) == "ALLOW"
+    assert _decide(RETURN_ACTION, RETURN_DAMAGED, claims=STRANGER, extra=rule) == "DENY"
 
 
 def test_the_solution_names_the_canonical_action() -> None:

@@ -27,32 +27,41 @@ the full vocabulary to compute what it is deliberately not publishing.
 
 ## Baseline authorization on a fresh stack
 
-Five policies, not one per tool. `scripts/deploy/render_agentcore_project.py`
-is the source; this table is checked against it by
-`pellier/backend/tests/test_fresh_policy_set.py`.
+5 policies, all permits, no forbid. `scripts/deploy/render_agentcore_project.py` is
+the source; this table is checked against it by
+`pellier/backend/tests/test_fresh_policy_set.py`. Every statement types the
+principal as `AgentCore::OAuthUser` and pins `resource ==` to the deployed
+Gateway ARN, which is why policies render only in the second deploy phase.
 
 | policy | effect | shape |
 |---|---|---|
-| `baseline_permit_workshop_tools` | permit | `action in [...]` over 13 explicit action ids. No wildcard, so a tool published later is denied by default. |
-| `get_customer_preferences_identity_scope` | forbid | customer-scope guard on the preferences read: the authenticated principal may only read its own |
-| `get_audit_trail_identity_scope` | forbid | the same guard on the audit-trail read |
-| `initiate_return_damaged_only` | permit | conditional on `context.input.reason == "damaged"` |
-| `initiate_return_deny_other_reasons` | forbid | the complement |
+| `baseline_permit_workshop_tools` | permit | `action in [...]` over 11 catalogue reads that expose no customer data. No wildcard, so a tool published later is denied by default. |
+| `get_customer_preferences_owner_only` | permit | only when the token's `custom:customer_id` equals `context.input.customer_id` |
+| `get_audit_trail_owner_only` | permit | the same condition on the audit-trail read |
+| `initiate_return_shopper_damaged` | permit | a principal carrying `custom:customer_id`, with `context.input.reason == "damaged"`; no ownership binding |
+| `initiate_return_staff_scope` | permit | a principal whose `custom:staff_scope` is `returns`; no reason condition |
 
-The two `*_identity_scope` policies matter to how Lab 4 is described: the
+Identity reaches Cedar as a claim. The Cognito pre-token trigger
+(`scripts/deploy/cognito_customer_claim.py`) stamps `custom:customer_id` from
+`pellier.principal_customers`, the table Row-Level Security keys off, and
+`custom:staff_scope` from operator group membership. A token with neither claim
+may read the catalogue and nothing else.
+
+The two `*_owner_only` policies matter to how Lab 4 is described: the
 customer-read boundary on the managed rail is **Cedar**, evaluated before the
 tool runs. Aurora Row-Level Security is a second, independent refusal on the
 database session, and Lab 4 proves them separately for exactly that reason. A
 claim that "RLS scopes what the agent can read" is only half the sentence.
 
-`restock_inventory` is published **without** a baseline permit. Published and
-unauthorized is a real Cedar DENY rather than a missing tool, which is what the operator
-desk needs in order to show a refusal.
+`restock_inventory` has no permit. Cedar is default-deny, so omission is the
+control.
 
-The Lab 4 identity condition (`principal.getTag("username")` bound to
-`context.input.customer_id`) is **absent from the baseline on purpose**. A fresh stack
-that shipped it would make Lab 4 step 3's DENY fire before the participant wrote
-anything. `pellier/backend/tests/test_fresh_policy_set.py` owns this contract.
+The Lab 4 identity condition (`principal.getTag("custom:customer_id")` bound to
+`context.input.customer_id` on the return action) is **absent from the baseline
+on purpose**. A fresh stack that shipped it would make Lab 4 step 3's DENY fire
+before the participant wrote anything. The participant's forbid is scoped by
+`when { principal.hasTag("custom:customer_id") }`, so it never touches staff.
+`pellier/backend/tests/test_fresh_policy_set.py` owns this contract.
 
 ## Operator authorization
 

@@ -1,34 +1,34 @@
-"""The Cedar identity rule and the application must agree on who owns what.
+"""The Cedar identity rule, the token trigger, and the application must agree.
 
-Why a parity test rather than generated policy
-----------------------------------------------
-
-The username-to-customer pairs are written out longhand in the Lab 4 reference
-policy on purpose: a participant authors that condition and has to reason about
-it, so generating it from `USERNAME_TO_CUSTOMER_ID` at deploy time would turn the
-exercise into plumbing they never read.
-
-The cost of keeping it explicit is drift. If the application ever remaps a
-username and the policy does not follow, the failure is silent and it fails
-*open* in the direction that matters: Cedar would permit a principal to act on a
-customer the application no longer scopes to them. So the mapping stays readable
-and this test carries the duplication risk.
+Identity reaches Cedar as a claim, not as a list of shoppers
+------------------------------------------------------------
+The Lab 4 rule compares the access token's ``custom:customer_id`` tag with the
+tool's ``customer_id`` input. The claim is stamped by the Cognito pre-token
+trigger from ``pellier.principal_customers``, which is also what row-level
+security keys off, so the policy, the token, and the database share one
+mapping and no policy file has to enumerate shoppers. An earlier version wrote
+four username-to-customer pairs into the rule; that duplicated the application
+mapping and failed open whenever the two drifted.
 
 What is checked
 ---------------
-
-* every application mapping appears in the reference policy;
-* the reference policy invents no pair the application does not have;
-* the participant starter stays unsolved;
-* the claim compared is the access token's, not the ID token's.
+* the starter and the reference name the same claim the trigger issues;
+* the starter stays unsolved and gives nothing away;
+* the reference is fail-closed for shoppers and scoped away from staff;
+* both files target the same action and pin the Gateway by ARN placeholder;
+* neither file names a shopper, a customer id, or the ID-token claim;
+* the trigger's mapping source is the same table RLS uses.
 
 Nothing here writes to either file. A validator that repaired the starter would
 delete the exercise.
 """
+
 from __future__ import annotations
 
+import importlib.util
 import pathlib
 import re
+import sys
 
 import pytest
 
@@ -36,118 +36,96 @@ from services.turn_identity import USERNAME_TO_CUSTOMER_ID
 
 _REPO = pathlib.Path(__file__).resolve().parents[3]
 STARTER = _REPO / "policies" / "workshop_identity_match_forbid.cedar"
+TEMPLATE = _REPO / "workshop" / "starters" / "workshop_identity_match_forbid.cedar"
 REFERENCE = _REPO / "solutions" / "the-concierge" / "policies" / "identity_match_forbid.cedar"
-
-# `principal.getTag("username") == "marco" && context.input.customer_id == "CUST-MARCO"`
-_PAIR = re.compile(
-    r'getTag\(\s*"username"\s*\)\s*==\s*"(?P<user>[^"]+)"'
-    r'.*?customer_id\s*==\s*"(?P<customer>[^"]+)"',
-    re.DOTALL,
-)
+TRIGGER = _REPO / "scripts" / "deploy" / "cognito_customer_claim.py"
+DEPLOYER = _REPO / "scripts" / "deploy" / "deploy_customer_claim_trigger.py"
+ACTION = re.compile(r'action\s*==\s*AgentCore::Action::"([^"]+)"')
+RESOURCE = 'resource == AgentCore::Gateway::"${PELLIER_GATEWAY_ARN}"'
 
 
-def _reference_pairs() -> dict[str, str]:
-    return {m.group("user"): m.group("customer") for m in _PAIR.finditer(REFERENCE.read_text())}
+def _trigger_claim_name() -> str:
+    spec = importlib.util.spec_from_file_location("cognito_customer_claim", TRIGGER)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["cognito_customer_claim"] = module
+    spec.loader.exec_module(module)
+    return module.CLAIM_NAME
 
 
-def test_both_policy_files_exist():
-    assert STARTER.is_file(), f"missing participant starter: {STARTER}"
-    assert REFERENCE.is_file(), f"missing reference solution: {REFERENCE}"
+def test_all_three_policy_files_exist() -> None:
+    for path in (STARTER, TEMPLATE, REFERENCE):
+        assert path.is_file(), f"missing: {path}"
 
 
-def test_every_application_mapping_appears_in_the_reference_policy():
-    """A mapping the application enforces but Cedar omits fails open."""
-    pairs = _reference_pairs()
-    missing = {
-        user: customer
-        for user, customer in USERNAME_TO_CUSTOMER_ID.items()
-        if pairs.get(user) != customer
-    }
-    assert not missing, (
-        "the reference Cedar policy does not bind "
-        f"{missing}. Add the pair to "
-        f"{REFERENCE.relative_to(_REPO)} so the policy and "
-        "services/turn_identity.py agree."
-    )
+def test_the_working_copy_starts_as_the_starter() -> None:
+    assert STARTER.read_bytes() == TEMPLATE.read_bytes()
 
 
-def test_the_reference_policy_invents_no_unknown_pair():
-    """A pair Cedar permits but the application does not know is a hole."""
-    pairs = _reference_pairs()
-    unknown = {
-        user: customer
-        for user, customer in pairs.items()
-        if USERNAME_TO_CUSTOMER_ID.get(user) != customer
-    }
-    assert not unknown, (
-        f"the reference Cedar policy binds {unknown}, which "
-        "services/turn_identity.py does not map. Remove it or add the mapping."
-    )
+def test_both_files_compare_the_claim_the_trigger_issues() -> None:
+    claim = _trigger_claim_name()
+    for path in (STARTER, REFERENCE):
+        text = path.read_text()
+        assert f'principal.hasTag("{claim}")' in text, path.name
+    assert f'principal.getTag("{claim}") == context.input.customer_id' in REFERENCE.read_text()
 
 
-def test_the_mapping_is_exactly_the_same_size():
-    """Catches an extra principal added to only one side."""
-    assert len(_reference_pairs()) == len(USERNAME_TO_CUSTOMER_ID)
-
-
-def test_the_participant_starter_is_still_unsolved():
-    """The `unless` block is the Lab 4 build. Shipping it solved removes the lab."""
+def test_the_participant_starter_is_still_unsolved() -> None:
     starter = STARTER.read_text()
-    assert "unless {" in starter
     assert re.search(r"unless\s*\{\s*false\s*\}", starter), (
         "the participant starter must ship with `unless { false }`; it currently "
         "contains something else, so either the exercise was solved in place or "
         "the fail-closed shape was lost."
     )
-    for user in USERNAME_TO_CUSTOMER_ID:
-        assert f'"{user}"' not in starter, (
-            f"the starter names {user!r}, which gives away the answer."
-        )
+    assert "getTag(" not in starter, "the starter must not carry the comparison"
 
 
-def test_the_starter_and_the_reference_target_the_same_action():
-    """A reference that guards a different action would never be reachable."""
-    action = re.compile(r'action\s*==\s*AgentCore::Action::"([^"]+)"')
-    starter_action = action.search(STARTER.read_text())
-    reference_action = action.search(REFERENCE.read_text())
-    assert starter_action and reference_action
-    assert starter_action.group(1) == reference_action.group(1)
+def test_neither_file_names_a_shopper_or_a_customer() -> None:
+    for path in (STARTER, REFERENCE):
+        text = path.read_text()
+        for username, customer_id in USERNAME_TO_CUSTOMER_ID.items():
+            assert f'"{username}"' not in text, f"{path.name} names {username!r}"
+            assert customer_id not in text, f"{path.name} names {customer_id!r}"
+        assert 'getTag("username")' not in text, path.name
 
 
-def test_the_reference_is_fail_closed_on_a_missing_claim():
-    """A missing tag must deny, not skip the comparison."""
+def test_the_reference_is_fail_closed_for_shoppers_and_scoped_away_from_staff() -> None:
     reference = REFERENCE.read_text()
-    assert 'hasTag("username")' in reference, (
-        "without an explicit hasTag guard a token carrying no username claim "
-        "would fall through the comparison instead of being denied."
-    )
+    assert re.search(
+        r'when\s*\{\s*principal\.hasTag\("custom:customer_id"\)\s*\}', reference
+    ), "the forbid must apply only to principals carrying a customer claim"
     assert "context.input has customer_id" in reference, (
         "a request with no customer_id must be denied rather than compared "
         "against an absent field."
     )
+    assert "custom:staff_scope" not in reference, "staff authority is a permit, not a carve-out"
 
 
-def test_the_claim_is_the_access_token_username_not_the_id_token_claim():
-    """`cognito:username` is on the ID token; the Gateway validates the access token.
-
-    Box-verified 2026-06-12. Comparing the wrong claim name yields a tag that is
-    never present, which under a fail-closed rule denies everyone and reads like
-    a broken policy engine.
-    """
+def test_both_files_target_the_same_action_and_pin_the_gateway() -> None:
+    starter_action = ACTION.search(STARTER.read_text())
+    reference_action = ACTION.search(REFERENCE.read_text())
+    assert starter_action and reference_action
+    assert starter_action.group(1) == reference_action.group(1)
     for path in (STARTER, REFERENCE):
         text = path.read_text()
-        assert "cognito:username" not in text, (
-            f"{path.name} references the ID token claim; the access token the "
-            "Gateway validates carries `username`."
-        )
+        assert "principal is AgentCore::OAuthUser" in text, path.name
+        assert RESOURCE in text, path.name
+        assert "resource is AgentCore::Gateway" not in text, path.name
 
 
-@pytest.mark.parametrize("path", [STARTER, REFERENCE], ids=["starter", "reference"])
-def test_both_policies_forbid_rather_than_permit(path: pathlib.Path):
-    """`forbid ... unless` keeps the default deny; a permit rule would widen access."""
-    text = path.read_text()
-    assert text.lstrip().count("permit(") == 0, (
-        f"{path.name} uses permit; the identity rule must be a forbid so an "
-        "unmatched principal stays denied."
-    )
-    assert "forbid(" in text
+def test_the_claim_is_on_the_access_token_not_the_id_token() -> None:
+    """`cognito:username` is on the ID token; the Gateway validates the access token."""
+    for path in (STARTER, REFERENCE):
+        assert "cognito:username" not in path.read_text(), path.name
+
+
+def test_the_trigger_maps_subjects_from_the_row_level_security_table() -> None:
+    deployer = DEPLOYER.read_text()
+    assert "FROM pellier.principal_customers" in deployer
+    trigger = TRIGGER.read_text()
+    assert "clientMetadata" not in trigger.split("def handler", 1)[1]
+
+
+@pytest.mark.parametrize("path", [STARTER, REFERENCE])
+def test_no_file_carries_an_account_specific_arn(path: pathlib.Path) -> None:
+    assert not re.search(r"arn:aws:bedrock-agentcore:[a-z0-9-]+:\d{12}:", path.read_text()), path.name

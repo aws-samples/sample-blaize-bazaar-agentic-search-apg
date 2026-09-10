@@ -501,7 +501,10 @@ def test_lab4_starter_targets_the_generated_action() -> None:
     """A `forbid` on the wrong action id is inert, and an inert rule looks like an ALLOW."""
     text = _read(LAB4_STARTER)
     assert LAB4_ACTION in text, f"{LAB4_STARTER} must forbid {LAB4_ACTION}"
-    assert "resource is AgentCore::Gateway" in text
+    # The live analyzer rejects `resource is AgentCore::Gateway` for a pinned action;
+    # the guide substitutes the deployed ARN before the policy is added.
+    assert 'resource == AgentCore::Gateway::"${PELLIER_GATEWAY_ARN}"' in text
+    assert "resource is AgentCore::Gateway" not in text
     assert text.lstrip().startswith("//") or "forbid(" in text
 
 
@@ -509,11 +512,14 @@ def test_lab4_reference_rule_binds_every_identity_pair() -> None:
     """The fallback must be complete, or the participant who takes it still fails step 4."""
     text = _read(LAB4_REFERENCE)
     assert LAB4_ACTION in text
-    assert 'principal.hasTag("username")' in text
+    # Scoped to principals carrying a customer claim, so staff are never caught by it.
+    assert re.search(r'when\s*\{\s*principal\.hasTag\("custom:customer_id"\)\s*\}', text)
     assert "context.input has customer_id" in text
+    assert 'principal.getTag("custom:customer_id") == context.input.customer_id' in text
+    # The rule binds a claim, never a list of shoppers.
     for username, customer_id in LAB4_IDENTITY_PAIRS:
-        assert f'getTag("username") == "{username}"' in text, f"{LAB4_REFERENCE} lost {username}"
-        assert f'context.input.customer_id == "{customer_id}"' in text
+        assert f'"{username}"' not in text, f"{LAB4_REFERENCE} names {username}"
+        assert customer_id not in text, f"{LAB4_REFERENCE} names {customer_id}"
 
 
 def test_lab4_reference_rule_is_the_starter_plus_the_condition() -> None:
@@ -524,8 +530,10 @@ def test_lab4_reference_rule_is_the_starter_plus_the_condition() -> None:
     """
     starter = _read(LAB4_STARTER)
     reference = _read(LAB4_REFERENCE)
-    for fragment in ("forbid(", "principal,", f'action == AgentCore::Action::"{LAB4_ACTION}"',
-                     "resource is AgentCore::Gateway", "unless {"):
+    for fragment in ("forbid(", "principal is AgentCore::OAuthUser,",
+                     f'action == AgentCore::Action::"{LAB4_ACTION}"',
+                     'resource == AgentCore::Gateway::"${PELLIER_GATEWAY_ARN}"',
+                     'when {\n  principal.hasTag("custom:customer_id")\n}', "unless {"):
         assert fragment in starter, f"{LAB4_STARTER} lost {fragment!r}"
         assert fragment in reference, f"{LAB4_REFERENCE} lost {fragment!r}"
 

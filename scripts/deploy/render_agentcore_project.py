@@ -91,126 +91,116 @@ def _render_runtime_source(root: Path, backend_dir: Path) -> tuple[Path, str]:
     return runtime_dir, compute_fingerprint(runtime_dir)
 
 
-def _customer_scope_forbid_statement(action: str) -> str:
-    """Return the fail-closed ownership condition for a sensitive read."""
+CUSTOMER_CLAIM = "custom:customer_id"
+STAFF_CLAIM = "custom:staff_scope"
+STAFF_RETURNS_SCOPE = "returns"
+OAUTH_PRINCIPAL = "principal is AgentCore::OAuthUser"
+
+
+def _gateway_resource(gateway_arn: str) -> str:
+    """The resource clause every tool-specific policy must carry.
+
+    The service rejects ``resource is AgentCore::Gateway`` once the action is
+    constrained ("constrain the resource to a specific AgentCore::Gateway
+    resource when creating tool-specific policies", live 2026-09-09), and the
+    CLI passes statements through verbatim. So the ARN is a render-time input,
+    which is why policies render only after the Gateway exists.
+    """
+    if not gateway_arn or not gateway_arn.startswith("arn:"):
+        raise SystemExit(
+            "refusing to render Cedar policies without the deployed Gateway ARN; "
+            "render policies after the first deploy, with --gateway-arn"
+        )
+    return f'resource == AgentCore::Gateway::"{gateway_arn}"'
+
+
+def _customer_scoped_permit_statement(action: str, gateway_arn: str) -> str:
+    """Permit a customer-scoped read only for the customer the token names.
+
+    The principal is typed: an untyped ``hasTag`` rule fails validation because
+    an IAM principal carries no tags, so the analyzer reports it as denying
+    every request. ``custom:customer_id`` is stamped by the Cognito pre-token
+    trigger from the principal mapping, never from anything a shopper can
+    write, and Cedar sees it as a principal tag (live-proved 2026-09-09).
+    """
     return (
-        f'forbid (principal, action == AgentCore::Action::"{action}", '
-        "resource is AgentCore::Gateway)\n"
-        "unless {\n"
-        '  principal.hasTag("username") &&\n'
+        f"permit ({OAUTH_PRINCIPAL}, action == AgentCore::Action::\"{action}\", "
+        f"{_gateway_resource(gateway_arn)})\n"
+        "when {\n"
+        f'  principal.hasTag("{CUSTOMER_CLAIM}") &&\n'
         "  context.input has customer_id &&\n"
-        "  (\n"
-        '    (principal.getTag("username") == "marco" &&\n'
-        '      context.input.customer_id == "CUST-MARCO") ||\n'
-        '    (principal.getTag("username") == "anna" &&\n'
-        '      context.input.customer_id == "CUST-ANNA") ||\n'
-        '    (principal.getTag("username") == "theo" &&\n'
-        '      context.input.customer_id == "CUST-THEO") ||\n'
-        '    (principal.getTag("username") == "jessica" &&\n'
-        '      context.input.customer_id == "CUST-JESSICA")\n'
-        "  )\n"
+        f'  principal.getTag("{CUSTOMER_CLAIM}") == context.input.customer_id\n'
         "};"
     )
 
 
-def baseline_policies(action_token: str = INITIATE_RETURN_ACTION) -> list[dict[str, Any]]:
+def baseline_policies(
+    action_token: str = INITIATE_RETURN_ACTION,
+    *,
+    gateway_arn: str,
+) -> list[dict[str, Any]]:
     """The fail-closed Cedar baseline a fresh workshop provision installs.
 
-    FIVE POLICIES, and each one exists for a reason the migration proved the hard way.
+    Every policy is a permit with a typed principal, pinned to one Gateway ARN,
+    and every permit that touches customer data requires an identity claim
+    the pre-token trigger stamped from a server-controlled mapping. There is
+    no forbid in the baseline: Cedar is default-deny, forbid wins over permit,
+    and a forbid scoped too widely would silently block the staff permit as
+    well. The one forbid in the workshop is the Lab 4 rule a participant
+    writes, and it is scoped by ``when`` to principals carrying a customer
+    claim so it never touches staff.
 
-    1. `baseline_permit_workshop_tools` — an EXACT allow-list of action ids, never
-       `permit(principal, action, resource == gw)`. A wildcard hands every future
-       published tool a matching permit the moment it appears, which is exactly what made
-       the `initiate_return` publication window unsafe. With an explicit list,
-       publication and authorization stay separate decisions.
+    THE PERMITS
 
-    2. `initiate_return_damaged_only` — a dedicated permit conditioned on
-       `reason == damaged`.
+    1. ``baseline_permit_workshop_tools`` — an EXACT allow-list of the
+       catalogue reads that expose no customer data. Never a wildcard: a
+       wildcard hands every future published tool a permit the moment it
+       appears. Any authenticated ``AgentCore::OAuthUser`` may call these.
 
-    3. `initiate_return_deny_other_reasons` — the matching forbid.
+    2. ``get_customer_preferences_owner_only`` and
+       ``get_audit_trail_owner_only`` — the two customer-scoped reads, each
+       permitted only when ``custom:customer_id`` equals the requested
+       ``customer_id``. The Lambda receives no verified principal, so this is
+       the only place the caller's identity meets the caller-controlled input
+       before the target runs.
 
-    4. `get_customer_preferences_identity_scope` and
-       `get_audit_trail_identity_scope` — fail-closed self-service constraints
-       for the two Gateway reads that expose customer-specific facts or
-       receipts. The Lambda receives no verified principal, so these
-       action-specific Cedar forbids must constrain the broad read permit before
-       the target receives caller-controlled `customer_id`.
+    3. ``initiate_return_shopper_damaged`` — a shopper (any principal with a
+       customer claim) may file a return whose stated reason is ``damaged``.
+       The ownership condition binding the claim to
+       ``context.input.customer_id`` is absent on purpose. That is Lab 4: a
+       participant observes
+       that Marco's token can file Theo's return, writes the forbid, and
+       proves the DENY is theirs. ``tests/test_fresh_policy_set.py`` fails if
+       the ownership binding reappears here.
 
-    WHAT THIS BASELINE DELIBERATELY OMITS
-    -------------------------------------
+    4. ``initiate_return_staff_scope`` — staff (principals whose
+       ``custom:staff_scope`` is ``returns``) may execute a return the
+       operator desk confirmed. The desk calls the Gateway with the
+       operator's own token, so this permit authorizes a person, not a service.
+       It carries no reason condition: a resolved dispute is not a
+       damaged-goods return.
 
-    The actor/customer OWNERSHIP condition — binding `principal.getTag("username")` to
-    `context.input.customer_id` — is **absent on purpose**. It is the Lab 4 challenge: a
-    participant observes that Marco's token can act on Theo's return, writes the rule,
-    and proves the behaviour changed because of their Policy work.
+    5. When Lab 3 publishes ``get_ticket_history``, an owner-only permit for it
+       lands in the same deployment as its publication.
 
-    An earlier version of this renderer installed `initiate_return_owned_damaged` and
-    `initiate_return_deny_unowned_or_unsupported`, both carrying that ownership
-    condition. On a freshly provisioned stack the
-    participant's exercise would already be solved: step 3's DENY would fire before they
-    wrote anything, and the lab would teach that Cedar does something it was already
-    doing. The read-only constraints stay because exposing another shopper's
-    preferences or evidence is not a workshop exercise. This teaching baseline
-    is not a claim about a complete recommended production posture — the Lab 4
-    solution still adds the return ownership dimension.
+    EXCLUDED
 
-    Nothing downstream may re-add the return challenge condition.
-    `tests/test_fresh_policy_set.py` evaluates the generated Cedar and fails if
-    it reappears on `initiate_return`.
+        restock_inventory   an operator capability with no shopper permit.
+                            Cedar is default-deny, so omission is the control.
+        issue_credit        deferred, not published: no action id exists.
 
-    EXCLUDED FROM THE ALLOW-LIST
-    ----------------------------
-
-        initiate_return     governed by its own permit/forbid pair above
-        restock_inventory   mutates warehouse stock. Published as part of the workshop
-                            tool contract, and DEFAULT DENY: no matching permit. Cedar is
-                            default-deny, so omission is the control. A redundant
-                            permit-plus-forbid pair would only add a second thing to keep
-                            in sync.
-
-    Deferred tools are not published at all, so they need no forbid: `issue_credit` and
-    `get_ticket_history` have no action id on a fresh Gateway.
-
-    WHY THERE IS NO OPERATOR-AUTHORIZATION POLICY HERE
-    --------------------------------------------------
-
-    Operator authorization is enforced at the API boundary only
-    (`services/auth.py::require_operator`, on every `/api/operator` route). There is no
-    Gateway-side defence-in-depth for it, and that is a structural limit rather than an
-    omission. The desk invokes exactly two capabilities:
-
-      `initiate_return`  published and permitted, but SHARED with the shopper rail. It is
-                         Lab 4's whole subject, so it cannot carry an operator-only
-                         condition without destroying the exercise.
-      `issue_credit`     the only genuinely operator-only capability, and deferred, so a
-                         fresh Gateway has no action id for it. A policy naming it is
-                         rejected as `unrecognized action`.
-
-    A previous version of this function gated `restock_inventory` on a Cognito group and
-    called that operator enforcement. It was not. `restock_inventory` is an Inventory
-    Agent tool with no operator route, and it already has no matching permit, so both an
-    operator and a shopper are denied either way. The policy changed the recorded reason
-    and no outcome, while risking the entire provision: an unproven
-    `getTag(...).contains(...)` under FAIL_ON_ANY_FINDINGS fails `agentcore deploy`, and
-    a failed deploy means no Gateway, no Runtime and no Memory.
-
-    WHEN AN OPERATOR-ONLY TOOL IS INTENTIONALLY PUBLISHED, add a separate
-    single-action policy for it, using the group name from
-    `services/auth.py::OPERATOR_GROUP`, and live-validate it before release.
-    `tests/test_fresh_policy_set.py` fails if a baseline policy claims operator
-    enforcement without one, so this cannot be re-added decoratively.
+    A token with neither claim is an authenticated stranger. It may read the
+    catalogue and nothing else. This is a teaching baseline, not a claim about a
+    complete production posture: the Lab 4 solution adds the return ownership
+    dimension, and a production deployment would keep it.
     """
-    gateway_type = "resource is AgentCore::Gateway"
-
-    # Publication is not authorization. Intersect the catalogue with reviewed
-    # actions so redeploying a newly published tool cannot silently permit it.
+    gateway = _gateway_resource(gateway_arn)
     published = workshop_target_tools()
     reviewed_tools = {
         "search_products", "search_products_hybrid", "browse_category",
         "check_inventory", "get_low_stock", "get_price_analysis",
-        "compare_products", "get_customer_preferences", "get_audit_trail",
-        "get_trending_products", "get_return_policy", "get_related_products",
-        "escalate_to_human",
+        "compare_products", "get_trending_products", "get_return_policy",
+        "get_related_products", "escalate_to_human",
     }
     allowed: list[str] = [
         f"{target}___{tool}"
@@ -231,46 +221,42 @@ def baseline_policies(action_token: str = INITIATE_RETURN_ACTION) -> list[dict[s
         {
             "name": "baseline_permit_workshop_tools",
             "description": (
-                f"Permit exactly the {len(allowed)} safe workshop actions. "
-                "No wildcard, so a newly published tool is denied by default."
+                f"Permit exactly the {len(allowed)} catalogue reads that expose no "
+                "customer data. No wildcard, so a newly published tool is denied by default."
             ),
             "statement": (
-                "permit (\n"
-                "  principal,\n"
-                "  action in [\n"
-                f"{action_list}\n"
-                "  ],\n"
-                f"  {gateway_type}\n"
-                ");"
+                f"permit (\n  {OAUTH_PRINCIPAL},\n  action in [\n{action_list}\n  ],\n  {gateway}\n);"
             ),
             "validationMode": "FAIL_ON_ANY_FINDINGS",
             "enforcementMode": "ACTIVE",
         },
-        {
-            "name": "get_customer_preferences_identity_scope",
+    ]
+    for tool in ("get_customer_preferences", "get_audit_trail", "get_ticket_history"):
+        target = next(
+            (name for name, tools in published.items() if tool in tools), None
+        )
+        if target is None:
+            continue
+        policies.append({
+            "name": f"{tool}_owner_only",
             "description": (
-                "Forbid preference reads unless the JWT username owns the requested customer"
+                f"Permit {tool} only when the token's customer claim names the requested customer"
             ),
-            "statement": _customer_scope_forbid_statement(CUSTOMER_PREFERENCES_ACTION),
+            "statement": _customer_scoped_permit_statement(f"{target}___{tool}", gateway_arn),
             "validationMode": "FAIL_ON_ANY_FINDINGS",
             "enforcementMode": "ACTIVE",
-        },
+        })
+    policies.extend([
         {
-            "name": "get_audit_trail_identity_scope",
+            "name": "initiate_return_shopper_damaged",
             "description": (
-                "Forbid audit reads unless the JWT username owns the requested customer"
+                "Permit a shopper with a customer claim to file a return whose reason is damaged"
             ),
-            "statement": _customer_scope_forbid_statement(AUDIT_TRAIL_ACTION),
-            "validationMode": "FAIL_ON_ANY_FINDINGS",
-            "enforcementMode": "ACTIVE",
-        },
-        {
-            "name": "initiate_return_damaged_only",
-            "description": "Permit returns only when the stated reason is damaged",
             "statement": (
-                f"permit (principal, action == AgentCore::Action::\"{action_token}\", "
-                f"{gateway_type})\n"
+                f"permit ({OAUTH_PRINCIPAL}, action == AgentCore::Action::\"{action_token}\", "
+                f"{gateway})\n"
                 "when {\n"
+                f'  principal.hasTag("{CUSTOMER_CLAIM}") &&\n'
                 '  context.input has reason && context.input.reason == "damaged"\n'
                 "};"
             ),
@@ -278,42 +264,22 @@ def baseline_policies(action_token: str = INITIATE_RETURN_ACTION) -> list[dict[s
             "enforcementMode": "ACTIVE",
         },
         {
-            "name": "initiate_return_deny_other_reasons",
+            "name": "initiate_return_staff_scope",
             "description": (
-                "Forbid returns with a missing reason or any reason other than damaged"
+                "Permit staff holding the returns scope to execute a confirmed return"
             ),
             "statement": (
-                f"forbid (principal, action == AgentCore::Action::\"{action_token}\", "
-                f"{gateway_type})\n"
+                f"permit ({OAUTH_PRINCIPAL}, action == AgentCore::Action::\"{action_token}\", "
+                f"{gateway})\n"
                 "when {\n"
-                '  !(context.input has reason) || context.input.reason != "damaged"\n'
+                f'  principal.hasTag("{STAFF_CLAIM}") &&\n'
+                f'  principal.getTag("{STAFF_CLAIM}") == "{STAFF_RETURNS_SCOPE}"\n'
                 "};"
             ),
             "validationMode": "FAIL_ON_ANY_FINDINGS",
             "enforcementMode": "ACTIVE",
         },
-    ]
-    # Lab 3 publishes this sensitive read. Install ownership enforcement in
-    # the same deployment that grants its permit, including direct MCP calls
-    # which never pass through the Runtime's argument binding.
-    if "get_ticket_history" in published.get(EXPERIENCE_TARGET, []):
-        scope = _customer_scope_forbid_statement(
-            f"{EXPERIENCE_TARGET}___get_ticket_history"
-        )
-        policies.append({
-            "name": "get_ticket_history_permit_owner",
-            "description": "Permit ticket history only for its verified owner",
-            "statement": scope.replace("forbid (", "permit (", 1).replace("unless {", "when {", 1),
-            "validationMode": "FAIL_ON_ANY_FINDINGS",
-            "enforcementMode": "ACTIVE",
-        })
-        policies.append({
-            "name": "get_ticket_history_identity_scope",
-            "description": "Forbid ticket reads unless the JWT username owns the requested customer",
-            "statement": scope,
-            "validationMode": "FAIL_ON_ANY_FINDINGS",
-            "enforcementMode": "ACTIVE",
-        })
+    ])
     return policies
 
 
@@ -332,6 +298,7 @@ def render_project(
     sonnet_model_id: str | None = None,
     fast_model_id: str | None = None,
     action_token: str = INITIATE_RETURN_ACTION,
+    gateway_arn: str = "",
 ) -> Path:
     """Write agentcore.json, aws-targets.json, and four tool-schema files."""
     root = project_root(repo)
@@ -479,7 +446,11 @@ def render_project(
                 "name": POLICY_ENGINE_NAME,
                 "description": "Cedar authorization for Pellier Gateway tools",
                 "tags": tags,
-                "policies": baseline_policies(action_token) if include_policies else [],
+                "policies": (
+                    baseline_policies(action_token, gateway_arn=gateway_arn)
+                    if include_policies
+                    else []
+                ),
             }
         ],
     }
@@ -524,6 +495,7 @@ def main() -> int:
         sonnet_model_id=args.sonnet_model_id,
         fast_model_id=args.fast_model_id,
         action_token=args.action_token,
+        gateway_arn=args.gateway_arn,
     )
     print(root)
     return 0

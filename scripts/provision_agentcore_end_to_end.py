@@ -728,13 +728,16 @@ def _deploy_cli_project(
     _agentcore(root, "deploy", "--yes", "--json", env=env)
 
     state = _read_deployed_state(root)
-    _require_gateway_state(state, GATEWAY_NAME)
+    gateway_state = _require_gateway_state(state, GATEWAY_NAME)
     _require_state_resource(state, "policyEngines", POLICY_ENGINE_NAME)
 
+    # Tool-specific Cedar policies must name the Gateway by ARN, which exists
+    # only after the first deploy; that is the reason for the second render.
     render_project(
         **common,
         include_policies=True,
         action_token=INITIATE_RETURN_ACTION,
+        gateway_arn=str(gateway_state["gatewayArn"]),
     )
     _agentcore(root, "validate", env=env)
     _agentcore(root, "deploy", "--yes", "--json", env=env)
