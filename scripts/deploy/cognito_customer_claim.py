@@ -18,6 +18,11 @@ What this deliberately never does:
   that customer owns an order, may return it, or may act at all is decided by
   Cedar, the tool, and Aurora, in that order.
 
+Staff carry a different claim, ``custom:staff_scope``, issued only to members of
+the operator group and naming a scope rather than a customer. A token with
+neither claim is an authenticated stranger: Cedar's permits require one or the
+other, so it can call nothing that reads or changes customer data.
+
 V2_0 runs on sign-in and on token refresh, so a refreshed access token carries
 the same claim. The user pool must be on the Essentials or Plus feature plan
 for access-token customization; ``deploy_customer_claim_trigger.py`` checks.
@@ -35,8 +40,12 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 CLAIM_NAME = "custom:customer_id"
+STAFF_CLAIM_NAME = "custom:staff_scope"
+STAFF_GROUP_ENV = "STAFF_GROUP"
+STAFF_SCOPE_ENV = "STAFF_SCOPE"
 MAP_ENV = "CUSTOMER_CLAIM_MAP"
 _CUSTOMER_ID = re.compile(r"^CUST-[A-Z0-9-]{1,40}$")
+_STAFF_SCOPE = re.compile(r"^[a-z][a-z0-9_-]{0,40}$")
 
 
 def _mapping() -> Dict[str, str]:
@@ -55,26 +64,47 @@ def _mapping() -> Dict[str, str]:
     }
 
 
+def _staff_scope(request: Dict[str, Any]) -> str:
+    """The staff claim, from group membership an administrator assigned.
+
+    ``groupsToOverride`` is the list of groups Cognito found the user in. The
+    claim value is a fixed scope name from deployment configuration, so a
+    staff token says *what kind* of authority it carries, never a customer.
+    """
+    group = os.environ.get(STAFF_GROUP_ENV, "").strip()
+    scope = os.environ.get(STAFF_SCOPE_ENV, "").strip()
+    if not group or not scope or not _STAFF_SCOPE.fullmatch(scope):
+        return ""
+    groups = (request.get("groupConfiguration") or {}).get("groupsToOverride") or []
+    return scope if group in groups else ""
+
+
 def handler(event: Dict[str, Any], _context: Any) -> Dict[str, Any]:
     request = event.get("request") or {}
     attributes = request.get("userAttributes") or {}
     sub = str(attributes.get("sub") or "").strip()
-    customer_id = _mapping().get(sub, "")
-    response = event.setdefault("response", {})
-    if not sub or not customer_id:
-        logger.info("no customer claim for trigger=%s", event.get("triggerSource"))
-        return event
-    if not _CUSTOMER_ID.fullmatch(customer_id):
+    claims: Dict[str, str] = {}
+
+    customer_id = _mapping().get(sub, "") if sub else ""
+    if customer_id and _CUSTOMER_ID.fullmatch(customer_id):
+        claims[CLAIM_NAME] = customer_id
+    elif customer_id:
         logger.error("refusing malformed customer id for subject %s", sub[:8])
+
+    staff_scope = _staff_scope(request)
+    if staff_scope:
+        claims[STAFF_CLAIM_NAME] = staff_scope
+
+    response = event.setdefault("response", {})
+    if not claims:
+        logger.info("no claims for trigger=%s", event.get("triggerSource"))
         return event
     response["claimsAndScopeOverrideDetails"] = {
-        "accessTokenGeneration": {
-            "claimsToAddOrOverride": {CLAIM_NAME: customer_id},
-        },
+        "accessTokenGeneration": {"claimsToAddOrOverride": claims},
     }
     logger.info(
-        "customer claim issued trigger=%s customer=%s",
+        "claims issued trigger=%s claims=%s",
         event.get("triggerSource"),
-        customer_id,
+        sorted(claims),
     )
     return event

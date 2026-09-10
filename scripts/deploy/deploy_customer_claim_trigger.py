@@ -6,7 +6,8 @@ Idempotent. Creates or updates:
 1. an execution role with basic Lambda logging only;
 2. the ``cognito_customer_claim`` function, whose ``CUSTOMER_CLAIM_MAP`` is
    rendered from ``pellier.principal_customers`` over the RDS Data API, so
-   the token claim and the row-level-security mapping come from one table;
+   the token claim and the row-level-security mapping come from one table,
+   and whose staff claim is keyed to the operator Cognito group;
 3. the invoke permission for this pool; and
 4. the pool's ``PreTokenGenerationConfig`` at ``LambdaVersion=V2_0``.
 
@@ -132,7 +133,13 @@ def _wait_for_function(lam: Any) -> None:
 
 
 def ensure_function(lam: Any, role_arn: str, mapping: Dict[str, str]) -> str:
-    env = {"Variables": {"CUSTOMER_CLAIM_MAP": json.dumps(mapping, sort_keys=True)}}
+    env = {
+        "Variables": {
+            "CUSTOMER_CLAIM_MAP": json.dumps(mapping, sort_keys=True),
+            "STAFF_GROUP": os.environ.get("PELLIER_OPERATOR_GROUP", "pellier-operators"),
+            "STAFF_SCOPE": os.environ.get("PELLIER_STAFF_SCOPE", "returns"),
+        }
+    }
     code = _package()
     try:
         lam.get_function(FunctionName=FUNCTION_NAME)

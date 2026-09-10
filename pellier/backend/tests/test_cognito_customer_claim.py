@@ -95,6 +95,48 @@ def test_handler_never_reads_client_metadata_or_user_attributes_for_the_value() 
     assert "custom:customer_id" not in body.replace("CLAIM_NAME", "")
 
 
+def _staff_event(sub: str, groups: list[str]) -> Dict[str, Any]:
+    event = _event(sub)
+    event["request"]["groupConfiguration"] = {"groupsToOverride": groups}
+    return event
+
+
+def test_operator_group_member_gets_the_staff_scope_and_no_customer(
+    trigger, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(trigger.STAFF_GROUP_ENV, "pellier-operators")
+    monkeypatch.setenv(trigger.STAFF_SCOPE_ENV, "returns")
+
+    out = trigger.handler(_staff_event("sub-operator", ["pellier-operators"]), None)
+
+    claims = out["response"]["claimsAndScopeOverrideDetails"]["accessTokenGeneration"]["claimsToAddOrOverride"]
+    assert claims == {"custom:staff_scope": "returns"}
+
+
+def test_shopper_outside_the_group_gets_no_staff_scope(trigger, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(trigger.STAFF_GROUP_ENV, "pellier-operators")
+    monkeypatch.setenv(trigger.STAFF_SCOPE_ENV, "returns")
+
+    out = trigger.handler(_staff_event("sub-marco", ["shoppers"]), None)
+
+    claims = out["response"]["claimsAndScopeOverrideDetails"]["accessTokenGeneration"]["claimsToAddOrOverride"]
+    assert claims == {"custom:customer_id": "CUST-MARCO"}
+
+
+def test_staff_scope_needs_both_group_and_scope_configured(trigger, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(trigger.STAFF_GROUP_ENV, raising=False)
+    monkeypatch.setenv(trigger.STAFF_SCOPE_ENV, "returns")
+    assert "claimsAndScopeOverrideDetails" not in trigger.handler(
+        _staff_event("sub-operator", ["pellier-operators"]), None
+    )["response"]
+
+    monkeypatch.setenv(trigger.STAFF_GROUP_ENV, "pellier-operators")
+    monkeypatch.setenv(trigger.STAFF_SCOPE_ENV, "Not A Scope!")
+    assert "claimsAndScopeOverrideDetails" not in trigger.handler(
+        _staff_event("sub-operator", ["pellier-operators"]), None
+    )["response"]
+
+
 class _FakeIdp:
     """Enough of cognito-idp to check what UpdateUserPool is told."""
 
