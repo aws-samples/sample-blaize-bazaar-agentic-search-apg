@@ -387,10 +387,13 @@ HOUSE_PRODUCTS: List[Product] = [
             "Waffle-weave cotton bath robe in muted sage. Long-staple cotton that softens with every wash, with patch pockets and a self-tie belt.",
             CAT_HOME, ["cotton", "bath", "home", "loungewear", "wellness", "gift"],
             4.6, 289, "house-sage-bath-robe.png", persona="house"),
+    # Sold out on purpose. Lab 1's check_inventory contract separates a piece the
+    # catalog does not carry (not_found) from a piece it carries with no units
+    # (success, total_units 0); this is the second case, live, for every box.
     Product(43, "Quilted Silk Vest", "Pellier Atelier", "Ivory", 193.13,
             "Collarless vest in diamond-quilted washed silk. Light as a layer, warm as a coat lining, cut to wear open over knitwear.",
             CAT_APPAREL, ["silk", "quilted", "layering", "minimal", "neutral", "everyday"],
-            4.5, 98, "house-quilted-silk-vest.png", persona="house"),
+            4.5, 98, "house-quilted-silk-vest.png", quantity=0, persona="house"),
     Product(44, "Travertine Wall Clock", "Pellier Maison", "Stone", 248.00,
             "Wall clock cut from a single piece of honed travertine. No numerals, two slim brushed-brass hands, a silent movement.",
             CAT_HOME, ["stone", "travertine", "minimal", "home", "sculptural", "timeless"],

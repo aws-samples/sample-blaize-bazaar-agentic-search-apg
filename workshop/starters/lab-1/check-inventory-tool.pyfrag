@@ -14,6 +14,12 @@
     #      indent=2).
     #   5. Catch exceptions and return a JSON error envelope.
     #
+    # The contract this body must keep, because the agent reports whatever it
+    # returns: a piece the catalog does not carry comes back as status
+    # "not_found" from BusinessLogic; a piece it carries with no units comes back
+    # as status "success" with total_units 0 and the warehouse rows. Unknown and
+    # zero are different answers to different questions. Never turn one into the
+    # other, and never invent a count for a piece that was not found.
     # Verify (live, the real check):
     #   Click Marco's Turn 3 pill in Pellier — Inventory Agent answers
     #   with the Brooklyn (BK-01) warehouse breakdown — and watch the
