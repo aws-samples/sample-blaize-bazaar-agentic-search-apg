@@ -711,10 +711,10 @@ def main(argv: Optional[List[str]] = None) -> int:
          "receipt_key": replay_receipt_key, "idempotency_key": allow_key},
     ]
 
-    print(f"\nSection 1 · Cedar · run {run_id}")
-    print(f"  every case sends initiate_return(customer_id={TARGET_CUSTOMER!r}, "
-          f"product_id={product_id}, reason='damaged')")
-    print("  only the authenticated principal changes\n")
+    print(f"\nSection 1: Cedar and return outcomes, run {run_id}")
+    print(f"  target customer: {TARGET_CUSTOMER}; returnable product: {product_id}")
+    print("  deny and allow compare principals; refusal uses an unowned product")
+    print("  replay repeats the allowed write key\n")
 
     all_passed = True
     first_execution_count: Optional[int] = None
@@ -759,7 +759,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     aurora: List[Dict[str, Any]] = []
     if not args.skip_aurora:
-        print(f"\nSection 2 · Aurora · role {RUNTIME_ROLE} · Cedar not consulted")
+        print(f"\nSection 2: Aurora, role {RUNTIME_ROLE}, Cedar not consulted")
         print("  unauthorized read -> empty result; unauthorized write -> error and rollback\n")
         aurora = _aurora_section(cfg, _receipt_subs(cfg, cases), product_id)
         for probe in aurora:

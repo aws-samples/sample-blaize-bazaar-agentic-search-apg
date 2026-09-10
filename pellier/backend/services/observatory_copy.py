@@ -8,6 +8,7 @@ without weakening shopper copy rules.
 
 OBSERVATORY_COPY = {
     "SESSION_EVIDENCE_UNAVAILABLE": "Aurora session evidence is unavailable.",
+    "MEMORY_SHOWCASE_UNAVAILABLE": "Memory showcase is temporarily unavailable.",
     "IDENTITY_BOUNDARY_UNAVAILABLE": (
         "Aurora governed receipts are unavailable, so the identity boundary "
         "cannot be reconstructed."

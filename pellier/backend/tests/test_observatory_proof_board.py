@@ -398,19 +398,19 @@ def test_proof_board_returns_cards_receipt_and_fallbacks(monkeypatch) -> None:
     assert "act" not in cards["marco-floor-check"]
     assert cards["audit-ledger"]["status"] == "complete"
     assert cards["managed-rail"]["status"] == "complete"
-    assert cards["marco-floor-check"]["lab"] == "Lab 1 · Build — Build a PostgreSQL-Grounded Agent"
+    assert cards["marco-floor-check"]["lab"] == "Lab 1: Build a PostgreSQL-Grounded Agent"
     assert cards["retrieval-comparison"]["lab"] == (
-        "Lab 2 · Build & Measure — Build and Measure PostgreSQL Hybrid Retrieval"
+        "Lab 2: Build and Measure PostgreSQL Hybrid Retrieval"
     )
     assert cards["retrieval-comparison"]["status"] == "available"
     assert cards["managed-rail"]["lab"] == (
-        "Lab 3 · Deploy & Operate — Deploy and Operate the Managed Agent Path"
+        "Lab 3: Deploy and Operate Agents with Amazon Bedrock AgentCore"
     )
     assert cards["managed-rail"]["required"] is True
     assert cards["audit-ledger"]["lab"] == (
-        "Lab 3 · Deploy & Operate — Deploy and Operate the Managed Agent Path"
+        "Lab 3: Deploy and Operate Agents with Amazon Bedrock AgentCore"
     )
-    assert cards["runtime-gateway-policy"]["lab"] == "Lab 4 · Govern — Govern and Prove Agent Actions"
+    assert cards["runtime-gateway-policy"]["lab"] == "Lab 4: Build Governed Agent Actions with Cedar"
     assert cards["runtime-gateway-policy"]["required"] is True
     assert all("act" not in card for card in cards.values())
     assert (

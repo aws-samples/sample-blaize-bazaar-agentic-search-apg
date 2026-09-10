@@ -32,7 +32,7 @@ describe('LabsCatalog', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('Four evidence-first labs')).toBeInTheDocument();
+    expect(await screen.findByText('Four technical labs')).toBeInTheDocument();
     expect(
       screen
         .getAllByRole('link')
@@ -83,7 +83,8 @@ describe('LabsCatalog', () => {
       (exercise) => exercise.id === 'fail-closed-policy',
     );
 
-    expect(managed?.objective).toContain('With Theo selected');
+    expect(managed?.objective).toContain('Theo');
+    expect(managed?.objective).toContain('new conversation');
     expect(managed?.participantTodo).toContain('three-turn');
     expect(managed?.command).toContain(
       'Hand-thrown ceramics for a slower morning routine',
@@ -94,10 +95,10 @@ describe('LabsCatalog', () => {
       imageWidth: 720,
       imageHeight: 900,
     });
-    expect(governed?.objective).toContain('Marco, Anna, and Jessica');
+    expect(governed?.objective).toContain('Marco and Jessica');
     expect(governed?.participantTodo).toContain('four-case identity matrix');
     expect(governed?.participantTodo).toContain('RLS read and write');
-    expect(governed?.participantTodo).toContain('three-turn Operator investigation');
+    expect(governed?.participantTodo).toContain('one Operator investigation');
     expect(governed?.command).toContain('scripts/prove_identity_boundary.py');
     expect(governed?.evidenceAssertion).toContain('human checkpoint');
     expect(governed?.primaryAction).toEqual({

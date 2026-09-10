@@ -22,8 +22,8 @@ export default function LabsCatalog() {
         <div className="labs-catalog-hero-copy">
           <h1 className="font-display">Governed Lab Collection</h1>
           <p>
-            Four labs, one live workbench: build the boundary, measure its
-            behavior, prove the exact evidence, and explain the tradeoff.
+            Build a grounded agent, measure retrieval, deploy with AgentCore,
+            and govern actions with Cedar. Inspect each result in the workbench.
           </p>
           <Link to={resumePoint ? resumeHref(resumePoint) : '/observatory/workbench?lab=grounded-inventory'}>
             {resumeLab ? `Resume Lab ${Number(resumeLab.number)}` : 'Start Lab 1'}
@@ -35,7 +35,7 @@ export default function LabsCatalog() {
       <section className="labs-catalog-body" aria-labelledby="labs-catalog-heading">
         <div className="labs-catalog-intro">
           <div>
-            <h2 id="labs-catalog-heading" className="font-display">Four evidence-first labs</h2>
+            <h2 id="labs-catalog-heading" className="font-display">Four technical labs</h2>
             <p>Follow Labs 1–4 in order, or return to your current lab. Environment status describes the setup and evidence, not participant completion.</p>
           </div>
         </div>
@@ -48,7 +48,7 @@ export default function LabsCatalog() {
                 <Link to={to} tabIndex={-1} aria-hidden="true" className="labs-catalog-portrait-link">
                   <figure>
                     <img src={imageSrc(exercise.image)} width={exercise.imageWidth} height={exercise.imageHeight} alt="" loading={index < 2 ? 'eager' : 'lazy'} decoding="async" />
-                    <figcaption><span>{exercise.anchorName} · Lab {Number(exercise.number)}</span></figcaption>
+                    <figcaption><span>{exercise.anchorName}</span><span>Lab {Number(exercise.number)}</span></figcaption>
                   </figure>
                 </Link>
                 <div className="labs-catalog-card-copy">

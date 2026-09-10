@@ -455,6 +455,22 @@ def render_project(
                         "name": "PellierUserPreferences",
                         "description": "Extract durable shopper preferences",
                         "namespaceTemplates": ["/pellier/preferences/{actorId}/"],
+                    },
+                    {
+                        "type": "SEMANTIC",
+                        "name": "PellierFacts",
+                        "namespaceTemplates": ["/pellier/facts/{actorId}/"],
+                    },
+                    {
+                        "type": "SUMMARIZATION",
+                        "name": "PellierSessionSummary",
+                        "namespaceTemplates": ["/pellier/summaries/{actorId}/{sessionId}/"],
+                    },
+                    {
+                        "type": "EPISODIC",
+                        "name": "PellierEpisodes",
+                        "namespaceTemplates": ["/pellier/episodes/{actorId}/{sessionId}/"],
+                        "reflectionNamespaceTemplates": ["/pellier/episodes/{actorId}/"],
                     }
                 ],
                 "tags": tags,

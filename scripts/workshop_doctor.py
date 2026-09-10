@@ -505,14 +505,14 @@ def _governance_chain(evidence: Evidence, run_id: Optional[str]) -> Check:
         findings = build_receipt._lab4_findings(rows)
         denied = {row["principal_label"].lower() for row in rows if row["decision"] == "DENY"}
         passed = (
-            {"marco", "anna"} <= denied
+            "marco" in denied
             and any(row["principal_label"].lower() == "jessica" and row["decision"] == "ALLOW" for row in rows)
             and all(findings.get(key) == build_receipt.PROVED for key in (
                 "allow_executed", "durable_effect", "deny_did_not_execute",
             ))
         )
         return Check(name, passed, "" if passed else
-                     "run Lab 4's direct Gateway Marco/Anna DENY and Jessica ALLOW/replay proof; "
+                     "run Lab 4's direct Gateway Marco DENY and Jessica REFUSE/ALLOW/replay proof; "
                      "the Operator journey ends at the pending human checkpoint")
     except Exception as exc:
         return Check(name, False, f"{type(exc).__name__}: {str(exc)[:120]}")

@@ -1686,7 +1686,7 @@ export default function ObservatoryWorkbench() {
                 />
                 <span>
                   <small>
-                    {exercise.anchorName} · Lab {Number(exercise.number)}
+                    {exercise.anchorName}: Lab {Number(exercise.number)}
                   </small>
                   <strong>{exercise.shortTitle}</strong>
                 </span>

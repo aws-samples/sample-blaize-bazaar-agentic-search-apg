@@ -7,7 +7,7 @@ _A retail search workshop where every answer has evidence and every sensitive ac
 <br/>
 
 [![Workshop: Level 400](https://img.shields.io/badge/Workshop-Level_400-7A263A?style=flat-square)](#workshop-path)
-[![Aurora PostgreSQL 18.3](https://img.shields.io/badge/Aurora_PostgreSQL-18.3_·_pgvector-2D72D9?style=flat-square&logo=postgresql&logoColor=white)](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.VectorDB.html)
+[![Aurora PostgreSQL 18.3](https://img.shields.io/badge/Aurora_PostgreSQL-18.3_and_pgvector-2D72D9?style=flat-square&logo=postgresql&logoColor=white)](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.VectorDB.html)
 [![Bedrock AgentCore](https://img.shields.io/badge/Bedrock-AgentCore-FF9900?style=flat-square)](https://aws.amazon.com/bedrock/agentcore/)
 [![Strands Agents](https://img.shields.io/badge/Strands-Agents_SDK-232F3E?style=flat-square)](https://strandsagents.com)
 [![MCP](https://img.shields.io/badge/MCP-postgres--mcp--server-4A154B?style=flat-square)](https://github.com/awslabs/mcp/tree/main/src/postgres-mcp-server)
@@ -23,7 +23,7 @@ _A retail search workshop where every answer has evidence and every sensitive ac
 > Educational reference implementation for a governed agentic AI search workshop.
 > Not intended for production deployment without security hardening.
 
-**Contents:** [Workshop abstract](#workshop-abstract) · [Who this is for](#who-this-is-for) · [What this is](#what-this-is) · [Closed loop](#shopper-to-operator-closed-loop) · [Governance model](#governance-model) · [Personas](#personas-reshape-everything) · [Quick start](#quick-start-local-dev) · [Workshop path](#workshop-path) · [Architecture](#architecture) · [Quality gates](#quality-gates) · [Repository layout](#repository-layout) · [Resources](#resources)
+**Contents:** [Workshop abstract](#workshop-abstract); [Who this is for](#who-this-is-for); [What this is](#what-this-is); [Closed loop](#shopper-to-operator-closed-loop); [Governance model](#governance-model); [Personas](#personas-reshape-everything); [Quick start](#quick-start-local-dev); [Workshop path](#workshop-path); [Architecture](#architecture); [Quality gates](#quality-gates); [Repository layout](#repository-layout); [Resources](#resources)
 
 Start with the [four-lab teaching map](WORKSHOP.md). It connects each person,
 question, and build to the evidence you should inspect. The **`governed` branch**
@@ -64,7 +64,7 @@ test authorization boundaries, and prove whether an action reached the database.
 
 **You do *not* need to:** build a search system from scratch, know Strands/AgentCore/MCP in advance, or have prior agentic-AI experience. We teach those during the session.
 
-**What you'll actually do — this is the important part.** The application is **already built and running** when you arrive. You are *not* assembling it from nothing. Your hands-on path is small and focused: **each lab has two builds, `a` and `b`** — eight in all, each one a marked region in a single file, each with a reference copy under `solutions/` if you need it. Around those builds you run **observe / measure / read** steps that prove how the production system behaves. The other specialists, tool contracts, database, and managed services are pre-wired *on purpose* so your attention goes to the agentic pattern, not setup plumbing.
+**What you will build.** Each lab contains two coding exercises, `a` and `b`: eight builds in total. You edit a marked region in a supplied application, then run checks against its services and database. The environment is deployed before the workshop so you can focus on retrieval, identity, memory, and controlled actions. Each build includes a catch-up reference under `solutions/`. The L400 work is deciding which component owns a decision and checking the evidence that supports it.
 
 | Build | You author | In |
 |---|---|---|
@@ -126,13 +126,13 @@ Every claim in the workshop abstract maps to something runnable in this repo:
 
 | Claim | Where it lives |
 |---|---|
-| **Grounded retrieval** on **Aurora PostgreSQL** | `pellier.product_catalog.embedding vector(1024)` · pgvector 0.8.1 · HNSW index · `<=>` cosine operator · hybrid (FTS + RRF) merge · Cohere Rerank v3.5 |
-| **Agentic AI – reasoning + tool use** | Strands Agents SDK · deterministic Storefront Dispatcher routes intent to one of 5 specialists · each specialist receives an explicit tool allowlist · Operator Concierge uses `GraphBuilder` for an ordered Case Investigator -> Resolution Planner graph |
-| **Model Context Protocol (MCP)** | [`awslabs.postgres-mcp-server`](https://github.com/awslabs/mcp/tree/main/src/postgres-mcp-server) installed via `uvx`, read-only against the Aurora cluster ARN · `pellier/config/mcp-server-config.json` is the literal contract · any MCP host (VS Code chat extension, Claude Code, Strands `MCPClient`, AgentCore Gateway) consumes the same JSON |
-| **Managed tool catalog (AgentCore Gateway)** | `services/agentcore_gateway.py` lists the Gateway catalog via `MCPClient.list_tools_sync()`, then selects the routed specialist's explicit allowlist · governed Runtime requests pass the shopper's access token through (`Authorization: Bearer`) and fail closed if Gateway is unavailable |
-| **Memory and personalization** | AgentCore Memory stores session events and durable preferences extracted by a `USER_PREFERENCE` strategy · Aurora customer events provide episodic history · runtime skills and MCP schemas provide procedural know-how · `tool_audit` remains operational evidence, not memory |
-| **Managed AgentCore path** | One `@aws/agentcore@0.26.0` project owns Runtime, Memory, Gateway, four Lambda target registrations, AgentCore-managed service roles, the Policy engine, and Cedar policies · `deploy_lambda.py` separately creates the external Lambda functions and their Lambda execution roles · `@app.entrypoint` in `pellier/backend/agentcore_runtime.py` · CUSTOM_JWT invocation must return `rail=gateway-mcp` · encrypted, retention-bounded Runtime and trace log groups carry correlated agent, model, and structured tool spans |
-| **Durable human handoff** | The shopper turn stores an immutable, explicitly untrusted `handoff_context` beside its terminal receipt · `pellier.approvals` owns the pending review and exact action hash · the graph persists only operator-safe artifacts · confirmation and execution are later authenticated requests |
+| **Grounded retrieval** on **Aurora PostgreSQL** | `pellier.product_catalog.embedding vector(1024)`; pgvector 0.8.1; HNSW index; `<=>` cosine operator; hybrid (FTS + RRF) merge; Cohere Rerank v3.5 |
+| **Agentic AI – reasoning + tool use** | Strands Agents SDK; deterministic Storefront Dispatcher routes intent to one of 5 specialists; each specialist receives an explicit tool allowlist; Operator Concierge uses `GraphBuilder` for an ordered Case Investigator -> Resolution Planner graph |
+| **Model Context Protocol (MCP)** | [`awslabs.postgres-mcp-server`](https://github.com/awslabs/mcp/tree/main/src/postgres-mcp-server) installed via `uvx`, read-only against the Aurora cluster ARN; `pellier/config/mcp-server-config.json` is the literal contract; any MCP host (VS Code chat extension, Claude Code, Strands `MCPClient`, AgentCore Gateway) consumes the same JSON |
+| **Managed tool catalog (AgentCore Gateway)** | `services/agentcore_gateway.py` lists the Gateway catalog via `MCPClient.list_tools_sync()`, then selects the routed specialist's explicit allowlist; governed Runtime requests pass the shopper's access token through (`Authorization: Bearer`) and fail closed if Gateway is unavailable |
+| **Memory and personalization** | The [Memory experiment](docs/MEMORY_SHOWCASE.md) uses an extracted preference in a new conversation in Lab 3. Participants inspect facts, preferences, and summaries; episodic extraction is optional. Aurora supplies current business records, and reviewed runtime skills supply instructions. |
+| **Managed AgentCore path** | One `@aws/agentcore@0.26.0` project owns Runtime, Memory, Gateway, four Lambda target registrations, AgentCore-managed service roles, the Policy engine, and Cedar policies; `deploy_lambda.py` separately creates the external Lambda functions and their Lambda execution roles; `@app.entrypoint` in `pellier/backend/agentcore_runtime.py`; CUSTOM_JWT invocation must return `rail=gateway-mcp`; encrypted, retention-bounded Runtime and trace log groups carry correlated agent, model, and structured tool spans |
+| **Durable human handoff** | The shopper turn stores an immutable, explicitly untrusted `handoff_context` beside its terminal receipt; `pellier.approvals` owns the pending review and exact action hash; the graph persists only operator-safe artifacts; confirmation and execution are later authenticated requests |
 
 ### Shopper-to-operator closed loop
 
@@ -221,28 +221,28 @@ deletes only log groups or policy state created by this workshop run.
 
 ### Memory model
 
-"The agent has memory" is four systems with four owners, four lifetimes, and four
-failure modes. AgentCore Memory holds two of them. This is the distinction people most
-often carry away blurred, so it is written out in full:
+Pellier uses conversation context, business records, and reviewed instructions.
+Each has a different owner and identity scope. A remembered preference can guide
+a recommendation; its price, stock, and permitted actions require current evidence.
 
-| Substrate | Owner | Keyed by | Lifetime | What the workshop proves |
+| Records | Owner | Keyed by | Lifetime | What participants check |
 |---|---|---|---|---|
-| **Working**, short-term | AgentCore Memory events | actor **and session** | 30-day event expiry | A separate Python process reads turn one before Runtime handles turn two |
-| **Semantic**, long-term | AgentCore Memory, one `USER_PREFERENCE` strategy under `/pellier/preferences/{actorId}/` | **actor** | outlives the session | Durable preferences are extracted and retrieved by actor |
-| **Episodic**, long-term | Aurora customer events, orders, and returns | customer | as long as the business keeps it | Business history remains queryable in the system of record |
-| **Procedural** | Checked-in runtime skills and MCP tool schemas | file path | changes by pull request | Instructions and tool contracts are reviewable source |
+| **Conversation events** | AgentCore Memory | actor and session | 30-day event expiry | The first conversation is recorded; the new conversation has zero prior chat events |
+| **Learned preferences and facts** | AgentCore Memory `USER_PREFERENCE` and `SEMANTIC` strategies | actor | stored beyond one session | An extracted preference is supplied to the new conversation and used in a recommendation |
+| **Summaries and optional episodes** | AgentCore Memory `SUMMARIZATION` and `EPISODIC` strategies | configured actor and session namespaces | stored beyond one session | Returned records and their IDs; an active strategy alone does not establish extraction |
+| **Business records and execution evidence** | Aurora products, inventory, orders, returns, and audit tables | product, customer, action, and turn identifiers | database retention policy | Current product facts, authorized business changes, and keyed evidence |
+| **Runtime instructions** | Checked-in skills and MCP tool schemas | file path | changes with the deployed artifact | Reviewed instructions and accepted tool arguments |
 
-Short-term and long-term are not the same records with different retention; they have
-different keys. End the session and working memory stops growing, while a semantic
-record is still there tomorrow in a new session on a new device. That is also why they
-cannot be collapsed behind one retention setting: "what did we just say" is scoped to a
-conversation by definition, and "what does this person prefer" is worthless if it is.
+Lab 3 keeps one verified actor across two different session IDs. It retrieves
+extracted records without loading the earlier conversation. Regular Storefront
+calls retain their existing conversation-specific actor scope; this exercise
+makes the separate identity choices visible.
 
-Each substrate fails differently, which is the practical reason to be precise. A
-forgotten sentence is a session-id problem. Empty preferences mean extraction has not
-settled or the actor key is wrong. A wrong order history is a database question that no
-memory service repairs. A misused tool is a pull request. Two of these are a
-managed-service bill, one is your database, and one is your git history.
+Extraction runs asynchronously. Check strategy state, namespace, and returned
+record IDs before claiming a preference was learned. The optional AgentCore
+`EPISODIC` strategy is separate from Aurora's curated `customer_episodic_seed`
+rows. Memory supplies context; authorization and database checks still control
+which records a caller can read and which actions can commit.
 
 `pellier.tool_audit` is intentionally outside that table. It records what
 executed and how long it took; it does not teach the agent how to work. When
@@ -509,18 +509,18 @@ The app moves to `/app/`, `GET /app` 307-redirects to `/app/`, and the real API 
 
 ## Workshop path
 
-This repo is the source of truth for the application behind the **governed agentic AI search workshop**, framed as a **400-level guided build + evidence walkthrough**: small code surface, deep production proof. The required path wires Marco's inventory tool path end to end, compares retrieval strategies, proves cross-turn AgentCore Memory, invokes managed Runtime through Gateway, queries the audit ledger, and demonstrates a real Cedar ALLOW/DENY pair. Exact pacing and participant wording live in the separate Workshop Studio repo.
+This repo contains the application for the **Level 400 governed agentic AI search workshop**. Participants build a grounded agent, measure hybrid retrieval, deploy through AgentCore, and govern actions with Cedar. They verify each outcome against service responses and database records, including a learned preference used in a new conversation. Workshop Studio holds the participant instructions and timing.
 
 The session content (lab manual, CloudFormation, prereq images) lives in the separate Workshop Studio repository, which is the single source of truth for everything under its `content/`, `assets/`, and `static/` trees. This repo holds the running application the session is built on. The flagship path is structured as:
 
 | Section | What attendees do |
 |---|---|
-| Introduction | Open the workspace and land in Pellier + Pellier Observatory — both already running, nothing to set up or start. Frame the architecture and the one production path attendees will wire and prove. |
+| Introduction | Open Code Editor and Pellier, record a run ID, check Aurora and the predeployed Runtime, and save Theo's first conversation for AgentCore Memory extraction. |
 | Lab 1: Build a PostgreSQL-Grounded Agent | Complete Inventory Agent and `check_inventory`, then prove Marco's answer against live inventory and `tool_audit`. |
-| Lab 2: Build and Measure PostgreSQL Hybrid Retrieval | Restore the RRF fusion, label the rows that count as relevant for Anna's query, then compare vector, hybrid, hybrid + rerank, and agentic retrieval and make a quality, latency, and cost decision against that labeling. |
-| Lab 3: Deploy and Operate the Managed Agent Path | Publish the customer-scoped read Theo's return needs on the Gateway, reconcile what the Runtime asks the Gateway for and bind that read to the caller, deploy, then prove the managed receipt carries your own build fingerprint, that Memory survives a fresh process, and that the four memory substrates have four different owners. |
-| Lab 4: Govern and Prove Agent Actions | Author one Cedar rule and the keyed absence query, prove Gateway DENY prevents execution, run the provided OpenTelemetry trace contract, confirm the matching identity is allowed, complete Jessica's Operator investigation up to the human checkpoint, prove Row-Level Security refuses another shopper's rows, replay a write to show it applies exactly once, and reset participant policy. |
-| Close | Map the pattern to your own stack, wrap up, and Q&A. |
+| Lab 2: Build and Measure PostgreSQL Hybrid Retrieval | Reconstruct the RRF expression and label relevant rows for Anna's query. Compare two rerank pools against fixed labels and five held-out cases, check eligibility, and justify a choice. |
+| Lab 3: Deploy and Operate Agents with Amazon Bedrock AgentCore | Publish a customer-scoped read, reconcile the Runtime tool list, and deploy. Use Theo's extracted preferences in a new conversation, verify current products in Aurora, inspect Memory from a separate process, compare build fingerprints, and run the trace contract. |
+| Lab 4: Build Governed Agent Actions with Cedar | Author the Cedar ownership rule and keyed absence query. Distinguish denial, business refusal, committed return, and replay; test Aurora RLS independently; complete one Operator investigation and stop before a consequential action. |
+| Summary | Export evidence, restore the policy baseline, explain what each boundary establishes, and map the pattern to your application. |
 
 Make canonical edits to the lab manual in the Workshop Studio repo, not here.
 
@@ -599,7 +599,7 @@ staff only, and `restock_inventory` stays off the shopper Gateway: no
 shopper-facing specialist binds either, and the desk reaches them behind its
 own authorization. The 15 published names are:
 
-`search_products` · `search_products_hybrid` · `get_related_products` · `get_trending_products` · `get_price_analysis` · `browse_category` · `compare_products` · `check_inventory` · `get_low_stock` · `get_return_policy` · `initiate_return` · `get_customer_preferences` · `get_audit_trail` · `escalate_to_human` · `issue_credit`
+`search_products`; `search_products_hybrid`; `get_related_products`; `get_trending_products`; `get_price_analysis`; `browse_category`; `compare_products`; `check_inventory`; `get_low_stock`; `get_return_policy`; `initiate_return`; `get_customer_preferences`; `get_audit_trail`; `escalate_to_human`; `issue_credit`
 
 #### One search executor
 
@@ -685,9 +685,9 @@ Every statement is wrapped as a subquery, planned before it runs, and executed
 as `pellier_query`:
 
 ```
-READ ONLY · statement_timeout = 3s · fixed search_path
-SET LOCAL ROLE pellier_query · pellier.principal_sub bound for RLS
-schema allowlist from the plan · implementation-owned row cap
+READ ONLY; statement_timeout = 3s; fixed search_path
+SET LOCAL ROLE pellier_query; pellier.principal_sub bound for RLS
+schema allowlist from the plan; implementation-owned row cap
 ```
 
 A write, a utility statement, a data-modifying CTE, or a stacked statement
@@ -741,7 +741,7 @@ denial.
 
 Five skills loaded per turn by the SkillRouter to shape voice, handling, proof, and care language without changing product selection:
 
-[`skills/the-packing-list/`](skills/the-packing-list/) (Marco) · [`skills/the-gift-table/`](skills/the-gift-table/) (Anna) · [`skills/the-makers-shelf/`](skills/the-makers-shelf/) (Theo) · [`skills/the-care-card/`](skills/the-care-card/) (shared care/returns) · [`skills/the-proof-counter/`](skills/the-proof-counter/) (shared proof/audit)
+[`skills/the-packing-list/`](skills/the-packing-list/) (Marco); [`skills/the-gift-table/`](skills/the-gift-table/) (Anna); [`skills/the-makers-shelf/`](skills/the-makers-shelf/) (Theo); [`skills/the-care-card/`](skills/the-care-card/) (shared care/returns); [`skills/the-proof-counter/`](skills/the-proof-counter/) (shared proof/audit)
 
 ### Claude Code instructions and project skills
 
@@ -762,17 +762,17 @@ Claude Code resolves `CLAUDE.md` guidance by scope. The backend separately loads
 
 | Layer            | Technology                                                                                                              |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Database         | **Aurora PostgreSQL Serverless v2** (engine 18.3) · elastic ACU scaling · standard PostgreSQL primitives throughout (extension, schemas, SQL) |
-| Vector retrieval | pgvector 0.8.1 · `vector(1024)` column · HNSW (m=16, ef_construction=64, `vector_cosine_ops`) · `<=>` cosine operator |
+| Database         | **Aurora PostgreSQL Serverless v2** (engine 18.3); elastic ACU scaling; standard PostgreSQL primitives throughout (extension, schemas, SQL) |
+| Vector retrieval | pgvector 0.8.1; `vector(1024)` column; HNSW (m=16, ef_construction=64, `vector_cosine_ops`); `<=>` cosine operator |
 | Lexical retrieval | Postgres FTS – `tsvector` + GIN + `ts_rank_cd` (no native BM25; `pg_trgm` for fuzzy match) |
 | Hybrid merge     | Reciprocal Rank Fusion (RRF) – fuses pgvector + FTS rank lists without normalizing raw scores |
-| Models           | Claude Opus 4.6 (`global.anthropic.claude-opus-4-6-v1`, editorial) · Claude Sonnet 4.6 (`global.anthropic.claude-sonnet-4-6`, routing/reporting, no temperature override) · Claude Haiku 4.5 (`global.anthropic.claude-haiku-4-5-20251001-v1:0`, explicit Fast response mode) · Cohere Embed v4 (`us.cohere.embed-v4:0`, 1024-dim via output_dimension, inference profile) · Cohere Rerank v3.5 (`cohere.rerank-v3-5:0`) |
+| Models           | Claude Opus 4.6 (`global.anthropic.claude-opus-4-6-v1`, editorial); Claude Sonnet 4.6 (`global.anthropic.claude-sonnet-4-6`, routing/reporting, no temperature override); Claude Haiku 4.5 (`global.anthropic.claude-haiku-4-5-20251001-v1:0`, explicit Fast response mode); Cohere Embed v4 (`us.cohere.embed-v4:0`, 1024-dim via output_dimension, inference profile); Cohere Rerank v3.5 (`cohere.rerank-v3-5:0`) |
 | Agent framework  | Strands Agents SDK – `Agent`, `@tool`, deterministic Storefront Dispatcher, bounded Operator Concierge `GraphBuilder`, and before/after tool-call hooks |
-| Agent infra      | Bedrock AgentCore – Runtime (CUSTOM_JWT, fail-closed Gateway MCP rail; managed Storefront proof and Operator graph deployment target) · Memory (STM, 30-day event expiry + `USER_PREFERENCE` semantic extraction strategy for durable taste) · Gateway (15-tool governed workshop subset from Pellier's 17-tool MCP catalog, Cognito access-token passthrough) · Policy (Cedar ENFORCE with live ALLOW/DENY proof) · Identity |
-| MCP              | [`awslabs.postgres-mcp-server`](https://github.com/awslabs/mcp/tree/main/src/postgres-mcp-server) pinned to `==1.1.6` and installed via `uvx`, registered against the Aurora cluster ARN over `--connection_method RDS_API --db_type APG` (enum-name flag, not the lowercase value; read-only by default — writes require opting in via `--allow_write_query`); `pellier/config/mcp-server-config.json` is the literal contract; AgentCore Gateway is the managed-host counterpart |
-| Backend          | FastAPI · Python 3.14 · psycopg3 · boto3 · SSE streaming                                                  |
-| Frontend         | React 18 · TypeScript 5 · Vite 6 · Tailwind CSS 3 · Framer Motion 12                                                      |
-| Editorial system | Fraunces Variable and Instrument Serif (display) · Instrument Sans (body) · JetBrains Mono (code) · self-hosted fonts     |
+| Agent infra      | Bedrock AgentCore Runtime (CUSTOM_JWT and governed Gateway MCP calls); Memory (conversation events and four configured extraction strategies, with episodic extraction optional); Gateway (15 published tools at baseline, 16 after Lab 3a, from 17 defined schemas; token-scoped discovery); Policy (Cedar ENFORCE); Identity |
+| MCP              | [`awslabs.postgres-mcp-server`](https://github.com/awslabs/mcp/tree/main/src/postgres-mcp-server) pinned to `==1.1.6` and installed via `uvx`, registered against the Aurora cluster ARN over `--connection_method RDS_API --db_type APG` (enum-name flag, not the lowercase value; read-only by default; writes require opting in via `--allow_write_query`); `pellier/config/mcp-server-config.json` is the literal contract; AgentCore Gateway is the managed-host counterpart |
+| Backend          | FastAPI; Python 3.14; psycopg3; boto3; SSE streaming                                                  |
+| Frontend         | React 18; TypeScript 5; Vite 6; Tailwind CSS 3; Framer Motion 12                                                      |
+| Editorial system | Fraunces Variable and Instrument Serif (display); Instrument Sans (body); JetBrains Mono (code); self-hosted fonts     |
 
 ---
 

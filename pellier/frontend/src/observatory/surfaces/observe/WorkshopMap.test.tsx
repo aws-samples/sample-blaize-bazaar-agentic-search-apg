@@ -11,11 +11,11 @@ describe('Observatory workshop map', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getAllByText(/^Lab [1-4] ·/).map((node) => node.textContent)).toEqual([
-      'Lab 1 · Build',
-      'Lab 2 · Build & Measure',
-      'Lab 3 · Deploy & Operate',
-      'Lab 4 · Govern',
+    expect(screen.getAllByText(/^Lab [1-4]$/).map((node) => node.textContent)).toEqual([
+      'Lab 1',
+      'Lab 2',
+      'Lab 3',
+      'Lab 4',
     ]);
     expect(
       screen.getByRole('heading', { name: 'Build a PostgreSQL-Grounded Agent' }),
@@ -27,11 +27,11 @@ describe('Observatory workshop map', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', {
-        name: 'Deploy and Operate the Managed Agent Path',
+        name: 'Deploy and Operate Agents with Amazon Bedrock AgentCore',
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: 'Govern and Prove Agent Actions' }),
+      screen.getByRole('heading', { name: 'Build Governed Agent Actions with Cedar' }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/^Act (I|II|III)$/)).not.toBeInTheDocument();
 

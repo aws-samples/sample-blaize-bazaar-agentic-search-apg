@@ -1,14 +1,13 @@
-"""Who owns each memory substrate, asserted rather than described.
+"""Keep conversation context, business records and instructions distinct.
 
-Pellier separates four memory categories by owner, and the separation is the
-lesson: AgentCore Memory is not a store for all four. Two of these live in the
-managed service, one lives in Aurora, and one lives in the repository.
+The original panels retain their API keys but name the actual records and owners.
+The separate showcase adds managed facts, summaries and episodic extraction;
+these must not be confused with Aurora business history.
 
-    working    short-term  AgentCore Memory session events, 30-day expiry
-    semantic   long-term   AgentCore Memory records from the USER_PREFERENCE
-                           strategy, namespaced by actor
-    episodic   long-term   Aurora: customers, orders, returns, seeded events
-    procedural long-term   checked-in runtime skills and MCP tool schemas
+    working     AgentCore Memory conversation events with configured expiry
+    semantic    AgentCore Memory USER_PREFERENCE records, namespaced by actor
+    episodic    Aurora customers, orders, returns and curated seed context
+    procedural  checked-in runtime skills and MCP tool schemas
 
 `pellier.tool_audit` is deliberately outside that set. It records what
 executed and how long it took; it does not teach the agent how to work.
@@ -53,24 +52,21 @@ def _read(path: pathlib.Path) -> str:
 # ---------------------------------------------------------------------------
 
 
-def test_agentcore_memory_declares_exactly_one_long_term_strategy() -> None:
-    """One extraction strategy, so "semantic" names one thing.
-
-    A second strategy would put two different long-term record shapes under the
-    same participant-facing word without the surfaces distinguishing them.
-    """
+def test_agentcore_memory_declares_four_distinct_showcase_strategies() -> None:
+    """The showcase distinguishes every record shape in its own tab."""
     source = _read(RENDERER)
-    strategies = re.findall(r'"type":\s*"(USER_PREFERENCE|SEMANTIC|SUMMARIZATION|SUMMARY)"', source)
-    assert strategies == ["USER_PREFERENCE"], (
-        f"expected exactly one USER_PREFERENCE strategy, found {strategies}"
-    )
+    strategies = re.findall(r'"type":\s*"(USER_PREFERENCE|SEMANTIC|SUMMARIZATION|EPISODIC)"', source)
+    assert strategies == ["USER_PREFERENCE", "SEMANTIC", "SUMMARIZATION", "EPISODIC"]
 
 
-def test_the_long_term_namespace_is_keyed_by_actor_not_session() -> None:
-    """Long-term records must outlive the session that produced them."""
+def test_preferences_and_facts_share_an_actor_while_summaries_identify_sessions() -> None:
+    """Session metadata in a durable namespace does not make it short-term."""
     source = _read(RENDERER)
     assert '"/pellier/preferences/{actorId}/"' in source
-    assert "{sessionId}" not in source
+    assert '"/pellier/facts/{actorId}/"' in source
+    assert '"/pellier/summaries/{actorId}/{sessionId}/"' in source
+    assert '"/pellier/episodes/{actorId}/{sessionId}/"' in source
+    assert '"reflectionNamespaceTemplates": ["/pellier/episodes/{actorId}/"]' in source
 
 
 def test_short_term_events_expire() -> None:
@@ -84,11 +80,11 @@ def test_short_term_events_expire() -> None:
 
 
 SUBSTRATE_OWNERS = (
-    ("working", "Working - AgentCore Memory"),
-    ("semantic", "Semantic - AgentCore Memory"),
-    ("episodic", "Episodic - Aurora"),
-    ("procedural", "Procedural - source controlled"),
-    ("operational", "Operational History - Aurora"),
+    ("working", "Conversation events: AgentCore Memory"),
+    ("semantic", "User preferences: AgentCore Memory"),
+    ("episodic", "Customer history: Aurora PostgreSQL"),
+    ("procedural", "Runtime instructions: repository"),
+    ("operational", "Tool execution history: Aurora PostgreSQL"),
 )
 
 
@@ -103,9 +99,9 @@ def test_the_read_model_attributes_each_substrate_to_its_owner(
 def test_tool_audit_is_never_presented_as_a_memory_substrate() -> None:
     """It is execution history. Calling it procedural memory was an older model."""
     source = _read(OBSERVATORY_ROUTE)
-    assert '"Operational History - Aurora"' in source
+    assert '"Tool execution history: Aurora PostgreSQL"' in source
     assert "Procedural - Aurora" not in source
-    assert '"Procedural - source controlled"' in source
+    assert '"Runtime instructions: repository"' in source
 
 
 def test_procedural_memory_points_at_reviewable_source() -> None:
@@ -120,7 +116,7 @@ def test_procedural_memory_points_at_reviewable_source() -> None:
 
 
 def test_no_surface_claims_aurora_holds_a_preference_embedding_store() -> None:
-    """Aurora owns episodic history. Durable preference is AgentCore's.
+    """Aurora owns business history. Learned preferences live in AgentCore.
 
     Pellier has no profile-embedding table: the catalogue carries the only
     embeddings, and `get_customer_preferences` reads ordinary Aurora rows.

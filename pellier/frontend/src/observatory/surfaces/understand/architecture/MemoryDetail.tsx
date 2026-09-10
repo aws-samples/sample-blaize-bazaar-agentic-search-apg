@@ -1,7 +1,7 @@
 /**
  * MemoryDetail - Architecture detail page for Memory.
  *
- * Four memory types plus operational history, each shown with provenance.
+ * Conversation context, business records and instructions, with their owners.
  */
 
 import React from 'react';
@@ -209,7 +209,7 @@ const SubstrateItem: React.FC<{ item: MemoryItem }> = ({ item }) => {
             paddingTop: '2px',
           }}
         >
-          {meta.join(' · ')}
+          {meta.join(', ')}
         </span>
       )}
     </li>
@@ -344,34 +344,34 @@ const MemoryDetail: React.FC = () => {
       numeral="II"
       conceptName="Memory"
       category="live"
-      title="Memory, with evidence kept separate."
-      prose="Working, semantic, episodic, and procedural memory have different stores and lifetimes. AgentCore Memory owns session turns and learned preferences; Aurora supplies business events; source-controlled skills and MCP schemas supply tool know-how. tool_audit is operational evidence, not memory."
+      title="Conversation context and business records."
+      prose="AgentCore Memory stores conversation events and extracts learned context. Aurora PostgreSQL owns current product, inventory, order and return records. Reviewed runtime skills and MCP schemas define how tools work. The tool_audit table records execution evidence."
       seeInPellier={{
         href: '/?ask=Pick+up+where+I+left+off',
-        label: 'See memory.recall fire on the storefront',
+        label: 'Open the Storefront',
       }}
       cheatSheet={[
         {
           numeral: 'i.',
-          text: 'Working - AgentCore Memory holds the last K session turns under user-{id}-session-{sid} (or anon-{sid}). Cheap, bounded, always relevant. Read first on every turn.',
+          text: 'Conversation events: AgentCore Memory stores turns under an actor and session. Reusing a session can carry chat history forward. The Lab 3 exercise uses a new session with zero prior chat events to isolate learned context.',
         },
         {
           numeral: 'ii.',
-          text: 'Semantic - durable preference facts a USER_PREFERENCE strategy extracts from conversation, stored as AgentCore Memory records under /pellier/preferences/{actorId}/. Learned asynchronously from turns (pre-baked at deploy); read when the specialist needs durable persona context.',
+          text: 'Learned preferences: the USER_PREFERENCE strategy extracts records asynchronously from conversation into /pellier/preferences/{actorId}/. The exercise keeps the verified actor unchanged across conversations and inspects the exact records supplied to the agent.',
         },
         {
           numeral: 'iii.',
-          text: 'Episodic - per-customer events in Aurora. customer_episodic_seed for the seeded story today; orders and returns are the real ledger. Reach into it when the turn earns the latency.',
+          text: 'Customer history: Aurora orders and returns record business activity. The customer_episodic_seed table supplies curated scenario context. These rows are separate from records extracted by the optional AgentCore EPISODIC strategy.',
         },
         {
           numeral: 'iv.',
-          text: 'Procedural - checked-in runtime skills and MCP schemas define how the agent should work and which arguments each tool accepts. This workshop inspects those contracts; it does not claim they are learned dynamically.',
+          text: 'Runtime instructions: checked-in skills guide the agent, and MCP schemas define accepted tool arguments. These are reviewed source files, not context learned from conversation.',
         },
       ]}
       liveState={
         data
           ? {
-              label: 'Current memory state for the active persona. Each substrate reads from its own backing store; the source pill tells you which panels were live on this request.',
+              label: 'Current records for the selected customer. Each panel names its source and shows whether the read returned records or is waiting for extraction.',
               values: [
                 { label: 'Live sources', value: `${liveCount} / 5` },
                 { label: 'Items', value: String(totalItems) },
@@ -396,54 +396,54 @@ const MemoryDetail: React.FC = () => {
             }}
           >
             <TierCard
-              tierName="Working - AgentCore Memory"
+              tierName="Conversation events: AgentCore Memory"
               category="live"
               title="Session turns"
-              role="Per-turn append, namespace-scoped"
-              prose={`Every authenticated turn ends with append_session_turn(session_ns, turn). Reads via get_session_history bring the last K turns back. Namespace is user-{user_id}-session-{session_id} or anon-{session_id} - physically disjoint so a sign-in flip never silently merges history. Dashes (not colons) because AgentCore session IDs must match [a-zA-Z0-9][a-zA-Z0-9-_]*.`}
-              codeSnippet={`# Working - AgentCore Memory
-ns = AgentCoreIdentityService.build_namespace(user_id, session_id)
-# → "user-{user_id}-session-{session_id}" or "anon-{session_id}"
+              role="Conversation history scoped to the caller and session"
+              prose="The Storefront builds its history namespace from the verified principal and session ID. get_session_history reads the recorded turns in that namespace. Lab 3 uses a separate experiment: the same verified actor, a new session ID, and extracted records supplied without earlier chat."
+              codeSnippet={`# Storefront conversation history
+ns = AgentCoreIdentityService.build_namespace(principal_sub, session_id)
+# "user-{principal_sub}-session-{session_id}"
 await memory.append_session_turn(ns, turn)
 
-# Last K turns back into the prompt
+# Read this conversation's recorded turns
 history = await memory.get_session_history(ns)`}
             />
             <TierCard
-              tierName="Semantic - AgentCore Memory"
+              tierName="User preferences: AgentCore Memory"
               category="live"
               title="Extracted preferences"
-              role="Learned from turns, read on every relevant turn"
-              prose={`Stable taste signals - fabric, palette, occasion - a USER_PREFERENCE strategy extracts from conversation into durable AgentCore Memory records under /pellier/preferences/{actorId}/. Extraction is asynchronous; when no records exist yet, the semantic panel shows Settling rather than calling the state live or showing seeded prose.`}
-              codeSnippet={`# Semantic - AgentCore Memory (USER_PREFERENCE)
+              role="Extracted from conversation and retrieved by actor"
+              prose="The USER_PREFERENCE strategy extracts preferences such as material, color and occasion into durable records. Extraction is asynchronous, so a configured strategy does not mean records are ready. A learned preference can guide a recommendation; current product details still come from Aurora."
+              codeSnippet={`# AgentCore Memory USER_PREFERENCE records
 prefs = await memory.get_semantic_memories(
-    actor_id  # e.g. "CUST-MARCO"
+    actor_id  # resolved from the verified caller
 )
-# → ["Prefers lightweight linen in warm neutrals", ...]
-# records live under /pellier/preferences/{actor_id}/`}
+# Read /pellier/preferences/{actor_id}/
+# An empty result means no extracted preferences are available.`}
             />
             <TierCard
-              tierName="Episodic - Aurora"
+              tierName="Customer history: Aurora PostgreSQL"
               category="live"
               title="Per-customer events"
               role="What this customer has done over time"
-              prose="Aurora as system of record. customer_episodic_seed holds 3-6 curated summaries per persona today (with ts_offset_days); orders and returns are the real per-customer ledger that production episodic recall would derive from."
-              codeSnippet={`# Episodic - Aurora customer_episodic_seed
+              prose="Orders and returns are authoritative business records. The customer_episodic_seed table holds curated context for the workshop scenario. Its name does not mean these rows were extracted by AgentCore Memory; the optional EPISODIC strategy has its own records and namespaces."
+              codeSnippet={`# Curated scenario context in Aurora
 seed = await fetch_episodic_seed(customer_id)
 # -> [{summary_text, ts_offset_days}, ...]
 
-# Real ledger lives in orders + returns
+# Order records for the authorized customer
 SELECT product_id, placed_at FROM pellier.orders
 WHERE customer_id = $1
 ORDER BY placed_at DESC;`}
             />
             <TierCard
-              tierName="Procedural - source controlled"
+              tierName="Runtime instructions: repository"
               category="live"
               title="Instructions and contracts"
               role="How the agent should perform work"
               prose="Runtime skills provide conditional operating guidance. Canonical MCP schemas define each tool's arguments. Both are checked-in, reviewable source and survive process restarts because the runtime reloads them from the deployed artifact."
-              codeSnippet={`# Procedural knowledge
+              codeSnippet={`# Reviewed instructions and tool contracts
 skills/*/SKILL.md
 scripts/deploy/gateway_tool_schemas.py
 

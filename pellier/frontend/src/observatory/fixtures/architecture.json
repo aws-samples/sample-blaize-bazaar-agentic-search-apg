@@ -12,9 +12,9 @@
     "numeral": "II",
     "category": "live",
     "title": "Memory",
-    "role": "Four memory types; operational history stays evidence",
-    "description": "Working memory holds session turns. Semantic memory holds durable learned preferences. Episodic memory comes from customer events in Aurora. Procedural knowledge comes from checked-in runtime skills and MCP schemas. tool_audit is shown separately because it proves what ran; it does not teach the agent how to work.",
-    "codeSnippet": "# Working - AgentCore Memory session events\nawait memory.append_session_turns(session_ns, turns)\n\n# Semantic - AgentCore USER_PREFERENCE records\nprefs = await memory.get_semantic_memories(actor_id)\n\n# Episodic - Aurora customer events\nseed = await fetch_episodic_seed(customer_id)\n\n# Procedural - reviewable source\nskills/*/SKILL.md\nscripts/deploy/gateway_tool_schemas.py\n\n# Operational history - evidence, not memory\nSELECT tool, count(*), avg(latency_ms)\nFROM pellier.tool_audit\nGROUP BY tool;",
+    "role": "AgentCore conversation context and Aurora business records",
+    "description": "AgentCore Memory stores conversation events and extracts learned preferences. Aurora stores current products, orders, returns and curated customer history. Runtime skills and MCP schemas are reviewed source instructions. The tool_audit table records execution evidence. In Lab 3, retrieve a learned preference for the same verified actor in a new conversation, then verify the recommended product in Aurora.",
+    "codeSnippet": "# AgentCore Memory conversation events\nawait memory.append_session_turns(session_ns, turns)\n\n# AgentCore Memory USER_PREFERENCE records\nprefs = await memory.get_semantic_memories(actor_id)\n\n# Curated customer context in Aurora\nseed = await fetch_episodic_seed(customer_id)\n\n# Reviewed instructions and tool contracts\nskills/*/SKILL.md\nscripts/deploy/gateway_tool_schemas.py\n\n# Execution evidence in Aurora\nSELECT tool, count(*), avg(latency_ms)\nFROM pellier.tool_audit\nGROUP BY tool;",
     "slug": "memory"
   },
   {

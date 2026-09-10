@@ -535,7 +535,7 @@ class TestLab4:
         rows = [
             {"principal_label": name, "decision": "DENY", "args": {"customer_id": "CUST-JESSICA"},
              "declared_key": f"deny-{name}", "audit_id": None, "policy_name": "ownership"}
-            for name in ("marco", "anna")
+            for name in ("marco",)
         ]
         rows.append({"principal_label": "jessica", "decision": "ALLOW",
                      "args": {"customer_id": "CUST-JESSICA"}, "audit_id": 5,
@@ -546,6 +546,35 @@ class TestLab4:
         })
         assert doctor._governance_chain(evidence, RUN_ID).passed
         rows[0]["declared_key"] = ""
+        assert not doctor._governance_chain(evidence, RUN_ID).passed
+
+    @pytest.mark.parametrize(
+        ("denied_principal", "allowed_principal", "customer"),
+        [
+            ("anna", "jessica", "CUST-JESSICA"),
+            ("marco", "theo", "CUST-JESSICA"),
+            ("marco", "jessica", "CUST-THEO"),
+        ],
+    )
+    def test_other_principals_or_customers_cannot_replace_the_lab_four_cases(
+        self, denied_principal: str, allowed_principal: str, customer: str
+    ) -> None:
+        rows = [
+            {"principal_label": denied_principal, "decision": "DENY",
+             "args": {"customer_id": customer}, "declared_key": "denied",
+             "audit_id": None, "policy_name": "ownership"},
+            {"principal_label": allowed_principal, "decision": "ALLOW",
+             "args": {"customer_id": customer}, "audit_id": 5,
+             "completed_at": "2026-09-10", "idempotency_key": "allowed",
+             "policy_name": "ownership"},
+        ]
+        evidence = FakeEvidence({
+            "WITH decisions": {"rows": rows},
+            "AS execution_rows": {
+                "execution_rows": 0, "write_rows": 0,
+                "completed_writes": 0, "ledger_rows": 0,
+            },
+        })
         assert not doctor._governance_chain(evidence, RUN_ID).passed
 
 

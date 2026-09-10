@@ -25,13 +25,13 @@ behind.
 **Lab 2 - Build and Measure PostgreSQL Hybrid Retrieval.** A runnable psql
 worksheet whose RRF expression starts degraded and a complete recovery twin.
 
-**Lab 3 - Deploy and Operate the Managed Agent Path.** Two marker regions and two
+**Lab 3 - Deploy and Operate Agents with Amazon Bedrock AgentCore.** Two marker regions and two
 fallback files. 3a publishes ``get_ticket_history`` on the Gateway; 3b reconciles the
 tools the Runtime asks the Gateway for and binds that read to the caller. One of the two
 files is a packaged runtime source, so completing 3b changes the deployed build
 fingerprint, which is how the participant proves their own build answered.
 
-**Lab 4 - Govern and Prove Agent Actions.** A starter Cedar file that must NOT contain
+**Lab 4 - Build Governed Agent Actions with Cedar.** A starter Cedar file that must NOT contain
 the answer, a reference rule that must, one proof script whose flags the guide passes
 verbatim, and a keyed absence worksheet whose counts start as NULL placeholders. The
 OpenTelemetry trace contract is a provided check the guide runs, not a build.
@@ -742,9 +742,8 @@ def test_participant_exercise_reset_restores_only_the_named_marker_region() -> N
 # ---------------------------------------------------------------------------
 # Lab titles, as the participant reads them in TWO products.
 #
-# The guide was renamed to a BUILD / BUILD & MEASURE / OPERATE & OBSERVE /
-# GOVERN spine and the
-# shipped application was not, so the Observatory's Workshop Map and Proof Board went on
+# Previously the guide was renamed without updating the
+# shipped application, so the Observatory's Workshop Map and Proof Board went on
 # naming "Design the Retrieval Strategy" while the guide beside them said "Measure Hybrid
 # Retrieval Trade-offs". Nothing failed: the naming guards in this repository scan for
 # retired SURFACE and TOOL names, and a lab title is neither.
@@ -755,10 +754,10 @@ def test_participant_exercise_reset_restores_only_the_named_marker_region() -> N
 # ---------------------------------------------------------------------------
 
 CANONICAL_LAB_TITLE_PARTS: Tuple[Tuple[str, str], ...] = (
-    ("Lab 1 · Build", "Build a PostgreSQL-Grounded Agent"),
-    ("Lab 2 · Build & Measure", "Build and Measure PostgreSQL Hybrid Retrieval"),
-    ("Lab 3 · Deploy & Operate", "Deploy and Operate the Managed Agent Path"),
-    ("Lab 4 · Govern", "Govern and Prove Agent Actions"),
+    ("Lab 1", "Build a PostgreSQL-Grounded Agent"),
+    ("Lab 2", "Build and Measure PostgreSQL Hybrid Retrieval"),
+    ("Lab 3", "Deploy and Operate Agents with Amazon Bedrock AgentCore"),
+    ("Lab 4", "Build Governed Agent Actions with Cedar"),
 )
 
 # Titles the rename replaced. Present anywhere in the shipped product, they are drift.
@@ -767,6 +766,8 @@ RETIRED_LAB_TITLES: Tuple[str, ...] = (
     "Run Agents in a Managed Runtime",
     "Govern and Trace Agent Actions",
     "Operate and Observe the AgentCore Managed Path",
+    "Deploy and Operate the Managed Agent Path",
+    "Govern and Prove Agent Actions",
 )
 
 # Surfaces a participant actually reads a lab title on, plus the API that supplies one.
@@ -774,6 +775,7 @@ LAB_TITLE_SURFACES: Tuple[str, ...] = (
     "pellier/backend/routes/observatory.py",
     "pellier/frontend/src/observatory/surfaces/observe/WorkshopMap.tsx",
     "pellier/frontend/src/observatory/surfaces/observe/ProofBoard.tsx",
+    "pellier/frontend/src/observatory/labs/labCatalog.ts",
 )
 
 
@@ -810,9 +812,14 @@ def test_the_workshop_map_and_proof_board_use_the_canonical_titles() -> None:
         )
 
     api = _read("pellier/backend/routes/observatory.py")
-    for primary, subtitle in CANONICAL_LAB_TITLE_PARTS[1:]:
-        assert primary in api, f"the Proof Board API no longer names {primary!r}"
-        assert subtitle in api, f"the Proof Board API no longer names {subtitle!r}"
+    catalog = _read("pellier/frontend/src/observatory/labs/labCatalog.ts")
+    for primary, subtitle in CANONICAL_LAB_TITLE_PARTS:
+        assert f'"lab": "{primary}: {subtitle}"' in api, (
+            f"the Proof Board API no longer names {primary}: {subtitle}"
+        )
+        assert f"title: '{subtitle}'" in catalog, (
+            f"the Lab Collection no longer names {subtitle!r}"
+        )
 
 
 def test_the_retired_and_canonical_title_lists_do_not_overlap() -> None:

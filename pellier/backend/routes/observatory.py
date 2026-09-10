@@ -1082,7 +1082,7 @@ async def _collect_proof_board(
     cards = [
         {
             "id": "marco-floor-check",
-            "lab": "Lab 1 · Build — Build a PostgreSQL-Grounded Agent",
+            "lab": "Lab 1: Build a PostgreSQL-Grounded Agent",
             "group": "Agent and tool evidence",
             "title": "Wire Marco to check_inventory",
             "status": _card_status(check_inventory_wired and bool(latest_check_inventory), "needs_run" if check_inventory_wired else "needs_build"),
@@ -1115,7 +1115,7 @@ async def _collect_proof_board(
         },
         {
             "id": "retrieval-comparison",
-            "lab": "Lab 2 · Build & Measure — Build and Measure PostgreSQL Hybrid Retrieval",
+            "lab": "Lab 2: Build and Measure PostgreSQL Hybrid Retrieval",
             "group": "Retrieval evidence",
             "title": "Reconstruct Anna's hybrid retrieval receipt",
             "status": (
@@ -1149,7 +1149,7 @@ async def _collect_proof_board(
         },
         {
             "id": "audit-ledger",
-            "lab": "Lab 3 · Deploy & Operate — Deploy and Operate the Managed Agent Path",
+            "lab": "Lab 3: Deploy and Operate Agents with Amazon Bedrock AgentCore",
             "group": "Operational evidence",
             "title": "Prove the tool_audit ledger",
             "status": (
@@ -1197,7 +1197,7 @@ async def _collect_proof_board(
         },
         {
             "id": "runtime-gateway-policy",
-            "lab": "Lab 4 · Govern — Govern and Prove Agent Actions",
+            "lab": "Lab 4: Build Governed Agent Actions with Cedar",
             "group": "Managed boundaries",
             "title": "Inspect the Gateway and Cedar boundary",
             "status": (
@@ -1230,7 +1230,7 @@ async def _collect_proof_board(
         },
         {
             "id": "managed-rail",
-            "lab": "Lab 3 · Deploy & Operate — Deploy and Operate the Managed Agent Path",
+            "lab": "Lab 3: Deploy and Operate Agents with Amazon Bedrock AgentCore",
             "group": "Managed boundaries",
             "title": "Prove the managed Runtime and Gateway rail",
             "status": _card_status(
@@ -2169,6 +2169,26 @@ def _live_substrate(
     return panel
 
 
+@router.get("/memory-showcase/{persona}")
+async def get_memory_showcase(
+    persona: str,
+    user: Optional[dict[str, Any]] = Depends(get_current_user),
+):
+    """Read an owned showcase; never provision, seed, or invoke on page load."""
+    import asyncio
+    from services.memory_showcase import MemoryShowcase
+
+    customer_id = _PERSONA_TO_CUSTOMER_ID.get(persona.lower(), "")
+    principal_sub = authorize_customer_read(user, customer_id)
+    try:
+        return await asyncio.to_thread(lambda: MemoryShowcase().inspect(principal_sub))
+    except Exception as exc:
+        logger.warning("Memory showcase read unavailable: %s", type(exc).__name__)
+        raise HTTPException(
+            status_code=503, detail=OBSERVATORY_COPY["MEMORY_SHOWCASE_UNAVAILABLE"]
+        ) from exc
+
+
 @router.get("/memory/{persona}")
 async def get_memory(
     persona: str,
@@ -2189,12 +2209,12 @@ async def get_memory(
         data = {
             "persona": persona,
             "working": _live_substrate(
-                "Working - AgentCore Memory",
+                "Conversation events: AgentCore Memory",
                 namespace or "No authenticated conversation recorded yet",
                 "No live session turns found yet. Create a Pellier turn for this persona, then reload.",
             ),
             "semantic": _live_substrate(
-                "Semantic - AgentCore Memory",
+                "User preferences: AgentCore Memory",
                 _sem_store,
                 (
                     "No USER_PREFERENCE records found yet. Extraction is "
@@ -2204,17 +2224,17 @@ async def get_memory(
                 "settling",
             ),
             "episodic": _live_substrate(
-                "Episodic - Aurora",
+                "Customer history: Aurora PostgreSQL",
                 "pellier.customer_episodic_seed + orders + returns",
                 "No live Aurora events found for this persona yet.",
             ),
             "procedural": _live_substrate(
-                "Procedural - source controlled",
+                "Runtime instructions: repository",
                 "skills/*/SKILL.md + scripts/deploy/gateway_tool_schemas.py",
                 "No runtime skills or canonical MCP schemas were readable.",
             ),
             "operational": _live_substrate(
-                "Operational History - Aurora",
+                "Tool execution history: Aurora PostgreSQL",
                 "pellier.tool_audit (aggregate)",
                 "No live tool_audit rows found yet. Run a turn that calls a tool, then reload.",
             ),

@@ -51,6 +51,7 @@ docs/*
 # guide against, so it ships with the repository rather than living in an ignored
 # directory a clone never receives.
 !docs/HANDOFF-SOURCE-CONTRACT.md
+!docs/MEMORY_SHOWCASE.md
 
 # IDE
 .vscode/

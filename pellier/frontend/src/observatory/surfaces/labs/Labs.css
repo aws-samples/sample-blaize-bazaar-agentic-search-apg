@@ -1285,7 +1285,8 @@
 }
 .labs-catalog-portrait-link { display: block; color: inherit; }
 .labs-catalog-contact-sheet figure { grid-template-rows: 180px auto; }
-.labs-catalog-contact-sheet figcaption { min-height: 0; padding: 12px 18px 0; border-top: 0; }
+.labs-catalog-contact-sheet figcaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; min-height: 0; padding: 12px 18px 0; border-top: 0; }
+.labs-catalog-contact-sheet figcaption span { white-space: nowrap; }
 .labs-catalog-contact-sheet .labs-catalog-card-copy { flex: 1; padding: 10px 18px 14px; }
 .labs-catalog-contact-sheet h3 { margin-top: 0; font-size: 17px; line-height: 1.25; }
 .labs-catalog-contact-sheet h3 a { color: inherit; }

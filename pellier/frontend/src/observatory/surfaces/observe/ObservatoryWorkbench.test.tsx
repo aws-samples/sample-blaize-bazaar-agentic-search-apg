@@ -128,14 +128,14 @@ describe('Pellier Observatory live agent workbench', () => {
         (portrait) => portrait.getAttribute('aria-hidden'),
       ),
     ).toEqual(['true', 'true', 'true', 'true']);
-    expect(labRail).toHaveTextContent('Marco · Lab 1');
+    expect(labRail).toHaveTextContent('Marco: Lab 1');
     expect(labRail).toHaveTextContent('PostgreSQL-grounded agent');
-    expect(labRail).toHaveTextContent('Anna · Lab 2');
+    expect(labRail).toHaveTextContent('Anna: Lab 2');
     expect(labRail).toHaveTextContent('PostgreSQL retrieval');
-    expect(labRail).toHaveTextContent('Theo · Lab 3');
+    expect(labRail).toHaveTextContent('Theo: Lab 3');
     expect(labRail).toHaveTextContent('AgentCore managed path');
-    expect(labRail).toHaveTextContent('Jessica · Lab 4');
-    expect(labRail).toHaveTextContent('Identity and non-execution');
+    expect(labRail).toHaveTextContent('Jessica: Lab 4');
+    expect(labRail).toHaveTextContent('Cedar and governed actions');
     expect(
       tracePanel(document.body).querySelector('canvas.labs-hero-field'),
     ).not.toBeInTheDocument();

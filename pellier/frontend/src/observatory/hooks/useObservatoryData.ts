@@ -38,6 +38,9 @@ function buildApiUrl(key: string, params?: Record<string, string>): string {
   if (key.startsWith('session-') && key !== 'sessions') {
     return `/api/observatory/sessions/${key.replace('session-', '')}`;
   }
+  if (key.startsWith('memory-showcase-')) {
+    return `/api/observatory/memory-showcase/${key.replace('memory-showcase-', '')}`;
+  }
   if (key.startsWith('memory-')) {
     return `/api/observatory/memory/${key.replace('memory-', '')}`;
   }

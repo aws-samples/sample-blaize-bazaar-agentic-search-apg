@@ -812,14 +812,14 @@ def render_markdown(receipt: Dict[str, Any]) -> str:
     # hybrid retrieval" and "Build and Measure PostgreSQL Hybrid Retrieval"
     # are the same lab.
     titles = {
-        "01_ground_the_answer": "Lab 1 - Build a PostgreSQL-Grounded Agent",
+        "01_ground_the_answer": "Lab 1: Build a PostgreSQL-Grounded Agent",
         "02_measure_hybrid_retrieval": (
-            "Lab 2 - Build and Measure PostgreSQL Hybrid Retrieval"
+            "Lab 2: Build and Measure PostgreSQL Hybrid Retrieval"
         ),
         "03_operate_the_managed_path": (
-            "Lab 3 - Deploy and Operate the Managed Agent Path"
+            "Lab 3: Deploy and Operate Agents with Amazon Bedrock AgentCore"
         ),
-        "04_govern_and_prove": "Lab 4 - Govern and Prove Agent Actions",
+        "04_govern_and_prove": "Lab 4: Build Governed Agent Actions with Cedar",
     }
     for key, claims in receipt["labs"].items():
         add(f"## {titles.get(key, key)}")
@@ -845,7 +845,7 @@ def render_markdown(receipt: Dict[str, Any]) -> str:
             ]
             if keys:
                 add("")
-                add("  " + " · ".join(f"`{k}={detail[k]}`" for k in keys))
+                add("  " + ", ".join(f"`{k}={detail[k]}`" for k in keys))
         add("")
 
     add("## Not yet proven")

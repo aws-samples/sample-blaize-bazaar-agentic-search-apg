@@ -221,3 +221,20 @@ def test_residue_counts_events_and_records_but_reports_sessions() -> None:
     assert module.residue([with_record]) == [with_record]
     # A preserved actor holding both is still never residue.
     assert module.residue([{**with_record, "preserve": True, "eventCount": 4}]) == []
+
+
+def test_survey_covers_facts_summaries_episodes_and_preferences() -> None:
+    module = _load_module()
+
+    class AllStrategiesClient(FakeMemoryClient):
+        def list_memory_records(self, **kwargs):
+            self.list_calls.append({"op": "list_memory_records", **kwargs})
+            prefix, actor = kwargs["namespace"].split("/")[2:4]
+            return {"memoryRecordSummaries": [{"memoryRecordId": f"{actor}-{prefix}", "content": {"text": prefix}}]}
+
+    client = AllStrategiesClient()
+    actors = module.survey(client, "memory")
+    owned = next(a for a in actors if a["actorId"] == "operator-sub")
+    assert {r["text"] for r in owned["records"]} == {"preferences", "facts", "summaries", "episodes"}
+    assert next(a for a in actors if a["actorId"] == "CUST-MARCO")["preserve"] is True
+    assert not client.deleted_events and not client.deleted_records

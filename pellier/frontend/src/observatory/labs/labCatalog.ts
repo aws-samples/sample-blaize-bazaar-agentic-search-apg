@@ -141,32 +141,32 @@ export const LAB_EXERCISES: readonly LabExercise[] = [
     id: 'managed-agent-path',
     number: '03',
     anchorName: 'Theo',
-    title: 'Deploy and Operate the Managed Agent Path',
+    title: 'Deploy and Operate Agents with Amazon Bedrock AgentCore',
     shortTitle: 'AgentCore managed path',
     summary:
-      'Publish the Gateway tool Theo\'s return needs, reconcile what the Runtime asks for, then deploy and prove the managed receipt carries your own build.',
+      'Publish Theo\'s customer-scoped read, reconcile the Runtime tool list, and deploy. Use learned preferences in a new conversation and verify the running build.',
     image: '/assets/personas/theo-720.webp',
     imageWidth: 720,
     imageHeight: 1080,
     proofCardIds: ['managed-rail', 'audit-ledger'],
     objective:
-      'With Theo selected, publish the customer-scoped read, reconcile the Runtime catalogue, deploy, then prove the build fingerprint, fresh-process Memory, and Gateway execution across his managed thread.',
+      'Deploy Theo\'s support path, use extracted preferences in a new conversation, and verify current product data in Aurora. Check the build fingerprint, Memory events, and correlated trace separately.',
     participantTodo:
-      'Publish get_ticket_history, reconcile the support specialist and bind it to the caller, deploy, then run Theo\'s three-turn thread and verify Memory from a separate process.',
+      'Publish get_ticket_history, bind the support read to the caller, and deploy. Complete the learned-preference check, then run Theo\'s three-turn thread and read its Memory events from a separate process.',
     command:
       'cd .agentcore-project/pellier\nnpx -y @aws/agentcore@0.26.0 invoke \\\n  --runtime pellier_orchestrator \\\n  --session-id "$RUNTIME_SESSION" \\\n  --bearer-token "$PELLIER_TOKEN" \\\n  --prompt "Hand-thrown ceramics for a slower morning routine" \\\n  --json',
     measurements: {
       before: {
         label: 'Before',
-        value: 'The Gateway publishes 15 tools and the support specialist asks for two it does not serve, so Theo\'s return fails on the managed rail.',
+        value: 'The Gateway publishes 15 tools. The support specialist requests tools outside the shopper\'s available tool list.',
       },
       after: {
         label: 'Acceptance target',
-        value: 'The Gateway publishes 16, Theo\'s return completes on the managed rail, and the receipt\'s build fingerprint matches this checkout.',
+        value: 'The Gateway publishes 16 tools, the executed build matches this checkout, and Theo\'s new conversation uses an extracted preference with current product data.',
       },
     },
     evidenceAssertion:
-      'The Runtime receipt, Memory verifier, and trace assertions all pass; SQL separately reconstructs the principal, requested customer, policy receipt, and execution row.',
+      'Retrieved record IDs, a new session ID, zero prior chat events, and catalog-tool results support the learned-preference check. The Runtime receipt, Memory verifier, and trace contract establish the other managed checks.',
     decisionPrompt:
       'Which artifact proves each managed boundary, and which claims remain unproven when one artifact is missing?',
     primaryAction: {
@@ -188,8 +188,8 @@ export const LAB_EXERCISES: readonly LabExercise[] = [
     id: 'fail-closed-policy',
     number: '04',
     anchorName: 'Jessica',
-    title: 'Govern and Prove Agent Actions',
-    shortTitle: 'Identity and non-execution',
+    title: 'Build Governed Agent Actions with Cedar',
+    shortTitle: 'Cedar and governed actions',
     summary:
       'Bind verified identity in Cedar, prove the four-case execution matrix and Aurora RLS backstop, then investigate Jessica\'s case as separately authorized staff.',
     image: '/assets/personas/jessica-720.webp',
@@ -197,23 +197,23 @@ export const LAB_EXERCISES: readonly LabExercise[] = [
     imageHeight: 900,
     proofCardIds: ['runtime-gateway-policy'],
     objective:
-      'Use Marco, Anna, and Jessica to prove the customer boundary from Cognito through Cedar, execution receipts, PostgreSQL RLS, and the Operator checkpoint.',
+      'Use Marco and Jessica to test the customer boundary through Cognito, Cedar, execution records, PostgreSQL RLS, and the Operator checkpoint.',
     participantTodo:
-      'Complete and deploy the Cedar rule, run the four-case identity matrix, prove RLS read and write behavior, complete Jessica\'s three-turn Operator investigation, stop at human review, and reset the policy.',
+      'Complete the Cedar rule and keyed absence query. Run the four-case identity matrix and RLS read and write checks, then complete one Operator investigation for Jessica. Stop before a consequential action and reset the policy in Summary.',
     command:
       'python3 scripts/prove_identity_boundary.py \\\n  --json /tmp/pellier-evidence/lab-4.json\npsql -X -v ON_ERROR_STOP=1 -P pager=off \\\n  -f workshop/lab-4-rls.sql',
     measurements: {
       before: {
         label: 'Before',
-        value: 'The baseline policy does not bind the verified username to the requested Aurora customer.',
+        value: 'The baseline policy does not bind the verified customer claim to the requested Aurora customer.',
       },
       after: {
         label: 'Acceptance target',
-        value: 'Both mismatches deny without execution, Jessica executes once and replays safely, RLS proves read and write scope, and Operator stops before approval.',
+        value: 'Marco is denied, Jessica\'s invalid return is refused, and her valid return commits once and replays safely. RLS enforces row scope; Operator stops before execution.',
       },
     },
     evidenceAssertion:
-      'The keyed matrix distinguishes policy, execution, write, and durable effect; the RLS worksheet proves an independent database boundary; Jessica\'s staff investigation remains pending at the human checkpoint.',
+      'The keyed matrix distinguishes policy, execution, write, and durable effect. RLS verifies an independent database boundary. The Operator investigation stops at the human checkpoint before a consequential action.',
     decisionPrompt:
       'Which layer proves identity, authorization, execution, database scope, and human approval, and what remains unproven if any layer is missing?',
     primaryAction: {

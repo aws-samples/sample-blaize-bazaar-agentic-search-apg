@@ -1,13 +1,13 @@
 /**
- * MemoryDashboard - four memory types plus operational history.
+ * MemoryDashboard - conversation context, business records and instructions.
  *
- * Shows working / semantic / episodic / procedural memory for the active
- * persona, then separates tool execution history. Each panel carries a
- * provenance pill so attendees can see whether it read live or is waiting
+ * Names each record's owner for the active persona and separates tool
+ * execution history. Each panel shows whether it read live or is waiting
  * for asynchronous extraction. Empty means no records yet, not static data.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import MemoryShowcase from './MemoryShowcase';
 import { redirectToSignIn } from '../../../utils/auth';
 import { Link } from 'react-router-dom';
 import {
@@ -184,7 +184,7 @@ const SubstrateItem: React.FC<{ item: MemoryItem }> = ({ item }) => {
             paddingTop: '2px',
           }}
         >
-          {meta.join(' · ')}
+          {meta.join(', ')}
         </span>
       )}
     </li>
@@ -326,18 +326,20 @@ const EmptyState: React.FC = () => (
  * Main component
  * ----------------------------------------------------------------------- */
 
-type MemoryPersona = 'marco' | 'anna' | 'theo';
+type MemoryPersona = 'marco' | 'anna' | 'theo' | 'jessica';
 
 const PERSONA_OPTIONS = [
   { id: 'marco' as const, label: 'Marco' },
   { id: 'anna' as const, label: 'Anna' },
   { id: 'theo' as const, label: 'Theo' },
+  { id: 'jessica' as const, label: 'Jessica' },
 ];
 
 const MEMORY_PERSONA_IDS: ReadonlySet<MemoryPersona> = new Set([
   'marco',
   'anna',
   'theo',
+  'jessica',
 ]);
 
 function isMemoryPersona(id: string | undefined): id is MemoryPersona {
@@ -353,13 +355,16 @@ const MemoryDashboard: React.FC = () => {
     ? (activePersona!.id as MemoryPersona)
     : 'marco';
   const [persona, setPersona] = useState<MemoryPersona>(initialPersona);
+  useEffect(() => {
+    if (isMemoryPersona(activePersona?.id)) setPersona(activePersona.id);
+  }, [activePersona?.id]);
 
   // Memory is live-only. Disable the static fallback so an API failure is visible.
   const { data, loading, error, errorStatus, refetch } = useObservatoryData<MemoryState>({
     key: `memory-${persona}`,
   });
 
-  const personaCounts = { marco: 1, anna: 1, theo: 1 } as Record<MemoryPersona, number>;
+  const personaCounts = { marco: 1, anna: 1, theo: 1, jessica: 1 } as Record<MemoryPersona, number>;
 
   const hasData = data != null;
 
@@ -376,28 +381,23 @@ const MemoryDashboard: React.FC = () => {
     : 0;
 
   return (
-    <div style={{ padding: '40px 48px', maxWidth: '1100px' }}>
+    <div style={{ padding: 'clamp(24px, 4vw, 40px) clamp(16px, 4vw, 48px)', maxWidth: '1100px' }}>
       <EditorialTitle
         backToReferences
-        eyebrow="Understand · Memory · four types · explicit evidence"
+        eyebrow="Understand: Memory"
         title="Memory"
-        summary="AgentCore Memory owns working turns and learned semantic preferences. Aurora supplies episodic business events. Source-controlled skills and MCP schemas supply procedural know-how. Operational history is shown separately because tool_audit proves what ran; it is not memory."
+        summary="See how AgentCore carries learned preferences into a new conversation. Inspect Aurora business records and reviewed source instructions separately."
       />
 
+      <SurfaceFilterBar label="Persona" filter={persona} counts={personaCounts} options={PERSONA_OPTIONS} onChange={setPersona} />
+      <MemoryShowcase key={persona} persona={persona} />
+      <h2 style={{ fontFamily: 'var(--obs-heading)', fontSize: '22px', margin: '28px 0 8px' }}>Conversation memory and business context</h2>
       {loading && <LoadingState />}
       {error && <ErrorState message={error} signIn={errorStatus === 401} onRetry={errorStatus === 401 ? () => redirectToSignIn('email') : refetch} />}
       {!loading && !error && !hasData && <EmptyState />}
 
       {!loading && !error && hasData && data != null && (
         <>
-          <SurfaceFilterBar
-            label="Persona"
-            filter={persona}
-            counts={personaCounts}
-            options={PERSONA_OPTIONS}
-            onChange={(p) => setPersona(p)}
-          />
-
           <div
             style={{
               display: 'flex',
@@ -415,7 +415,6 @@ const MemoryDashboard: React.FC = () => {
             }}
           >
             <span>Live sources: {liveCount} / 5</span>
-            <span style={{ color: 'var(--obs-ink-4)' }}>·</span>
             <span>Persona: {data.persona}</span>
           </div>
 

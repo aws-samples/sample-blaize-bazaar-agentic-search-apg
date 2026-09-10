@@ -220,11 +220,11 @@ const TRACE_TONE: Record<TraceStepState, { label: string; card: ProofTone }> = {
 
 // Four-lab workshop spine.
 const LAB_BY_CARD_ID: Record<string, string> = {
-  'marco-floor-check': 'Lab 1 · Build a PostgreSQL-Grounded Agent',
-  'retrieval-comparison': 'Lab 2 · Build and Measure PostgreSQL Hybrid Retrieval',
-  'managed-rail': 'Lab 3 · Deploy and Operate the Managed Agent Path',
-  'audit-ledger': 'Lab 3 · Deploy and Operate the Managed Agent Path',
-  'runtime-gateway-policy': 'Lab 4 · Govern and Prove Agent Actions',
+  'marco-floor-check': 'Lab 1: Build a PostgreSQL-Grounded Agent',
+  'retrieval-comparison': 'Lab 2: Build and Measure PostgreSQL Hybrid Retrieval',
+  'managed-rail': 'Lab 3: Deploy and Operate Agents with Amazon Bedrock AgentCore',
+  'audit-ledger': 'Lab 3: Deploy and Operate Agents with Amazon Bedrock AgentCore',
+  'runtime-gateway-policy': 'Lab 4: Build Governed Agent Actions with Cedar',
 };
 
 interface GovernedProofStage {
@@ -1551,7 +1551,7 @@ const ProofBoard: React.FC<ProofBoardProps> = ({ focusCardId }) => {
         backToReferences={!isAuditFocus}
         eyebrow={
           isAuditFocus
-            ? 'Lab 3 · Deploy and Operate the Managed Agent Path'
+            ? 'Lab 3: Deploy and Operate Agents with Amazon Bedrock AgentCore'
             : 'Observe · Evidence'
         }
         title="Proof Board"

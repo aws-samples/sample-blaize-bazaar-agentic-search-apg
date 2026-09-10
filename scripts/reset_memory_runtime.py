@@ -12,6 +12,10 @@ accumulate:
   * LONG-TERM USER_PREFERENCE records, which the strategy extracts from those turns
     into the namespace ``/pellier/preferences/{actorId}/``.
 
+The cross-session showcase also provisions facts, summaries and episodes. The
+current survey covers each actor's four namespace prefixes, including episodic
+reflections, so a reset cannot leave those newer records behind.
+
 That namespace is ACTOR-scoped. Measured on 2026-08-27, the authenticated Operator
 subject had 6 sessions, 16 events and 4 extracted preference records, all derived from
 Operator Concierge engineering runs. Their content:
@@ -66,6 +70,13 @@ from typing import Any, Dict, List
 PRESERVE_ACTORS = frozenset({"CUST-MARCO", "CUST-ANNA", "CUST-THEO"})
 
 PREFERENCE_NAMESPACE = "/pellier/preferences/{actor}/"
+MEMORY_NAMESPACE_PREFIXES = (
+    PREFERENCE_NAMESPACE,
+    "/pellier/facts/{actor}/",
+    "/pellier/summaries/{actor}/",
+    # Includes session episodes and actor-level reflections.
+    "/pellier/episodes/{actor}/",
+)
 
 # "This box has no Memory resource", which the reset must not confuse with
 # "cleaning it failed". See EXIT CODES in the module docstring.
@@ -164,12 +175,15 @@ def survey(client: Any, memory_id: str) -> List[Dict[str, Any]]:
                 "sessionId": session["sessionId"],
                 "eventIds": [e["eventId"] for e in events],
             })
-        records = _paginate(
-            client.list_memory_records, "memoryRecordSummaries",
-            memoryId=memory_id,
-            namespace=PREFERENCE_NAMESPACE.format(actor=actor),
-            maxResults=100,
-        )
+        records_by_id: Dict[str, Dict[str, Any]] = {}
+        for prefix in MEMORY_NAMESPACE_PREFIXES:
+            for record in _paginate(
+                client.list_memory_records, "memoryRecordSummaries",
+                memoryId=memory_id, namespace=prefix.format(actor=actor),
+                maxResults=100,
+            ):
+                records_by_id[record["memoryRecordId"]] = record
+        records = list(records_by_id.values())
         actors.append({
             "actorId": actor,
             "preserve": actor in PRESERVE_ACTORS,
@@ -189,7 +203,7 @@ def survey(client: Any, memory_id: str) -> List[Dict[str, Any]]:
 def apply_cleanup(
     client: Any, memory_id: str, actors: List[Dict[str, Any]], *, apply: bool
 ) -> Dict[str, int]:
-    """Delete events and preference records for every non-preserved actor.
+    """Delete events and managed long-term records for every non-preserved actor.
 
     Per-event and per-record, using the narrowest operations the SDK exposes
     (``delete_event`` and ``delete_memory_record``). No bulk or namespace-wide delete,

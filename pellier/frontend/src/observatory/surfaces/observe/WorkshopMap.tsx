@@ -52,7 +52,7 @@ const PILLARS: PillarItem[] = [
 
 const LABS: LabItem[] = [
   {
-    lab: 'Lab 1 · Build',
+    lab: 'Lab 1',
     title: 'Build a PostgreSQL-Grounded Agent',
     summary:
       "Complete Inventory Agent and check_inventory, then prove Marco's warehouse turn against live Aurora inventory and tool_audit.",
@@ -71,10 +71,10 @@ const LABS: LabItem[] = [
     ],
   },
   {
-    lab: 'Lab 2 · Build & Measure',
+    lab: 'Lab 2',
     title: 'Build and Measure PostgreSQL Hybrid Retrieval',
     summary:
-      "Compare Anna's vector, hybrid, hybrid plus rerank, and agentic paths, then defend one choice with quality, latency, and cost.",
+      "Build the rank-fusion expression and relevance labels for Anna's query. Compare two rerank pools and five held-out cases, then justify a choice.",
     primary: {
       to: '/observatory/performance',
       label: 'Open retrieval comparison',
@@ -94,10 +94,10 @@ const LABS: LabItem[] = [
     ],
   },
   {
-    lab: 'Lab 3 · Deploy & Operate',
-    title: 'Deploy and Operate the Managed Agent Path',
+    lab: 'Lab 3',
+    title: 'Deploy and Operate Agents with Amazon Bedrock AgentCore',
     summary:
-      "Publish the Gateway tool Theo's return needs, reconcile the Runtime catalogue, then deploy and prove the managed receipt carries your own build.",
+      "Publish Theo's customer-scoped read and deploy. Use a learned preference in a new conversation, check current products in Aurora, and verify the running build and trace.",
     primary: {
       to: '/observatory/proof-board#managed-rail',
       label: 'Open Lab 3 proofs',
@@ -107,7 +107,7 @@ const LABS: LabItem[] = [
       {
         to: '/observatory/memory',
         label: 'Memory',
-        detail: 'Cross-turn continuity',
+        detail: 'Conversation events and learned preferences',
       },
       {
         to: '/observatory/proof-board#audit-ledger',
@@ -117,10 +117,10 @@ const LABS: LabItem[] = [
     ],
   },
   {
-    lab: 'Lab 4 · Govern',
-    title: 'Govern and Prove Agent Actions',
+    lab: 'Lab 4',
+    title: 'Build Governed Agent Actions with Cedar',
     summary:
-      'Bind JWT identity to the requested customer, classify the managed DENY, prove its exact key has no execution row, confirm the matching identity executes once, and reset the participant policy.',
+      'Build the Cedar ownership rule and keyed absence query. Distinguish denial, business refusal, committed return, and replay. Test RLS independently and investigate Jessica\'s case as Operator.',
     primary: {
       to: '/observatory/write-path',
       label: 'Open Gateway & Policy',
