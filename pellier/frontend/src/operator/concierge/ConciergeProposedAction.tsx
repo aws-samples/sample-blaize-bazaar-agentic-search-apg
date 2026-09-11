@@ -29,6 +29,7 @@ import type { ConciergeProposedAction } from '../../services/operatorConcierge'
 
 const EXECUTION_COPY: Record<string, string> = {
   available: 'Available',
+  review_required: 'Requires human confirmation',
   temporarily_unavailable: 'Temporarily unavailable',
   not_enabled: 'Not enabled',
   capability_state_unverified: 'Could not be confirmed',
@@ -60,6 +61,7 @@ interface Props {
 
 const ConciergeProposedActionCard: React.FC<Props> = ({ action }) => {
   const [review, setReview] = useState<OperatorReviewDetail | null>(null)
+  const [readState, setReadState] = useState<'loading' | 'ready' | 'failed'>('loading')
   const reviewId = action.reviewId ?? null
 
   useEffect(() => {
@@ -68,14 +70,22 @@ const ConciergeProposedActionCard: React.FC<Props> = ({ action }) => {
       return
     }
     let active = true
+    setReview(null)
+    setReadState('loading')
     // Current state, not the artifact's. A confirmation recorded ten minutes after
     // this turn must show here, and the transcript must not be rewritten to say so.
     void fetchReview(reviewId)
       .then((detail) => {
-        if (active) setReview(detail)
+        if (active) {
+          setReview(detail)
+          setReadState('ready')
+        }
       })
       .catch(() => {
-        if (active) setReview(null)
+        if (active) {
+          setReview(null)
+          setReadState('failed')
+        }
       })
     return () => {
       active = false
@@ -83,7 +93,7 @@ const ConciergeProposedActionCard: React.FC<Props> = ({ action }) => {
   }, [reviewId])
 
   const execution = action.executionCapability?.state ?? 'capability_state_unverified'
-  const humanState = review?.review.humanState ?? 'confirmation_required'
+  const humanState = review?.review.humanState
 
   return (
     <section
@@ -92,10 +102,11 @@ const ConciergeProposedActionCard: React.FC<Props> = ({ action }) => {
       data-execution={execution}
       data-testid="operator-concierge-proposal"
     >
-      <span className="operator-concierge-eyebrow">Proposed action</span>
-      <p className="operator-concierge-proposal-title">
-        {action.tool === 'initiate_return' ? 'Initiate return' : action.tool}
-      </p>
+      <h3 className="operator-concierge-proposal-title">
+        {reviewId !== null
+          ? action.tool === 'initiate_return' ? 'Return review prepared' : 'Action review prepared'
+          : 'Review not prepared'}
+      </h3>
 
       <dl className="operator-concierge-proposal-rows">
         {action.product?.name ? (
@@ -104,7 +115,7 @@ const ConciergeProposedActionCard: React.FC<Props> = ({ action }) => {
             <dd>
               {action.product.name}
               {typeof action.product.price === 'number'
-                ? ` · ${money(action.product.price)}`
+                ? `, ${money(action.product.price)}`
                 : ''}
             </dd>
           </div>
@@ -124,13 +135,15 @@ const ConciergeProposedActionCard: React.FC<Props> = ({ action }) => {
         <div>
           <dt>Human confirmation</dt>
           <dd data-testid="operator-concierge-proposal-human">
-            {HUMAN_COPY[humanState] ?? humanState}
+            {reviewId === null ? 'No review prepared' : humanState
+              ? HUMAN_COPY[humanState] ?? humanState
+              : readState === 'failed' ? 'Could not read current decision' : 'Reading current decision…'}
           </dd>
         </div>
         <div>
           {/* Separate row, separate fact. A confirmed review does not make a closed
               rail open, and a closed rail does not invalidate the decision. */}
-          <dt>Governed execution</dt>
+          <dt>Execution availability when prepared</dt>
           <dd data-testid="operator-concierge-proposal-execution">
             {EXECUTION_COPY[execution] ?? execution}
           </dd>
@@ -152,13 +165,23 @@ const ConciergeProposedActionCard: React.FC<Props> = ({ action }) => {
       ) : null}
 
       {reviewId !== null ? (
-        <Link
-          className="operator-concierge-proposal-link"
-          to={`/operator/reviews/${reviewId}`}
-          data-testid="operator-concierge-proposal-review-link"
-        >
-          Open action <span aria-hidden="true">&rarr;</span>
-        </Link>
+        <>
+          <p className="operator-concierge-proposal-note">
+            Review #{reviewId} is saved in Action Queue.{' '}
+            {humanState === 'confirmation_required'
+              ? 'Open it to confirm or decline this return. Execution is a separate step.'
+              : 'Open it to read the current decision and execution evidence.'}
+          </p>
+          <Link
+            className="operator-concierge-proposal-link"
+            to={`/operator/reviews/${reviewId}`}
+            data-testid="operator-concierge-proposal-review-link"
+          >
+            {humanState === 'confirmation_required' ? 'Review this return'
+              : humanState ? 'View review outcome' : `Open review #${reviewId}`}
+            <span aria-hidden="true">&rarr;</span>
+          </Link>
+        </>
       ) : null}
     </section>
   )

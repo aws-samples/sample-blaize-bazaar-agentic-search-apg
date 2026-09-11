@@ -2281,9 +2281,7 @@
   margin: 0;
   font-family: var(--sans);
   font-size: var(--text-label);
-  font-weight: 600;
-  letter-spacing: var(--op-label-track);
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--op-muted);
 }
 
@@ -2334,19 +2332,25 @@
 /* Outcome roles, derived from the assurance axes. Green is verified positive
    state, red is blocked; the glyph and the word carry the distinction for
    anyone who cannot rely on colour. */
-.operator-review-state[data-outcome='executed'] {
+.operator-review-outcome {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.operator-review-outcome[data-outcome='executed'] {
   color: var(--op-verified, var(--dl-ok));
 }
 
-.operator-review-state[data-outcome='refused'] {
+.operator-review-outcome[data-outcome='refused'] {
   color: var(--op-blocked, var(--dl-err));
 }
 
-.operator-review-state[data-outcome='unavailable'] {
+.operator-review-outcome[data-outcome='unavailable'] {
   color: var(--op-caution, var(--dl-warn));
 }
 
-.operator-review-state[data-outcome='approved'] {
+.operator-review-outcome[data-outcome='approved'] {
   color: var(--op-caution, var(--dl-warn));
 }
 
@@ -3923,8 +3927,8 @@
 .operator-concierge-step-source {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 7px;
+  gap: 7px;
+  padding: 4px 7px 4px 4px;
   border: 1px solid
     color-mix(in srgb, var(--op-source-tone, var(--op-faint)) 32%, transparent);
   border-radius: var(--chip-radius, 4px);
@@ -3936,10 +3940,23 @@
   font-family: var(--sans);
   font-size: var(--text-label);
   font-weight: 600;
-  letter-spacing: var(--op-label-track);
-  text-transform: uppercase;
   color: var(--op-source-tone, var(--op-faint));
   white-space: nowrap;
+}
+
+.operator-service-logo {
+  display: inline-block;
+  flex: none;
+  object-fit: contain;
+}
+
+.operator-concierge-section-title {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--op-ink);
 }
 
 .operator-concierge-step-duration {
@@ -5274,9 +5291,11 @@
 .operator-concierge-recovery { padding: 12px 22px; font-family: var(--sans); font-size: 14px; line-height: 1.5; background: var(--op-paper-2); }
 .operator-concierge-recovery p { margin: 0 0 8px; }
 .operator-concierge-recovery button,
-.operator-concierge-latest { min-height: 44px; padding: 8px 12px; border-radius: 6px; font: 500 14px var(--sans); color: var(--op-authority); text-decoration: underline; text-underline-offset: 4px; }
+.operator-concierge-latest { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px; border-radius: 6px; font: 500 14px var(--sans); color: var(--op-authority); text-decoration: underline; text-underline-offset: 4px; }
 .operator-concierge-latest { align-self: center; margin: 6px 16px; }
-.operator-review-state[data-outcome='unknown'] { color: var(--op-ink-2); }
+.operator-concierge-navigation { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 4px 12px; margin: 6px 0; }
+.operator-concierge-navigation .operator-concierge-latest { margin: 0; }
+.operator-review-outcome[data-outcome='unknown'] { color: var(--op-ink-2); }
 .operator-root :is(a, button, summary):focus-visible { outline: 2px solid var(--op-authority); outline-offset: 4px; }
 .operator-root [id] { scroll-margin-top: 100px; }
 @media (max-width: 760px) {

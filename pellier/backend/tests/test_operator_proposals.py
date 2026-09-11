@@ -147,6 +147,14 @@ def test_execution_affordance_fails_closed() -> None:
         assert PROP._execution_capability(capability)["executable"] is executable
 
 
+def test_review_required_is_a_known_gate_not_an_unknown_capability() -> None:
+    capability = {"state": "review_required", "reason": "human_review_required"}
+    assert PROP._execution_capability(capability)["executable"] is False
+    assert PROP.describe_execution(capability) == (
+        "Human confirmation is required before requesting governed execution."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Material arguments: Aurora establishes every business reference
 # ---------------------------------------------------------------------------

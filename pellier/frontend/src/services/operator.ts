@@ -270,6 +270,8 @@ export interface OperatorReview {
    */
   execution: OperatorExecutionReceipt | null
   orderId: number | null
+  /** Current catalog label, resolved from the proposed product on read. */
+  productName?: string | null
   issue: string
   recommendation: {
     primaryAction?: string
@@ -285,8 +287,8 @@ export interface OperatorReview {
   decidedBy: string | null
   /**
    * Who asked, kept apart from the customer the proposal names and from the
-   * operator who decides. `unverified` means an anonymous session opened it:
-   * the customer on the review was chosen in the storefront, not proved.
+   * operator who decides. `unverified` means the requester was not proved to
+   * own this customer record. A subject may still identify a signed-in caller.
    */
   requestedBySub: string | null
   requesterKind: 'shopper' | 'operator' | 'unverified'
@@ -302,7 +304,18 @@ export function requesterLine(review: Pick<OperatorReview, 'requesterKind' | 're
   if (review.requesterKind === 'operator') {
     return `Prepared on the desk by staff${subject}; no shopper asked for this.`
   }
-  return 'Asked for from a session that was not signed in. The customer named here was chosen in the storefront and is not a proved identity.'
+  if (review.requestedBySub) {
+    return 'The original requester was signed in, but ownership of this customer record was not verified. This is separate from your Operator sign-in.'
+  }
+  return 'No verified requester identity was saved with this request. This is separate from your current Operator sign-in.'
+}
+
+export function requesterLabel(review: Pick<OperatorReview, 'requesterKind' | 'requestedBySub'>): string {
+  if (review.requesterKind === 'shopper') return 'Requested by the verified shopper'
+  if (review.requesterKind === 'operator') return 'Prepared by an operator'
+  return review.requestedBySub
+    ? 'Requester signed in; customer ownership unverified'
+    : 'Original requester identity not recorded'
 }
 
 export interface OperatorReviewQueue {
@@ -387,12 +400,19 @@ export class OperatorApiError extends Error {
 
 /** Read APIs should surface an unavailable state, never leave the desk loading. */
 export const OPERATOR_REQUEST_TIMEOUT_MS = 8_000
+// A review hydrates current orders, inventory, returns, identity and receipts.
+// Give this detail read its own bound without slowing failures on light reads.
+export const OPERATOR_REVIEW_TIMEOUT_MS = 30_000
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  timeoutMs = init.method === 'POST' ? 120_000 : OPERATOR_REQUEST_TIMEOUT_MS,
+): Promise<T> {
   const controller = new AbortController()
   const timeout = globalThis.setTimeout(
     () => controller.abort(),
-    init.method === 'POST' ? 120_000 : OPERATOR_REQUEST_TIMEOUT_MS,
+    timeoutMs,
   )
   try {
     const response = await fetch(path, {
@@ -585,6 +605,8 @@ export function fetchReviewQueue(): Promise<OperatorReviewQueue> {
 export function fetchReview(reviewId: number): Promise<OperatorReviewDetail> {
   return request<OperatorReviewDetail>(
     `/api/operator/reviews/${encodeURIComponent(String(reviewId))}`,
+    {},
+    OPERATOR_REVIEW_TIMEOUT_MS,
   )
 }
 

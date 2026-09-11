@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   fetchClientRecord,
+  fetchReview,
   OperatorApiError,
   OPERATOR_REQUEST_TIMEOUT_MS,
+  OPERATOR_REVIEW_TIMEOUT_MS,
 } from './operator'
 
 describe('Operator API client', () => {
@@ -12,7 +14,10 @@ describe('Operator API client', () => {
     vi.unstubAllGlobals()
   })
 
-  it('surfaces an unavailable state when an Operator read stalls', async () => {
+  it.each([
+    { name: 'client', load: () => fetchClientRecord('CUST-JESSICA'), deadline: OPERATOR_REQUEST_TIMEOUT_MS },
+    { name: 'review', load: () => fetchReview(7), deadline: OPERATOR_REVIEW_TIMEOUT_MS },
+  ])('surfaces an unavailable state when a $name read stalls', async ({ load, deadline }) => {
     vi.useFakeTimers()
     vi.stubGlobal(
       'fetch',
@@ -26,16 +31,30 @@ describe('Operator API client', () => {
       }),
     )
 
-    const record = fetchClientRecord('CUST-JESSICA')
+    const record = load()
     const rejected = expect(record).rejects.toEqual(
       expect.objectContaining<Partial<OperatorApiError>>({
         code: 'operator_unavailable',
         status: 503,
       }),
     )
-    await vi.advanceTimersByTimeAsync(OPERATOR_REQUEST_TIMEOUT_MS)
+    await vi.advanceTimersByTimeAsync(deadline)
 
     await rejected
+  })
+
+  it('allows a full review body to arrive after the lightweight read deadline', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('fetch', vi.fn(async (_path: RequestInfo | URL, init?: RequestInit) => ({
+      ok: true,
+      json: () => new Promise((resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(new DOMException('Timeout', 'AbortError')))
+        setTimeout(() => resolve({ review: { reviewId: 7 } }), 12_000)
+      }),
+    })))
+    const result = expect(fetchReview(7)).resolves.toMatchObject({ review: { reviewId: 7 } })
+    await vi.advanceTimersByTimeAsync(12_000)
+    await result
   })
 })
 

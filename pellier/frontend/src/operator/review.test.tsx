@@ -222,6 +222,39 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('ReviewQueue', () => {
+  it('distinguishes repeated reviews of the same item and keeps both saved outcomes', async () => {
+    const reviews = [1, 3].map((reviewId) => ({
+      ...PENDING_REVIEW, reviewId, productName: 'Wabi-Sabi Bowl',
+      humanState: 'confirmed', status: 'approved',
+    }))
+    mockFetch(() => ({ body: { reviews, total: 2, pendingCount: 0 } }))
+    renderQueue()
+    for (const id of [1, 3]) {
+      const row = await screen.findByTestId(`operator-review-${id}`)
+      expect(row).toHaveTextContent(`Review #${id}, order #305`)
+      expect(row).toHaveTextContent('Wabi-Sabi Bowl')
+      expect(row).toHaveAttribute('href', `/operator/reviews/${id}`)
+      expect(within(row).getByTestId('operator-review-outcome')).toBeVisible()
+    }
+  })
+
+  it.each([
+    ['shopper', 'shopper-sub', 'Requested by the verified shopper'],
+    ['operator', 'operator-sub', 'Prepared by an operator'],
+    ['unverified', 'other-shopper-sub', 'Requester signed in; customer ownership unverified'],
+    ['unverified', null, 'Original requester identity not recorded'],
+  ])('describes the original %s requester independently of Operator sign-in', async (kind, sub, label) => {
+    authMock.isAuthenticated = true
+    authMock.user = { sub: 'current-operator', email: 'operator@example.test' }
+    mockFetch(() => ({ body: {
+      reviews: [{ ...PENDING_REVIEW, requesterKind: kind, requestedBySub: sub }],
+      total: 1, pendingCount: 1,
+    } }))
+    renderQueue()
+    expect(await screen.findByTestId('operator-review-requester-flag')).toHaveTextContent(label!)
+    expect(screen.queryByText('Requester not signed in')).not.toBeInTheDocument()
+  })
+
   it('filters the queue by outcome and counts each outcome', async () => {
     mockFetch(() => ({
       body: { reviews: [PENDING_REVIEW], total: 1, pendingCount: 1 },
@@ -255,14 +288,14 @@ describe('ReviewQueue', () => {
     expect(screen.getByText('Confirmation required')).toBeInTheDocument()
   })
 
-  it('reads as continuity from Pellier rather than a ticket from nowhere', async () => {
+  it('identifies the saved review and order without relying on the client name', async () => {
     mockFetch(() => ({
       body: { reviews: [PENDING_REVIEW], total: 1, pendingCount: 1 },
     }))
     renderQueue()
     await screen.findByTestId('operator-reviews')
 
-    expect(screen.getByText(/Prepared from Pellier/)).toBeInTheDocument()
+    expect(screen.getByText('Review #12, order #305')).toBeInTheDocument()
   })
 
   it('never shows a raw session or turn identifier in the queue', async () => {
@@ -521,8 +554,8 @@ describe('ReviewRecord', () => {
 
     const requester = await screen.findByTestId('operator-review-requester')
     expect(requester).toHaveAttribute('data-requester', 'unverified')
-    expect(requester).toHaveTextContent('not signed in')
-    expect(requester).toHaveTextContent('not a proved identity')
+    expect(requester).toHaveTextContent('No verified requester identity was saved')
+    expect(requester).toHaveTextContent('separate from your current Operator sign-in')
 
     const handoff = await screen.findByTestId('operator-shopper-handoff')
     expect(handoff).toHaveTextContent('What Theo asked Pellier')

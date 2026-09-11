@@ -29,9 +29,11 @@ const TURN_STATE_COPY: Record<string, { label: string; detail: string }> = {
 
 interface Props {
   messages: ConciergeMessage[]
+  nextStep?: React.ReactNode
+  onRetry?: (request: string) => void
 }
 
-const ConciergeConversation: React.FC<Props> = ({ messages }) => {
+const ConciergeConversation: React.FC<Props> = ({ messages, nextStep, onRetry }) => {
   // Which turns received an answer. The operator message's own `turnState` is
   // written once as `incomplete` and never updated, because history is append-only
   // and editing what was said would be rewriting the transcript. So completion is
@@ -40,6 +42,10 @@ const ConciergeConversation: React.FC<Props> = ({ messages }) => {
   const answered = new Set(
     messages.filter((m) => m.role === 'assistant').map((m) => m.turnId),
   )
+  const latestAnswer = messages.filter(
+    (message) => message.role === 'assistant' && message.turnState === 'complete',
+  ).at(-1)
+  const latestResponse = messages.filter((message) => message.role === 'assistant').at(-1)
 
   return (
   <ol className="operator-concierge-thread" data-testid="operator-concierge-thread">
@@ -70,20 +76,33 @@ const ConciergeConversation: React.FC<Props> = ({ messages }) => {
       }
 
       const artifact = message.artifact ?? {}
+      const failed = message.turnState === 'failed'
+      const originalRequest = messages.find(
+        (request) => request.role === 'user' && request.turnId === message.turnId,
+      )
       return (
-        <li className="operator-concierge-turn" key={message.messageId}>
+        <li className="operator-concierge-turn" key={message.messageId} data-role="assistant">
           {message.content ? (
             <div className="operator-concierge-primary"
                  data-workflow={artifact.workflow || 'client_summary'}>
               {/* A draft is labelled; a summary is not. The label is what stops
                   customer-facing copy from reading as something already sent. */}
-              {artifact.primaryLabel ? (
+              {artifact.primaryLabel || failed ? (
                 <span className="operator-concierge-eyebrow"
                       data-testid="operator-concierge-primary-label">
-                  {artifact.primaryLabel}
+                   {failed ? 'Investigation incomplete' : artifact.primaryLabel}
                 </span>
               ) : null}
               <p className="operator-concierge-conclusion">{message.content}</p>
+              {failed && message === latestResponse && originalRequest && onRetry ? (
+                <button
+                  type="button"
+                  className="operator-concierge-latest"
+                  onClick={() => onRetry(originalRequest.content)}
+                >
+                  Retry this request
+                </button>
+              ) : null}
               {artifact.primaryNote ? (
                 <p className="operator-concierge-primary-note">
                   {artifact.primaryNote}
@@ -91,6 +110,25 @@ const ConciergeConversation: React.FC<Props> = ({ messages }) => {
               ) : null}
             </div>
           ) : null}
+          {artifact.recommendation?.body ? (
+            <section className="operator-concierge-recommendation"
+                     data-testid="operator-concierge-recommendation">
+              <h3 className="operator-concierge-section-title">Recommended next step</h3>
+              <p className="operator-concierge-recommendation-body">
+                {artifact.recommendation.body}
+              </p>
+              {artifact.workflow === 'investigate_resolution' && !artifact.proposedActions?.length ? (
+                <p className="operator-concierge-primary-note">
+                  This assessment records no human decision. Review preparation,
+                  confirmation, and execution are separate steps.
+                </p>
+              ) : null}
+            </section>
+          ) : null}
+          {artifact.proposedActions?.length ? (
+            <ConciergeProposedActions actions={artifact.proposedActions} />
+          ) : null}
+          {message === latestAnswer ? nextStep : null}
           {/* Products come before the sections: an operator asked for options, so
               the options lead and the comparison prose follows them. */}
           {artifact.replacement ? (
@@ -126,20 +164,6 @@ const ConciergeConversation: React.FC<Props> = ({ messages }) => {
           ) : null}
           {artifact.evidence?.length ? (
             <ConciergeEvidence items={artifact.evidence} />
-          ) : null}
-          {/* After the prose and the evidence: an operator reads what was found,
-              then what is being asked of them. */}
-          {artifact.proposedActions?.length ? (
-            <ConciergeProposedActions actions={artifact.proposedActions} />
-          ) : null}
-          {artifact.recommendation?.body ? (
-            <section className="operator-concierge-recommendation"
-                     data-testid="operator-concierge-recommendation">
-              <span className="operator-concierge-eyebrow">Recommendation</span>
-              <p className="operator-concierge-recommendation-body">
-                {artifact.recommendation.body}
-              </p>
-            </section>
           ) : null}
           {artifact.sources?.length ? (
             <section className="operator-concierge-sources"

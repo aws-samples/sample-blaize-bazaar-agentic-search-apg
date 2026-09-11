@@ -1,18 +1,16 @@
 import React from 'react'
 import {
   AlertCircle,
-  Brain,
   Check,
   Database,
-  GitBranch,
   LoaderCircle,
   MessageSquareQuote,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 import type { ConciergeInvestigationStep } from '../../services/operatorConcierge'
+import ServiceLogo, { type ServiceName } from '../components/ServiceLogo'
 
 interface Props {
   steps: ConciergeInvestigationStep[]
@@ -20,6 +18,7 @@ interface Props {
 
 function sourceIdentity(source: string): {
   Icon: LucideIcon
+  service?: ServiceName
   tone:
     | 'database'
     | 'memory'
@@ -30,18 +29,20 @@ function sourceIdentity(source: string): {
     | 'neutral'
 } {
   const value = source.toLowerCase()
-  if (value.includes('postgres') || value.includes('aurora')) {
-    return { Icon: Database, tone: 'database' }
+  if (value.includes('aurora')) {
+    return { Icon: Database, service: 'aurora', tone: 'database' }
   }
-  if (value.includes('memory')) return { Icon: Brain, tone: 'memory' }
-  if (value.includes('strands graph')) return { Icon: GitBranch, tone: 'graph' }
+  if (value.includes('postgres')) return { Icon: Database, tone: 'database' }
+  if (value.includes('memory')) return { Icon: Database, service: 'agentcore', tone: 'memory' }
+  if (value.includes('strands')) return { Icon: Database, service: 'strands', tone: 'graph' }
   if (value.includes('storefront handoff')) {
     return { Icon: MessageSquareQuote, tone: 'handoff' }
   }
-  if (value.includes('bedrock')) return { Icon: Sparkles, tone: 'model' }
   if (value.includes('control') || value.includes('policy')) {
-    return { Icon: ShieldCheck, tone: 'control' }
+    return { Icon: ShieldCheck, service: value.includes('agentcore') ? 'agentcore' : undefined, tone: 'control' }
   }
+  if (value.includes('agentcore')) return { Icon: Database, service: 'agentcore', tone: 'control' }
+  if (value.includes('bedrock')) return { Icon: Database, service: 'bedrock', tone: 'model' }
   return { Icon: Database, tone: 'neutral' }
 }
 
@@ -67,7 +68,7 @@ function statusLabel(status: ConciergeInvestigationStep['status']): string {
 const ConciergeStepList: React.FC<Props> = ({ steps }) => (
   <ol className="operator-concierge-steps">
     {steps.map((step, index) => {
-      const { Icon: SourceIcon, tone } = sourceIdentity(step.source)
+      const { Icon: SourceIcon, service, tone } = sourceIdentity(step.source)
       const StatusIcon = statusIcon(step)
       const duration = durationLabel(step.durationMs)
       return (
@@ -89,7 +90,11 @@ const ConciergeStepList: React.FC<Props> = ({ steps }) => (
           </span>
           <span className="operator-concierge-step-provenance">
             <span className="operator-concierge-step-source">
-              <SourceIcon size={12} strokeWidth={1.8} aria-hidden="true" />
+              {service ? (
+                <ServiceLogo service={service} />
+              ) : (
+                <SourceIcon size={16} strokeWidth={1.8} aria-hidden="true" />
+              )}
               {step.source}
             </span>
             {duration ? (

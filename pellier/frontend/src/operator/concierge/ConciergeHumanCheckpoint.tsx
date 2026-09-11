@@ -74,7 +74,7 @@ const ConciergeHumanCheckpoint: React.FC<Props> = ({
     >
       <div className="operator-concierge-human-checkpoint-head">
         <h3 id="operator-concierge-checkpoint-title">
-          Decide what should enter review
+          Prepare a return review
         </h3>
         <p>
           This prepares a review. It does not authorize or execute the return.
@@ -88,7 +88,7 @@ const ConciergeHumanCheckpoint: React.FC<Props> = ({
         </li>
         <li>
           <CheckCircle2 size={16} aria-hidden="true" />
-          <span><strong>Human confirms</strong> in Action Queue</span>
+          <span><strong>You confirm or decline</strong> on the review in Action Queue</span>
         </li>
         <li>
           <ShieldCheck size={16} aria-hidden="true" />
@@ -96,7 +96,7 @@ const ConciergeHumanCheckpoint: React.FC<Props> = ({
         </li>
       </ol>
 
-      <fieldset className="operator-concierge-human-checkpoint-items">
+      <fieldset className="operator-concierge-human-checkpoint-items" disabled={disabled}>
         <legend>Choose the disputed piece</legend>
         {items.map((candidate) => (
           <label key={`${candidate.orderId}-${candidate.productId}`}>
@@ -110,7 +110,7 @@ const ConciergeHumanCheckpoint: React.FC<Props> = ({
             <span>
               <strong>{candidate.productName}</strong>
               <small>
-                Order #{candidate.orderId} · ${candidate.price.toFixed(2)}
+                Order #{candidate.orderId}, ${candidate.price.toFixed(2)}
               </small>
             </span>
           </label>
@@ -143,8 +143,12 @@ const ConciergeHumanCheckpoint: React.FC<Props> = ({
           )
         }}
       >
-        Prepare for human review
+        Prepare review
       </button>
+      <p className="operator-concierge-primary-note">
+        A direct link to the saved review will appear here. You can then inspect
+        the evidence and record your decision in Action Queue.
+      </p>
     </section>
   )
 }

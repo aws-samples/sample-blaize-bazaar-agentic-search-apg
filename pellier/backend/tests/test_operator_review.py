@@ -13,6 +13,7 @@ clicking confirm is the same event as a system being permitted to act.
 from __future__ import annotations
 
 import json
+import sqlite3
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -556,6 +557,58 @@ async def test_a_materially_different_proposal_gets_its_own_review() -> None:
 # ---------------------------------------------------------------------------
 # C. Discovery
 # ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("read", ["queue", "detail"])
+@pytest.mark.parametrize(
+    ("kind", "subject"),
+    [("shopper", "shopper-sub"), ("operator", "operator-sub"),
+     ("unverified", "other-shopper-sub"), ("unverified", None)],
+)
+async def test_review_reads_preserve_requester_identity_and_product(
+    read: str, kind: str, subject: Optional[str]
+) -> None:
+    """Execute the real SELECT projection, which a full-row mock cannot check."""
+    with sqlite3.connect(":memory:") as conn:
+        conn.row_factory = sqlite3.Row
+        conn.executescript("""
+            ATTACH DATABASE ':memory:' AS pellier;
+            CREATE TABLE pellier.approvals (
+                id INTEGER, customer_id TEXT, tool TEXT, args TEXT, status TEXT,
+                source_turn_id TEXT, execution_turn_id TEXT, order_id INTEGER,
+                issue TEXT, recommendation TEXT, action_hash TEXT, decided_by TEXT,
+                requested_by_sub TEXT, requester_kind TEXT,
+                requested_at TEXT, decided_at TEXT
+            );
+            CREATE TABLE pellier.customers (id TEXT, name TEXT);
+            CREATE TABLE pellier.product_catalog (product_id INTEGER, name TEXT);
+            INSERT INTO pellier.customers VALUES ('CUST-THEO', 'Theo');
+            INSERT INTO pellier.product_catalog VALUES (37, 'Wabi-Sabi Bowl');
+        """)
+        conn.execute("""
+            INSERT INTO pellier.approvals
+              (id, customer_id, tool, args, status, requested_by_sub, requester_kind)
+            VALUES (1, 'CUST-THEO', 'initiate_return', '{"product_id":37}', 'pending', ?, ?)
+        """, (subject, kind))
+
+        class QueryDb:
+            async def fetch_all(self, query: str, *params: Any) -> list[dict]:
+                # SQLite supports the same joins and JSON extraction. Only the
+                # driver placeholders and PostgreSQL cast spelling differ here.
+                sql = query.replace("::text", "").replace("%s", "?")
+                return [dict(row) for row in conn.execute(sql, params)]
+
+            async def fetch_one(self, query: str, *params: Any) -> Optional[dict]:
+                rows = await self.fetch_all(query, *params)
+                return rows[0] if rows else None
+
+        db = QueryDb()
+        row = (await rv.list_reviews(db))[0] if read == "queue" else await rv.get_review(db, 1)
+        payload = operator_module._review_payload(row)
+        assert payload["requesterKind"] == kind
+        assert payload["requestedBySub"] == subject
+        assert payload["productName"] == "Wabi-Sabi Bowl"
+
 
 def test_the_pending_review_appears_in_the_operator_queue() -> None:
     db = FakeReviewDb()

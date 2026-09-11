@@ -33,8 +33,10 @@ INVESTIGATOR_NODE = "case-investigator"
 PLANNER_NODE = "resolution-planner"
 READ_ONLY_COMPLETE = "READ_ONLY_COMPLETE"
 WAITING_FOR_HUMAN = "WAITING_FOR_HUMAN"
-_INVESTIGATOR_MAX_TOKENS = 450
-_PLANNER_MAX_TOKENS = 700
+# Allow room for a complete JSON evidence comparison. The prompts separately
+# bound the prose; a token cutoff must not substitute for concise writing.
+_INVESTIGATOR_MAX_TOKENS = 1024
+_PLANNER_MAX_TOKENS = 1536
 _GRAPH_TIMEOUT_SECONDS = 180
 _NODE_TIMEOUT_SECONDS = 90
 
@@ -48,6 +50,8 @@ Rules:
 - establishedFacts contains concise claims explicitly supported by FACT evidence.
 - reportedContext contains concise claims explicitly labelled CONTEXT or untrusted.
 - gaps contains material questions the supplied records do not answer.
+- Use at most five established facts, three reported claims, and three gaps.
+  Keep each entry to one short sentence.
 - Do not recommend an action, draft customer copy, infer missing facts, or claim that
   a person, policy engine, tool, or database performed an action.
 - This output is an investigation brief for another agent. It is not business truth.

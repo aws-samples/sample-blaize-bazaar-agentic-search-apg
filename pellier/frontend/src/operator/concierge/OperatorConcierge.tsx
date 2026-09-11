@@ -12,11 +12,12 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, GitBranch } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 import type { OperatorClientRecord } from '../../services/operator'
 
 import ServiceSource from '../components/ServiceSource'
+import ServiceLogo from '../components/ServiceLogo'
 import ConciergeCapabilityState from './ConciergeCapabilityState'
 import ConciergeHumanCheckpoint from './ConciergeHumanCheckpoint'
 import ConciergePendingTurn from './ConciergePendingTurn'
@@ -59,26 +60,27 @@ const OperatorConcierge: React.FC<Props> = ({
   const templateContext = useMemo(() => buildTemplateContext(record), [record])
   const guidedStarted = useRef(false)
   const hasAnsweredTurn = concierge.messages.some(
-    (message) => message.role === 'assistant',
+    (message) => message.role === 'assistant' && message.turnState === 'complete',
   )
   const hasPreparedAction = concierge.messages.some(
-    (message) => Boolean(message.artifact?.proposedActions?.length),
+    (message) => message.artifact?.proposedActions?.some(
+      (action) => action.reviewId != null,
+    ),
   )
   const guidedCompletedTurns = useMemo(() => {
     if (!guidedServiceRecovery) return 0
+    const answeredTurns = new Set(concierge.messages.filter(
+      (message) => message.role === 'assistant' && message.turnState === 'complete',
+    ).map((message) => message.turnId))
     let completed = 0
     for (const prompt of GUIDED_SERVICE_RECOVERY_PROMPTS) {
-      const request = concierge.messages.find(
-        (message) => message.role === 'user' && message.content === prompt,
-      )
-      if (!request) break
-      const answer = concierge.messages.find(
+      const answered = concierge.messages.some(
         (message) =>
-          message.role === 'assistant' &&
-          message.turnId === request.turnId &&
-          message.turnState === 'complete',
+          message.role === 'user' &&
+          message.content === prompt &&
+          answeredTurns.has(message.turnId),
       )
-      if (!answer) break
+      if (!answered) break
       completed += 1
     }
     return completed
@@ -89,8 +91,8 @@ const OperatorConcierge: React.FC<Props> = ({
       : undefined
   const nextGuidedLabel =
     guidedCompletedTurns === 1
-      ? 'Continue to authoritative records'
-      : 'Prepare the fair next step'
+      ? 'Check the source records'
+      : 'Get the final recommendation'
 
   useEffect(() => {
     if (
@@ -129,8 +131,10 @@ const OperatorConcierge: React.FC<Props> = ({
   const goToLatest = () => {
     const el = body.current
     if (!el) return
-    const requests = el.querySelectorAll('.operator-concierge-request')
-    const newest = requests[requests.length - 1]
+    const turns = el.querySelectorAll(
+      inFlight ? '.operator-concierge-request' : '[data-role="assistant"]',
+    )
+    const newest = turns[turns.length - 1]
     if (newest) el.scrollTop += newest.getBoundingClientRect().top - el.getBoundingClientRect().top
     following.current = true
     setShowLatest(false)
@@ -139,6 +143,59 @@ const OperatorConcierge: React.FC<Props> = ({
     if (following.current) goToLatest()
     else setShowLatest(true)
   }, [concierge.messages, concierge.pendingRequest, concierge.liveAnswer])
+
+  const nextStep = !inFlight ? (
+    <>
+      {nextGuidedPrompt ? (
+        <section
+          className="operator-concierge-guided-next"
+          data-testid="operator-concierge-guided-next"
+          aria-label={`Guided Jessica case, turn ${guidedCompletedTurns + 1} of ${GUIDED_SERVICE_RECOVERY_PROMPTS.length}`}
+        >
+          <div>
+            <span>Optional follow-up {guidedCompletedTurns} of 2</span>
+            <p>{nextGuidedPrompt}</p>
+            <p className="operator-concierge-primary-note">
+              This continues the investigation. It does not prepare or approve a return.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={!concierge.composerEnabled}
+            onClick={() => void concierge.submit(nextGuidedPrompt)}
+          >
+            {nextGuidedLabel}
+          </button>
+        </section>
+      ) : null}
+      {hasAnsweredTurn &&
+      !hasPreparedAction &&
+      (!guidedServiceRecovery ||
+        guidedCompletedTurns === GUIDED_SERVICE_RECOVERY_PROMPTS.length) &&
+      record?.client.returnEvidence?.unconfirmedReturnAssertion ? (
+        <ConciergeHumanCheckpoint
+          record={record}
+          disabled={!concierge.composerEnabled}
+          onPrepare={(request) => void concierge.submit(request)}
+        />
+      ) : null}
+    </>
+  ) : null
+  const hasNextStep = !inFlight && (
+    Boolean(nextGuidedPrompt) ||
+    (hasAnsweredTurn && !hasPreparedAction &&
+      (!guidedServiceRecovery || guidedCompletedTurns === GUIDED_SERVICE_RECOVERY_PROMPTS.length) &&
+      record?.client.returnEvidence?.unconfirmedReturnAssertion)
+  )
+  const focusNextStep = () => {
+    const el = body.current
+    const target = el?.querySelector<HTMLElement>(
+      '[data-testid="operator-concierge-human-checkpoint"], [data-testid="operator-concierge-guided-next"]',
+    )
+    if (!el || !target) return
+    el.scrollTop += target.getBoundingClientRect().top - el.getBoundingClientRect().top
+    target.querySelector<HTMLElement>('input, button')?.focus()
+  }
 
   return (
     <section
@@ -172,7 +229,7 @@ const OperatorConcierge: React.FC<Props> = ({
               aria-label="Strands Graph path: Case Investigator, then Resolution Planner"
             >
               <span className="operator-concierge-path-label">
-                <GitBranch size={13} strokeWidth={1.8} aria-hidden="true" />
+                <ServiceLogo service="strands" size={20} />
                 Strands Graph
               </span>
               <span>Case Investigator</span>
@@ -186,7 +243,7 @@ const OperatorConcierge: React.FC<Props> = ({
         <p className="operator-concierge-scope" data-testid="operator-concierge-scope">
           <span className="operator-concierge-scope-name">{clientName}</span>
           <span className="operator-concierge-scope-meta">
-            {membershipLabel} &middot; {spendLabel}
+            {membershipLabel}, {spendLabel}
           </span>
         </p>
       </header>
@@ -213,7 +270,12 @@ const OperatorConcierge: React.FC<Props> = ({
       >
         {hasConversation || inFlight ? (
           <>
-            <ConciergeConversation messages={concierge.messages} />
+            <ConciergeConversation
+              messages={concierge.messages}
+              nextStep={nextStep}
+              onRetry={!inFlight && concierge.composerEnabled
+                ? (request) => void concierge.submit(request) : undefined}
+            />
             {inFlight ? (
               <ol className="operator-concierge-thread">
                 <ConciergePendingTurn
@@ -222,40 +284,6 @@ const OperatorConcierge: React.FC<Props> = ({
                   answer={concierge.liveAnswer}
                 />
               </ol>
-            ) : null}
-            {!inFlight && nextGuidedPrompt ? (
-              <section
-                className="operator-concierge-guided-next"
-                data-testid="operator-concierge-guided-next"
-                aria-label={`Guided Jessica case, turn ${guidedCompletedTurns + 1} of ${GUIDED_SERVICE_RECOVERY_PROMPTS.length}`}
-              >
-                <div>
-                  <span>
-                    Guided case · Turn {guidedCompletedTurns + 1} of{' '}
-                    {GUIDED_SERVICE_RECOVERY_PROMPTS.length}
-                  </span>
-                  <p>{nextGuidedPrompt}</p>
-                </div>
-                <button
-                  type="button"
-                  disabled={!concierge.composerEnabled}
-                  onClick={() => void concierge.submit(nextGuidedPrompt)}
-                >
-                  {nextGuidedLabel}
-                </button>
-              </section>
-            ) : null}
-            {!inFlight &&
-            hasAnsweredTurn &&
-            !hasPreparedAction &&
-            (!guidedServiceRecovery ||
-              guidedCompletedTurns === GUIDED_SERVICE_RECOVERY_PROMPTS.length) &&
-            record?.client.returnEvidence?.unconfirmedReturnAssertion ? (
-              <ConciergeHumanCheckpoint
-                record={record}
-                disabled={!concierge.composerEnabled}
-                onPrepare={(request) => void concierge.submit(request)}
-              />
             ) : null}
           </>
         ) : (
@@ -281,7 +309,17 @@ const OperatorConcierge: React.FC<Props> = ({
         )}
       </div>
 
-      {showLatest ? <button type="button" className="operator-concierge-latest" onClick={goToLatest}>Latest reply</button> : null}
+      {hasNextStep || showLatest ? (
+        <nav className="operator-concierge-navigation" aria-label="Conversation navigation">
+          {showLatest ? <button type="button" className="operator-concierge-latest" onClick={goToLatest}>Latest reply</button> : null}
+          {hasNextStep ? (
+            <button type="button" className="operator-concierge-latest" onClick={focusNextStep}>
+              {nextGuidedPrompt ? 'View optional follow-up' : 'Choose return details'}
+              <ArrowRight size={16} aria-hidden="true" />
+            </button>
+          ) : null}
+        </nav>
+      ) : null}
       {concierge.status === 'conversation_unavailable' || concierge.status === 'config_unavailable' ? (
         <div className="operator-concierge-recovery" role="status">
           <p>{concierge.error || (concierge.status === 'config_unavailable' ? 'The investigation service configuration could not be read.' : 'Saved conversation history could not be verified.')}</p>

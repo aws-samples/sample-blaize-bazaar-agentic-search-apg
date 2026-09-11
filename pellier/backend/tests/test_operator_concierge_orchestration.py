@@ -248,12 +248,16 @@ async def test_client_evidence_includes_order_lines_and_attributed_ticket_note(
                 }
             ],
             "credits": [],
-            "returns": [],
+            "returns": [{
+                "returnId": 91, "productId": "31",
+                "productName": "Stoneware Pour-Over Set",
+                "reason": "damaged", "status": "approved",
+            }],
         }
 
     monkeypatch.setattr("routes.operator.get_client", get_client)
 
-    _record, _steps, evidence = await ORCH.load_client_evidence(
+    _record, steps, evidence = await ORCH.load_client_evidence(
         object(), "CUST-JESSICA"
     )
 
@@ -266,6 +270,15 @@ async def test_client_evidence_includes_order_lines_and_attributed_ticket_note(
     assert "Return logged for the catchall and the robe." in rendered
     assert "[FACT] Order history:" in rendered
     assert "[CONTEXT] Service context:" in rendered
+    return_record = next(item for item in evidence if item.kind == "return")
+    return_text = ORCH._evidence_for_prompt([return_record])
+    assert "Return #91: Stoneware Pour-Over Set, status approved, reason damaged" in return_text
+    assert "1 authoritative return record." in return_text
+    assert return_record.data["returns"][0]["productId"] == "31"
+    conflict = next(item for item in evidence if item.kind == "return_conflict")
+    assert "different item does not confirm" in conflict.detail
+    assert next(step for step in steps if step.kind == "ticket").result == "1 ticket"
+    assert next(step for step in steps if step.kind == "return").result == "1 return"
 
 
 # ---------------------------------------------------------------------------

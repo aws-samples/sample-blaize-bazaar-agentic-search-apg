@@ -13,6 +13,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 import ClientRecord from '../surfaces/ClientRecord'
+import ConciergeConversation from './ConciergeConversation'
 import {
   GUIDED_SERVICE_RECOVERY_PROMPTS,
   TEMPLATES,
@@ -20,6 +21,7 @@ import {
   rankTemplates,
 } from './templates'
 import type { OperatorClientRecord } from '../../services/operator'
+import type { ConciergeMessage } from '../../services/operatorConcierge'
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -408,7 +410,7 @@ describe('submitting a turn', () => {
     )
 
     fireEvent.click(
-      await screen.findByRole('button', { name: 'Continue to authoritative records' }),
+      await screen.findByRole('button', { name: 'Check the source records' }),
     )
 
     await waitFor(() => {
@@ -422,8 +424,8 @@ describe('submitting a turn', () => {
     })
   })
 
-  it('reveals the human checkpoint only after all three guided turns', async () => {
-    const messages = GUIDED_SERVICE_RECOVERY_PROMPTS.flatMap((prompt, index) => [
+  it.each([false, true])('reveals the checkpoint after three completed guided turns, including retry=%s', async (retry) => {
+    const messages: ConciergeMessage[] = GUIDED_SERVICE_RECOVERY_PROMPTS.flatMap((prompt, index) => [
       {
         messageId: index * 2 + 1, role: 'user' as const,
         content: prompt, turnId: `turn-${index + 1}`,
@@ -444,6 +446,14 @@ describe('submitting a turn', () => {
         artifactVersion: 2, createdAt: null,
       },
     ])
+    if (retry) {
+      const successfulAnswer = { ...messages[5] }
+      messages[5] = { ...messages[5], turnState: 'failed', content: 'Investigation could not be completed.' }
+      messages.push(
+        { ...messages[4], messageId: 7, turnId: 'turn-retry' },
+        { ...successfulAnswer, messageId: 8, turnId: 'turn-retry' },
+      )
+    }
     wire({ stream: STREAM, messages })
     renderRecord(
       '/operator/clients/CUST-JESSICA?guided=service-recovery#operator-concierge-title',
@@ -533,7 +543,7 @@ describe('submitting a turn', () => {
     expect(checkpoint).toHaveTextContent(
       'This prepares a review. It does not authorize or execute the return.',
     )
-    expect(checkpoint).toHaveTextContent('Human confirms in Action Queue')
+    expect(checkpoint).toHaveTextContent('You confirm or decline on the review in Action Queue')
 
     fireEvent.click(
       screen.getByRole('radio', { name: /Coral Lacquer Catchall/i }),
@@ -542,7 +552,7 @@ describe('submitting a turn', () => {
       target: { value: 'not_as_described' },
     })
     fireEvent.click(
-      screen.getByRole('button', { name: 'Prepare for human review' }),
+      screen.getByRole('button', { name: 'Prepare review' }),
     )
 
     await waitFor(() => {
@@ -578,6 +588,24 @@ describe('resuming a conversation', () => {
       artifactVersion: 2, createdAt: null,
     },
   ]
+
+  it('labels a failed investigation and retries its original request without asserting a result', () => {
+    const retry = vi.fn()
+    render(<ConciergeConversation
+      messages={[
+        HISTORY[0],
+        { ...HISTORY[1], turnState: 'failed', content: 'Investigation could not be completed.',
+          artifact: { primaryLabel: 'Established by the records' } },
+      ]}
+      onRetry={retry}
+    />)
+    expect(screen.getByTestId('operator-concierge-primary-label')).toHaveTextContent(
+      'Investigation incomplete',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Retry this request' }))
+    expect(retry).toHaveBeenCalledExactlyOnceWith(HISTORY[0].content)
+    expect(screen.queryByText('Established by the records')).not.toBeInTheDocument()
+  })
 
   it('replays the stored thread instead of the empty state', async () => {
     wire({ latestSessionId: 'sess-1', messages: HISTORY })
@@ -971,7 +999,9 @@ describe('proposed actions', () => {
         Promise.resolve({
           ok: true, status: 200, json: () => Promise.resolve(body),
         } as Response)
-      if (url.includes('/operator/reviews/')) return json(detail)
+      if (url.includes('/operator/reviews/')) {
+        return detail instanceof Error ? Promise.reject(detail) : json(detail)
+      }
       if (url.includes('/concierge/sessions/latest')) return json({ sessionId: 'sess-1' })
       if (url.includes('/concierge/sessions/')) {
         return json({
@@ -997,7 +1027,7 @@ describe('proposed actions', () => {
     renderRecord()
     const card = await screen.findByTestId('operator-concierge-proposal')
 
-    expect(card.textContent).toContain('Initiate return')
+    expect(card.textContent).toContain('Return review prepared')
     expect(card.textContent).toContain('Vetiver Quietude')
     expect(card.textContent).toContain('#325')
     expect(card.textContent).toContain('Not as described')
@@ -1008,6 +1038,20 @@ describe('proposed actions', () => {
     expect(
       screen.getByTestId('operator-concierge-proposal-execution').textContent,
     ).toBe('Temporarily unavailable')
+  })
+
+  it('names the live human-review gate without claiming execution is authorized', async () => {
+    wireWithReview({
+      ...PROPOSAL,
+      executionCapability: { state: 'review_required', executable: false },
+    }, reviewDetail('confirmation_required', {
+      human: 'CONFIRMATION_REQUIRED', policy: 'PENDING',
+      aurora: 'NOT_EVALUATED', evidence: 'PENDING',
+    }))
+    renderRecord()
+    expect(await screen.findByTestId('operator-concierge-proposal-execution')).toHaveTextContent(
+      'Requires human confirmation',
+    )
   })
 
   it('offers no control that would execute or approve in place', async () => {
@@ -1025,6 +1069,32 @@ describe('proposed actions', () => {
     // The one affordance: navigation to the canonical review surface.
     const link = screen.getByTestId('operator-concierge-proposal-review-link')
     expect(link.getAttribute('href')).toBe('/operator/reviews/36')
+    await waitFor(() => expect(link).toHaveTextContent('Review this return'))
+    expect(screen.getByTestId('operator-concierge-proposal')).toHaveTextContent(
+      'Review #36 is saved in Action Queue',
+    )
+  })
+
+  it('does not invent a pending human decision when the current review cannot be read', async () => {
+    wireWithReview(PROPOSAL, new Error('review_unavailable'))
+    renderRecord()
+    await waitFor(() =>
+      expect(screen.getByTestId('operator-concierge-proposal-human')).toHaveTextContent(
+        'Could not read current decision',
+      ),
+    )
+    expect(screen.getByTestId('operator-concierge-proposal-review-link')).toHaveAttribute(
+      'href', '/operator/reviews/36',
+    )
+  })
+
+  it('keeps review preparation available after a preparation failure', async () => {
+    wireWithReview({ ...PROPOSAL, reviewId: null, state: 'could_not_prepare_review' }, null)
+    renderRecord()
+    expect(await screen.findByRole('button', { name: 'Prepare review' })).toBeEnabled()
+    expect(screen.getByTestId('operator-concierge-proposal-human')).toHaveTextContent(
+      'No review prepared',
+    )
   })
 
   it('renders the four axes from the review API, not from the artifact', async () => {

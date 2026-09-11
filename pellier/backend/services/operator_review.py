@@ -489,9 +489,8 @@ def _default_recommendation(action: str, args: Mapping[str, Any]) -> Dict[str, A
 # Discovery
 # ---------------------------------------------------------------------------
 
-# Only the review's own columns plus the client's name. The name is a label, not
-# a decision input; membership, spend, order state and inventory are resolved
-# separately by hydrate_review so nothing here can go stale.
+# Workflow state plus current client and product labels. Membership, spend,
+# order state and inventory are resolved separately by hydrate_review.
 _QUEUE_SELECT = """
     SELECT
         a.id             AS review_id,
@@ -509,10 +508,14 @@ _QUEUE_SELECT = """
         a.recommendation AS recommendation,
         a.action_hash    AS action_hash,
         a.decided_by     AS decided_by,
+        a.requested_by_sub AS requested_by_sub,
+        a.requester_kind AS requester_kind,
+        p.name          AS product_name,
         a.requested_at   AS requested_at,
         a.decided_at     AS decided_at
       FROM pellier.approvals a
       LEFT JOIN pellier.customers c ON c.id = a.customer_id
+      LEFT JOIN pellier.product_catalog p ON p.product_id::text = a.args->>'product_id'
      -- Explicit casts: Postgres cannot infer a type for a bare placeholder used
      -- only in `IS NULL`, and raises IndeterminateDatatype before the query runs.
      WHERE (%s::text IS NULL OR a.status = %s::text)
@@ -539,10 +542,14 @@ _ONE_SELECT = """
         a.recommendation AS recommendation,
         a.action_hash    AS action_hash,
         a.decided_by     AS decided_by,
+        a.requested_by_sub AS requested_by_sub,
+        a.requester_kind AS requester_kind,
+        p.name          AS product_name,
         a.requested_at   AS requested_at,
         a.decided_at     AS decided_at
       FROM pellier.approvals a
       LEFT JOIN pellier.customers c ON c.id = a.customer_id
+      LEFT JOIN pellier.product_catalog p ON p.product_id::text = a.args->>'product_id'
      WHERE a.id = %s
 """
 

@@ -16,6 +16,8 @@ import { ArrowUpRight, CircleCheck, CircleDashed, CircleMinus, Clock3, ShieldAle
 import { Link } from 'react-router-dom'
 import {
   type OperatorReview,
+  requesterLabel,
+  requesterLine,
 } from '../../services/operator'
 import { useReviewQueue } from '../hooks/useReviewQueue'
 import ClientAvatar from '../components/ClientAvatar'
@@ -163,6 +165,8 @@ const ReviewCard: React.FC<{ review: OperatorReview }> = ({ review }) => {
       : review.humanState === 'confirmed'
         ? 'Confirmed'
         : 'Declined'
+  const HumanIcon = review.humanState === 'confirmed' ? CircleCheck
+    : review.humanState === 'declined' ? CircleMinus : Clock3
 
   return (
     <Link
@@ -177,21 +181,21 @@ const ReviewCard: React.FC<{ review: OperatorReview }> = ({ review }) => {
         personaId={review.personaId}
       />
       <span className="operator-review-body">
-        <span className="operator-review-origin">
-          Prepared from Pellier{when ? ` · ${when}` : ''}
-        </span>
         <span className="operator-client-name">{review.customerName}</span>
-        <span className="operator-cell-note">
-          {review.issue || 'Action details awaiting inspection'}
+        <span className="operator-review-origin">
+          Review #{review.reviewId}{review.orderId ? `, order #${review.orderId}` : ''}
         </span>
-        {review.requesterKind === 'unverified' ? (
-          <span
-            className="operator-cell-note operator-review-requester-flag"
-            data-testid="operator-review-requester-flag"
-          >
-            Requester not signed in
-          </span>
-        ) : null}
+        <span className="operator-cell-note">
+          {review.productName || review.issue || 'Action details awaiting inspection'}
+        </span>
+        <span className="operator-cell-note operator-review-requester"
+          data-testid="operator-review-requester-flag"
+          data-requester={review.requesterKind}
+          title={requesterLine(review)}
+        >
+          {requesterLabel(review)}
+        </span>
+        {when ? <span className="operator-cell-note">Prepared {when}</span> : null}
       </span>
       <span className="operator-review-action-cell">
         <span className="operator-review-cell-label">Prepared action</span>
@@ -199,20 +203,21 @@ const ReviewCard: React.FC<{ review: OperatorReview }> = ({ review }) => {
           {actionLabel(review.action)}
         </span>
         <span
-          className="operator-cell-note"
+          className="operator-cell-note operator-review-outcome"
           data-testid="operator-review-outcome"
+          data-outcome={outcomeKind(review)}
         >
+          <OutcomeGlyph kind={outcomeKind(review)} />
           {outcomeLine(review)}
         </span>
       </span>
       <span
         className="operator-review-state"
         data-state={review.humanState}
-        data-outcome={outcomeKind(review)}
       >
         <span className="operator-review-cell-label">Human decision</span>
         <span className="operator-review-state-value">
-          <OutcomeGlyph kind={outcomeKind(review)} />
+          <HumanIcon className="operator-review-outcome-glyph" aria-hidden />
           {humanState}
         </span>
       </span>

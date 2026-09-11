@@ -222,11 +222,11 @@ async def load_client_evidence(
     steps.append(Step("client", "Client record loaded", SOURCE_AURORA,
                       duration_ms=duration, result=client.get("name", "")))
     steps.append(Step("order", "Order history loaded", SOURCE_AURORA,
-                      result=f"{len(orders)} orders"))
+                      result=f"{len(orders)} {'order' if len(orders) == 1 else 'orders'}"))
     steps.append(Step("ticket", "Service context loaded", SOURCE_AURORA,
-                      result=f"{len(tickets)} tickets"))
+                      result=f"{len(tickets)} {'ticket' if len(tickets) == 1 else 'tickets'}"))
     steps.append(Step("return", "Return records checked", SOURCE_AURORA,
-                      result=f"{len(returns)} returns"))
+                      result=f"{len(returns)} {'return' if len(returns) == 1 else 'returns'}"))
 
     evidence.append(Evidence(
         kind="client", role=ROLE_FACT, status="verified", source=SOURCE_AURORA,
@@ -265,14 +265,25 @@ async def load_client_evidence(
     ))
 
     # The authoritative return position, stated as a fact even when it is zero.
+    # The graph needs item-level evidence, not just a count. Otherwise it asks
+    # the operator to retrieve records this request has already loaded.
+    return_lines = [
+        f"Return #{row.get('returnId')}: "
+        f"{row.get('productName') or 'product ' + str(row.get('productId') or 'unidentified')}, "
+        f"status {row.get('status') or 'not recorded'}, "
+        f"reason {str(row.get('reason') or 'not recorded').replace('_', ' ')}"
+        for row in returns[:10]
+    ]
     evidence.append(Evidence(
         kind="return", role=ROLE_FACT, status="verified", source=SOURCE_AURORA,
         label="Return records",
         detail=(
-            f"{len(returns)} authoritative return records"
+            f"{len(returns)} authoritative return "
+            f"{'record' if len(returns) == 1 else 'records'}. "
+            + "; ".join(return_lines)
             if returns else "No authoritative return record is currently present"
         ),
-        data={"authoritativeReturnCount": len(returns)},
+        data={"authoritativeReturnCount": len(returns), "returns": returns[:10]},
     ))
 
     # A ticket is a source REPORTING something. That is context, not fact, and the
@@ -297,8 +308,9 @@ async def load_client_evidence(
             kind="return_conflict", role=ROLE_CONTEXT, status="unverified",
             source=SOURCE_AURORA, label="Unconfirmed assertion",
             detail=(
-                "A support ticket states a return was received, and no corresponding "
-                "authoritative return record is currently present."
+                "A support ticket reports a received return for the disputed items. "
+                "No authoritative return record was found for those items. "
+                "A return for a different item does not confirm this report."
             ),
         ))
 
@@ -510,13 +522,12 @@ async def _requester_evidence(db: Any, review_id: Any) -> Optional[Evidence]:
     elif subject:
         detail = (
             f"Requested by a signed-in shopper, subject {subject[:8]}…, whose "
-            "token does not map to the customer named on the review. That "
-            "customer was chosen in the storefront and is not a proved identity."
+            "ownership of the customer named on the review was not verified."
         )
     else:
         detail = (
-            "Requested from a session that was not signed in. The customer named "
-            "on the review was chosen in the storefront and is not a proved identity."
+            "No verified requester identity was saved with this request. This "
+            "does not describe the current operator's sign-in."
         )
     return Evidence(
         kind="requester",
@@ -568,13 +579,16 @@ Return ONLY minified JSON, no prose outside it, matching exactly:
 {{"established": "...", "reported": "...", "recommendation": "..."}}
 
 - established: what the authoritative records establish about this issue. FACT
-  evidence only. At most three sentences.
+  evidence only. At most three sentences and 90 words.
 - reported: what a source reports that the authoritative records do not confirm,
   attributed to that source. CONTEXT evidence only. Use an empty string if there is
-  no such item. Never present it as settled and never resolve it.
+  no such item. Never present it as settled and never resolve it. At most 60 words.
 - recommendation: one sentence naming the next fair step for the operator. Recommend
   only investigation, confirmation or a decision the operator makes; never state that
-  an action has been taken or will be taken.
+  an action has been taken or will be taken. At most 45 words.
+- Do not ask the operator to retrieve a record already supplied in FACT evidence.
+  Name the unresolved item or missing fact. Do not use membership or spending alone
+  as authority for a refund, shipping refund, or credit.
 """
 
 # A draft is customer-facing copy, so the constraints are stricter: it can be pasted

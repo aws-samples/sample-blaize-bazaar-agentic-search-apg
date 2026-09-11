@@ -833,6 +833,7 @@ def _review_payload(
         "sourceTurnId": row.get("source_turn_id"),
         "executionTurnId": row.get("execution_turn_id"),
         "orderId": int(row["order_id"]) if row.get("order_id") else None,
+        "productName": row.get("product_name") or None,
         "issue": row.get("issue") or "",
         "recommendation": recommendation or {},
         # Echoed so the console can send it back on confirm. It is a fingerprint

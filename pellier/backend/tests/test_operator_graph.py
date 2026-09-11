@@ -178,8 +178,8 @@ def test_operator_graph_has_two_ordered_agents_and_a_durable_checkpoint(
 
     investigator = builder.nodes[0][0]
     planner = builder.nodes[1][0]
-    assert investigator.kwargs["model"].kwargs["max_tokens"] == 450
-    assert planner.kwargs["model"].kwargs["max_tokens"] == 700
+    assert investigator.kwargs["model"].kwargs["max_tokens"] == 1024
+    assert planner.kwargs["model"].kwargs["max_tokens"] == 1536
     assert investigator.kwargs["tools"] == []
     assert planner.kwargs["tools"] == []
 

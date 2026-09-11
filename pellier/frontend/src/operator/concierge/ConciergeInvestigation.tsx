@@ -54,9 +54,9 @@ const ConciergeInvestigation: React.FC<Props> = ({
         <span className="operator-concierge-eyebrow">How this answer was built</span>
         <span className="operator-concierge-investigation-meta">
           {steps.length} {steps.length === 1 ? 'step' : 'steps'}
-          {` · ${sources} ${sources === 1 ? 'source' : 'sources'}`}
+          {`, ${sources} ${sources === 1 ? 'source' : 'sources'}`}
           {/* Only a measured duration. Never an invented one. */}
-          {measured > 0 ? ` · ${(measured / 1000).toFixed(1)}s` : ''}
+          {measured > 0 ? `, ${(measured / 1000).toFixed(1)}s` : ''}
         </span>
         <ChevronDown
           className="operator-concierge-disclosure-icon"

@@ -423,6 +423,8 @@ def describe_execution(capability: Dict[str, Any]) -> str:
     state = str(capability.get("state") or "")
     if state == "available":
         return "Governed execution available."
+    if state == "review_required":
+        return "Human confirmation is required before requesting governed execution."
     if state == "temporarily_unavailable":
         return "Governed execution temporarily unavailable."
     if state == "not_enabled":
